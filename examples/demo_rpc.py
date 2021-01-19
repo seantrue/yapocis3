@@ -5,11 +5,12 @@ Created on Jul 21, 2011
 '''
 
 import numpy as np
-from yapocis.utils import imread, to_image
+from yapocis.utils import imread
 from yapocis.utils import show_array, show_arraygrad
-from yapocis.median import median3x3
-from yapocis.gradient import gradient
-from yapocis.hsi import rgb2hsi, hsi2rgb, join_channels, split_channels
+from yapocis.kernels.median import median3x3
+from yapocis.kernels.gradient import gradient
+from yapocis.kernels.hsi import rgb2hsi, hsi2rgb
+from yapocis.channels import split_channels, join_channels
 
 
 def test():
@@ -27,7 +28,7 @@ def test():
     show_array("Noisy", image)
     show_array("Filtered", filtered)
     
-    image = np.float32(imread("test.jpg"))
+    image = np.float32(imread("../yapocis/test.jpg"))
     image /= 256.
 
     show_array("Test HSI", image)
@@ -37,7 +38,7 @@ def test():
     show_array("S", s)
     show_array("H", h)
 
-    from gaussian import gauss_image
+    from yapocis.kernels.gaussian import gauss_image
     blur = gauss_image(i, 3)
     show_array("Blur", blur)
     blurmore = gauss_image(i, 4)

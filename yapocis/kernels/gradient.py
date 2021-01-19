@@ -9,13 +9,11 @@ import numpy as np
 from yapocis.rpc import kernels, interfaces
 from yapocis.yapocis_types import *
 
-program = kernels.load_program(interfaces.gradient, engine=kernels.GPU_ENGINE)
-gradientcl = program.gradient
-gradient_res = program.gradient_res
-
+gradient_cl = None
+kernels.import_program("gradient", gradient="gradient_cl")
 
 def gradient(image:Array, reach:int=1) -> Tuple[Array,Array]:
-    grad, theta = gradientcl(image, reach)
+    grad, theta = gradient_cl(image, reach)
     # TODO: gradientCL should not be returning nans, and is
     theta[np.where(np.isnan(theta))] = 0.0
     grad[np.where(np.isnan(grad))] = 0.0

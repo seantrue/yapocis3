@@ -9,7 +9,7 @@ b = numpy.random.rand(50000)
 
 t = time.time()
 # We don't need to manage a compiler and linker, that can be done for us
-demo = kernels.load_program(interfaces.demo)
+demo = kernels.load_program("demo")
 
 # We don't need to manage buffers, that can be done for us
 a_plus_b = demo.sum(a,b)

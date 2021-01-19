@@ -2,9 +2,7 @@ import numpy as np
 
 from yapocis.rpc.buffers import BufferManager, CPU_ENGINE
 from yapocis.rpc.interfacecl_parser import get_interface
-from yapocis.rpc.kernels import load_program, get_engine, GPU_ENGINE, CPU_ENGINE, directories
-from yapocis.rpc.interfaces import convolve, convolves, median3x3, gradient, xy, hsi
-from yapocis.rpc.interfaces import mandelbrot, demo
+from yapocis.rpc.kernels import load_program, get_engine, directories, import_program, get_available
 
 
 def test_buffers():
@@ -100,28 +98,29 @@ def test_getinterfacecl():
 
 def test_compiling():
     print("Interface search path", directories)
-    interfaces = [(convolve, dict(name="convolve", conv=[1, 2, 3, 4, 3, 2, 1])),
-                  (median3x3, dict(steps=[9], width=9)),
-                  (gradient, {}),
-                  (convolves, dict(convs=[("boxone", [1, 1, 1]), ("triangle", [.5, 1, .5])])),
-                  (mandelbrot, {}),
-                  (demo, {}),
-                  (xy, {}),
-                  (hsi, {}),
-                  ]
-    for itest, (interface, context) in enumerate(interfaces):
-        program = load_program(interface, engine=CPU_ENGINE, debug=True, **context)
-        print("Interface", program.interface.interface_name)
-        for kernel in program.interface.kernels():
-            print("Kernel", kernel)
-            print("Params", program.interface.kernel_params(kernel))
-            print("OpenCL entry", getattr(program.interface.program, program.interface.kernel_alias(kernel)))
-            print("Callable", getattr(program, kernel))
-        print()
+    interfaces = [("convolve", dict(name="convolve", conv=[1, 2, 3, 4, 3, 2, 1])),
+                  ("median3x3", dict(steps=[9], width=9)),
+                  ("gradient", {}),
+                  ("convolves", dict(convs=[("boxone", [1, 1, 1]), ("triangle", [.5, 1, .5])])),
+                  ("mandelbrot", {}),
+                  ("demo", {}),
+                  ("xy", {}),
+                  ("hsi", {}),
+                      ]
+    for engine_name in get_available().keys():
+        for itest, (interface, context) in enumerate(interfaces):
+            program = load_program(interface, engine_name=engine_name, debug=True, **context)
+            print("Interface", program.interface.interface_name)
+            for kernel in program.interface.kernels():
+                print("Kernel", kernel)
+                print("Params", program.interface.kernel_params(kernel))
+                print("OpenCL entry", getattr(program.interface.program, program.interface.kernel_alias(kernel)))
+                print("Callable", getattr(program, kernel))
+            print()
 
 
 def test_context():
-    engine = get_engine(GPU_ENGINE)
+    engine = get_engine()
     a = np.random.sample((100,)).astype(np.float32)
     b = a.copy()
     # b[0]=b[1]
@@ -138,9 +137,13 @@ def test_context():
 
 
 def test_demo():
-    program = load_program(demo)
+    program = load_program("demo")
     print(program.sum)
     a = np.array([0, 1, 2, 3]).astype(np.float32)
     b = np.array([1, 1, 1, 1]).astype(np.float32)
     print(program.sum(a, b))
     print(program)
+
+def test_import():
+    program = import_program("demo",sum="frabjous_day")
+    assert frabjous_day

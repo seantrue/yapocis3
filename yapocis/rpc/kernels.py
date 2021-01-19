@@ -1,25 +1,43 @@
 import os, time
 import pyopencl
 from pyopencl import mem_flags as mf  # @UnusedImport
-import numpy as np
+from yapocis.yapocis_types import *
 
-CPU_ENGINE = 0
-GPU_ENGINE = 1
-engine_ids = {"gpu": GPU_ENGINE, "cpu": CPU_ENGINE}
-engine_names = {GPU_ENGINE: "gpu", CPU_ENGINE: "cpu"}
+from pyopencl import get_platforms
+def get_available():
+    platforms = get_platforms()
+    devices = {}
+    for platform in platforms:
+        for device in platform.get_devices():
+            devices[device.name] = device
+            if len(platforms) > 1:
+                devices[f"{platform.name}:{device.name}"] = device
+    return devices
+
+def get_yapocis_device(engine_name:Optional[str] = None):
+    engine_name = os.environ.get("YAPOCIS_ENGINE",None) if engine_name is None else engine_name
+    devices = get_available()
+    if not devices:
+        raise RuntimeError("No OpenCL devices found")
+    device_names = list(devices.keys())
+    if engine_name is None:
+        raise RuntimeError(f"Specify an OpenCL device from {device_names}")
+    if engine_name not in devices:
+        raise RuntimeError(f"{engine_name} not an available device {device_names}")
+    return engine_name, devices[engine_name]
 
 MEMFLAGS = mf.READ_WRITE | mf.COPY_HOST_PTR
 
+import yapocis
 from yapocis.rpc.buffers import BufferManager
 from yapocis.rpc.interfacecl_parser import get_interface, InterfaceCL
 from yapocis.yapocis_types import *
 
 
 class Engine:
-    def __init__(self, engine: Optional[int] = None, autoflatten: bool = True):
-        engine = int(os.environ.get("ENGINE", engine))
-        self.engine_name = engine_names[engine]
-        self.ctx = pyopencl.Context([pyopencl.get_platforms()[0].get_devices()[engine]])
+    def __init__(self, engine_name: Optional[str] = None, autoflatten: bool = True):
+        self.engine_name, self.device = get_yapocis_device(engine_name=engine_name)
+        self.ctx = pyopencl.Context([self.device])
         self.queue = pyopencl.CommandQueue(self.ctx)
         self.bmgr = BufferManager(context=self.ctx, queue=self.queue)
         self.context_meta = {}
@@ -46,16 +64,10 @@ class Engine:
         return self.bmgr.ensure_buffer(a)
 
 
-engines = {CPU_ENGINE: Engine(CPU_ENGINE), GPU_ENGINE: Engine(GPU_ENGINE)}
-
-
-def get_engine(engine: EngineID) -> Engine:
+def get_engine(engine_name: Optional[str] = None) -> Engine:
     """Takes the identifier for an OpenCL engine (CPU_ENGINE, GPU_ENGINE)
     and returns a Engine with buffer management ."""
-    if isinstance(engine, str):
-        assert engine.lower() in list(engine_ids.keys()), "Unknown engine name %s" % engine
-        engine = engine_ids[engine.lower()]
-    return engines[engine]
+    return Engine(engine_name)
 
 
 from mako.template import Template
@@ -71,18 +83,20 @@ def find_file(dirs: List[str], subdirs: List[str], filename: str) -> Optional[st
     return None
 
 
-directories = [".", "rpc", "interfaces"]
+directories = [".", "interfaces"]
 
+def find_yapocis_file(subdirs:List[str], filename:str) -> Optional[str]:
+    yapocis_dir = os.path.dirname(yapocis.__file__)
+    current_dir = os.getcwd()
+    tfilename = find_file([current_dir, yapocis_dir], subdirs, filename)
+    return tfilename
 
 def render_program(filename: str, **context: Context) -> str:
     """
     Takes the basename of a mako template file, and uses context to generate an OpenCL program
     """
     filename += ".mako"
-    tfilename = find_file([os.getcwd(), os.path.abspath(os.path.dirname(__file__))],
-                          [".", "rpc", "interfaces"],
-                          filename
-                          )
+    tfilename = find_yapocis_file(["kernel_source", "."], filename)
     if not tfilename:
         raise Exception("Can't find template '%s'" % filename)
     mylookup = TemplateLookup(directories=[os.path.dirname(tfilename)])
@@ -107,14 +121,14 @@ class Program:
     Manages buffers on the OpenCL device to prevent over-allocation.
     """
 
-    def __init__(self, interface: InterfaceCL, engine: EngineID, debug: bool = False, **context: Context):
+    def __init__(self, interface: InterfaceCL, engine_name: str, debug: bool = False, **context: Context):
         source = render_program(interface.interface_name, **context)
         self.source = source
         if debug:
             print("Source")
             print(source)
         mf = pyopencl.mem_flags
-        self.engine = get_engine(engine)
+        self.engine = get_engine(engine_name)
         interface.program = self.engine.build(source)
         self.callable = {}
         self.context_meta = self.engine.context_meta
@@ -162,18 +176,45 @@ class Program:
         self.purge()
         return "%(interfacename)s engine:%(engine)s calls:%(calls)s hits:%(hits)s misses:%(misses)s buffers:%(buffers)s runtime:%(runtime)s" % self.stats()
 
+def load_interface(interface_spec:str) -> str:
+    """
+    Find an interface, or return source if it is an interface spec.
+    Args:
+        interface_spec: either an interface name or a spec
 
-def load_program(source: str, engine: EngineID = GPU_ENGINE, debug: bool = False, **context: Context):
+    Returns:
+        an interface specification
+    """
+    if interface_spec.strip().startswith("interface "):
+        return interface_spec
+    filename= f"{interface_spec}.interface"
+    path = find_yapocis_file(["interfaces","."], filename)
+    if path is None:
+        raise RuntimeError(f"Can't find {filename}")
+    with open(path) as inf:
+        return inf.read()
+
+def load_program(interface_spec: str, engine_name: Optional[str] = None, debug: bool = False, **context: Context):
     """
     Primary interface for yapocis.rpc
     Factory returning runnable interface based on a interface specification.
     """
+    source = load_interface(interface_spec)
     source = render_interface(source, **context)
     interface = get_interface(source)
     interface.source = source
     if debug: print("Interface", interface)
-    return Program(interface, engine, debug=debug, **context)
+    return Program(interface, engine_name, debug=debug, **context)
 
+def import_program(interface_spec: str, engine_name:Optional[str]=None, debug: bool = False, **context: Context):
+    program = load_program(interface_spec, engine_name=engine_name,debug=debug,**context)
+    import inspect
+    caller = inspect.currentframe().f_back
+    target = inspect.getmodule(caller.f_code)
+    for name, callable in program.callable.items():
+        nameas = context.get(name,name)
+        setattr(target, nameas, callable)
+    return program
 
 # Todo: Not thread safe: allocate a new Program and Kernels per thread
 class Kernel:

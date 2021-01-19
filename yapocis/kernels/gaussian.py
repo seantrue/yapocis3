@@ -1,11 +1,10 @@
-import numpy as np
 from yapocis.rpc import interfaces, kernels
 
 from yapocis.utils import set_margin, set_frame
-from yapocis.gradient import gradient
+from yapocis.kernels.gradient import gradient
 
-from yapocis.operators import sub_res
-from yapocis.zcs import zcs, zcs_res
+from yapocis.kernels.operators import sub_res
+from yapocis.kernels.zcs import zcs, zcs_res
 from yapocis.yapocis_types import *
 
 def are_close(a:Array, b:Array) -> bool:
@@ -61,7 +60,7 @@ def gaussian_kernels(gs):
     global program
     convs = [("gauss%s" % len(a), a) for a in gs]
     convsres = [("gauss%s_res" % len(a), a) for a in gs]
-    program = kernels.load_program(interfaces.convolvesep, convs=convs)
+    program = kernels.load_program("convolvesep", convs=convs)
     krnls = [getattr(program, name) for (name, conv) in convs]
     for i, (name, conv) in enumerate(convs):
         krnls[i].res = getattr(program, convsres[i][0])

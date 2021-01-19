@@ -1,7 +1,9 @@
 import numpy as np
 import time
 from scipy.ndimage.filters import median_filter
-from yapocis import median
+from yapocis.kernels import median
+
+
 def median3x3(input, iterations=1):
     for i in range(iterations):
         input = median_filter(input,3)
@@ -25,11 +27,11 @@ for i in range(0,SAMPLES):
     numpy_delta = time.time() - t
     
     t = time.time()
-    output2 = median.median3x3slow(img,ITERATIONS)
+    output2 = median.median3x3slow(img, ITERATIONS)
     yapocis_delta = time.time() - t
     
     t = time.time()
-    output3 = median.median3x3fast(img,ITERATIONS)
+    output3 = median.median3x3fast(img, ITERATIONS)
     yapocisfast_delta = time.time() - t
 
     print(width, numpy_delta, yapocis_delta, yapocisfast_delta)

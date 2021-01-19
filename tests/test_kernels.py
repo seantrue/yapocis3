@@ -1,15 +1,16 @@
 import numpy as np
 import time
-
-from yapocis.xy import xy
-from yapocis.zcs import zcs
-from yapocis.gaussian import gauss_1d, are_close, gaussians, get_scales, get_gaussian_kernel, get_gaussian, gauss_image, \
+from yapocis.rpc.kernels import get_available
+from yapocis.kernels.xy import addr as xy_addr
+from yapocis.kernels.zcs import zcs
+from yapocis.kernels.gaussian import gauss_1d, are_close, gaussians, get_scales, get_gaussian_kernel, get_gaussian, gauss_image, \
     zcsdog
-from yapocis.operators import add, add_res, program, sub, sub_res, mul, mul_res
+from yapocis.kernels.operators import add, add_res, program, sub, sub_res, mul, mul_res
 from yapocis.rpc import kernels, interfaces
 from yapocis.utils import show_array, stage
-from yapocis.hsi import split_channels, join_channels, rgb2hsi, hsi2rgb
-from yapocis.median import median3x3fast, median3x3slow
+from yapocis.kernels.hsi import rgb2hsi, hsi2rgb
+from yapocis.channels import split_channels, join_channels
+from yapocis.kernels.median import median3x3fast, median3x3slow
 
 def test_gaussian_1d():
     "Make sure that the kernel sums back to 1"
@@ -71,11 +72,11 @@ def test_gradient():
     t = time.time()
     b = np.gradient(a)
     print("Numpy seconds", time.time()-t)
-    for engine in (kernels.GPU_ENGINE, kernels.CPU_ENGINE):
-        program = kernels.load_program(interfaces.gradient, engine=engine)
+    for engine_name in get_available().keys():
+        program = kernels.load_program("gradient", engine_name=engine_name)
         t = time.time()
         c = program.gradient(a, 1)
-        print("Engine %s seconds %s" % (engine,time.time()-t))
+        print("Engine %s seconds %s" % (engine_name,time.time()-t))
 
 def test_hsi():
     r = np.empty((256, 256), dtype=np.float32)
@@ -149,7 +150,7 @@ def test_operators():
 
 def test_xy():
     a = np.zeros((402, 798), dtype=np.int32)
-    addr, x, y, label = xy.addr(a)
+    addr, x, y, label = xy_addr(a)
     show_array("addr", addr)
     show_array("x", x)
     show_array("y", y)
@@ -166,3 +167,4 @@ def test_zcs():
     show_array("larger", larger)
     show_array("dog", dog)
     show_array("zca", zca)
+
