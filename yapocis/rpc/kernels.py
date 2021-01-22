@@ -21,7 +21,8 @@ def get_yapocis_device(engine_name:Optional[str] = None):
         raise RuntimeError("No OpenCL devices found")
     device_names = list(devices.keys())
     if engine_name is None:
-        raise RuntimeError(f"Specify an OpenCL device from {device_names}")
+        engine_name = device_names[0]
+        # raise RuntimeError(f"Specify an OpenCL device from {device_names}")
     if engine_name not in devices:
         raise RuntimeError(f"{engine_name} not an available device {device_names}")
     return engine_name, devices[engine_name]
@@ -83,12 +84,14 @@ def find_file(dirs: List[str], subdirs: List[str], filename: str) -> Optional[st
     return None
 
 
-directories = [".", "interfaces"]
-
 def find_yapocis_file(subdirs:List[str], filename:str) -> Optional[str]:
     yapocis_dir = os.path.dirname(yapocis.__file__)
     current_dir = os.getcwd()
-    tfilename = find_file([current_dir, yapocis_dir], subdirs, filename)
+    directories = [yapocis_dir, current_dir]
+    yapocis_path = os.environ.get("YAPOCIS_PATH",None)
+    if yapocis_path:
+        directories.append(yapocis_path)
+    tfilename = find_file(directories, subdirs, filename)
     return tfilename
 
 def render_program(filename: str, **context: Context) -> str:
@@ -123,6 +126,7 @@ class Program:
 
     def __init__(self, interface: InterfaceCL, engine_name: str, debug: bool = False, **context: Context):
         source = render_program(interface.interface_name, **context)
+
         self.source = source
         if debug:
             print("Source")

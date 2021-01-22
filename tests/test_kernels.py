@@ -1,16 +1,21 @@
 import numpy as np
 import time
+from random import randint
+
 from yapocis.rpc.kernels import get_available
 from yapocis.kernels.xy import addr as xy_addr
 from yapocis.kernels.zcs import zcs
-from yapocis.kernels.gaussian import gauss_1d, are_close, gaussians, get_scales, get_gaussian_kernel, get_gaussian, gauss_image, \
+from yapocis.kernels.gaussian import gauss_1d, are_close, gaussians, get_scales, get_gaussian_kernel, get_gaussian, \
+    gauss_image, \
     zcsdog
 from yapocis.kernels.operators import add, add_res, program, sub, sub_res, mul, mul_res
+from yapocis.kernels.graphics import draw, rects, circles
 from yapocis.rpc import kernels, interfaces
 from yapocis.utils import show_array, stage
 from yapocis.kernels.hsi import rgb2hsi, hsi2rgb
 from yapocis.channels import split_channels, join_channels
 from yapocis.kernels.median import median3x3fast, median3x3slow
+
 
 def test_gaussian_1d():
     "Make sure that the kernel sums back to 1"
@@ -28,12 +33,12 @@ def test_gaussians():
 def test_kernels():
     for scale in range(get_scales()):
         gkernel = get_gaussian_kernel(scale)
-        a = np.zeros((256,256), dtype=np.float32)
-        a[127,127] = 1.0
-        b = gkernel(1,a)
+        a = np.zeros((256, 256), dtype=np.float32)
+        a[127, 127] = 1.0
+        b = gkernel(1, a)
         gsum = get_gaussian(scale).sum()
         assert are_close(b[127, :].sum(), gsum)
-        b = gkernel(0,a)
+        b = gkernel(0, a)
         assert are_close(b[:, 127].sum(), gsum)
         # Compare in order of lowest precision
         assert are_close(a.sum(), 1.0)
@@ -41,11 +46,11 @@ def test_kernels():
 
 def test_gauss_image():
     for scale in range(get_scales()):
-        a = np.zeros((400,700), dtype=np.float32)
-        a[200,:] = 1.0
-        a[:,200] = 1.0
+        a = np.zeros((400, 700), dtype=np.float32)
+        a[200, :] = 1.0
+        a[:, 200] = 1.0
         for xy in range(400):
-            a[xy,xy] = 1.0
+            a[xy, xy] = 1.0
         b = gauss_image(a, scale)
         show_array("GI%s" % scale, b)
 
@@ -54,12 +59,12 @@ def test_zcs():
     for res in (False, True):
         subtotal = 0.0
         for scale in range(get_scales() - 1):
-            a = np.zeros((1200,1800), dtype=np.float32)
-            a[200,:] = 1.0
-            a[:,200] = 1.0
+            a = np.zeros((1200, 1800), dtype=np.float32)
+            a[200, :] = 1.0
+            a[:, 200] = 1.0
             t = time.time()
-            zca,grad,theta = zcsdog(a,scale)
-            subtotal += (time.time()-t)
+            zca, grad, theta = zcsdog(a, scale)
+            subtotal += (time.time() - t)
             show_array("org %s" % scale, a)
             show_array("zcs %s" % scale, zca)
             show_array("grad %s" % scale, grad)
@@ -68,15 +73,16 @@ def test_zcs():
 
 
 def test_gradient():
-    a = np.random.sample((1000,1000)).astype(np.float32)
+    a = np.random.sample((1000, 1000)).astype(np.float32)
     t = time.time()
     b = np.gradient(a)
-    print("Numpy seconds", time.time()-t)
+    print("Numpy seconds", time.time() - t)
     for engine_name in get_available().keys():
         program = kernels.load_program("gradient", engine_name=engine_name)
         t = time.time()
         c = program.gradient(a, 1)
-        print("Engine %s seconds %s" % (engine_name,time.time()-t))
+        print("Engine %s seconds %s" % (engine_name, time.time() - t))
+
 
 def test_hsi():
     r = np.empty((256, 256), dtype=np.float32)
@@ -89,64 +95,66 @@ def test_hsi():
     rgb = join_channels(r, g, b)
     rgb /= 255.0
     show_array("Test data", rgb)
-    r,g,b = split_channels(rgb)
-    rgb2 = join_channels(r,g,b)
+    r, g, b = split_channels(rgb)
+    rgb2 = join_channels(r, g, b)
     show_array("Test split and join", rgb2)
-    h, s, i = rgb2hsi(r,g,b)
+    h, s, i = rgb2hsi(r, g, b)
     show_array("I", i)
     show_array("H", h)
     show_array("S", s)
-    r,g,b = hsi2rgb(h,s,i)
-    rgb3  = join_channels(r,g,b)
+    r, g, b = hsi2rgb(h, s, i)
+    rgb3 = join_channels(r, g, b)
     show_array("from HSI", rgb3)
     print(program)
 
+
 def test_median3():
-    a1 = np.random.sample((500,500)).astype(np.float32)
+    a1 = np.random.sample((500, 500)).astype(np.float32)
     a2 = a1.copy()
     stage("slow")
-    b1 = median3x3slow(a1,500)
+    b1 = median3x3slow(a1, 500)
     stage()
     stage("fast")
-    b2 = median3x3fast(a2,500)
+    b2 = median3x3fast(a2, 500)
     stage()
-    error = np.sum(np.abs(b1.flatten()-b2.flatten()))
+    error = np.sum(np.abs(b1.flatten() - b2.flatten()))
     assert error == 0.0
 
 
 def test_operators():
     # 1+0 -> 1
-    a = np.ones((100,100), dtype=np.float32)
+    a = np.ones((100, 100), dtype=np.float32)
     b = np.zeros_like(a)
-    c = add(a,b)
+    c = add(a, b)
     d = np.empty_like(a)
-    add_res(a,b,d)
-    assert c.sum() == c.size*1.0
+    add_res(a, b, d)
+    assert c.sum() == c.size * 1.0
     program.read(d)
     assert a.sum() == c.sum()
     assert a.sum() == d.sum()
     # 1-1 == 0
-    b[:,:] = 1.0
-    c = sub(a,b)
-    d[:,:]=10
-    sub_res(a,b,d)
+    b[:, :] = 1.0
+    c = sub(a, b)
+    d[:, :] = 10
+    sub_res(a, b, d)
     program.read(d)
     assert c.sum() == 0.0
     assert c.sum() == d.sum()
     # 1*1 = 1
-    c = mul(a,b)
-    d[:,:]=10
-    mul_res(a,b,d)
+    c = mul(a, b)
+    d[:, :] = 10
+    mul_res(a, b, d)
     program.read(d)
     assert a.sum() == c.sum()
     assert a.sum() == d.sum()
     # 1/1 = 1
-    #c = div(a,b)
-    #d[:,:]=10
-    #div_res(a,b,d)
-    #program.read(d)
-    #assert a.sum() == c.sum()
-    #assert a.sum() == d.sum()
+    # c = div(a,b)
+    # d[:,:]=10
+    # div_res(a,b,d)
+    # program.read(d)
+    # assert a.sum() == c.sum()
+    # assert a.sum() == d.sum()
+
 
 def test_xy():
     a = np.zeros((402, 798), dtype=np.int32)
@@ -156,15 +164,65 @@ def test_xy():
     show_array("y", y)
     show_array("label", label)
 
+
 def test_zcs():
-    image = np.zeros((512,512), dtype=np.float32)
-    image[255,255] = 1.0
+    image = np.zeros((512, 512), dtype=np.float32)
+    image[255, 255] = 1.0
     smaller = gauss_image(image, 2)
     larger = gauss_image(image, 3)
-    dog = smaller-larger
+    dog = smaller - larger
     zca = zcs(dog)
     show_array("smaller", smaller)
     show_array("larger", larger)
     show_array("dog", dog)
     show_array("zca", zca)
 
+
+def random_points(n):
+    a = np.zeros((1000, 1000)).astype(np.float32)
+
+    def rx():
+        return randint(0, a.shape[0])
+
+    def ry():
+        return randint(0, a.shape[1])
+
+    a[:, :] = 0.0
+    points = []
+    for iline in range(n):
+        x, y = rx(), ry()
+        points.append([x, y])
+    return a, points
+
+def random_lines(n):
+    a, lines = random_points(n)
+    a = np.zeros((1000, 1000)).astype(np.float32)
+    length = 50
+    for line in lines:
+        x,y = line
+        x1, y1 = x + randint(-length, length), y + randint(-length, length)
+        line += [x1, y1]
+    return a, lines
+
+def random_circles(n):
+    a, circles = random_points(n)
+    a = np.zeros((1000, 1000)).astype(np.float32)
+    radius = 50
+    for circle in circles:
+        circle += [randint(2,radius), 0]
+    return a, circles
+
+def test_draw():
+    a, coords = random_lines(100)
+    draw(a, coords, 2.5)
+    show_array(f"draw", a)
+
+def test_rects():
+    a, coords = random_lines(100)
+    rects(a, coords, 1.0)
+    show_array(f"rects", a)
+
+def test_circles():
+    a, coords = random_circles(100)
+    circles(a, coords, 1.0)
+    show_array(f"circles", a)

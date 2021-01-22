@@ -2,7 +2,7 @@ import numpy as np
 
 from yapocis.rpc.buffers import BufferManager, CPU_ENGINE
 from yapocis.rpc.interfacecl_parser import get_interface
-from yapocis.rpc.kernels import load_program, get_engine, directories, import_program, get_available
+from yapocis.rpc.kernels import load_program, get_engine, import_program, get_available
 
 
 def test_buffers():
@@ -97,7 +97,6 @@ def test_getinterfacecl():
 
 
 def test_compiling():
-    print("Interface search path", directories)
     interfaces = [("convolve", dict(name="convolve", conv=[1, 2, 3, 4, 3, 2, 1])),
                   ("median3x3", dict(steps=[9], width=9)),
                   ("gradient", {}),
@@ -106,7 +105,8 @@ def test_compiling():
                   ("demo", {}),
                   ("xy", {}),
                   ("hsi", {}),
-                      ]
+                  ]
+
     for engine_name in get_available().keys():
         for itest, (interface, context) in enumerate(interfaces):
             program = load_program(interface, engine_name=engine_name, debug=True, **context)
@@ -144,6 +144,7 @@ def test_demo():
     print(program.sum(a, b))
     print(program)
 
+
 def test_import():
-    program = import_program("demo",sum="frabjous_day")
+    program = import_program("demo", sum="frabjous_day")
     assert frabjous_day
