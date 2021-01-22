@@ -1,0 +1,6 @@
+interface operators {
+%for name, operator in operators:
+    kernel ${name}(in float *input1, in float *input2, outlike input1);
+    alias ${name}_res as ${name}(resident float *input1, resident float *input2, resident float *output);
+%endfor
+    };

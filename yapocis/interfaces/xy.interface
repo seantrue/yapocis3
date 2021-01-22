@@ -1,0 +1,3 @@
+interface xy {
+    kernel addr(widthof a, heightof a, in int *a, outlike a, outlike a, outlike a, outlike a);
+};

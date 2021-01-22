@@ -1,0 +1,5 @@
+interface convolves {
+%for name,conv in convs:
+        kernel ${name}(sizeof a, in float* a, outlike a);
+%endfor 
+    };

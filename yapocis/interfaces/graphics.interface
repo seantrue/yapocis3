@@ -1,0 +1,5 @@
+interface graphics {
+    kernel draw(widthof a, heightof a, inout float* a, widthof lines, in float *lines, in float distance);
+    kernel rects(widthof a, heightof a, inout float* a, widthof lines, in float *lines, in float rcolor);
+    kernel circles(widthof a, heightof a, inout float* a, widthof lines, in float *lines, in float rcolor);
+};

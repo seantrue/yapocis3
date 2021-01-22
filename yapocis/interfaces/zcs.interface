@@ -1,0 +1,4 @@
+interface zcs {
+    kernel zcs(widthof int input, heightof int input, in float *input, outlike input);
+    alias zcs_res as zcs(widthof int input, heightof int input, resident float *input, resident float *zcs);
+};
