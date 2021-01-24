@@ -68,6 +68,8 @@ def INTERFACECL_BNF() -> OneOrMore:
         bnf = OneOrMore(moduleItem)
 
         singleLineComment = "//" + restOfLine
+        splatLineComment = "#" + restOfLine
+        bnf.ignore(splatLineComment)
         bnf.ignore(singleLineComment)
         bnf.ignore(cStyleComment)
 

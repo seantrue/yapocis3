@@ -22,6 +22,7 @@ def get_yapocis_device(engine_name:Optional[str] = None):
     device_names = list(devices.keys())
     if engine_name is None:
         engine_name = device_names[0]
+        print(f"Defaulting to {engine_name}")
         # raise RuntimeError(f"Specify an OpenCL device from {device_names}")
     if engine_name not in devices:
         raise RuntimeError(f"{engine_name} not an available device {device_names}")
@@ -31,7 +32,7 @@ MEMFLAGS = mf.READ_WRITE | mf.COPY_HOST_PTR
 
 import yapocis
 from yapocis.rpc.buffers import BufferManager
-from yapocis.rpc.interfacecl_parser import get_interface, InterfaceCL
+from yapocis.rpc.interface_parser import get_interface, InterfaceCL
 from yapocis.yapocis_types import *
 
 
@@ -216,8 +217,8 @@ def import_program(interface_spec: str, engine_name:Optional[str]=None, debug: b
     caller = inspect.currentframe().f_back
     target = inspect.getmodule(caller.f_code)
     for name, callable in program.callable.items():
-        nameas = context.get(name,name)
-        setattr(target, nameas, callable)
+        name_as = context.get(name,name)
+        setattr(target, name_as, callable)
     return program
 
 # Todo: Not thread safe: allocate a new Program and Kernels per thread

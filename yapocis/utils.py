@@ -166,6 +166,7 @@ def to_image(arr: Array, high: int = 255, low: int = 0, cmin: Optional[float] = 
     if numch not in [3, 4]:
         raise ValueError("Channel axis dimension is not valid.")
 
+    strdata = None
     bytedata = byte_scale(data, high=high, low=low, cmin=cmin, cmax=cmax)
     if ca == 2:
         strdata = bytedata.tostring()
@@ -198,7 +199,7 @@ def to_image(arr: Array, high: int = 255, low: int = 0, cmin: Optional[float] = 
 
 
 def newsize(img: PILImage, width: int, height: int, longest: int) -> Tuple[bool, int, int]:
-    if longest != None:
+    if longest is not None:
         width, height = img.size[0], img.size[1]
         resize = False
         if width > height and width > longest:
@@ -328,12 +329,23 @@ def _show_array(*args):
     return title, img
 
 
-def show_array(*args: List[Any]):
+def show_array(*args):
     title, img = _show_array(*args)
     img.show()
 
 
-def show_arraygrad(title: str, image: Array, theta: Array, grad: Optional[Array] = None):
+def show_arraygrad(title: str, image: Array, theta: Array, grad: Optional[Array] = None) -> None:
+    """
+    Show an array with gradient orientation and optional magnitude
+    Args:
+        title: a useful title
+        image: image to annotate
+        theta: array of pi=1.0 angles
+        grad: optional array of gradients, defaults to something visible
+
+    Returns: None
+
+    """
     from PIL import ImageDraw  # @UnresolvedImport
     title, img = _show_array(title, image)
     img = img.convert("RGB")
@@ -416,17 +428,25 @@ def histeq_large(im: Array, nbr_bins=2 ** 16) -> Array:
 
     cdf = imhist.cumsum()  # cumulative distribution function
     # TODO: And here we have a non-linear something or other
-    cdf ** .5
+    # cdf ** .5
     # TODO: This normalization looks wrong for a different number of bins.
-    cdf = (2 ** 16 - 1) * cdf / cdf[-1]  # normalize
+    cdf = (nbr_bins- 1) * cdf / cdf[-1]  # normalize
 
-    # cdf = cdf / (2**16.)  #normalize
     # use linear interpolation of cdf to find new pixel values
     im2 = np.interp(im.flatten(), bins[:-1], cdf)
     return np.array(im2, np.float32).reshape(im.shape)
 
 
 def histeq(im: Array, nbr_bins: int = 256) -> Tuple[Array, Array]:
+    """
+    Histogram equalization quantized to 8 bits. Appropriate for 8 bit images.
+    Args:
+        im: 2d array of pixels
+        nbr_bins: defaults to 256
+
+    Returns: array like im, and the cumulative density table
+
+    """
     imhist, bins = np.histogram(im.flatten(), nbr_bins, normed=True)
     cdf = imhist.cumsum()  # cumulative distribution function
     cdf = 255 * cdf / cdf[-1]  # normalize
@@ -438,6 +458,15 @@ ALIGNMENT = 4
 
 
 def align_image(image: Array, alignment: int = ALIGNMENT) -> Array:
+    """
+    OpenCL really seems to prefer data that is aligned on quadfloat boundaries.
+    Args:
+        image: 2d or 3d arrau
+        alignment: defaults to 4
+
+    Returns: an array whose dimensions are a multiple of alignment.
+
+    """
     assert len(image.shape) in (2, 3)
     width, height = image.shape[:2]
     oddw, oddh = width % alignment, height % alignment
@@ -455,12 +484,30 @@ def align_image(image: Array, alignment: int = ALIGNMENT) -> Array:
 
 
 def normalize(a: Array) -> Array:
+    """
+    Ensures that array contents are in range 0 <= elem < 1.0
+    Args:
+        a: an array to be normalized
+
+    Returns: an array whose min and max values are 0.0 and really close to 1.0
+
+    """
     a = a - a.min()
-    a = a / (a.max() * 1.000001)
+    a = a / (a.max() * (1.0-np.epsilon))
     return a
 
 
 def set_margin(a: Array, margin: int, value: Optional[float] = 0.0) -> None:
+    """
+    Set the edges of a 2D array to a constant value
+    Args:
+        a: a 2D array
+        margin: width of margin
+        value: value to set, defaults to 0.0
+
+    Returns: None
+
+    """
     a[:, -margin:] = value
     a[:, :margin] = value
     a[-margin:, :] = value

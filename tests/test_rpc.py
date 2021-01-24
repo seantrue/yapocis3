@@ -1,7 +1,7 @@
 import numpy as np
 
 from yapocis.rpc.buffers import BufferManager, CPU_ENGINE
-from yapocis.rpc.interfacecl_parser import get_interface
+from yapocis.rpc.interface_parser import get_interface
 from yapocis.rpc.kernels import load_program, get_engine, import_program, get_available
 
 

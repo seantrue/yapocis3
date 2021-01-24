@@ -18,10 +18,13 @@ void addr(int width, int height, __global int* input1, __global int* ad, __globa
     unsigned int y1 = Y(i);
     size_t j = ADDRESS(x1,y1);
     size_t white = ADDRESS(width,height)-1;
-    ad[j] = i;
+    printf("%d %d %d %d %d\n", i, x1, y1, j, white);
+
+   ad[j] = i;
     x[j] = x1;
     y[j] = y1;
     xy[j] = i;
+
     barrier(CLK_GLOBAL_MEM_FENCE);
     if ((x1&63)== 0) {
        xy[j] = 0;
@@ -30,7 +33,7 @@ void addr(int width, int height, __global int* input1, __global int* ad, __globa
     int dx = 32;
     if ((x1&127)==0 && (y1&127)==0) {
        for(int k = 0; k < dx; k++) {
-       	       size_t addr1 = ADDRESS(x1+k,y1+k);
+       	   size_t addr1 = ADDRESS(x1+k,y1+k);
 	       if (addr1 <= white)
 	           xy[addr1] = white;
 	       addr1 = ADDRESS(x1+k, y1-k);
@@ -46,4 +49,5 @@ void addr(int width, int height, __global int* input1, __global int* ad, __globa
 	}
     }
     barrier(CLK_GLOBAL_MEM_FENCE);
+    */
 }

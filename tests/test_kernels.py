@@ -1,20 +1,19 @@
 import numpy as np
 import time
-from random import randint
 
-from yapocis.rpc.kernels import get_available
-from yapocis.kernels.xy import addr as xy_addr
-from yapocis.kernels.zcs import zcs
-from yapocis.kernels.gaussian import gauss_1d, are_close, gaussians, get_scales, get_gaussian_kernel, get_gaussian, \
-    gauss_image, \
-    zcsdog
-from yapocis.kernels.operators import add, add_res, program, sub, sub_res, mul, mul_res
-from yapocis.kernels.graphics import draw, rects, circles
-from yapocis.rpc import kernels, interfaces
-from yapocis.utils import show_array, stage
+from yapocis.rpc import kernels
+from yapocis.utils import show_array, stage, imread
 from yapocis.kernels.hsi import rgb2hsi, hsi2rgb
 from yapocis.channels import split_channels, join_channels
+
+from yapocis.rpc.kernels import get_available
+
+from yapocis.kernels.zcs import zcs
+from yapocis.kernels.gaussian import gauss_1d, are_close, gaussians, get_scales, get_gaussian_kernel, \
+    get_gaussian, gauss_image, zcsdog
+from yapocis.kernels.operators import add, add_res, program, sub, sub_res, mul, mul_res
 from yapocis.kernels.median import median3x3fast, median3x3slow
+import yapocis.kernels.peronamalik2 as peronamalik2
 
 
 def test_gaussian_1d():
@@ -156,15 +155,6 @@ def test_operators():
     # assert a.sum() == d.sum()
 
 
-def test_xy():
-    a = np.zeros((402, 798), dtype=np.int32)
-    addr, x, y, label = xy_addr(a)
-    show_array("addr", addr)
-    show_array("x", x)
-    show_array("y", y)
-    show_array("label", label)
-
-
 def test_zcs():
     image = np.zeros((512, 512), dtype=np.float32)
     image[255, 255] = 1.0
@@ -177,52 +167,13 @@ def test_zcs():
     show_array("dog", dog)
     show_array("zca", zca)
 
+def test_perona_malik():
+   rgb = imread("tests/test.jpg").astype(np.float32)/256
+   show_array("org", rgb)
+   for i, rgb2 in enumerate(peronamalik2.pm_filter_rgbIS(rgb)):
+      if i >= 100:
+         break
+   show_array(f"100", rgb2)
 
-def random_points(n):
-    a = np.zeros((1000, 1000)).astype(np.float32)
 
-    def rx():
-        return randint(0, a.shape[0])
 
-    def ry():
-        return randint(0, a.shape[1])
-
-    a[:, :] = 0.0
-    points = []
-    for iline in range(n):
-        x, y = rx(), ry()
-        points.append([x, y])
-    return a, points
-
-def random_lines(n):
-    a, lines = random_points(n)
-    a = np.zeros((1000, 1000)).astype(np.float32)
-    length = 50
-    for line in lines:
-        x,y = line
-        x1, y1 = x + randint(-length, length), y + randint(-length, length)
-        line += [x1, y1]
-    return a, lines
-
-def random_circles(n):
-    a, circles = random_points(n)
-    a = np.zeros((1000, 1000)).astype(np.float32)
-    radius = 50
-    for circle in circles:
-        circle += [randint(2,radius), 0]
-    return a, circles
-
-def test_draw():
-    a, coords = random_lines(100)
-    draw(a, coords, 2.5)
-    show_array(f"draw", a)
-
-def test_rects():
-    a, coords = random_lines(100)
-    rects(a, coords, 1.0)
-    show_array(f"rects", a)
-
-def test_circles():
-    a, coords = random_circles(100)
-    circles(a, coords, 1.0)
-    show_array(f"circles", a)
