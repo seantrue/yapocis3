@@ -4,7 +4,7 @@ from random import randint, shuffle
 from yapocis.utils import show_array, imread
 from yapocis.channels import join_channels, split_channels
 from yapocis.lib.hsi import rgb2hsi
-from yapocis.lib.graphics import KernelDraw, KernelDraw3
+from yapocis.lib.kerneldraw import KernelDraw, KernelDraw3
 from yapocis.lib.graphics import lines, rects, circles, triangles, ellipses, composite, sprites, draw_strings
 
 from . import test_image_path

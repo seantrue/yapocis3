@@ -5,7 +5,8 @@ from yapocis.yapocis_types import *
 DEBUG = False
 
 from yapocis.utils import *
-from yapocis.lib.graphics import KernelDraw, KernelDraw3
+from yapocis.lib.kerneldraw import KernelDraw, KernelDraw3
+
 
 def sign(title: str, img: np.ndarray) -> np.ndarray:
     img = img.astype(np.float32)
