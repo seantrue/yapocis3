@@ -10,4 +10,6 @@ interface graphics {
     alias triangles_in as triangles(widthof a, heightof a, resident float* a, widthof lines, in float *lines, in float *rcolor);
     kernel ellipses(widthof a, heightof a, inout float* a, widthof lines, in float *lines, in float *rcolor);
     alias ellipses_in as ellipses(widthof a, heightof a, resident float* a, widthof lines, in float *lines, in float *rcolor);
+    kernel composite(widthof a, heightof a, inout float* a, widthof lines, in int *lines, in float *pixels, in int *ipixels,  widthof pixels);
+    alias composite_in as composite(widthof a, heightof a, resident float* a, widthof lines, in int *lines, in float *pixels, in int *ipixels,  widthof pixels);
 };

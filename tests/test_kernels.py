@@ -1,19 +1,20 @@
 import numpy as np
 import time
 
-from yapocis.rpc import kernels
+import yapocis.rpc.programs
+from yapocis.rpc import engines
 from yapocis.utils import show_array, stage, imread
-from yapocis.kernels.hsi import rgb2hsi, hsi2rgb
+from yapocis.lib.hsi import rgb2hsi, hsi2rgb
 from yapocis.channels import split_channels, join_channels
 
-from yapocis.rpc.kernels import get_available
+from yapocis.rpc.engines import get_available
 
-from yapocis.kernels.zcs import zcs
-from yapocis.kernels.gaussian import gauss_1d, are_close, gaussians, get_scales, get_gaussian_kernel, \
+from yapocis.lib.zcs import zcs
+from yapocis.lib.gaussian import gauss_1d, are_close, gaussians, get_scales, get_gaussian_kernel, \
     get_gaussian, gauss_image, zcsdog
-from yapocis.kernels.operators import add, add_res, program, sub, sub_res, mul, mul_res
-from yapocis.kernels.median import median3x3fast, median3x3slow
-import yapocis.kernels.peronamalik2 as peronamalik2
+from yapocis.lib.operators import add, add_res, program, sub, sub_res, mul, mul_res
+from yapocis.lib.median import median3x3fast, median3x3slow
+import yapocis.lib.peronamalik2 as peronamalik2
 
 
 def test_gaussian_1d():
@@ -77,7 +78,7 @@ def test_gradient():
     b = np.gradient(a)
     print("Numpy seconds", time.time() - t)
     for engine_name in get_available().keys():
-        program = kernels.load_program("gradient", engine_name=engine_name)
+        program = yapocis.rpc.programs.load_program("gradient", engine_name=engine_name)
         t = time.time()
         c = program.gradient(a, 1)
         print("Engine %s seconds %s" % (engine_name, time.time() - t))

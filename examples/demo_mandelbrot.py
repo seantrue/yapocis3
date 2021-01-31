@@ -29,12 +29,14 @@ from functools import reduce
 # Speed notes are listed in the same place
 
 # set width and height of window, more pixels take longer to calculate
+import yapocis.rpc.programs
+
 w = 1024
 h = 1024
 
 # Use the rpc extension to define and load the kernel as a callable.
 from rpc import kernels, interfaces
-kernels.import_program("mandelbrot", engine=kernels.CPU_ENGINE)
+yapocis.rpc.programs.import_program("mandelbrot", engine=kernels.CPU_ENGINE)
 calc_fractal_opencl = mandelbrot
 
 

@@ -1,3 +1,3 @@
-from yapocis.rpc.kernels import get_available
+from yapocis.rpc.engines import get_available
 
 print(get_available())

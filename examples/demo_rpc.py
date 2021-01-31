@@ -1,15 +1,15 @@
 '''
 Created on Jul 21, 2011
-@summary: Test yapocis kernels
+@summary: Test yapocis lib
 @author: seant
 '''
 
 import numpy as np
 from yapocis.utils import imread
 from yapocis.utils import show_array, show_arraygrad
-from yapocis.kernels.median import median3x3
-from yapocis.kernels.gradient import gradient
-from yapocis.kernels.hsi import rgb2hsi, hsi2rgb
+from yapocis.lib.median import median3x3
+from yapocis.lib.gradient import gradient
+from yapocis.lib.hsi import rgb2hsi, hsi2rgb
 from yapocis.channels import split_channels, join_channels
 
 
@@ -38,7 +38,7 @@ def test():
     show_array("S", s)
     show_array("H", h)
 
-    from yapocis.kernels.gaussian import gauss_image
+    from yapocis.lib.gaussian import gauss_image
     blur = gauss_image(i, 3)
     show_array("Blur", blur)
     blurmore = gauss_image(i, 4)

@@ -1,7 +1,9 @@
 import numpy as np
-from yapocis.rpc import kernels
+
+import yapocis.rpc.programs
+from yapocis.rpc import engines
 draw_cl = None
-kernels.import_program("draw", draw="draw_cl")
+yapocis.rpc.programs.import_program("draw", draw="draw_cl")
 
 def draw(lines, image, color=0.0):
     lines = np.array(lines)

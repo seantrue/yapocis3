@@ -3,12 +3,14 @@ Created on Jul 22, 2011
 
 @author: seant
 '''
+import yapocis.rpc.programs
+
 DEBUG = False
-from yapocis.rpc import kernels, interfaces
+from yapocis.rpc import engines, interfaces
 from yapocis.yapocis_types import *
 
 rgb2hsi_cl = hsi2rgb_cl = None
-kernels.import_program("hsi",rgb2hsi="rgb2hsi_cl",hsi2rgb="hsi2rgb_cl")
+yapocis.rpc.programs.import_program("hsi", rgb2hsi="rgb2hsi_cl", hsi2rgb="hsi2rgb_cl")
 
 def rgb2hsi(r:Array, g:Array, b:Array) -> Tuple[Array,Array,Array]:
     h, s, i = rgb2hsi_cl(r, g, b) #@UnusedVariable

@@ -1,79 +1,16 @@
-import os, time
+import os
+import time
+import numpy as np
+from typing import List, Optional, Callable, Tuple, Any, Union
+
 import pyopencl
-from pyopencl import mem_flags as mf  # @UnusedImport
-from yapocis.yapocis_types import *
-
-from pyopencl import get_platforms
-def get_available():
-    platforms = get_platforms()
-    devices = {}
-    for platform in platforms:
-        for device in platform.get_devices():
-            devices[device.name] = device
-            if len(platforms) > 1:
-                devices[f"{platform.name}:{device.name}"] = device
-    return devices
-
-def get_yapocis_device(engine_name:Optional[str] = None):
-    engine_name = os.environ.get("YAPOCIS_ENGINE",None) if engine_name is None else engine_name
-    devices = get_available()
-    if not devices:
-        raise RuntimeError("No OpenCL devices found")
-    device_names = list(devices.keys())
-    if engine_name is None:
-        engine_name = device_names[0]
-        print(f"Defaulting to {engine_name}")
-        # raise RuntimeError(f"Specify an OpenCL device from {device_names}")
-    if engine_name not in devices:
-        raise RuntimeError(f"{engine_name} not an available device {device_names}")
-    return engine_name, devices[engine_name]
-
-MEMFLAGS = mf.READ_WRITE | mf.COPY_HOST_PTR
+from mako.lookup import TemplateLookup
+from mako.template import Template
 
 import yapocis
-from yapocis.rpc.buffers import BufferManager
-from yapocis.rpc.interface_parser import get_interface, InterfaceCL
-from yapocis.yapocis_types import *
-
-
-class Engine:
-    def __init__(self, engine_name: Optional[str] = None, autoflatten: bool = True):
-        self.engine_name, self.device = get_yapocis_device(engine_name=engine_name)
-        self.ctx = pyopencl.Context([self.device])
-        self.queue = pyopencl.CommandQueue(self.ctx)
-        self.bmgr = BufferManager(context=self.ctx, queue=self.queue)
-        self.context_meta = {}
-        self.calls = 0
-        self.runtime = 0.0
-        self.autoflatten = autoflatten
-
-    def build(self, source: str) -> pyopencl.Program:
-        binary = pyopencl.Program(self.ctx, source)
-        program = binary.build(options=["-w"])
-        return program
-
-    def purge(self):
-        self.bmgr.purge_buffers()
-
-    def write(self, a: Array) -> pyopencl.Buffer:
-        assert hasattr(a, "dtype")
-        return self.bmgr.write_buffer(a)
-
-    def read(self, a: Array) -> Optional[pyopencl.Buffer]:
-        return self.bmgr.read_buffer(a)
-
-    def ensure(self, a: Array) -> pyopencl.Buffer:
-        return self.bmgr.ensure_buffer(a)
-
-
-def get_engine(engine_name: Optional[str] = None) -> Engine:
-    """Takes the identifier for an OpenCL engine (CPU_ENGINE, GPU_ENGINE)
-    and returns a Engine with buffer management ."""
-    return Engine(engine_name)
-
-
-from mako.template import Template
-from mako.lookup import TemplateLookup
+from yapocis.rpc.engines import get_engine, Engine
+from yapocis.rpc.interface_parser import InterfaceCL, get_interface
+from yapocis.yapocis_types import Context, Array
 
 
 def find_file(dirs: List[str], subdirs: List[str], filename: str) -> Optional[str]:
@@ -95,12 +32,13 @@ def find_yapocis_file(subdirs:List[str], filename:str) -> Optional[str]:
     tfilename = find_file(directories, subdirs, filename)
     return tfilename
 
+
 def render_program(filename: str, **context: Context) -> str:
     """
     Takes the basename of a mako template file, and uses context to generate an OpenCL program
     """
     filename += ".mako"
-    tfilename = find_yapocis_file(["kernel_source", "."], filename)
+    tfilename = find_yapocis_file(["kernels", "."], filename)
     if not tfilename:
         raise Exception("Can't find template '%s'" % filename)
     mylookup = TemplateLookup(directories=[os.path.dirname(tfilename)])
@@ -181,6 +119,7 @@ class Program:
         self.purge()
         return "%(interfacename)s engine:%(engine)s calls:%(calls)s hits:%(hits)s misses:%(misses)s buffers:%(buffers)s runtime:%(runtime)s" % self.stats()
 
+
 def load_interface(interface_spec:str) -> str:
     """
     Find an interface, or return source if it is an interface spec.
@@ -199,6 +138,7 @@ def load_interface(interface_spec:str) -> str:
     with open(path) as inf:
         return inf.read()
 
+
 def load_program(interface_spec: str, engine_name: Optional[str] = None, debug: bool = False, **context: Context):
     """
     Primary interface for yapocis.rpc
@@ -211,6 +151,7 @@ def load_program(interface_spec: str, engine_name: Optional[str] = None, debug: 
     if debug: print("Interface", interface)
     return Program(interface, engine_name, debug=debug, **context)
 
+
 def import_program(interface_spec: str, engine_name:Optional[str]=None, debug: bool = False, **context: Context):
     program = load_program(interface_spec, engine_name=engine_name,debug=debug,**context)
     import inspect
@@ -221,7 +162,7 @@ def import_program(interface_spec: str, engine_name:Optional[str]=None, debug: b
         setattr(target, name_as, callable)
     return program
 
-# Todo: Not thread safe: allocate a new Program and Kernels per thread
+
 class Kernel:
     """
     Provide a callable interface to an OpenCL kernel function.

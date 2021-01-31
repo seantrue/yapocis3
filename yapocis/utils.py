@@ -222,7 +222,6 @@ def imread(filename: str, longest: Optional[int] = None) -> Array:
         img = img.resize((width, height))
     a = from_image(img).astype(np.float32)
     if len(a.shape) == 3 and a.shape[2] == 4:
-        print("Dropping alpha")
         a = a[:, :, 0:3]
     return a
 
@@ -284,7 +283,7 @@ def sign(title: str, img: Union[Array, PILImage]) -> Image:
         ink = "white"
     else:
         ink = "black"
-    draw.text((10, height - 75), title, ink, font=font)
+    draw.draw_string((10, height - 75), title, ink, font=font)
     return img
 
 
@@ -301,12 +300,10 @@ def _show_array(*args):
         title = "showarray %s" % _showArrayCounter
     if array.dtype != np.uint8:
         array = array.copy()
-        print(title, "*", array.shape, array.min(), array.max())
         if array.dtype in (np.float32, np.float64, np.float):
             array -= array.min()
             array /= array.max()
             array *= 255.
-            print(title, array.shape, array.min(), array.max())
             array = array.astype(np.uint8)
     img = Image.fromarray(array)
     shape = array.shape

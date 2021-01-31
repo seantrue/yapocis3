@@ -127,3 +127,50 @@ void ellipses(int width, int height,  __global float *a, int nlines, __global fl
     a[i] = color;
     barrier(CLK_GLOBAL_MEM_FENCE);
 }
+
+//#define DEBUG
+__kernel
+void composite(int width, int height,  __global float *a, int n, __global int4 *coords,
+                __global float2 *pixels, __global int *ipixels, int npixels)
+{
+    size_t i =  get_global_id(0);
+    float color = a[i];
+    float saved_color = color;
+    int2 xy = (int2) (i/height,(i-((i/height)*height)));
+    for (int j=0; j < n; j++) {
+        // Get the x,y,w,h of the destination
+        int4 coord = coords[j];
+        // Get the first pixel location in the pixel buffer
+        int ipixel = ipixels[j];
+        int2 lb = coord.s10;
+        int2 yt = coord.s10 + coord.s32;
+        // Is the current xy inside the destination area?
+        int outside = any(isless(xy,lb)) + any(isgreaterequal(xy,yt));
+        int2 source_location = xy-lb;
+        int source_offset = (source_location.x*coord.s2)+source_location.y;
+        int ipixel_source = ipixel + source_offset;
+        int inside = !outside && 0<=ipixel_source && ipixel_source < npixels;
+        float2 color_alpha = inside ? pixels[ipixel_source] : (float2)(0.0f,0.0f);
+        float clr = (color_alpha.s0*color_alpha.s1)+(color*(1.0-color_alpha.s1));
+        color = inside ? clr : color;
+#ifdef DEBUG
+        if (inside && xy.x < 100 && xy.y < 100) {
+            printf("\n");
+            printf("x,y %d %d\n", xy.x, xy.y);
+            printf("w,h %d %d\n", width, height);
+            printf("ipixel %d\n", ipixel);
+            printf("i,j %d %d\n", i, j);
+            printf("lb %d %d yt %d %d\n", lb.x, lb.y, yt.x, yt.y);
+            printf("outside %d\n", outside);
+            printf("source location %d %d\n", source_location.x, source_location.y);
+            printf("source offset %d\n", source_offset);
+            printf("ipixel+source_offset %d\n", ipixel_source);
+            printf("a[i] %.4f color_alpha %.4f %.4f\n", saved_color, color_alpha.s0, color_alpha.s1);
+            printf("new color %.4f",clr);
+            printf("\n");
+        }
+#endif
+    }
+    a[i] = color;
+    barrier(CLK_GLOBAL_MEM_FENCE);
+}

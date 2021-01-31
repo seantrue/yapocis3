@@ -2,7 +2,8 @@ import numpy as np
 
 from yapocis.rpc.buffers import BufferManager, CPU_ENGINE
 from yapocis.rpc.interface_parser import get_interface
-from yapocis.rpc.kernels import load_program, get_engine, import_program, get_available
+from yapocis.rpc.engines import get_engine, get_available
+from yapocis.rpc.programs import load_program, import_program
 
 
 def test_buffers():

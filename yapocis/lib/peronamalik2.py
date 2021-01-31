@@ -4,11 +4,11 @@
 import numpy
 
 from yapocis.channels import split_channels, join_channels
-from yapocis.kernels.hsi import *
+from yapocis.lib.hsi import *
 from yapocis.yapocis_types import *
 
-import yapocis.kernels.peronamalik
-from yapocis.kernels.peronamalik import _peronamalik as peronamalik, _peronamalik_res as peronamalik_res
+import yapocis.lib.peronamalik
+from yapocis.lib.peronamalik import _peronamalik as peronamalik, _peronamalik_res as peronamalik_res
 
 def _exp(image_gradient: Array, scale: float):
     return numpy.exp(-(numpy.absolute(image_gradient) / scale) ** 2)

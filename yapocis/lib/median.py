@@ -4,12 +4,14 @@ Created on Jul 22, 2011
 '''
 
 import numpy as np
-from yapocis.rpc import kernels, interfaces
+
+import yapocis.rpc.programs
+from yapocis.rpc import engines, interfaces
 from yapocis.yapocis_types import *
 
 # Provision this program with just one median filter, fixed length of 9
 first = last = median3x3_cl = None
-program = kernels.import_program("median3x3", median3x3="median3x3_cl", width=9, steps=[9])
+program = yapocis.rpc.programs.import_program("median3x3", median3x3="median3x3_cl", width=9, steps=[9])
 
 def median3x3slow(image:Array, iterations:int=1) -> Array:
     while iterations > 0:

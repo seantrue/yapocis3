@@ -1,4 +1,5 @@
-from yapocis.rpc import kernels, interfaces
+import yapocis.rpc.programs
+from yapocis.rpc import engines, interfaces
 import numpy
 import numpy.linalg as la
 import time
@@ -9,7 +10,7 @@ b = numpy.random.rand(50000)
 
 t = time.time()
 # We don't need to manage a compiler and linker, that can be done for us
-demo = kernels.load_program("demo")
+demo = yapocis.rpc.programs.load_program("demo")
 
 # We don't need to manage buffers, that can be done for us
 a_plus_b = demo.sum(a,b)
