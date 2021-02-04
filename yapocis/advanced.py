@@ -1,10 +1,8 @@
-from PIL import Image, ImageFont, ImageDraw
-import numpy as np
-from yapocis.yapocis_types import *
-
 DEBUG = False
 
-from yapocis.utils import *
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+
+from yapocis.basic import *
 from yapocis.lib.kerneldraw import KernelDraw, KernelDraw3
 
 

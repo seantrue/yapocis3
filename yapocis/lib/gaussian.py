@@ -1,12 +1,13 @@
-import yapocis.rpc.programs
-from yapocis.rpc import interfaces, engines
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-from yapocis.utils import set_margin, set_frame
+import yapocis.rpc.programs
+
+from yapocis.basic import set_margin, set_frame
 from yapocis.lib.gradient import gradient
 
 from yapocis.lib.operators import sub_res
 from yapocis.lib.zcs import zcs, zcs_res
-from yapocis.yapocis_types import *
+from yapocis.lib.yapocis_types import *
 
 def are_close(a:Array, b:Array) -> bool:
     eps = .00001

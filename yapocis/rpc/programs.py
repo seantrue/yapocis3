@@ -1,3 +1,5 @@
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+
 import os
 import time
 import numpy as np
@@ -9,8 +11,8 @@ from mako.template import Template
 
 import yapocis
 from yapocis.rpc.engines import get_engine, Engine
-from yapocis.rpc.interface_parser import InterfaceCL, get_interface
-from yapocis.yapocis_types import Context, Array
+from yapocis.rpc.parser import InterfaceCL, get_interface
+from yapocis.lib.yapocis_types import Context, Array
 
 
 def find_file(dirs: List[str], subdirs: List[str], filename: str) -> Optional[str]:
@@ -152,15 +154,20 @@ def load_program(interface_spec: str, engine_name: Optional[str] = None, debug: 
     return Program(interface, engine_name, debug=debug, **context)
 
 
-def import_program(interface_spec: str, engine_name:Optional[str]=None, debug: bool = False, **context: Context):
+def import_program(interface_spec: str, engine_name:Optional[str]=None,
+                   namespace:bool=False, debug: bool = False, import_kernels=None, **context: Context):
     program = load_program(interface_spec, engine_name=engine_name,debug=debug,**context)
     import inspect
     caller = inspect.currentframe().f_back
     target = inspect.getmodule(caller.f_code)
     for name, callable in program.callable.items():
-        name_as = context.get(name,name)
-        setattr(target, name_as, callable)
-    return program
+        if import_kernels == "*" or name in context:
+            name_as = context.get(name,name)
+            setattr(target, name_as, callable)
+    if namespace:
+        return program, program.callable
+    else:
+        return program, list(program.callable.values())
 
 
 class Kernel:

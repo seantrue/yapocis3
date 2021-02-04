@@ -3,6 +3,8 @@ py
 Created on Aug 12, 2011
 Copyright (c) 2011, Sean D. True
 '''
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+
 # Standard demo, interface spec supports c=sum(a,b)
 demo = """
 interface demo {

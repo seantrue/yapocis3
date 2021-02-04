@@ -1,7 +1,9 @@
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+
 import numpy as np
 
 from yapocis.rpc.buffers import BufferManager, CPU_ENGINE
-from yapocis.rpc.interface_parser import get_interface
+from yapocis.rpc.parser import get_interface
 from yapocis.rpc.engines import get_engine, get_available
 from yapocis.rpc.programs import load_program, import_program
 
@@ -104,7 +106,6 @@ def test_compiling():
                   ("convolves", dict(convs=[("boxone", [1, 1, 1]), ("triangle", [.5, 1, .5])])),
                   ("mandelbrot", {}),
                   ("demo", {}),
-                  ("xy", {}),
                   ("hsi", {}),
                   ]
 
@@ -138,14 +139,13 @@ def test_context():
 
 
 def test_demo():
-    program = load_program("demo")
-    print(program.sum)
+    _,entrypoints = import_program("demo",sum="sum")
+    assert sum == entrypoints[0]
     a = np.array([0, 1, 2, 3]).astype(np.float32)
     b = np.array([1, 1, 1, 1]).astype(np.float32)
-    print(program.sum(a, b))
-    print(program)
+    assert sum(a, b).sum() == 10
 
 
 def test_import():
-    program = import_program("demo", sum="frabjous_day")
-    assert frabjous_day
+    import_program("demo", sum="frabjous_day")
+    assert callable(frabjous_day)

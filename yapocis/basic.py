@@ -1,6 +1,7 @@
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+
 from PIL import Image, ImageFont, ImageDraw
-import numpy as np
-from yapocis.yapocis_types import *
+from yapocis.lib.yapocis_types import *
 
 DEBUG = False
 

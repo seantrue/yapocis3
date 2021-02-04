@@ -1,11 +1,12 @@
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+
 import numpy as np
 import time
 
 import yapocis.rpc.programs
-from yapocis.rpc import engines
-from yapocis.utils import show_array, stage, imread
+from yapocis.basic import show_array, stage, imread
 from yapocis.lib.hsi import rgb2hsi, hsi2rgb
-from yapocis.channels import split_channels, join_channels
+from yapocis.lib.channels import split_channels, join_channels
 
 from yapocis.rpc.engines import get_available
 
@@ -16,6 +17,8 @@ from yapocis.lib.operators import add, add_res, program, sub, sub_res, mul, mul_
 from yapocis.lib.median import median3x3fast, median3x3slow
 import yapocis.lib.peronamalik2 as peronamalik2
 
+from . import test_image_path
+test_image = test_image_path()
 
 def test_gaussian_1d():
     "Make sure that the kernel sums back to 1"
@@ -169,7 +172,7 @@ def test_zcs():
     show_array("zca", zca)
 
 def test_perona_malik():
-   rgb = imread("tests/test.jpg").astype(np.float32)/256
+   rgb = imread(test_image).astype(np.float32)/256
    show_array("org", rgb)
    for i, rgb2 in enumerate(peronamalik2.pm_filter_rgbIS(rgb)):
       if i >= 100:

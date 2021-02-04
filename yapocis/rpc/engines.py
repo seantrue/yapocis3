@@ -1,8 +1,10 @@
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+
 import os
 import pyopencl
 from pyopencl import mem_flags as mf  # @UnusedImport
 from yapocis.rpc.buffers import BufferManager
-from yapocis.yapocis_types import *
+from yapocis.lib.yapocis_types import *
 MEMFLAGS = mf.READ_WRITE | mf.COPY_HOST_PTR
 
 

@@ -8,6 +8,8 @@ two neighbours; a dead cell is brought to life if it has exactly three
 neighbours (determined in Cell::setNextState).
     Iain Haslam, June 2005.
 """ 
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+
 from tkinter import *
 root = Tk()
  

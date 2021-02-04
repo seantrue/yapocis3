@@ -1,13 +1,15 @@
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+
 #
 # interfacecl.py
 #
 # Process an improper subset of the CORBA IDL grammar to facilitate calling opencl from a python Numpy framework
 # Inspired by an IDL parser by Paul McGuire, shipped as a demo with pyparser
 #
-from yapocis.yapocis_types import *
-from pyparsing import Literal, CaselessLiteral, Word, upcaseTokens, OneOrMore, ZeroOrMore, \
-    Forward, NotAny, delimitedList, oneOf, Group, Optional, Combine, alphas, nums, restOfLine, cStyleComment, \
-    alphanums, printables, empty, quotedString, ParseException, ParseResults, Keyword
+from yapocis.lib.yapocis_types import *
+from pyparsing import Literal, Word, OneOrMore, ZeroOrMore, \
+    delimitedList, Group, Optional, alphas, restOfLine, cStyleComment, \
+    alphanums, ParseException, Keyword
 
 bnf = None
 

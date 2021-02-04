@@ -1,3 +1,5 @@
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+
 # I adapted Holger's adaptation to show use of pyopencl.rpc
 # Thanks to Holger and Ian for the very useful demo.
 # Sean True
@@ -34,10 +36,8 @@ import yapocis.rpc.programs
 w = 1024
 h = 1024
 
-# Use the rpc extension to define and load the kernel as a callable.
-from rpc import kernels, interfaces
-yapocis.rpc.programs.import_program("mandelbrot", engine=kernels.CPU_ENGINE)
-calc_fractal_opencl = mandelbrot
+# Use the rpc extension to define and load the kernel as a callable, importing the kernel "mandelbrot" as "calc_fractal_opencl"
+yapocis.rpc.programs.import_program("mandelbrot", mandelbrot="calc_fractal_opencl", engine=0)
 
 
 
@@ -73,7 +73,7 @@ def calc_fractal_numpy(q, maxiter):
 
 # choose your calculation routine here by uncommenting one of the options
 calc_fractal = calc_fractal_opencl
-# calc_fractal = calc_fractal_serial
+#calc_fractal = calc_fractal_serial
 #calc_fractal = calc_fractal_numpy
 
 if __name__ == '__main__':

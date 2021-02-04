@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+
 #
 # Yapocis documentation build configuration file, created by
 # sphinx-quickstart on Mon Aug 15 11:50:26 2011.

@@ -1,9 +1,10 @@
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+
 import numpy as np
 
 import yapocis.rpc.programs
-from yapocis.rpc import engines
 draw_cl = None
-yapocis.rpc.programs.import_program("draw", draw="draw_cl")
+yapocis.rpc.programs.import_program("draw",draw="draw_cl")
 
 def draw(lines, image, color=0.0):
     lines = np.array(lines)
@@ -12,7 +13,7 @@ def draw(lines, image, color=0.0):
     return image
 
 def test_draw():
-    from yapocis.utils import show_array, stage
+    from yapocis.basic import show_array, stage
     from random import randint
     a = np.ones((1000,1000)).astype(np.float32)
     def rx():

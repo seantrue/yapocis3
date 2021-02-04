@@ -4,13 +4,15 @@ Created on Jul 21, 2011
 @author: seant
 '''
 
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+
 import numpy as np
-from yapocis.utils import imread
-from yapocis.utils import show_array, show_arraygrad
+from yapocis.basic import imread
+from yapocis.basic import show_array, show_arraygrad
 from yapocis.lib.median import median3x3
 from yapocis.lib.gradient import gradient
 from yapocis.lib.hsi import rgb2hsi, hsi2rgb
-from yapocis.channels import split_channels, join_channels
+from yapocis.lib.channels import split_channels, join_channels
 
 
 def test():

@@ -1,4 +1,5 @@
-import yapocis.rpc.programs
-from yapocis.rpc import interfaces, engines
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-program = yapocis.rpc.programs.import_program("operators", operators=[("add", "+"), ("sub", "-"), ("mul", "*"), ("div", "/")])
+import yapocis.rpc.programs
+
+program, _ = yapocis.rpc.programs.import_program("operators", import_kernels="*", operators=[("add", "+"), ("sub", "-"), ("mul", "*"), ("div", "/")])

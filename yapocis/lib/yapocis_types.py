@@ -1,3 +1,5 @@
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+
 import numpy as np
 from typing import Dict, Any, List, Union, Optional, Callable, Set, Tuple
 import PIL.Image

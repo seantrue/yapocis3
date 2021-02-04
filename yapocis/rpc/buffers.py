@@ -1,13 +1,15 @@
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+
 import os
 from weakref import WeakValueDictionary as Weak
 
 import pyopencl
 from pyopencl import mem_flags as mf
 
-from yapocis.yapocis_types import *
+from yapocis.lib.yapocis_types import *
 
-GPU_ENGINE = 0
-CPU_ENGINE = 1
+GPU_ENGINE = 1
+CPU_ENGINE = 0
 
 
 # Numpy makes a big deal out of .copy() being a deepcopy. Hah!

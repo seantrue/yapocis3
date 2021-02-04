@@ -1,25 +1,42 @@
 '''
 Provides 2d median filter for 2d arrays
-Created on Jul 22, 2011
 '''
 
-import numpy as np
+
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import yapocis.rpc.programs
-from yapocis.rpc import engines, interfaces
-from yapocis.yapocis_types import *
+from yapocis.lib.yapocis_types import *
 
 # Provision this program with just one median filter, fixed length of 9
-first = last = median3x3_cl = None
-program = yapocis.rpc.programs.import_program("median3x3", median3x3="median3x3_cl", width=9, steps=[9])
+first = last = median3x3_cl = step = None
+yapocis.rpc.programs.import_program("median3x3", import_kernels="*", median3x3="median3x3_cl", width=9, steps=[9])
 
 def median3x3slow(image:Array, iterations:int=1) -> Array:
+    """
+    3x3 median filter reading and writing the data on each pass
+    Args:
+        image:
+        iterations:
+
+    Returns: A copy of the array.
+
+    """
     while iterations > 0:
         image = median3x3_cl(image)
         iterations -= 1
     return image.copy()
 
 def median3x3fast(image:Array, iterations:int=1) -> Array:
+    """
+    3x3 median filter iterating use ping/pong buffers on the device.
+    Args:
+        image:
+        iterations:
+
+    Returns: A copy of the array.
+
+    """
     if iterations == 1:
         # One pass through
         return median3x3_cl(image)

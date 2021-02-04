@@ -1,10 +1,15 @@
+"""
+Low level wrappers around the OpenCL graphics kernels.
+"""
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+
 import numpy as np
 
 import yapocis.rpc.programs
 from yapocis.lib.text import render_text
 
 lines_cl = rects_cl = circles_cl = triangles_cl = ellipses_cl = composite_cl = None
-program = yapocis.rpc.programs.import_program("graphics", lines="lines_cl", rects="rects_cl", circles="circles_cl",
+program, _ = yapocis.rpc.programs.import_program("graphics", lines="lines_cl", rects="rects_cl", circles="circles_cl",
                                               triangles="triangles_cl", ellipses="ellipses_cl", composite="composite_cl")
 
 
@@ -124,12 +129,12 @@ def sprites_setup(locations, sprites, alpha):
     return coords, buffer, ipixels
 
 
-def lines(image, coords, distance=1.0, colors=None, alpha=None):
+def lines(image, coords, width=1.0, colors=None, alpha=None):
     if not coords:
         return
     coords = coerce_coords(coords, 4)
     colors = coerce_colors_alpha(coords, colors, alpha)
-    lines_cl(image, coords, distance, colors)
+    lines_cl(image, coords, width, colors)
 
 
 def rects(image, coords, colors=None, alpha=None):
@@ -178,7 +183,7 @@ def composite(image, locations, blocks, alpha=None):
     composite_cl(image, coords, buffer, ipixels)
 
 
-def sprites(image, locations, sprites, alphas=None):
+def sprites(image, locations, sprites, alpha=None):
     """
     Composite sprites into target image
     Args:
@@ -189,31 +194,33 @@ def sprites(image, locations, sprites, alphas=None):
     Returns: None
 
     """
-    coords, buffer, ipixels = sprites_setup(locations, sprites, alphas)
+    coords, buffer, ipixels = sprites_setup(locations, sprites, alpha)
     composite_cl(image, coords, buffer, ipixels)
 
 
-def setup_texts(locations, texts, fonts, sizes, alphas):
+def setup_texts(locations, texts, fonts, sizes, alpha):
     sizes = 32 if sizes is None else sizes
-    alphas = 1.0 if alphas is None else alphas
+    alpha = 1.0 if alpha is None else alpha
     if not isinstance(fonts, (list, tuple)):
         fonts = [fonts] * len(locations)
     if not isinstance(sizes, (list, tuple)):
         sizes = [sizes] * len(locations)
-    if isinstance(alphas, str):
-        alphas = [alphas] * len(locations)
+    if isinstance(alpha, str):
+        alpha = [alpha] * len(locations)
     blocks = [render_text(text, font_name, size) for text, font_name, size in zip(texts, fonts, sizes)]
-    if isinstance(alphas, (list, tuple)):
+    if isinstance(alpha, (list, tuple)):
         new_alphas = []
-        for alpha, block in zip(alphas, blocks):
-            if alpha == "mask":
-                alpha = block
-            new_alphas.append(alpha)
-        alphas = new_alphas
-    return locations, blocks, alphas
+        for alpha_, block in zip(alpha, blocks):
+            if alpha_ == "mask":
+                alpha_ = block
+            elif alpha_ == "bug":
+                alpha_ = np.maximum(block,.33)
+            new_alphas.append(alpha_)
+        alpha = new_alphas
+    return locations, blocks, alpha
 
-def draw_strings(image, locations, texts, fonts="default", sizes=32, alphas=1.0):
-    locations, blocks, alphas = setup_texts(locations, texts, fonts, sizes, alphas)
-    composite(image, locations, blocks, alphas)
+def draw_strings(image, locations, texts, fonts="default", sizes=32, alpha=1.0):
+    locations, blocks, alpha = setup_texts(locations, texts, fonts, sizes, alpha)
+    composite(image, locations, blocks, alpha)
 
 

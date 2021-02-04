@@ -1,10 +1,11 @@
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+
 import numpy as np
 
-from yapocis.utils import imread
-from yapocis.lib.median import median3x3
+from yapocis.basic import imread
 from yapocis.lib.gradient import gradient
-from yapocis.lib.hsi import rgb2hsi, hsi2rgb
-from yapocis.channels import split_channels, join_channels
+from yapocis.lib.hsi import rgb2hsi
+from yapocis.lib.channels import split_channels
 
 from yapocis.advanced import show_array, show_arraygrad
 from . import test_image_path

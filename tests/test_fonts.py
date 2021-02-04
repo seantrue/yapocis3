@@ -1,3 +1,5 @@
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+
 import os
 from PIL import Image, ImageDraw
 import numpy as np

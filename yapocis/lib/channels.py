@@ -1,12 +1,14 @@
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+
 import numpy as np
 
-from yapocis.yapocis_types import Tuple
-from yapocis.yapocis_types import Array
+from yapocis.lib.yapocis_types import Tuple
+from yapocis.lib.yapocis_types import Array
 
 
 def histeq(im:Array, nbr_bins:int =2 ** 16) -> Array:
     """
-    Perform histogram equalization of a 2D array
+    Histogram equalization of a 2D array
     Args:
         im: 2D Array
         nbr_bins: number of bins

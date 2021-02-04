@@ -6,23 +6,22 @@ void lines(int width, int height,  __global float *a, int nlines, __global float
     float color = a[i];
     int x = i/height;
     int y = i-(x*height);
-    float threshold = rdist * .5;
-    float alias_threshold = threshold + 0.5;
+    float threshold = (rdist * .5) + .5;
     float2 point = (float2)((float)x,(float)y);
     for (int iline=0; iline < nlines; iline++) {
         float2 linestart  = *coords++;
         float2 lineend = *coords++;
-        float2 rc = *colors++;
-        float clr = (rc.x*rc.y)+(color*(1.0-rc.y));
-
+        float2 value_alpha = *colors++;
+        float value = value_alpha.s0;
+        float alpha = value_alpha.s1;
         float linemag = distance( lineend, linestart );
         float2 delta = lineend-linestart;
         float2 u2 = (point-linestart)*(delta);
         float u = (u2.x+u2.y)/(linemag*linemag);
         float2 intersection = linestart + (u * delta);
-        float dist = distance( point, intersection );
-
-        color = (u >= 0.0f && u <= 1.0f && dist < threshold) ? clr : color;
+        float dist = distance(point, intersection);
+        float clr = (value*alpha)+(color*(1.0-alpha));
+        color = (u >= 0.0f && u <= 1.0 && dist < threshold) ? clr : color;
     }
     a[i] = color;
     barrier(CLK_GLOBAL_MEM_FENCE);
@@ -57,7 +56,6 @@ void circles(int width, int height,  __global float *a, int nlines, __global flo
 {
     size_t i =  get_global_id(0);
     float color = a[i];
-    // Todo: Do this with a table lookup
     int x = i/height;
     int y = i-(x*height);
     float2 point = (float2)((float)x,(float)y);

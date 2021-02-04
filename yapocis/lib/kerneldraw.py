@@ -1,6 +1,11 @@
+"""
+Higher level wrappers around the OpenCL graphics kernels.
+"""
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+
 import numpy as np
 
-from yapocis.channels import split_channels
+from yapocis.lib.channels import split_channels
 from yapocis.lib.graphics import program, coerce_coords, coerce_colors_alpha, composite_setup, sprites_setup, \
     setup_texts
 
@@ -37,7 +42,7 @@ class AbstractKernelDraw:
 
     def draw_string(self, xy, text, font="default", size=None, alpha=None):
         size = 32 if size is None else size
-        alphas = 1.0 if alpha is None else alpha
+        alpha = 1.0 if alpha is None else alpha
         self._texts.append((xy, text, font, size, alpha))
 
     def render_lines(self):
@@ -259,7 +264,7 @@ class KernelDraw3(AbstractKernelDraw):
             return
         # TODO: Deal with separate colors for planes
         for ad in self.ads:
-            ad.draw_strings(locations, texts, fonts, sizes, alphas=None)
+            ad.draw_strings(locations, texts, fonts, sizes, alphas=alphas)
 
     def render(self):
         super(KernelDraw3, self).render()

@@ -1,14 +1,15 @@
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+
 # http://mail.scipy.org/pipermail/scipy-user/2009-February/020125.html
 # Anisotropic Diffusion, as per Perona and Malik's paper (see section V).
 
 import numpy
 
-from yapocis.channels import split_channels, join_channels
+from yapocis.lib.channels import split_channels, join_channels
 from yapocis.lib.hsi import *
-from yapocis.yapocis_types import *
+from yapocis.lib.yapocis_types import *
 
-import yapocis.lib.peronamalik
-from yapocis.lib.peronamalik import _peronamalik as peronamalik, _peronamalik_res as peronamalik_res
+from yapocis.lib.peronamalik import _peronamalik_res as peronamalik_res
 
 def _exp(image_gradient: Array, scale: float):
     return numpy.exp(-(numpy.absolute(image_gradient) / scale) ** 2)

@@ -1,17 +1,12 @@
-'''
-Created on Jul 22, 2011
 
-@author: seant
-'''
 
-import numpy as np
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import yapocis.rpc.programs
-from yapocis.rpc import engines, interfaces
-from yapocis.yapocis_types import *
+from yapocis.lib.yapocis_types import *
 
 gradient_cl = None
-yapocis.rpc.programs.import_program("gradient", gradient="gradient_cl")
+program, kernels = yapocis.rpc.programs.import_program("gradient", gradient="gradient_cl")
 
 def gradient(image:Array, reach:int=1) -> Tuple[Array,Array]:
     grad, theta = gradient_cl(image, reach)
