@@ -55,7 +55,7 @@ def test_gauss_image():
         for xy in range(400):
             a[xy, xy] = 1.0
         b = gauss_image(a, scale)
-        show_array("GI%s" % scale, b)
+        show_array(f"gauss scale {scale}", b)
 
 
 def test_zcs():
@@ -166,8 +166,8 @@ def test_zcs():
     larger = gauss_image(image, 3)
     dog = smaller - larger
     zca = zcs(dog)
-    show_array("smaller", smaller)
-    show_array("larger", larger)
+    show_array("gauss 2", smaller)
+    show_array("gauss 3", larger)
     show_array("dog", dog)
     show_array("zca", zca)
 
@@ -177,7 +177,7 @@ def test_perona_malik():
    for i, rgb2 in enumerate(peronamalik2.pm_filter_rgbIS(rgb)):
       if i >= 100:
          break
-   show_array(f"100", rgb2)
+   show_array(f"filtered 100", rgb2)
 
 
 

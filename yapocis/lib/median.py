@@ -10,11 +10,12 @@ from yapocis.lib.yapocis_types import *
 
 # Provision this program with just one median filter, fixed length of 9
 first = last = median3x3_cl = step = None
-yapocis.rpc.programs.import_program("median3x3", import_kernels="*", median3x3="median3x3_cl", width=9, steps=[9])
+progran, kernels = yapocis.rpc.programs.import_program("median3x3", import_kernels="*", median3x3="median3x3_cl", width=9, steps=[9])
 
 def median3x3slow(image:Array, iterations:int=1) -> Array:
     """
     3x3 median filter reading and writing the data on each pass
+
     Args:
         image:
         iterations:
@@ -30,6 +31,7 @@ def median3x3slow(image:Array, iterations:int=1) -> Array:
 def median3x3fast(image:Array, iterations:int=1) -> Array:
     """
     3x3 median filter iterating use ping/pong buffers on the device.
+
     Args:
         image:
         iterations:

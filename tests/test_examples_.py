@@ -19,7 +19,7 @@ def test_advanced_showarraygrad():
     r, g, b = split_channels(image)
     h, s, i = rgb2hsi(r, g, b)
     g, a = gradient(i, 5)
-    show_array("Gradient", g)
-    show_arraygrad("Grad angle", image, a)
-    show_arraygrad("Grad vectors", image, a, g * 10)
+    show_array("Gradient (advanced)", g)
+    show_arraygrad("Grad angle (advanced)", image, a)
+    show_arraygrad("Grad vectors (advanced)", image, a, g * 10)
 

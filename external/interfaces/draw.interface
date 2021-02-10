@@ -1,3 +1,0 @@
-interface draw {
-   kernel draw(in int *lines, widthof int a, heightof int a, inout float *a, in float color);
-   };

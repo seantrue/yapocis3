@@ -1,3 +1,6 @@
+"""
+Support for rendering text into sprites for use with compositing kernels
+"""
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import numpy as np
@@ -13,10 +16,10 @@ def get_render_buffer(size):
         _render_buffer = Image.new("L", (size[0],size[1]))
     return _render_buffer
 
-def render_text(text, font_name="default", size=32):
+def render_text(text, font_name="default", size=32, rotation=None):
     try:
-        a = _rendered[(text,font_name,size)]
-        return a
+        bbox, a = _rendered[(text,font_name,size, rotation)]
+        return bbox, a
     except KeyError:
         pass
     font = image_font(font_name, size=size)
@@ -27,9 +30,20 @@ def render_text(text, font_name="default", size=32):
     rendered.paste(0, box=(0,0,w,h))
     draw = ImageDraw.ImageDraw(rendered)
     draw.text((0,0),text, font=font,fill=255)
+    if rotation is not None:
+        pixels =  rendered.crop((0,0,w,h))
+        wh = max(w,h)*2
+        rendered = get_render_buffer((wh,wh))
+        rendered.paste(0, box=(0, 0, wh, wh))
+        rendered.paste(pixels,(w//2,wh//2))
+        rendered = rendered.rotate(rotation,fillcolor=0)
     a = np.array(rendered,dtype=np.float32)
+    vprofile = np.nonzero(np.sum(a,0))[0]
+    hprofile = np.nonzero(np.sum(a,1))[0]
+    x1,x2 = hprofile[0], hprofile[-1]
+    y1,y2 = vprofile[0],vprofile[-1]
+    a = a[x1-1:x2+2, y1-1:y2+2]
     a /= 255.0
-    a = a[y:h+1,:w]
-    _rendered[(text,font_name, size)] = a[:,:]
-    return a
+    (bbox,a) = _rendered[(text,font_name, size, rotation)] = (bbox,a[:,:])
+    return bbox, a
 

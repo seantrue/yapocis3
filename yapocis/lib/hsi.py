@@ -15,12 +15,13 @@ program, kernels = yapocis.rpc.programs.import_program("hsi", rgb2hsi="rgb2hsi_c
 def rgb2hsi(r:Array, g:Array, b:Array) -> Tuple[Array,Array,Array]:
     """
     Convert red,green,blue planes to hue,saturation,intensity
-    Args:
-        r: np.float32 array of 0-1.0 values
-        g: ""
-        b: ""
 
-    Returns:  tuple of three arrays
+    Args:
+        r: red, a np.float32 array of 0-1.0 values
+        g: green, ""
+        b: blue, ""
+
+    Returns:  hue, saturation, intensity as tuple of three arrays
 
     """
     h, s, i = rgb2hsi_cl(r, g, b)
@@ -29,12 +30,13 @@ def rgb2hsi(r:Array, g:Array, b:Array) -> Tuple[Array,Array,Array]:
 def hsi2rgb(h:Array, s:Array, i:Array) -> Tuple[Array,Array,Array]:
     """
     Reverse rgb2hsi
-    Args:
-        h:
-        s:
-        i:
 
-    Returns:  tuple of three arrays
+    Args:
+        h: hue, a np.float32 array of 0-1.0 values
+        s: saturation, ""
+        i: intensity, ""
+
+    Returns:  red, green, blue tuple of three arrays
 
     """
     r,g,b = hsi2rgb_cl(h,s,i)

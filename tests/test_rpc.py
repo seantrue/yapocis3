@@ -2,14 +2,14 @@
 
 import numpy as np
 
-from yapocis.rpc.buffers import BufferManager, CPU_ENGINE
 from yapocis.rpc.parser import get_interface
-from yapocis.rpc.engines import get_engine, get_available
+from yapocis.rpc.engines import get_engine, get_available, get_yapocis_device
 from yapocis.rpc.programs import load_program, import_program
 
 
 def test_buffers():
-    bmgr = BufferManager(CPU_ENGINE)
+    engine = get_engine()
+    bmgr = engine.bmgr
     a = np.random.sample((100,)).astype(np.float32)
     b = a.copy()
     bmgr.write_buffer(a)
@@ -111,6 +111,7 @@ def test_compiling():
 
     for engine_name in get_available().keys():
         for itest, (interface, context) in enumerate(interfaces):
+            print(engine_name, interface)
             program = load_program(interface, engine_name=engine_name, debug=True, **context)
             print("Interface", program.interface.interface_name)
             for kernel in program.interface.kernels():

@@ -11,6 +11,7 @@
 .\#*
 .deps
 .libs
+/external
 /.idea
 /build
 /dist

@@ -1,3 +1,8 @@
+"""
+Accomodate the differences between PIL, Numpy, and convenient programming models for OpenCL
+HWC <-> CHW ordering, conceptually.
+"""
+
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import numpy as np
@@ -9,6 +14,7 @@ from yapocis.lib.yapocis_types import Array
 def histeq(im:Array, nbr_bins:int =2 ** 16) -> Array:
     """
     Histogram equalization of a 2D array
+
     Args:
         im: 2D Array
         nbr_bins: number of bins
@@ -31,6 +37,7 @@ def histeq(im:Array, nbr_bins:int =2 ** 16) -> Array:
 def split_channels(rgb:Array) -> Tuple[Array,Array,Array]:
     """
     Split a 3xWxH array into WxH, WxH, WxH
+
     Args:
         rgb: 3D array
 
@@ -44,6 +51,7 @@ def split_channels(rgb:Array) -> Tuple[Array,Array,Array]:
 def join_channels(r: Array, g: Array, b: Array) -> Array:
     """
     Join WxH, WxH, WxH 2D arrays into a 3D Array with copied data
+
     Args:
         r: WxH array
         g: WxH array

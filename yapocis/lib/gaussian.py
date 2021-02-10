@@ -16,8 +16,16 @@ def are_close(a:Array, b:Array) -> bool:
 
 def gauss_1d(sigma:float=1., dt:float=1., limit:float=.01, normalize:bool=True) -> Array:
     """
-    Get a Gaussian distribution that sums to 1 along 1 dimension, 
-    quantized by discrete steps.
+    Get a Gaussian distribution that sums to 1 along 1 dimension, quantized by discrete steps.
+
+    Args:
+        sigma: width
+        dt: step
+        limit: smallest change
+        normalize: normalize sum to 1.0
+
+    Returns: 1D Array
+
     """
     tail = []
     x = 0.
@@ -40,6 +48,18 @@ def gauss_1d(sigma:float=1., dt:float=1., limit:float=.01, normalize:bool=True) 
 
 
 def gaussians(maxwidth=100, sigma=1.0, scale=1.6, limit=.001, sigmas=[]):
+    """
+    Generate a list of gaussian kernels with size less than maxwidth
+    Args:
+        maxwidth:
+        sigma:
+        scale:
+        limit:
+        sigmas:
+
+    Returns:
+
+    """
     sigma = 1.0
     gs = []
     if sigmas:

@@ -35,12 +35,16 @@ def find_yapocis_file(subdirs:List[str], filename:str) -> Optional[str]:
     return tfilename
 
 
-def render_program(filename: str, **context: Context) -> str:
+def render_program(base_filename: str, **context: Context) -> str:
     """
     Takes the basename of a mako template file, and uses context to generate an OpenCL program
     """
-    filename += ".mako"
-    tfilename = find_yapocis_file(["kernels", "."], filename)
+    tfilename = None
+    for ext in [".cl",".mako"]:
+        filename = base_filename + ext
+        tfilename = find_yapocis_file(["kernels", "."], filename)
+        if tfilename:
+            break
     if not tfilename:
         raise Exception("Can't find template '%s'" % filename)
     mylookup = TemplateLookup(directories=[os.path.dirname(tfilename)])
@@ -72,7 +76,7 @@ class Program:
         if debug:
             print("Source")
             print(source)
-        mf = pyopencl.mem_flags
+        self.mf = pyopencl.mem_flags
         self.engine = get_engine(engine_name)
         interface.program = self.engine.build(source)
         self.callable = {}
@@ -115,7 +119,7 @@ class Program:
                     misses=self.engine.bmgr.misses,
                     buffers=len(self.engine.bmgr.buffers),
                     runtime=self.runtime,
-                    engine=self.engine.engine_name)
+                    engine=self.engine.device_name)
 
     def __str__(self):
         self.purge()

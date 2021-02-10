@@ -299,6 +299,8 @@ def _show_array(*args):
     title = " ".join([str(arg) for arg in args]).strip()
     if not title:
         title = "showarray %s" % _showArrayCounter
+    if len(array.shape) == 3 and array.shape[2] == 4:
+        array = array[:,:,:3]
     if array.dtype != np.uint8:
         array = array.copy()
         if array.dtype in (np.float32, np.float64, np.float):

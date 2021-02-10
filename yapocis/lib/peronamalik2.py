@@ -1,3 +1,6 @@
+"""
+Higher level wrapper for anisotropic filter (Perona/Malik).
+"""
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 # http://mail.scipy.org/pipermail/scipy-user/2009-February/020125.html
@@ -9,7 +12,7 @@ from yapocis.lib.channels import split_channels, join_channels
 from yapocis.lib.hsi import *
 from yapocis.lib.yapocis_types import *
 
-from yapocis.lib.peronamalik import _peronamalik_res as peronamalik_res
+from yapocis.lib.peronamalik import filterImage, filterImage_res
 
 def _exp(image_gradient: Array, scale: float):
     return numpy.exp(-(numpy.absolute(image_gradient) / scale) ** 2)
@@ -21,6 +24,7 @@ def _inv(image_gradient: Array, scale: float):
 def pm_filter_n(image: Array, n: int, scale: float = 3.0, step_size: float = 0.2) -> Array:
     """
     Perform n iterations of peronamalik filter on 2D array.
+
     Args:
        image: 2d array, dtype = np.float32
        n: iterations
@@ -43,18 +47,19 @@ def pm_filter_n(image: Array, n: int, scale: float = 3.0, step_size: float = 0.2
             if n <= 0:
                 program.read(image1)
                 return image1 / 256.
-            peronamalik_res(image1, scale, step_size, image)
+            filterImage_res(image1, scale, step_size, image)
             n -= 1
             if n <= 0:
                 program.read(image)
                 return image / 256.
-            peronamalik_res(image, scale, step_size, image1)
+            filterImage_res(image, scale, step_size, image1)
             n -= 1
 
 
 def pm_filter(image: Array, scale: float = 3.0, step_size: float = 0.2) -> GeneratorExit:
     """
     Yields peronamalik filtered images from 2D array.
+
     Args:
        image: 2d array, dtype = np.float32
        scale: peronamalik scale parameter
@@ -71,7 +76,7 @@ def pm_filter(image: Array, scale: float = 3.0, step_size: float = 0.2) -> Gener
         print("Rescaling")
         image *= 256.
     while 1:
-        image = peronamalik(image, scale, step_size)
+        image = filterImage(image, scale, step_size)
         yield image / 256
 
 

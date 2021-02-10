@@ -8,14 +8,12 @@ from pyopencl import mem_flags as mf
 
 from yapocis.lib.yapocis_types import *
 
-GPU_ENGINE = 1
-CPU_ENGINE = 0
-
 
 # Numpy makes a big deal out of .copy() being a deepcopy. Hah!
-# a.data is shared until a copy is forced by copy on write.
+# At the time of this writing (2011)
+# a.data was shared until a copy is forced by copy on write.
 # This makes mapping arrays to remote buffers tricky
-# Theona has an interesting approac, which I am ignoring
+# Theona has an interesting approach, which I am ignoring
 # in favor of better sugar.
 
 
@@ -25,18 +23,9 @@ class BufferManager:
     WRITE = 1
     DEBUG = True
 
-    def __init__(self, engine: EngineID = None, context: Optional[pyopencl.Context] = None,
-                 queue: Optional[pyopencl.CommandQueue] = None):
-        if engine is None and context is None:
-            # Look in environment for engine selection
-            engine = os.environ.get("ENGINE", None)
-            if engine is None:
-                raise RuntimeError("Define ENGINE in environment or specify as argument")
+    def __init__(self, context: pyopencl.Context, queue: Optional[pyopencl.CommandQueue] = None):
         self.ctx = context
         self.queue = queue
-        if self.ctx is None:
-            self.ctx = pyopencl.Context([pyopencl.get_platforms()[0].get_devices()[engine]])
-            self.queue = None
         if self.queue is None:
             self.queue = pyopencl.CommandQueue(self.ctx)
         # Buffer management

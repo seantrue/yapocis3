@@ -3,7 +3,8 @@ DEBUG = False
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 from yapocis.basic import *
-from yapocis.lib.kerneldraw import KernelDraw, KernelDraw3
+from yapocis.lib.kerneldraw import KernelDraw
+from yapocis.lib.kerneldraw3 import KernelDraw3
 
 
 def sign(title: str, img: np.ndarray) -> np.ndarray:
@@ -20,7 +21,7 @@ def sign(title: str, img: np.ndarray) -> np.ndarray:
         ad = KernelDraw(img)
     elif len(img.shape) == 3 and img.shape[2] == 3:
         ad = KernelDraw3(img)
-    ad.draw_string((10,10), title, size=fheight, alpha="mask")
+    ad.draw_string((10,10), title, color=1.0, size=fheight, alpha="bug")
     ad.render()
     ad.read()
     return img
@@ -50,8 +51,8 @@ def _show_array(*args, normalize=True):
     return title, img
 
 
-def show_array(*args):
-    title, img = _show_array(*args)
+def show_array(*args, **kwargs):
+    title, img = _show_array(*args, **kwargs)
     img.show()
 
 
@@ -91,9 +92,9 @@ def show_arraygrad(title, image, theta, grad = None) -> None:
             x1, y1 = int(i - dx), int(j - dy)
             x2, y2 = int(i + dx), int(j + dy)
             color = grd/10.
-            ad.line((x1,y1,x2,y2), distance=1.5, color=color, alpha=1.0)
+            ad.line((x1,y1,x2,y2), distance=1.1, color=color, alpha=1)
     ad.render()
     ad.read()
-    show_array(title, image)
+    show_array(title, image, normalize=False)
 
 
