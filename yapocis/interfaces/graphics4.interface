@@ -1,0 +1,15 @@
+interface graphics4 {
+    # Kernels have aliases for running on resident buffers
+    kernel lines(widthof a, heightof a, inout float* a, widthof lines, in float *lines, in float distance, in float *rcolor);
+    alias lines_in as lines(widthof a, heightof a, resident float* a, widthof lines, in float *lines, in float distance, in float *rcolor);
+    kernel rects(widthof a, heightof a, inout float* a, widthof lines, in float *lines, in float *rcolor);
+    alias rects_in as rects(widthof a, heightof a, resident float* a, widthof lines, in float *lines, in float *rcolor);
+    kernel circles(widthof a, heightof a, inout float* a, widthof lines, in float *lines, in float *rcolor);
+    alias circles_in as circles(widthof a, heightof a, resident float* a, widthof lines, in float *lines, in float *rcolor);
+    kernel triangles(widthof a, heightof a, inout float* a, widthof lines, in float *lines, in float *rcolor);
+    alias triangles_in as triangles(widthof a, heightof a, resident float* a, widthof lines, in float *lines, in float *rcolor);
+    kernel ellipses(widthof a, heightof a, inout float* a, widthof lines, in float *lines, in float *rcolor);
+    alias ellipses_in as ellipses(widthof a, heightof a, resident float* a, widthof lines, in float *lines, in float *rcolor);
+    kernel composite(widthof a, heightof a, inout float* a, widthof lines, in int *lines, in float *pixels, in int *ipixels,  widthof pixels);
+    alias composite_in as composite(widthof a, heightof a, resident float* a, widthof lines, in int *lines, in float *pixels, in int *ipixels,  widthof pixels);
+};
