@@ -1,5 +1,3 @@
-'''
-Created on Aug 21, 2011
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-@author: seant
-'''
+"""Yet another PyOpenCL interface specifier"""

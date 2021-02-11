@@ -1,0 +1,3 @@
+interface demo {
+    kernel sum(in float *a, in float *b, outlike a);
+    };

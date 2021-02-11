@@ -1,7 +1,9 @@
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+
 from setuptools import setup, find_packages
 setup(
     name = "yapocis",
-    version = "0.2.4",
+    version = "0.3.0",
     packages = find_packages(),
     zip_safe=False,
     # Requirements are in requirements.txt

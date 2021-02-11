@@ -1,0 +1,69 @@
+'''
+Provides 2d median filter for 2d arrays
+'''
+
+
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+
+import yapocis.rpc.programs
+from yapocis.lib.yapocis_types import *
+
+# Provision this program with just one median filter, fixed length of 9
+first = last = median3x3_cl = step = None
+progran, kernels = yapocis.rpc.programs.import_program("median3x3", import_kernels="*", median3x3="median3x3_cl", width=9, steps=[9])
+
+def median3x3slow(image:Array, iterations:int=1) -> Array:
+    """
+    3x3 median filter reading and writing the data on each pass
+
+    Args:
+        image:
+        iterations:
+
+    Returns: A copy of the array.
+
+    """
+    while iterations > 0:
+        image = median3x3_cl(image)
+        iterations -= 1
+    return image.copy()
+
+def median3x3fast(image:Array, iterations:int=1) -> Array:
+    """
+    3x3 median filter iterating use ping/pong buffers on the device.
+
+    Args:
+        image:
+        iterations:
+
+    Returns: A copy of the array.
+
+    """
+    if iterations == 1:
+        # One pass through
+        return median3x3_cl(image)
+    input = image
+    output = np.zeros_like(input)
+    if iterations == 2:
+        # Send in data, don't retrieve
+        first(input, output)
+        input,output = output,input
+        # Don't send in, retrieve data
+        last(input, output)
+        return output
+    # Send in data, no retrieve
+    first(input, output)
+    input,output = output,input
+    # Allow for first and last calls
+    iterations -= 2
+    while iterations > 1:
+        # Iterate with resident data
+        step(input, output)
+        input,output = output,input
+        iterations -= 1
+    # And retrieve the data
+    input,output = output,input
+    last(input, output)
+    return output.copy()
+
+median3x3=median3x3fast

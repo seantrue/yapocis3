@@ -1,0 +1,3 @@
+interface mandelbrot {
+        kernel mandelbrot(in complex64 *q, outlike short *q, in int maxiter);
+};

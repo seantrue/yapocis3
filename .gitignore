@@ -11,6 +11,8 @@
 .\#*
 .deps
 .libs
+/external
+/.idea
 /build
 /dist
 /scipy.egg-info
