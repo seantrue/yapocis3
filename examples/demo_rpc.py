@@ -7,8 +7,8 @@ Created on Jul 21, 2011
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import numpy as np
-from yapocis.basic import imread
-from yapocis.basic import show_array, show_arraygrad
+from yapocis.utils.basic import imread
+from yapocis.utils.basic import show_array, show_arraygrad
 from yapocis.lib.median import median3x3
 from yapocis.lib.gradient import gradient
 from yapocis.lib.hsi import rgb2hsi, hsi2rgb

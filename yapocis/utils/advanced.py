@@ -2,7 +2,7 @@ DEBUG = False
 
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-from yapocis.basic import *
+from yapocis.utils.basic import *
 from yapocis.lib.kerneldraw import KernelDraw
 from yapocis.lib.kerneldraw3 import KernelDraw3
 
@@ -11,8 +11,8 @@ def sign(title: str, img: np.ndarray) -> np.ndarray:
     img = img.astype(np.float32)
     width, height = img.shape[1], img.shape[0]
     if height > 480:
-        fheight = height / 30
-        fheight = 5 * (fheight / 5)
+        fheight = height // 30
+        fheight = 5 * (fheight // 5)
         if fheight % 5:
             fheight += 5
     else:

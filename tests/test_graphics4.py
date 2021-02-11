@@ -5,7 +5,7 @@ import pytest
 import numpy as np
 from random import randint, shuffle
 
-from yapocis.basic import show_array, imread
+from yapocis.utils.basic import show_array, imread
 from yapocis.lib.kerneldraw4 import KernelDraw4
 from yapocis.lib.graphics4 import lines, rects, circles, triangles, ellipses, composite, sprites, draw_strings
 
@@ -57,7 +57,7 @@ def random_points(n=100):
     return points
 
 def random_vector(n=100):
-    return np.random.uniform(0, 1.0, n).astype(np.float32)
+    return np.random.uniform(.2, 1.0, n).astype(np.float32)
 
 def components_to_colors(*components):
     colors = list(zip(*components))
@@ -138,8 +138,9 @@ def test_lines(canvas):
         for j in range(100, ASIZE, 100):
             coords.append([0, 0, i, j])
     colors = random_colors(len(coords))
-    lines(canvas, coords, colors, width=1.5)
-    lines(canvas, random_coords, random_colors(), width=1.5)
+    colors[:,:] = 1.0
+    lines(canvas, coords, colors=colors, width=1.5)
+    # lines(canvas, random_coords, colors=random_colors(), width=1.5)
     show_array(f"draw", canvas)
 
 
@@ -233,17 +234,14 @@ def test_simple_texts(canvas):
     show_array("simple texts", canvas)
 
 def test_rotated_texts(canvas):
-    locations = []
-    string = "Hello world"
     rotations = list(range(0,360,30))
-    locations = [(500,500)] * len(rotations)
+    center = canvas.shape[0]//2
+    locations = [(center,center)] * len(rotations)
     strings = [f"--------{r:03d}" for r in rotations]
     color = np.array([1,1,1,1])
     draw_strings(canvas, locations, strings, color=color, rotations=rotations, alpha="mask")
     circles(canvas, [(500,500,20)],[1,0,0,.5])
     show_array("simple texts", canvas)
-
-
 
 def test_texts(canvas):
     locations = random_points(300)

@@ -19,6 +19,7 @@ Yapocis depends on, and is grateful for:
 * pyparsing: http://pyparsing.wikispaces.com/home
 
 Yapocis is still raw, but appears to be nutritious.
+Now, for Python 3.7
 
 Contents:
 

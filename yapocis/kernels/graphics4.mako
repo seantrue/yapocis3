@@ -7,7 +7,7 @@
 #define ZEROS (float4)(0.0f, 0.0f, 0.0f, 0.0f)
 
 __kernel void lines(int width, int height, __global float4 *a, int nelements,
-                    __global float4 *coords, float rdist,
+                    __global float2 *coords, float rdist,
                     __global float4 *colors) {
   size_t i = get_global_id(0);
   int x = i / height;
@@ -17,21 +17,17 @@ __kernel void lines(int width, int height, __global float4 *a, int nelements,
   float threshold = (rdist * .5) + .5;
   float2 point = (float2)((float)x, (float)y);
   for (int ielement = 0; ielement < nelements; ielement++) {
+    float2 linestart = *coords++;
+    float2 lineend = *coords++;
     float4 rgba = *colors++;
     float4 alpha = (float4)(rgba.s3, rgba.s3, rgba.s3, 0.0f);
-    float4 clr = (rgba * alpha) + (color * (ONES - alpha));
-
-    float4 line = *coords;
-    float2 line_start = (float2)(line.s0,line.s1);
-    float2 line_end = (float2)(line.s2,line.s3);
-
-    float line_mag = distance(line_end, line_start);
-    float2 delta = line_end - line_start;
-    float2 u2 = (point - line_start) * (delta);
-    float u = (u2.x + u2.y) / (line_mag * line_mag);
-    float2 intersection = line_start + (u * delta);
+    float linemag = distance(lineend, linestart);
+    float2 delta = lineend - linestart;
+    float2 u2 = (point - linestart) * (delta);
+    float u = (u2.x + u2.y) / (linemag * linemag);
+    float2 intersection = linestart + (u * delta);
     float dist = distance(point, intersection);
-
+    float4 clr = (rgba * alpha) + (color * (ONES - alpha));
     color = (u >= 0.0f && u <= 1.0f && dist < threshold) ? clr : color;
   }
   color.s3 = 0.0f;

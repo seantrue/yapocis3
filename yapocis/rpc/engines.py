@@ -4,13 +4,17 @@ Helpers around the PyOpenCL wrappers for OpenCL
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import os
+import sys
 import pyopencl
 from pyopencl import mem_flags as mf  # @UnusedImport
 from yapocis.rpc.buffers import BufferManager
 from yapocis.lib.yapocis_types import *
 MEMFLAGS = mf.READ_WRITE | mf.COPY_HOST_PTR
 
-
+YAPOCIS_CACHE=os.environ.get("YAPOCIS_CACHE", None)
+if YAPOCIS_CACHE and not os.path.isdir(YAPOCIS_CACHE):
+    print(f"YAPOCIS_CACHE={YAPOCIS_CACHE} is not a directory", file=sys.stderr)
+    sys.exit(1)
 from pyopencl import get_platforms
 def get_available() -> Dict[str,"Device"] :
     """
@@ -77,7 +81,7 @@ class Engine:
 
     def build(self, source: str) -> pyopencl.Program:
         binary = pyopencl.Program(self.ctx, source)
-        program = binary.build(options=["-w"])
+        program = binary.build(options=["-w"],cache_dir=YAPOCIS_CACHE)
         return program
 
     def purge(self):

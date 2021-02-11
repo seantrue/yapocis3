@@ -7,10 +7,8 @@ from high level Python code. It depends on, and was inspired by, PyOpenCL which 
 hard work of making OpenCL callable at all. Yapocis is intended to make calling it much 
 less painful.
 
-The code is currently developed and tested on OS/X Lion. It was originally developed on Snow Leopard,
-and there were some code changes required to jump forward. Those changes are entirely in the OpenCL
-kernel code itself, and adapting kernel interfaces to Yapocis should usually start with already
-functioning OpenCL code.
+The code is currently developed and tested with  Python 3.7 on OS/X Big Sur. It was originally developed with Python 2.7 on Snow Leopard, and there were modest changes in jumping forward about 10 years. In addition, the code has been cleaned,  refactored, and extended with kernels and interfaces for on-device graphics using OpenCL.
+
 
 
 Quick look

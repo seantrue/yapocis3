@@ -8,12 +8,12 @@ from yapocis.lib.kerneldraw import AbstractKernelDraw, KernelDraw
 
 
 class KernelDraw3(AbstractKernelDraw):
+    COLOR_WIDTH = 3
     def __init__(self, a: np.ndarray):
         super(KernelDraw3, self).__init__()
         self.a = a
         self.color = (None, None, None)
         self.alpha = 1.0
-        self.color_width = 3
         self.channels = split_channels(a)
         self.ads = [KernelDraw(a) for a in self.channels]
 

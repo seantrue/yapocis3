@@ -39,13 +39,7 @@ def coerce_colors(coords, colors):
     colors = arrayify(colors, (coords.shape[0],4))
     return colors
 
-
-def coerce_colors_alpha(coords, colors, alpha=None):
-    ca = arrayify(colors, (coords.shape[0],4))
-    return ca
-
-
-def composite_setup(locations, blocks):
+def setup_composite(locations, blocks):
     """
     Compute the information for compositing a set of distinct blocks
 
@@ -79,7 +73,7 @@ def composite_setup(locations, blocks):
     return coords, buffer, ipixels
 
 
-def sprites_setup(locations, sprites):
+def setup_sprites(locations, sprites):
     """
     Compute the information for compositing a set of reusable blocks, for graphical or repeated elements.
 
@@ -120,7 +114,7 @@ def lines(image, coords, colors, width=1.0):
     if not coords:
         return
     coords = coerce_coords(coords, 4)
-    colors = coerce_colors_alpha(coords, colors)
+    colors = coerce_colors(coords, colors)
     lines_cl(image, coords, width, colors, global_size=image.size//4)
 
 
@@ -128,7 +122,7 @@ def rects(image, coords, colors):
     if not coords:
         return
     coords = coerce_coords(coords, 4)
-    colors = coerce_colors_alpha(coords, colors)
+    colors = coerce_colors(coords, colors)
     rects_cl(image, coords, colors, global_size=image.size//4)
 
 
@@ -136,7 +130,7 @@ def circles(image, coords, colors):
     if not coords:
         return
     coords = coerce_coords(coords, 3)
-    colors = coerce_colors_alpha(coords, colors)
+    colors = coerce_colors(coords, colors)
     circles_cl(image, coords, colors, global_size=image.size//4)
 
 
@@ -144,13 +138,13 @@ def triangles(image, coords, colors):
     if not coords:
         return
     coords = coerce_coords(coords, 6)
-    colors = coerce_colors_alpha(coords, colors)
+    colors = coerce_colors(coords, colors)
     triangles_cl(image, coords, colors, global_size=image.size//4)
 
 
 def ellipses(image, coords, colors):
     coords = coerce_coords(coords, 4)
-    colors = coerce_colors_alpha(coords, colors)
+    colors = coerce_colors(coords, colors)
     ellipses_cl(image, coords, colors, global_size=image.size//4)
 
 
@@ -167,7 +161,7 @@ def composite(image, locations, blocks):
     Returns: None
 
     """
-    coords, buffer, ipixels = composite_setup(locations, blocks)
+    coords, buffer, ipixels = setup_composite(locations, blocks)
     composite_cl(image, coords, buffer, ipixels, global_size=image.size//4)
 
 
@@ -182,7 +176,7 @@ def sprites(image, locations, sprites):
     Returns: None
 
     """
-    coords, buffer, ipixels = sprites_setup(locations, sprites)
+    coords, buffer, ipixels = setup_sprites(locations, sprites)
     composite_cl(image, coords, buffer, ipixels, global_size=image.size//4)
 
 

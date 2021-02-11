@@ -10,9 +10,9 @@ from yapocis.lib.graphics import program, coerce_coords, coerce_colors, composit
 
 
 class AbstractKernelDraw:
-    COLOR_WIDTH=None
+    COLOR_WIDTH = 1
+
     def __init__(self):
-        self.color_width = 1
         self.alpha = 1.0
         self.color = 1.0
         # Initialize display lists
@@ -25,31 +25,31 @@ class AbstractKernelDraw:
         self._draw_strings = []
 
     def coerce_colors(self, n, color=None, colors=None, **kwargs):
-        # a tuple, list, array of 3 floats
-        # a list or tuple of array/list/typle of 3 floats
-        # an array of nx3 floats
+        # a tuple, list, array of COLOR_WIDTH floats
+        # a list or tuple of array/list/tuple of COLOR_WIDTH floats
+        # an array of nxCOLOR_WIDTH floats
         if color is None and colors is None:
             color = self.color
         if color:
-            if self.color_width > 1:
+            if self.COLOR_WIDTH > 1:
                 color = np.asarray(color, dtype=np.float32)
-                colors = np.empty((n,self.color_width), dtype=np.float32)
+                colors = np.empty((n, self.COLOR_WIDTH), dtype=np.float32)
             else:
-                assert isinstance(color,(float,int))
+                assert isinstance(color, (float, int))
                 colors = np.empty(n, dtype=np.float32)
             colors[:] = color
         else:
             colors = np.asarray(colors, dtype=np.float32)
-            if self.color_width > 1:
+            if self.COLOR_WIDTH > 1:
                 if len(colors.shape) == 1:
-                    colors = np.column_stack([colors for i in range(self.color_width)])
-                assert colors.shape == (n, self.color_width)
+                    colors = np.column_stack([colors for i in range(self.COLOR_WIDTH)])
+                assert colors.shape == (n, self.COLOR_WIDTH)
             else:
                 assert colors.shape[0] == n
         return colors
 
     def coerce_alphas(self, n, alpha=None, alphas=None, **kwargs):
-        alphas = to_list(alpha,alphas,n, self.alpha)
+        alphas = to_list(alpha, alphas, n, self.alpha)
         return alphas
 
     def prepare_args(self, coords, width, **kwargs):
@@ -57,7 +57,6 @@ class AbstractKernelDraw:
         colors = self.coerce_colors(len(coords), **kwargs)
         alphas = self.coerce_alphas(len(coords), **kwargs)
         return coords, colors, alphas
-
 
     # Add item to display list for batch rendering
     def line(self, xyxy, distance=1.0, **kwargs):
@@ -89,11 +88,11 @@ class AbstractKernelDraw:
             arglist = list(zip(*display_list))
             columns = {}
             for kwargs in arglist[-1]:
-                for key,value in kwargs.items():
+                for key, value in kwargs.items():
                     key = key + "s"
-                    columns.setdefault(key,[]).append(value)
+                    columns.setdefault(key, []).append(value)
             handler(*arglist[:-1], **columns)
-            setattr(self, f"_{handle}",[])
+            setattr(self, f"_{handle}", [])
 
     def render_lines(self):
         self.render_display_list("lines")
@@ -126,25 +125,25 @@ class AbstractKernelDraw:
         self.render_sprites()
 
     # Implement these to get things done.
-    def lines(self, coords, distance=1.0,  **kwargs):
+    def lines(self, coords, distance=1.0, **kwargs):
         raise NotImplementedError()
 
-    def rects(self, coords,  **kwargs):
+    def rects(self, coords, **kwargs):
         raise NotImplementedError()
 
-    def circles(self, coords,  **kwargs):
+    def circles(self, coords, **kwargs):
         raise NotImplementedError()
 
-    def triangles(self, coords,  **kwargs):
+    def triangles(self, coords, **kwargs):
         raise NotImplementedError()
 
-    def ellipses(self, coords,  **kwargs):
+    def ellipses(self, coords, **kwargs):
         raise NotImplementedError()
 
     def composite(self, locations, blocks, **kwargs):
         raise NotImplementedError()
 
-    def sprites(self, locations, sprites,**kwargs):
+    def sprites(self, locations, sprites, **kwargs):
         raise NotImplementedError()
 
     def draw_strings(self, locations, texts, **kwargs):
@@ -155,6 +154,7 @@ class AbstractKernelDraw:
 
 
 class KernelDraw(AbstractKernelDraw):
+    COLOR_WIDTH=1
     def __init__(self, a: np.ndarray):
         super(KernelDraw, self).__init__()
         self.a = a
@@ -200,9 +200,6 @@ class KernelDraw(AbstractKernelDraw):
         coords, buffer, pixel_indexes = composite_setup(locations, blocks, alphas=alphas)
         program.composite_in(self.a, coords, buffer, pixel_indexes)
 
-
     def read(self):
         program.read(self.a)
         return self.a
-
-

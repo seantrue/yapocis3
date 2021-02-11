@@ -213,7 +213,7 @@ class Kernel:
 
     def prepare_arguments(self, args:List[Any]):
         "Takes the actual arguments and maps to the arguments needed by the kernel"
-        assert len(self.posbyname) == len(args), "Expected %s arguments, got %s" % (len(self.posbyname), len(args))
+        assert len(self.posbyname) == len(args), f" Got {len(args)}, expected {len(self.posbyname)} arguments, [{self.posbyname}]"
         self.returns = []
         realargs = [None] * len(self.params)
         for iparam, (bufferHint, value) in enumerate(self.argspecs):

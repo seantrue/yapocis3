@@ -4,7 +4,7 @@ import numpy as np
 import time
 
 import yapocis.rpc.programs
-from yapocis.basic import show_array, stage, imread
+from yapocis.utils.basic import show_array, stage, imread
 from yapocis.lib.hsi import rgb2hsi, hsi2rgb
 from yapocis.lib.channels import split_channels, join_channels
 
@@ -175,7 +175,7 @@ def test_perona_malik():
    rgb = imread(test_image).astype(np.float32)/256
    show_array("org", rgb)
    for i, rgb2 in enumerate(peronamalik2.pm_filter_rgbIS(rgb)):
-      if i >= 100:
+      if i >= 50:
          break
    show_array(f"filtered 100", rgb2)
 

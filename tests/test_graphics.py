@@ -5,7 +5,7 @@ import pytest
 import numpy as np
 from random import randint, shuffle
 
-from yapocis.basic import show_array, imread
+from yapocis.utils.basic import show_array, imread
 from yapocis.lib.channels import split_channels
 from yapocis.lib.hsi import rgb2hsi
 from yapocis.lib.kerneldraw import KernelDraw

@@ -82,9 +82,7 @@ void triangles(int width, int height,  __global float *a, int nlines, __global f
     float color = a[i];
     int x = i/height;
     int y = i-(x*height);
-    float2 center;
     float2 point = (float2)((float)x,(float)y);
-    float radius;
     for (int iline=0; iline < nlines; iline++) {
         float2 v1 = *coords++;
         float2 v2 = *coords++;
@@ -133,7 +131,9 @@ void composite(int width, int height,  __global float *a, int n, __global int4 *
 {
     size_t i =  get_global_id(0);
     float color = a[i];
+#ifdef DEBUG
     float saved_color = color;
+#endif
     int2 xy = (int2) (i/height,(i-((i/height)*height)));
     for (int j=0; j < n; j++) {
         // Get the x,y,w,h of the destination

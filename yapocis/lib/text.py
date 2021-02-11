@@ -6,7 +6,6 @@ Support for rendering text into sprites for use with compositing kernels
 import numpy as np
 from PIL import Image,ImageDraw
 from yapocis.fonts import image_font
-from yapocis.basic import from_image
 
 _rendered = {}
 _render_buffer = None
@@ -40,10 +39,11 @@ def render_text(text, font_name="default", size=32, rotation=None):
     a = np.array(rendered,dtype=np.float32)
     vprofile = np.nonzero(np.sum(a,0))[0]
     hprofile = np.nonzero(np.sum(a,1))[0]
-    x1,x2 = hprofile[0], hprofile[-1]
-    y1,y2 = vprofile[0],vprofile[-1]
-    a = a[x1-1:x2+2, y1-1:y2+2]
+    y1,y2 = hprofile[0], hprofile[-1]
+    x1,x2 = vprofile[0],vprofile[-1]
+    a = a[max(0,y1-1):y2+2, max(0,x1-1):x2+2]
     a /= 255.0
-    (bbox,a) = _rendered[(text,font_name, size, rotation)] = (bbox,a[:,:])
+    a = a[:,:]
+    _rendered[(text,font_name, size, rotation)] = (bbox,a)
     return bbox, a
 

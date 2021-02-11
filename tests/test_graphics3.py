@@ -4,7 +4,7 @@ import numpy as np
 
 from tests.test_graphics import random_ellipses, random_circles, random_rects, random_lines, random_triangles, \
     random_colors, random_alpha, ASIZE
-from yapocis.basic import show_array
+from yapocis.utils.basic import show_array
 from yapocis.lib.channels import join_channels
 from yapocis.lib.kerneldraw3 import KernelDraw3
 

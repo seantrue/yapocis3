@@ -2,7 +2,7 @@
 
 import yapocis.rpc.programs
 
-from yapocis.basic import set_margin, set_frame
+from yapocis.utils.basic import set_margin, set_frame
 from yapocis.lib.gradient import gradient
 
 from yapocis.lib.operators import sub_res
