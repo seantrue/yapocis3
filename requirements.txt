@@ -3,8 +3,10 @@ MarkupSafe
 Pillow
 decorator
 numpy
+pyyaml
 py
 pyopencl
 pyparsing
 pytest
 pytools
+sphinx
