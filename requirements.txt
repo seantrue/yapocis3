@@ -3,6 +3,7 @@ MarkupSafe
 Pillow
 decorator
 numpy
+pyyaml
 py
 pyopencl
 pyparsing

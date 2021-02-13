@@ -303,7 +303,7 @@ def _show_array(*args):
         array = array[:,:,:3]
     if array.dtype != np.uint8:
         array = array.copy()
-        if array.dtype in (np.float32, np.float64, np.float):
+        if array.dtype in (np.float32, np.float64, float):
             array -= array.min()
             array /= array.max()
             array *= 255.
