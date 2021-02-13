@@ -4,12 +4,12 @@ import sys
 import time
 import numpy as np
 
-from matplotlib import pyplot as plot
 
 try:
     from scipy.ndimage.filters import median_filter
+    from matplotlib import pyplot as plot
 except ImportError:
-    print("Please install scipy to compare median filter performance")
+    print("Please install scipy and matplotlib to compare median filter performance")
     sys.exit(1)
 
 from yapocis.lib import median
@@ -31,7 +31,7 @@ LARGEST=4000
 engines = list(get_available(aliases=False).keys())
 
 # Range of images widths spaced logarithmically
-widths = np.logspace(np.log2(SMALLEST), np.log2(LARGEST), num=SAMPLES, base=2).astype(np.int)
+widths = np.logspace(np.log2(SMALLEST), np.log2(LARGEST), num=SAMPLES, base=2).astype(int)
 images = []
 for width in widths:
     images.append(np.float32(np.random.random_sample((width, width))))
