@@ -11,17 +11,16 @@ def median3x3(input, iterations=1):
         input = median_filter(input,3)
     return input
 
-sizes = []
 areas = []
 yapocisfast_deltas = []
 yapocis_deltas = []
 numpy_deltas = []
 errors = []
-ITERATIONS=20
-SAMPLES=50
-STEP=40
-for i in range(0,SAMPLES):
-    width = (i+1)*STEP
+ITERATIONS=10
+SAMPLES=20
+sizes = np.logspace(6,12,num=SAMPLES,base=2).astype(np.int)
+
+for width in sizes:
     img = np.float32(np.random.random_sample((width,width)))
     
     t = time.time()
@@ -37,34 +36,38 @@ for i in range(0,SAMPLES):
     yapocisfast_delta = time.time() - t
 
     print(width, numpy_delta, yapocis_delta, yapocisfast_delta)
-    sizes.append(width)
     areas.append(width*width)
     numpy_deltas.append(numpy_delta)
     yapocis_deltas.append(yapocis_delta)
     yapocisfast_deltas.append(yapocisfast_delta)
     
 from matplotlib import pyplot as plot
-areas = np.array(areas)
+areas = np.array(areas)/1000.
 numpy_deltas = np.array(numpy_deltas)
 yapocis_deltas = np.array(yapocis_deltas)
 yapocisfast_deltas = np.array(yapocisfast_deltas)
-ratio = yapocis_deltas/numpy_deltas
-ratio2 = yapocisfast_deltas/numpy_deltas
-p = plot.subplot(111)
-plot.title("Median 3x3 filter, %s iterations" % ITERATIONS,fontsize="large")
-l1 = plot.plot(areas, numpy_deltas,color="lightgreen")
-l2 = plot.plot(areas, yapocis_deltas,color="pink")
-l3 = plot.plot(areas, yapocisfast_deltas,color="yellow")
-l4 = p.plot(areas,ratio,color="red")
-l5 = p.plot(areas,ratio2,color="black")
-plot.fill_between(areas, numpy_deltas, yapocis_deltas,color="lightgreen")
-plot.fill_between(areas, yapocisfast_deltas, yapocis_deltas, color="pink")
-plot.fill_between(areas, np.zeros_like(yapocis_deltas),yapocisfast_deltas, 
+ratio = 1.0/(yapocis_deltas/numpy_deltas)
+ratio2 = 1.0/(yapocisfast_deltas/numpy_deltas)
+unity = numpy_deltas/numpy_deltas
+fig, ax1 = plot.subplots()
+ax1.set_title("Median 3x3 filter, %s iterations" % ITERATIONS,fontsize="large")
+ax1.set_xlabel("Pixels(k)",fontsize="medium")
+ax1.plot(areas, numpy_deltas,color="darkgreen",label="numpy")
+ax1.plot(areas, yapocis_deltas,color="magenta",label="slow")
+ax1.plot(areas, yapocisfast_deltas,color="orange",label="fast")
+ax1.fill_between(areas, numpy_deltas, yapocis_deltas,color="lightgreen")
+ax1.fill_between(areas, yapocisfast_deltas, yapocis_deltas, color="pink")
+ax1.fill_between(areas, np.zeros_like(yapocis_deltas),yapocisfast_deltas, 
                   color="yellow")
-plot.figlegend( (l1, l2, l3, l4, l5), 
-                ('numpy', 'yapocis','yapocis-fast','yapocis/numpy','fast/numpy'), 
-                'upper left', shadow=True)
-plot.xlabel("Pixels",fontsize="medium")
-plot.ylabel("Seconds",fontsize="medium")
-plot.savefig("../../doc/images/median3x3-performance.png")
+ax1.set_ylabel("Seconds",fontsize="medium")
+ax2 = ax1.twinx()
+ax2.plot(areas,ratio,color="red",label="slow>np")
+ax2.plot(areas,ratio2,color="black",label="fast>np")
+#ax2.plot(areas,unity,color="blue",label="baseline")
+ax2.set_ylabel("Speed-up")
+#ax2.set_ylim(0,1.2)
+ax1.legend(bbox_to_anchor=(1.1, 1.0), loc='upper left')
+ax2.legend(bbox_to_anchor=(.15, 1.0), loc='upper left')
+fig.tight_layout()
+plot.savefig("docs/images/median3x3-performance.png")
 plot.show()

@@ -19,18 +19,18 @@ done from Python:
 
 First the easy way, with numpy:
 
-.. literalinclude:: /../yapocis/examples/demo_numpy.py
+.. literalinclude:: /../examples/demo_numpy.py
    :language: python
    :linenos:
    
 First the easy and fast way, with yapocis:
 
-.. literalinclude:: /../yapocis//examples/demo_yapocis.py
+.. literalinclude:: /../examples/demo_yapocis.py
    :language: python
    :linenos: 
    
 First the hard and fast way, with raw pyopencl:
 
-.. literalinclude:: /../yapocis/examples/demo_opencl.py
+.. literalinclude:: /../examples/demo_opencl.py
    :language: python
    :linenos:     

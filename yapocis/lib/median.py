@@ -1,8 +1,6 @@
 '''
 Provides 2d median filter for 2d arrays
 '''
-
-
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import yapocis.rpc.programs

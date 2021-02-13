@@ -30,7 +30,7 @@ def test():
     show_array("Noisy", image)
     show_array("Filtered", filtered)
     
-    image = np.float32(imread("../yapocis/test.jpg"))
+    image = np.float32(imread("tests/test.jpg"))
     image /= 256.
 
     show_array("Test HSI", image)
@@ -50,10 +50,13 @@ def test():
     g,a = gradient(i,5)
     show_array("Gradient", g)
     show_array("Angle", a)
+    g,a = gradient(i,5)
     sat = np.ones_like(i)
     gimg = join_channels(*hsi2rgb(a, sat, g))
     show_array("Color gradient with angle", gimg)
+    g,a = gradient(i,5)
     show_arraygrad("Grad angle", image, a)
+    g,a = gradient(i,5)
     show_arraygrad("Grad vectors", image, a, g * 10)
    
 if __name__ == '__main__':

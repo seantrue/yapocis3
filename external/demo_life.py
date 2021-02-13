@@ -8,7 +8,7 @@ two neighbours; a dead cell is brought to life if it has exactly three
 neighbours (determined in Cell::setNextState).
     Iain Haslam, June 2005.
 """ 
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+import time
 
 from tkinter import *
 root = Tk()
@@ -48,6 +48,7 @@ class Grid:
     def __init__(self,parent,sizex,sizey):
         self.sizex = sizex
         self.sizey = sizey
+        self.running = False
         #numpy.zeros(sizex,sizey) is a better choice,
         #but an additional dependency might be rude...
         self.cells = []
@@ -65,7 +66,10 @@ class Grid:
             self.cells[9][11].displayState(Cell.LIVE)
             self.cells[10][11].displayState(Cell.LIVE)
             self.cells[11][11].displayState(Cell.LIVE)
- 
+
+    def run(self):
+        self.running = not self.running
+
     def step(self):
         """Calculate then display the next iteration of the game of life.
  
@@ -90,7 +94,10 @@ class Grid:
         for row in cells:
             for cell in row:
                 cell.stepToNextState()
- 
+        if self.running:
+            time.sleep(.001)
+            self.step()
+
     def clear(self):
         for row in self.cells:
             for cell in row:
@@ -99,12 +106,14 @@ class Grid:
 if __name__ == "__main__":
     frame = Frame(root)
     frame.pack()
-    grid = Grid(frame,25,25)
+    grid = Grid(frame,40,40)
     bottomFrame = Frame(root)
     bottomFrame.pack(side=BOTTOM)
     buttonStep = Button(bottomFrame,text="Step",command=grid.step)
     buttonStep.pack(side=LEFT)
     buttonClear = Button(bottomFrame,text="Clear",command=grid.clear)
     buttonClear.pack(side=LEFT,after=buttonStep)
+    buttonRun = Button(bottomFrame,text="Run",command=grid.run)
+    buttonRun.pack(side=LEFT,after=buttonStep)
     root.mainloop()
     

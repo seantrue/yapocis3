@@ -42,7 +42,11 @@ def _show_array(*args, normalize=True):
 
     if array.dtype != np.float32:
         array = array.astype(np.float32) / 255.
-    array = array.copy()
+    else:
+        try:
+            array = array[:,:]
+        except:
+            array = array[:,:,:]
     if normalize and array.dtype in (np.float32, np.float64, np.float):
         array -= array.min()
         array /= array.max()

@@ -14,11 +14,11 @@ Here to make using OpenCL via Python just a little easier. You can find Yapocis 
 
 Yapocis depends on, and is grateful for:
 
-* PyOpenCL: http://mathema.tician.de/software/pyopencl
+* PyOpenCL: https://documen.tician.de/pyopencl/
 
-* pyparsing: http://pyparsing.wikispaces.com/home
+* pyparsing: https://pyparsing-docs.readthedocs.io/en/latest/pyparsing.html
 
-Yapocis is still raw, but appears to be nutritious.
+I've been using Yapocis for about 10 years, it isn't completely raw, and appears to be nutritious.
 Now, for Python 3.7
 
 Contents:
