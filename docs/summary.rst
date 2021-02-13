@@ -23,14 +23,15 @@ First the easy way, with numpy:
    :language: python
    :linenos:
    
-First the easy and fast way, with yapocis:
+Second, the hard and fast way, with raw pyopencl:
+
+.. literalinclude:: /../examples/demo_opencl.py
+   :language: python
+   :linenos:     
+
+Finally, the easy and fast way, with yapocis:
 
 .. literalinclude:: /../examples/demo_yapocis.py
    :language: python
    :linenos: 
    
-First the hard and fast way, with raw pyopencl:
-
-.. literalinclude:: /../examples/demo_opencl.py
-   :language: python
-   :linenos:     
