@@ -9,14 +9,17 @@ import pyopencl
 from pyopencl import mem_flags as mf  # @UnusedImport
 from yapocis.rpc.buffers import BufferManager
 from yapocis.lib.yapocis_types import *
+
 MEMFLAGS = mf.READ_WRITE | mf.COPY_HOST_PTR
 
-YAPOCIS_CACHE=os.environ.get("YAPOCIS_CACHE", None)
+YAPOCIS_CACHE = os.environ.get("YAPOCIS_CACHE", None)
 if YAPOCIS_CACHE and not os.path.isdir(YAPOCIS_CACHE):
     print(f"YAPOCIS_CACHE={YAPOCIS_CACHE} is not a directory", file=sys.stderr)
     sys.exit(1)
 from pyopencl import get_platforms
-def get_available() -> Dict[str,"Device"] :
+
+
+def get_available(aliases:bool=True) -> Dict[str, "Device"]:
     """
     Get the names of the available OpenCL platforms and devices. Name is device name,
     with an alias of platform:device name.
@@ -30,13 +33,15 @@ def get_available() -> Dict[str,"Device"] :
     for platform in platforms:
         for device in platform.get_devices():
             devices[device.name] = device
-            devices[idevice] = device
+            if aliases:
+                devices[idevice] = device
             idevice += 1
-            if len(platforms) > 1:
+            if len(platforms) > 1 and aliases:
                 devices[f"{platform.name}:{device.name}"] = device
     return devices
 
-def get_yapocis_device(device_name:Optional[str] = None) -> "Device":
+
+def get_yapocis_device(device_name: Optional[str] = None) -> "Device":
     """
     Get a device that is an exact or approximate match for device name, which can also be an numeric index,
     and if None, will be the first device found.
@@ -81,7 +86,7 @@ class Engine:
 
     def build(self, source: str) -> pyopencl.Program:
         binary = pyopencl.Program(self.ctx, source)
-        program = binary.build(options=["-w"],cache_dir=YAPOCIS_CACHE)
+        program = binary.build(options=["-w"], cache_dir=YAPOCIS_CACHE)
         return program
 
     def purge(self):

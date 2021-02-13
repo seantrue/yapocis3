@@ -26,10 +26,10 @@ Now, the wrapper code for loading that in an even prettier way:
    :language: python
    :linenos:
 
-and a driver program that compares running the median filter 10 times
+and a demo that compares running the median filter 20 times on all available engines
 on each of an increasing series of image sizes.
 
-.. literalinclude:: /../examples/median3x3_comparison.py
+.. literalinclude:: /../examples/demo_performance.py
    :language: python
    :linenos:
    
