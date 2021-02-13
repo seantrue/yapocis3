@@ -30,7 +30,6 @@ Contents:
    intro
    architecture
    examples
-   api
 
 Indices and tables
 ==================
