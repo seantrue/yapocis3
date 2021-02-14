@@ -6,7 +6,7 @@ import time
 import yapocis.rpc.programs
 from yapocis.utils.basic import show_array, stage, imread
 from yapocis.lib.hsi import rgb2hsi, hsi2rgb
-from yapocis.lib.channels import split_channels, join_channels
+from yapocis.lib.channels import split_channels, join_channels, split_planes, join_planes
 
 from yapocis.rpc.engines import get_available
 
@@ -16,9 +16,12 @@ from yapocis.lib.gaussian import gauss_1d, are_close, gaussians, get_scales, get
 from yapocis.lib.operators import add, add_res, program, sub, sub_res, mul, mul_res
 from yapocis.lib.median import median3x3fast, median3x3slow
 from yapocis.lib.anisodiff import anisodiff, anisodiff_rgbIS
+from yapocis.utils.config import get_device_config, dump_config
 
 from . import test_image_path
+
 test_image = test_image_path()
+
 
 def test_gaussian_1d():
     "Make sure that the kernel sums back to 1"
@@ -171,33 +174,61 @@ def test_zcs():
     show_array("dog", dog)
     show_array("zca", zca)
 
+
 def test_perona_malik():
-   rgb = imread(test_image).astype(np.float32)/256
-   show_array("org", rgb)
-   for i, rgb2 in enumerate(anisodiff_rgbIS(rgb)):
-      if i >= 50:
-         break
-   show_array(f"filtered 100", rgb2)
+    rgb = imread(test_image).astype(np.float32) / 256
+    show_array("org IS", rgb)
+    for i, rgb2 in enumerate(anisodiff_rgbIS(rgb)):
+        if i >= 50:
+            break
+    show_array(f"filtered IS", rgb2)
+
+def test_perona_malik():
+    rgb = imread(test_image).astype(np.float32) / 256
+    show_array("org IS", rgb)
+    for i, rgb2 in enumerate(anisodiff_rgbIS(rgb)):
+        if i >= 50:
+            break
+    show_array(f"filtered IS", rgb2)
+
+def test_perona2_malik():
+    config = get_device_config()
+    if config["native_vector_width_float"] > 2:
+        print(config["preferred_vector_width_float"])
+        raise RuntimeError("This OpenCL engine does not support float2")
+    rgb = imread(test_image).astype(np.float32) / 256
+    show_array("org rg", rgb)
+    r,g,b = split_planes(rgb)
+    rg = join_planes(r,g)
+    for i, rgb2 in enumerate(anisodiff(rg)):
+        if i >= 50:
+            break
+    r,g = split_planes(rg)
+    rgb2 = join_planes(r,g,b)
+    show_array(f"filtered rg", rgb2)
+
 
 def test_perona3_malik():
-   rgb = imread(test_image).astype(np.float32)/256
-   show_array("org", rgb)
-   for i, rgb2 in enumerate(anisodiff(rgb)):
-      if i >= 50:
-         break
-   show_array(f"filtered rgb", rgb2[:,:,:3])
+    config = get_device_config()
+    if config["preferred_vector_width_float"] > 3:
+        print(config["preferred_vector_width_float"])
+        raise RuntimeError("This OpenCL engine does not support float3")
+    rgb = imread(test_image).astype(np.float32) / 256
+    show_array("org rgb", rgb)
+    for i, rgb2 in enumerate(anisodiff(rgb)):
+        if i >= 50:
+            break
+    show_array(f"filtered rgb", rgb2)
+
 
 def test_perona4_malik():
-   rgb = imread(test_image).astype(np.float32)/256
-   show_array("org", rgb)
-   shape4 = list(rgb.shape)
-   shape4[2] = 4
-   rgba = np.zeros((shape4),dtype=np.float32)
-   rgba[:,:,:3] = rgb
-   for i, rgba2 in enumerate(anisodiff(rgba)):
-      if i >= 50:
-         break
-   show_array(f"filtered rgba", rgba2[:,:,:3])
-
-
-
+    rgb = imread(test_image).astype(np.float32) / 256
+    show_array("org rgba", rgb)
+    shape4 = list(rgb.shape)
+    shape4[2] = 4
+    rgba = np.zeros((shape4), dtype=np.float32)
+    rgba[:, :, :3] = rgb
+    for i, rgba2 in enumerate(anisodiff(rgba)):
+        if i >= 50:
+            break
+    show_array(f"filtered rgba", rgba2[:, :, :3])

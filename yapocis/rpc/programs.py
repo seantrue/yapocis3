@@ -70,7 +70,12 @@ class Program:
     """
 
     def __init__(self, interface: InterfaceCL, engine_name: str, debug: bool = False, **context: Context):
-        source = render_program(interface.interface_name, **context)
+        try:
+            source = render_program(interface.interface_name, **context)
+        except:
+            print(f"Source rendering issue for {interface.interface_name}")
+            print(context)
+            raise
 
         self.source = source
         if debug:
