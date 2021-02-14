@@ -7,7 +7,7 @@ Created on Jul 22, 2011
 
 import yapocis.rpc.programs
 
-from yapocis.lib.yapocis_types import *
+from yapocis.utils.typing import *
 
 rgb2hsi_cl = hsi2rgb_cl = None
 program, kernels = yapocis.rpc.programs.import_program("hsi", rgb2hsi="rgb2hsi_cl", hsi2rgb="hsi2rgb_cl")

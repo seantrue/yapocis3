@@ -6,7 +6,7 @@
 # Process an improper subset of the CORBA IDL grammar to facilitate calling opencl from a python Numpy framework
 # Inspired by an IDL parser by Paul McGuire, shipped as a demo with pyparser
 #
-from yapocis.lib.yapocis_types import *
+from yapocis.utils.typing import *
 from pyparsing import Literal, Word, OneOrMore, ZeroOrMore, \
     delimitedList, Group, Optional, alphas, restOfLine, cStyleComment, \
     alphanums, ParseException, Keyword

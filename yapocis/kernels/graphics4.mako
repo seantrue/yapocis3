@@ -2,13 +2,15 @@
 // array[,,3] is the "alpha" channel
 // The alpha channel is ignored (but must be present) for the input/output array (a)
 // Colors are [N,4] where color[,3] is the alpha and is _not_ ignored
+#define READONLY __global
+#define READWRITE __global
 
 #define ONES (float4)(1.0f, 1.0f, 1.0f, 1.0f)
 #define ZEROS (float4)(0.0f, 0.0f, 0.0f, 0.0f)
 
-__kernel void lines(int width, int height, __global float4 *a, int nelements,
-                    __global float2 *coords, float rdist,
-                    __global float4 *colors) {
+__kernel void lines(int width, int height, READWRITE float4 *a, int nelements,
+                    READONLY float2 *coords, float rdist,
+                    READONLY float4 *colors) {
   size_t i = get_global_id(0);
   int x = i / height;
   int y = i - (x * height);
@@ -35,8 +37,8 @@ __kernel void lines(int width, int height, __global float4 *a, int nelements,
   barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-__kernel void rects(int width, int height, __global float4 *a, int nelements,
-                    __global float4 *coords, __global float4 *colors) {
+__kernel void rects(int width, int height, READWRITE float4 *a, int nelements,
+                    READONLY float4 *coords, READONLY float4 *colors) {
   size_t i = get_global_id(0);
   float4 pixel = a[i];
   float x = i / height;
@@ -59,8 +61,8 @@ __kernel void rects(int width, int height, __global float4 *a, int nelements,
   barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-__kernel void circles(int width, int height, __global float4 *a, int nelements,
-                      __global float *coords, __global float4 *colors) {
+__kernel void circles(int width, int height, READWRITE float4 *a, int nelements,
+                      READONLY float *coords, READONLY float4 *colors) {
   size_t i = get_global_id(0);
   float4 pixel = a[i];
   int x = i / height;
@@ -86,8 +88,8 @@ __kernel void circles(int width, int height, __global float4 *a, int nelements,
 #define signex(p1, p2, p3)                                                     \
   ((p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y))
 
-__kernel void triangles(int width, int height, __global float4 *a, int nelements,
-                        __global float2 *coords, __global float4 *colors) {
+__kernel void triangles(int width, int height, READWRITE float4 *a, int nelements,
+                        READONLY float2 *coords, READONLY float4 *colors) {
   size_t i = get_global_id(0);
   float4 pixel = a[i];
   int x = i / height;
@@ -117,8 +119,8 @@ __kernel void triangles(int width, int height, __global float4 *a, int nelements
 }
 
 // (x-h)^2/a^2 + (y-k)^2/b^2 <= 1
-__kernel void ellipses(int width, int height, __global float4 *a, int nelements,
-                       __global float4 *coords, __global float4 *colors) {
+__kernel void ellipses(int width, int height, READWRITE float4 *a, int nelements,
+                       READONLY float4 *coords, READONLY float4 *colors) {
   size_t i = get_global_id(0);
   float4 pixel = a[i];
   int x = i / height;
@@ -140,9 +142,9 @@ __kernel void ellipses(int width, int height, __global float4 *a, int nelements,
   barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-__kernel void composite(int width, int height, __global float4 *a, int nelements,
-                        __global int4 *coords, __global float4 *pixels,
-                        __global int *ipixels, int npixels) {
+__kernel void composite(int width, int height, READWRITE float4 *a, int nelements,
+                        READONLY int4 *coords, READWRITE float4 *pixels,
+                        READONLY int *ipixels, int npixels) {
   size_t i = get_global_id(0);
   float4 pixel = a[i];
   int2 xy = (int2)(i / height, (i - ((i / height) * height)));

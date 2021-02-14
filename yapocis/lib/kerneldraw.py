@@ -3,16 +3,17 @@ Higher level wrappers around the OpenCL graphics kernels.
 """
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-import numpy as np
-
 from yapocis.lib.graphics import program, coerce_coords, coerce_colors, composite_setup, sprites_setup, \
     setup_texts, to_list
+from yapocis.utils.basic import chunker
+from yapocis.utils.typing import *
 
 
 class AbstractKernelDraw:
     COLOR_WIDTH = 1
 
-    def __init__(self):
+    def __init__(self, chunk_size: Optional[int]=1000):
+        self.chunk_size = chunk_size
         self.alpha = 1.0
         self.color = 1.0
         # Initialize display lists
@@ -80,18 +81,36 @@ class AbstractKernelDraw:
     def draw_string(self, xy, text, **kwargs):
         self._draw_strings.append((xy, text, kwargs))
 
+    def _render_list(self, handler, arglist, columns):
+        columns = {}
+        for kwargs in arglist[-1]:
+            for key, value in kwargs.items():
+                key = key + "s"
+                columns.setdefault(key, []).append(value)
+        handler(*arglist[:-1], **columns)
+
     def render_display_list(self, handle):
         display_list = getattr(self, f"_{handle}", None)
         if display_list:
             handler = getattr(self, f"{handle}", None)
             assert display_list is not None and handler is not None, handler
-            arglist = list(zip(*display_list))
-            columns = {}
-            for kwargs in arglist[-1]:
-                for key, value in kwargs.items():
-                    key = key + "s"
-                    columns.setdefault(key, []).append(value)
-            handler(*arglist[:-1], **columns)
+            if self.chunk_size:
+                for chunk in chunker(display_list,self.chunk_size):
+                    arglist = list(zip(*chunk))
+                    columns = {}
+                    for kwargs in arglist[-1]:
+                        for key, value in kwargs.items():
+                            key = key + "s"
+                            columns.setdefault(key, []).append(value)
+                    handler(*arglist[:-1], **columns)
+            else:
+                arglist = list(zip(*display_list))
+                columns = {}
+                for kwargs in arglist[-1]:
+                    for key, value in kwargs.items():
+                        key = key + "s"
+                        columns.setdefault(key, []).append(value)
+                handler(*arglist[:-1], **columns)
             setattr(self, f"_{handle}", [])
 
     def render_lines(self):
@@ -155,8 +174,8 @@ class AbstractKernelDraw:
 
 class KernelDraw(AbstractKernelDraw):
     COLOR_WIDTH=1
-    def __init__(self, a: np.ndarray):
-        super(KernelDraw, self).__init__()
+    def __init__(self, a: np.ndarray, **kwargs):
+        super(KernelDraw, self).__init__(**kwargs)
         self.a = a
         program.write(a)
 

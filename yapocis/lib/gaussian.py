@@ -7,7 +7,7 @@ from yapocis.lib.gradient import gradient
 
 from yapocis.lib.operators import sub_res
 from yapocis.lib.zcs import zcs, zcs_res
-from yapocis.lib.yapocis_types import *
+from yapocis.utils.typing import *
 
 def are_close(a:Array, b:Array) -> bool:
     eps = .00001

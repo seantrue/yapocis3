@@ -16,24 +16,20 @@ from yapocis.lib.channels import split_channels, join_channels
 
 
 def test():
-
-    # Create a noisy image with an embedded white square
-    image = np.zeros((201,199),dtype=np.float32)
-    width,height = image.shape
-    x,y = width//2, height//2
-    offset = 10
-    image[x-offset:x+offset,y-offset:y+offset] = 2
-    image += np.random.random_sample(image.shape)
-    
-    filtered = median3x3(image, 100)
-
-    show_array("Noisy", image)
-    show_array("Filtered", filtered)
-    
+    # Load the test image and reduce dimensions
     image = np.float32(imread("tests/test.jpg"))
     image /= 256.
+    image_fs = image
+    image = image_fs[::2,::2,:]
 
-    show_array("Test HSI", image)
+    show_array("Original", image)
+    # Add noise to the image
+    image = image *.8 + np.random.uniform(0,.2,image.shape)
+    show_array("Noisy", image)
+
+    image = median3x3(image, 100)
+    show_array("Filtered", image)
+    
     r,g,b = split_channels(image)
     h,s,i = rgb2hsi(r,g,b)
     show_array("I", i)
@@ -41,12 +37,14 @@ def test():
     show_array("H", h)
 
     from yapocis.lib.gaussian import gauss_image
+    h,s,i = rgb2hsi(r,g,b)
     blur = gauss_image(i, 3)
     show_array("Blur", blur)
     blurmore = gauss_image(i, 4)
     dog = blur-blurmore
     show_array("DOG", dog)
     
+    h,s,i = rgb2hsi(r,g,b)
     g,a = gradient(i,5)
     show_array("Gradient", g)
     show_array("Angle", a)

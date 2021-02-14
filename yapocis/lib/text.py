@@ -6,16 +6,17 @@ Support for rendering text into sprites for use with compositing kernels
 import numpy as np
 from PIL import Image,ImageDraw
 from yapocis.fonts import image_font
+from yapocis.utils.typing import *
 
 _rendered = {}
 _render_buffer = None
-def get_render_buffer(size):
+def get_render_buffer(size:Tuple[int,int]) -> Image:
     global _render_buffer
     if _render_buffer is None or _render_buffer.size[0] < size[0] or _render_buffer.size[1] < size[1]:
         _render_buffer = Image.new("L", (size[0],size[1]))
     return _render_buffer
 
-def render_text(text, font_name="default", size=32, rotation=None):
+def render_text(text:str, font_name:str="default", size:int=32, rotation:Optional[float]=None) -> Tuple[Tuple,np.ndarray]:
     try:
         bbox, a = _rendered[(text,font_name,size, rotation)]
         return bbox, a

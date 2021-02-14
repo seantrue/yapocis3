@@ -2,7 +2,7 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import os
-from yapocis.lib.yapocis_types import *
+from yapocis.utils.typing import *
 
 try:
     from PIL.ImageFont import truetype

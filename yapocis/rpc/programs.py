@@ -12,7 +12,7 @@ from mako.template import Template
 import yapocis
 from yapocis.rpc.engines import get_engine, Engine
 from yapocis.rpc.parser import InterfaceCL, get_interface
-from yapocis.lib.yapocis_types import Context, Array
+from yapocis.utils.typing import Context, Array
 
 
 def find_file(dirs: List[str], subdirs: List[str], filename: str) -> Optional[str]:

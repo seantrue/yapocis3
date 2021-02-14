@@ -1,7 +1,7 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 from PIL import Image, ImageFont, ImageDraw
-from yapocis.lib.yapocis_types import *
+from yapocis.utils.typing import *
 
 DEBUG = False
 
@@ -525,3 +525,7 @@ def set_frame(a: Array, width: int, frame: Optional[float] = 1.0, margin: Option
     a[:, margin] = frame
     a[-margin, :] = frame
     a[:, -margin] = frame
+
+def chunker(data: Iterable, chunk_size:int=100):
+    for i in range(0, len(data), chunk_size):
+        yield data[i:i+chunk_size]

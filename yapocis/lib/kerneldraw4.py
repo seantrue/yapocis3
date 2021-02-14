@@ -4,13 +4,14 @@ import numpy as np
 from yapocis.lib.graphics4 import program, coerce_coords, setup_composite, setup_sprites, setup_texts
 
 from yapocis.lib.kerneldraw import AbstractKernelDraw
+from yapocis.utils.typing import *
 
 
 class KernelDraw4(AbstractKernelDraw):
     COLOR_WIDTH = 4
 
-    def __init__(self, a: np.ndarray):
-        super(KernelDraw4, self).__init__()
+    def __init__(self, a: np.ndarray, **kwargs):
+        super(KernelDraw4, self).__init__(**kwargs)
         self.color = [1.0, 1.0, 1.0, 1.0]
         self.distance = 1.0
         self.alpha = 1.0
@@ -18,34 +19,34 @@ class KernelDraw4(AbstractKernelDraw):
         self.global_size = a.size // 4
         program.write(a)
 
-    def prepare_args(self, coords, coord_width, **kwargs):
+    def prepare_args(self, coords:Coords, coord_width:int, **kwargs):
         coords = coerce_coords(coords, coord_width)
         colors = self.coerce_colors(len(coords), **kwargs)
         return coords, colors
 
-    def render_immediate(self, handle, coord_width, coords, *args, **kwargs):
+    def render_immediate(self, handle:str, coord_width:int, coords:Coords, *args, **kwargs):
         if not isinstance(coords, np.ndarray) and not coords:
             return
         coords, colors = self.prepare_args(coords, coord_width, **kwargs)
         getattr(program, handle)(self.a, coords, *args, colors, global_size=self.global_size)
 
 
-    def rects(self, coords, **kwargs):
+    def rects(self, coords:Coords, **kwargs):
         self.render_immediate("rects_in", 4, coords, **kwargs)
 
-    def circles(self, coords, **kwargs):
+    def circles(self, coords:Coords, **kwargs):
         self.render_immediate("circles_in", 3, coords, **kwargs)
 
-    def triangles(self, coords, **kwargs):
+    def triangles(self, coords:Coords, **kwargs):
         self.render_immediate("triangles_in", 6, coords, **kwargs)
 
-    def ellipses(self, coords, **kwargs):
+    def ellipses(self, coords:Coords, **kwargs):
         self.render_immediate("ellipses_in", 4, coords, **kwargs)
 
-    def lines(self, coords, distance=1.0, **kwargs):
+    def lines(self, coords:Coords, distance:float=1.0, **kwargs):
         self.render_immediate("lines_in", 4, coords, distance, **kwargs)
 
-    def render_setup(self, setup, locations, blocks):
+    def render_setup(self, setup:Callable, locations, blocks):
         coords, buffer, pixel_indexes = setup(locations, blocks)
         program.composite_in(self.a, coords, buffer, pixel_indexes, global_size=self.global_size)
 

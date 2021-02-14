@@ -8,7 +8,7 @@ import sys
 import pyopencl
 from pyopencl import mem_flags as mf  # @UnusedImport
 from yapocis.rpc.buffers import BufferManager
-from yapocis.lib.yapocis_types import *
+from yapocis.utils.typing import *
 
 MEMFLAGS = mf.READ_WRITE | mf.COPY_HOST_PTR
 

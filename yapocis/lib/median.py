@@ -4,7 +4,7 @@ Provides 2d median filter for 2d arrays
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import yapocis.rpc.programs
-from yapocis.lib.yapocis_types import *
+from yapocis.utils.typing import *
 
 # Provision this program with just one median filter, fixed length of 9
 first = last = median3x3_cl = step = None

@@ -1,7 +1,7 @@
 DEBUG = False
 
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
-
+import copy
 from yapocis.utils.basic import *
 from yapocis.lib.kerneldraw import KernelDraw
 from yapocis.lib.kerneldraw3 import KernelDraw3
@@ -36,6 +36,7 @@ def _show_array(*args, normalize=True):
     array = args[-1]
     args = args[:-1]
     assert isinstance(array, np.ndarray)
+    array = copy.deepcopy(array)
     title = " ".join([str(arg) for arg in args]).strip()
     if not title:
         title = "showarray %s" % _showArrayCounter
@@ -72,6 +73,7 @@ def show_arraygrad(title, image, theta, grad = None) -> None:
     Returns: None
 
     """
+    image = copy.deepcopy(image)
     ad = KernelDraw3(image)
     # Decimate the arrays since we only use every 10th point any way
     theta = theta[::10,::10]

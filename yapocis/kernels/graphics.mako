@@ -1,6 +1,7 @@
-
+#define READONLY __constant
+#define READWRITE __global
 __kernel
-void lines(int width, int height,  __global float *a, int nlines, __global float2 *coords, float rdist, __global float2 *colors)
+void lines(int width, int height,  READWRITE float *a, int nlines, READONLY float2 *coords, float rdist, READONLY float2 *colors)
 {
     size_t i =  get_global_id(0);
     float color = a[i];
@@ -28,7 +29,7 @@ void lines(int width, int height,  __global float *a, int nlines, __global float
 }
 
 __kernel
-void rects(int width, int height,  __global float *a, int nlines, __global float4 *coords, __global float2 *colors)
+void rects(int width, int height,  READWRITE float *a, int nlines, READONLY float4 *coords, READONLY float2 *colors)
 {
     size_t i =  get_global_id(0);
     float color = a[i];
@@ -52,7 +53,7 @@ void rects(int width, int height,  __global float *a, int nlines, __global float
 }
 
 __kernel
-void circles(int width, int height,  __global float *a, int nlines, __global float *coords, __global float2 *colors)
+void circles(int width, int height,  READWRITE float *a, int nlines, READONLY float *coords, READONLY float2 *colors)
 {
     size_t i =  get_global_id(0);
     float color = a[i];
@@ -76,7 +77,7 @@ void circles(int width, int height,  __global float *a, int nlines, __global flo
 #define signex(p1,p2,p3) ((p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y))
 
 __kernel
-void triangles(int width, int height,  __global float *a, int nlines, __global float2 *coords, __global float2 *colors)
+void triangles(int width, int height,  READWRITE float *a, int nlines, READONLY float2 *coords, READONLY float2 *colors)
 {
     size_t i =  get_global_id(0);
     float color = a[i];
@@ -104,7 +105,7 @@ void triangles(int width, int height,  __global float *a, int nlines, __global f
 
 // (x-h)^2/a^2 + (y-k)^2/b^2 <= 1
 __kernel
-void ellipses(int width, int height,  __global float *a, int nlines, __global float2 *coords, __global float2 *colors)
+void ellipses(int width, int height,  READWRITE float *a, int nlines, READONLY float2 *coords, READONLY float2 *colors)
 {
     size_t i =  get_global_id(0);
     float color = a[i];
@@ -126,8 +127,8 @@ void ellipses(int width, int height,  __global float *a, int nlines, __global fl
 
 //#define DEBUG
 __kernel
-void composite(int width, int height,  __global float *a, int n, __global int4 *coords,
-                __global float2 *pixels, __global int *ipixels, int npixels)
+void composite(int width, int height,  READWRITE float *a, int n, READONLY int4 *coords,
+                READWRITE float2 *pixels, READONLY int *ipixels, int npixels)
 {
     size_t i =  get_global_id(0);
     float color = a[i];

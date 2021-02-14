@@ -1,12 +1,11 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-import os
 from weakref import WeakValueDictionary as Weak
 
 import pyopencl
 from pyopencl import mem_flags as mf
 
-from yapocis.lib.yapocis_types import *
+from yapocis.utils.typing import *
 
 
 # Numpy makes a big deal out of .copy() being a deepcopy. Hah!

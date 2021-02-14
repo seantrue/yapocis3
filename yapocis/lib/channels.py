@@ -7,9 +7,7 @@ HWC <-> CHW ordering, conceptually.
 
 import numpy as np
 
-from yapocis.lib.yapocis_types import Tuple
-from yapocis.lib.yapocis_types import Array
-
+from yapocis.utils.typing import *
 
 def histeq(im:Array, nbr_bins:int =2 ** 16) -> Array:
     """

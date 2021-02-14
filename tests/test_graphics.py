@@ -1,5 +1,6 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
+import time
 import pytest
 
 import numpy as np
@@ -15,7 +16,8 @@ from . import test_image_path
 
 test_image = test_image_path()
 
-ASIZE=1000
+ASIZE = 1000
+
 
 @pytest.fixture
 def canvas():
@@ -45,7 +47,6 @@ def image_sprites(steps=4):
 
 
 def random_points(n=100):
-
     def rx():
         return randint(0, ASIZE)
 
@@ -62,6 +63,7 @@ def random_points(n=100):
 def random_colors(n=100):
     return np.random.uniform(0, 1.0, n).astype(np.float32)
 
+
 def random_alpha(n=100):
     return np.random.uniform(.25, 1.0, n).astype(np.float32)
 
@@ -75,7 +77,9 @@ def random_lines(n=100):
         line += [x1, y1]
     return lines
 
+
 random_rects = random_lines
+
 
 def random_triangles(n=100):
     lines = random_points(n)
@@ -236,9 +240,9 @@ def test_simple_texts(canvas):
 def test_texts(canvas):
     locations = random_points(300)
     strings = ["Hello", "sympathy", "goodbye", "Aqua"]
-    fonts = ["bold","italic","light","regular"]
+    fonts = ["bold", "italic", "light", "regular"]
     sizes = [18, 36, 72, 112]
-    alphas = ["bug","mask",.5,1.0]
+    alphas = ["bug", "mask", .5, 1.0]
     while len(strings) < len(locations):
         strings += strings
         sizes += sizes
@@ -292,3 +296,26 @@ def test_kerneldraw_displaylist(canvas):
     show_array(f"displaylist", canvas)
 
 
+def test_kerneldraw_chunking(canvas):
+    random_coords = random_ellipses()
+    rects = random_rects(1000)
+    lines = random_lines(1000)
+    circles = random_circles(1000)
+    colors = random_colors(1000)
+    alphas = random_alpha(1000)
+    times = []
+    for chunk_size in (None, 10, 100, 500, 10000):
+        canvas[:, :] = 0.0
+        t = time.time()
+        ad = KernelDraw(canvas, chunk_size=chunk_size)
+        for xyxy, color, alpha in zip(lines, colors, alphas):
+            ad.line(xyxy, distance=1.5, color=color, alpha=alpha)
+        for rect, color, alpha in zip(rects, colors, alphas):
+            ad.rect(rect, color=color, alpha=alpha)
+        for x in range(0, ASIZE, 100):
+            ad.draw_string((x, x), "Hello world!")
+        ad.render()
+        canvas = ad.read()
+        times.append(time.time() - t)
+        # show_array(f"chunked", canvas)
+    print(times)

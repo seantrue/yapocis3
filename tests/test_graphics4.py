@@ -2,6 +2,7 @@
 
 import pytest
 
+import time
 import numpy as np
 from random import randint, shuffle
 
@@ -307,3 +308,27 @@ def test_kerneldraw4_displaylist(canvas):
     show_array(f"displaylist", canvas)
 
 
+def test_kerneldraw_chunking(canvas):
+    random_coords = random_ellipses()
+    ELEMENTS=1000
+    rects = random_rects(ELEMENTS)
+    lines = random_lines(ELEMENTS)
+    circles = random_circles(ELEMENTS)
+    colors = random_colors(ELEMENTS)
+    alphas = random_alpha(ELEMENTS)
+    times = []
+    for chunk_size in (None, 10, 100, 500, 10000):
+        canvas[:,:] = 0.0
+        t = time.time()
+        ad = KernelDraw4(canvas, chunk_size=chunk_size)
+        for xyxy, color, alpha in zip(lines, colors, alphas):
+            ad.line(xyxy, distance=1.5, color=color, alpha=alpha)
+        for rect, color, alpha in zip(rects, colors, alphas):
+            ad.rect(rect, color=color, alpha=alpha)
+        for x in range(0, ASIZE, 100):
+            ad.draw_string((x, x), "Hello world!")
+        ad.render()
+        canvas = ad.read()
+        times.append(time.time()-t)
+        # show_array(f"chunked", canvas)
+    print(times)

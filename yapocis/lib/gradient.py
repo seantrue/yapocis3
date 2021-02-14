@@ -5,7 +5,7 @@ Wrapper for 2D gradient kernel
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import yapocis.rpc.programs
-from yapocis.lib.yapocis_types import *
+from yapocis.utils.typing import *
 
 gradient_cl = None
 program, kernels = yapocis.rpc.programs.import_program("gradient", gradient="gradient_cl")
