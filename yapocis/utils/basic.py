@@ -11,46 +11,6 @@ DEBUG = False
 # Returns a byte-scaled image
 def byte_scale(data: Array, cmin: Optional[float] = None, cmax: Optional[float] = None, high: int = 255,
                low: int = 0) -> Array:
-    """
-    Byte scales an array (image).
-
-    Parameters
-    ----------
-    data : ndarray
-        PIL image data array.
-    cmin :  Scalar
-        Bias scaling of small values, Default is data.min().
-    cmax : scalar
-        Bias scaling of large values, Default is data.max().
-    high : scalar
-        Scale max value to `high`.
-    low : scalar
-        Scale min value to `low`.
-
-    Returns
-    -------
-    img_array : ndarray
-        Bytescaled array.
-
-    Examples
-    --------
-    >>> img = array([[ 91.06794177,   3.39058326,  84.4221549 ],
-                     [ 73.88003259,  80.91433048,   4.88878881],
-                     [ 51.53875334,  34.45808177,  27.5873488 ]])
-    >>> byte_scale(img)
-    array([[255,   0, 236],
-           [205, 225,   4],
-           [140,  90,  70]], dtype=uint8)
-    >>> byte_scale(img, high=200, low=100)
-    array([[200, 100, 192],
-           [180, 188, 102],
-           [155, 135, 128]], dtype=uint8)
-    >>> byte_scale(img, cmin=0, cmax=255)
-    array([[91,  3, 84],
-           [74, 81,  5],
-           [52, 34, 28]], dtype=uint8)
-
-    """
     if data.dtype == np.uint8:
         return data
     high = high - low
@@ -215,7 +175,7 @@ def newsize(img: PILImage, width: int, height: int, longest: int) -> Tuple[bool,
     return False, width, height
 
 
-def imread(filename: str, longest: Optional[int] = None) -> Array:
+def imread(filename: str, longest: Optional[int] = None) -> Union[Image1,Image3]:
     img = Image.open(filename)
     width, height = img.size
     resize = newsize(img, width, height, longest)
@@ -251,7 +211,7 @@ class Stage:
 stage = Stage()
 
 
-def sign(title: str, img: Union[Array, PILImage]) -> Image:
+def sign(title: str, img: Union[Image1, PILImage]) -> PILImage:
     if hasattr(img, "dtype"):
         img = to_image(img)
     shape = img.size
@@ -291,14 +251,14 @@ def sign(title: str, img: Union[Array, PILImage]) -> Image:
 _showArrayCounter = 0
 
 
-def _show_array(*args):
+def _show_array(*args) -> Tuple[str, PILImage]:
     global _showArrayCounter
     _showArrayCounter += 1
     array = args[-1]
     args = args[:-1]
     title = " ".join([str(arg) for arg in args]).strip()
     if not title:
-        title = "showarray %s" % _showArrayCounter
+        title = f"Array {_showArrayCounter}"
     if len(array.shape) == 3 and array.shape[2] == 4:
         array = array[:,:,:3]
     if array.dtype != np.uint8:
@@ -329,12 +289,12 @@ def _show_array(*args):
     return title, img
 
 
-def show_array(*args):
+def show_array(*args) -> None:
     title, img = _show_array(*args)
     img.show()
 
 
-def show_arraygrad(title: str, image: Array, theta: Array, grad: Optional[Array] = None) -> None:
+def show_arraygrad(title: str, image: Image1, theta: Image1, grad: Optional[Image1] = None) -> None:
     """
     Show an array with gradient orientation and optional magnitude
     Args:
@@ -384,7 +344,7 @@ def show_arraygrad(title: str, image: Array, theta: Array, grad: Optional[Array]
 
 
 class Shaper:
-    def __init__(self, data):
+    def __init__(self, data:Array):
         assert len(data.shape) == 2, "Shaper requires 2-d data"
         self.shape = data.shape
         self.order = None
@@ -421,8 +381,17 @@ class Shaper:
         return self.data
 
 
-def histeq_large(im: Array, nbr_bins=2 ** 16) -> Array:
-    # get image histogram
+def histeq_large(im: Image1, nbr_bins=2 ** 16) -> Array:
+    """
+    Histogram equalization of a 2D array
+
+    Args:
+        im: 2D Array
+        nbr_bins: number of bins
+
+    Returns:
+        2d Array, dtype=np.float32
+    """
     imhist, bins = np.histogram(im.flatten(), nbr_bins, normed=True)
     imhist[0] = 0
 
@@ -437,7 +406,7 @@ def histeq_large(im: Array, nbr_bins=2 ** 16) -> Array:
     return np.array(im2, np.float32).reshape(im.shape)
 
 
-def histeq(im: Array, nbr_bins: int = 256) -> Tuple[Array, Array]:
+def histeq(im: Image1, nbr_bins: int = 256) -> Tuple[Array, Array]:
     """
     Histogram equalization quantized to 8 bits. Appropriate for 8 bit images.
     Args:
@@ -457,7 +426,7 @@ def histeq(im: Array, nbr_bins: int = 256) -> Tuple[Array, Array]:
 ALIGNMENT = 4
 
 
-def align_image(image: Array, alignment: int = ALIGNMENT) -> Array:
+def align_image(image: Image1, alignment: int = ALIGNMENT) -> Image1:
     """
     OpenCL really seems to prefer data that is aligned on quadfloat boundaries.
     Args:
@@ -497,7 +466,7 @@ def normalize(a: Array) -> Array:
     return a
 
 
-def set_margin(a: Array, margin: int, value: Optional[float] = 0.0) -> None:
+def set_margin(a: Image1, margin: int, value: Optional[float] = 0.0) -> None:
     """
     Set the edges of a 2D array to a constant value
     Args:
@@ -514,18 +483,34 @@ def set_margin(a: Array, margin: int, value: Optional[float] = 0.0) -> None:
     a[:margin, :] = value
 
 
-def set_frame(a: Array, width: int, frame: Optional[float] = 1.0, margin: Optional[float] = 0.0) -> None:
+def set_frame(a: Image1, width: int, frame: Optional[float] = 1.0, margin: Optional[float] = 0.0) -> None:
+    """
+    Set the margin and then set the outer most pixels.
+
+    Args:
+        a: 2D Image
+        width: width of clearm
+        frame: edge pixel defailts to 1
+        margin: margin pixels default to 0
+
+    Returns:
+
+    """
     set_margin(a, width, margin)
     a[0, :] = frame
     a[:, 0] = frame
     a[-1, :] = frame
     a[:, -1] = frame
-    # TODO: should not include corners
-    a[margin, :] = frame
-    a[:, margin] = frame
-    a[-margin, :] = frame
-    a[:, -margin] = frame
 
-def chunker(data: Iterable, chunk_size:int=100):
+def chunker(data: Iterable, chunk_size:int=100) -> Iterator[List]:
+    """
+    Chop an iterable into a digestable chunks
+    Args:
+        data: an iterable
+        chunk_size: defaults to 100
+
+    Returns: a generator of lists
+
+    """
     for i in range(0, len(data), chunk_size):
         yield data[i:i+chunk_size]

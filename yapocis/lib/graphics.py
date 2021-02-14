@@ -9,8 +9,10 @@ import yapocis.rpc.programs
 from yapocis.lib.text import render_text
 
 lines_cl = rects_cl = circles_cl = triangles_cl = ellipses_cl = composite_cl = None
-program, _ = yapocis.rpc.programs.import_program("graphics", lines="lines_cl", rects="rects_cl", circles="circles_cl",
-                                              triangles="triangles_cl", ellipses="ellipses_cl", composite="composite_cl")
+program, _ = yapocis.rpc.programs.import_program("graphics",
+                                                 lines="lines_cl", rects="rects_cl", circles="circles_cl",
+                                                 triangles="triangles_cl", ellipses="ellipses_cl",
+                                                 composite="composite_cl")
 
 
 def coerce_coords(coords, width, dtype=np.int32):
@@ -26,7 +28,7 @@ def arrayify1d(scalar_or_vector, length, default=None, dtype=np.float32):
         raise ValueError(f"Both value and default are None")
     if isinstance(scalar_or_vector, np.ndarray):
         vector = scalar_or_vector.astype(dtype)
-    elif isinstance(scalar_or_vector, (list,tuple)):
+    elif isinstance(scalar_or_vector, (list, tuple)):
         vector = np.array(scalar_or_vector, dtype=dtype)
     else:
         vector = [scalar_or_vector] * length
@@ -35,32 +37,36 @@ def arrayify1d(scalar_or_vector, length, default=None, dtype=np.float32):
         raise ValueError(f"value length {vector.shape[0]} does not match specified {length}")
     return vector
 
+
 def arrayify2d(scalar_or_vector, length, width, default=None, dtype=np.float32):
     if scalar_or_vector is None and default is None:
         raise ValueError(f"Both value and default are None")
-    scalar_or_vector = [default]*width if scalar_or_vector is None else scalar_or_vector
-    if isinstance(scalar_or_vector, (list,tuple, np.ndarray)):
+    scalar_or_vector = [default] * width if scalar_or_vector is None else scalar_or_vector
+    if isinstance(scalar_or_vector, (list, tuple, np.ndarray)):
         vector = np.array(scalar_or_vector, dtype=dtype)
     if len(vector.shape) == 2:
         if vector.shape[2] != width:
             raise ValueError(f"shape {scalar_or_vector.shape} should be {length},{width}")
         return vector
     else:
-        vector = np.empty((length,width), dtype=dtype)
+        vector = np.empty((length, width), dtype=dtype)
         vector[:] = scalar_or_vector
     return vector
+
 
 def to_list(scalar, vector, n, default=None):
     if scalar is None and vector is None:
         scalar = default
-    coerced = list(vector) if isinstance(vector,(tuple,list,np.ndarray)) else [scalar]*n
+    coerced = list(vector) if isinstance(vector, (tuple, list, np.ndarray)) else [scalar] * n
     return coerced
+
 
 def to_vector(scalar, vector, n, dtype=np.float32, default=None):
     if scalar is None and vector is None:
         scalar = default
-    coerced = arrayify1d(scalar, n, dtype=dtype) if scalar else arrayify1d(vector,n,dtype=dtype)
+    coerced = arrayify1d(scalar, n, dtype=dtype) if scalar else arrayify1d(vector, n, dtype=dtype)
     return coerced
+
 
 def coerce_colors(coords, color=None, colors=None, alpha=None, alphas=None, **kwargs) -> np.ndarray:
     n = coords.shape[0]
@@ -72,7 +78,6 @@ def coerce_colors(coords, color=None, colors=None, alpha=None, alphas=None, **kw
     alphas = to_vector(alpha, alphas, n, default=1.0)
     ca = np.column_stack([colors, alphas])
     return ca
-
 
 
 def composite_setup(locations, blocks, alpha=None, alphas=None):
@@ -235,14 +240,15 @@ def sprites(image, locations, sprites, alpha=None, alphas=None):
     composite_cl(image, coords, buffer, ipixels)
 
 
-def setup_texts(locations, texts, font=None, fonts=None, size=None, sizes=None,  alpha=None, alphas=None, color=None, colors=None, rotation=None, rotations=None):
+def setup_texts(locations, texts, font=None, fonts=None, size=None, sizes=None, alpha=None, alphas=None, color=None,
+                colors=None, rotation=None, rotations=None):
     n = len(locations)
-    fonts = to_list(font,fonts,n,default="default")
-    sizes = to_list(size,sizes,n, default=32)
+    fonts = to_list(font, fonts, n, default="default")
+    sizes = to_list(size, sizes, n, default=32)
     alphas = to_list(alpha, alphas, n, default=None)
     rotations = to_list(rotation, rotations, n, default=None)
-    bbox_blocks = [render_text(text, font_name=font_name, size=size,rotation=rotation)
-              for text, font_name, size ,rotation in zip(texts, fonts, sizes, rotations)]
+    bbox_blocks = [render_text(text, font_name=font_name, size=size, rotation=rotation)
+                   for text, font_name, size, rotation in zip(texts, fonts, sizes, rotations)]
     bboxes, blocks = zip(*bbox_blocks)
     if isinstance(alphas, (list, tuple)):
         new_alphas = []
@@ -250,13 +256,12 @@ def setup_texts(locations, texts, font=None, fonts=None, size=None, sizes=None, 
             if alpha_ == "mask":
                 alpha_ = block
             elif alpha_ == "bug":
-                alpha_ = np.maximum(block,.33)
+                alpha_ = np.maximum(block, .33)
             new_alphas.append(alpha_)
         alphas = new_alphas
     return locations, blocks, alphas
 
+
 def draw_strings(image, locations, texts, **kwargs):
     locations, blocks, alpha = setup_texts(locations, texts, **kwargs)
     composite(image, locations, blocks)
-
-

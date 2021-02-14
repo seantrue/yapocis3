@@ -15,7 +15,7 @@ from yapocis.lib.gaussian import gauss_1d, are_close, gaussians, get_scales, get
     get_gaussian, gauss_image, zcsdog
 from yapocis.lib.operators import add, add_res, program, sub, sub_res, mul, mul_res
 from yapocis.lib.median import median3x3fast, median3x3slow
-import yapocis.lib.anisodiff as peronamalik2
+from yapocis.lib.anisodiff import anisodiff, anisodiff_rgbIS
 
 from . import test_image_path
 test_image = test_image_path()
@@ -174,10 +174,18 @@ def test_zcs():
 def test_perona_malik():
    rgb = imread(test_image).astype(np.float32)/256
    show_array("org", rgb)
-   for i, rgb2 in enumerate(peronamalik2.anisodiff_rgbIS(rgb)):
+   for i, rgb2 in enumerate(anisodiff_rgbIS(rgb)):
       if i >= 50:
          break
    show_array(f"filtered 100", rgb2)
+
+def test_perona3_malik():
+   rgb = imread(test_image).astype(np.float32)/256
+   show_array("org", rgb)
+   for i, rgb2 in enumerate(anisodiff(rgb)):
+      if i >= 50:
+         break
+   show_array(f"filtered rgb", rgb2[:,:,:3])
 
 def test_perona4_malik():
    rgb = imread(test_image).astype(np.float32)/256
@@ -186,10 +194,10 @@ def test_perona4_malik():
    shape4[2] = 4
    rgba = np.zeros((shape4),dtype=np.float32)
    rgba[:,:,:3] = rgb
-   for i, rgba2 in enumerate(peronamalik2.anisodiff(rgba)):
+   for i, rgba2 in enumerate(anisodiff(rgba)):
       if i >= 50:
          break
-   show_array(f"filtered 100", rgba2[:,:,:3])
+   show_array(f"filtered rgba", rgba2[:,:,:3])
 
 
 

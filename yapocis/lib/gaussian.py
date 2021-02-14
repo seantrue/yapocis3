@@ -9,12 +9,13 @@ from yapocis.lib.operators import sub_res
 from yapocis.lib.zcs import zcs, zcs_res
 from yapocis.utils.typing import *
 
-def are_close(a:Array, b:Array) -> bool:
+
+def are_close(a: Array, b: Array) -> bool:
     eps = .00001
     return abs(a - b) <= eps
 
 
-def gauss_1d(sigma:float=1., dt:float=1., limit:float=.01, normalize:bool=True) -> Array:
+def gauss_1d(sigma: float = 1., dt: float = 1., limit: float = .01, normalize: bool = True) -> Array:
     """
     Get a Gaussian distribution that sums to 1 along 1 dimension, quantized by discrete steps.
 
@@ -47,7 +48,8 @@ def gauss_1d(sigma:float=1., dt:float=1., limit:float=.01, normalize:bool=True) 
     return k
 
 
-def gaussians(maxwidth=100, sigma=1.0, scale=1.6, limit=.001, sigmas=[]):
+def gaussians(maxwidth: int = 100, sigma: float = 1.0, scale: float = 1.6, limit: float = .001,
+              sigmas: Optional[List[float]] = None) -> List[Array]:
     """
     Generate a list of gaussian kernels with size less than maxwidth
     Args:
@@ -93,12 +95,12 @@ def gaussian_kernels(gs):
 _gaussian_basis = gaussians()
 
 
-def get_gaussian(scale):
+def get_gaussian(scale: int):
     assert 0 <= scale and scale < len(_gaussian_basis)
     return _gaussian_basis[scale]
 
 
-def get_scales():
+def get_scales() -> int:
     return (len(_gaussian_basis))
 
 
@@ -113,19 +115,20 @@ def get_gaussian_kernels():
     return _gaussian_kernels
 
 
-def get_gaussian_kernel(scale):
+def get_gaussian_kernel(scale: int) -> Array:
     assert 0 <= scale and scale < len(_gaussian_kernels)
     return _gaussian_kernels[scale]
 
 
-def gauss_image(a, scale):
+def gauss_image(a: Image1, scale: int):
     g = get_gaussian_kernel(scale)
     b = g(0, a)
     c = g(1, b)
     return c.copy()
 
 
-def zcsdog(a, scale, clearmargin=True, frame=True, res=True):
+def zcsdog(a: Image1, scale: int, clearmargin: bool = True, frame: bool = True, res: bool = True) -> \
+        Tuple[Image1, Image1, Image1]:
     if res:
         g = get_gaussian_kernel(scale)
         g1 = get_gaussian_kernel(scale + 1)

@@ -10,13 +10,13 @@ from yapocis.utils.typing import *
 
 _rendered = {}
 _render_buffer = None
-def get_render_buffer(size:Tuple[int,int]) -> Image:
+def get_render_buffer(size:Tuple[int,int]) -> PILImage:
     global _render_buffer
     if _render_buffer is None or _render_buffer.size[0] < size[0] or _render_buffer.size[1] < size[1]:
         _render_buffer = Image.new("L", (size[0],size[1]))
     return _render_buffer
 
-def render_text(text:str, font_name:str="default", size:int=32, rotation:Optional[float]=None) -> Tuple[Tuple,np.ndarray]:
+def render_text(text:str, font_name:str="default", size:int=32, rotation:Optional[float]=None) -> Tuple[Tuple, Image1]:
     try:
         bbox, a = _rendered[(text,font_name,size, rotation)]
         return bbox, a

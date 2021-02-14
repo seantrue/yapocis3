@@ -12,7 +12,7 @@ from yapocis.utils.typing import *
 rgb2hsi_cl = hsi2rgb_cl = None
 program, kernels = yapocis.rpc.programs.import_program("hsi", rgb2hsi="rgb2hsi_cl", hsi2rgb="hsi2rgb_cl")
 
-def rgb2hsi(r:Array, g:Array, b:Array) -> Tuple[Array,Array,Array]:
+def rgb2hsi(r:Image1, g:Image1, b:Image1) -> Tuple[Image1,Image1,Image1]:
     """
     Convert red,green,blue planes to hue,saturation,intensity
 
@@ -27,7 +27,7 @@ def rgb2hsi(r:Array, g:Array, b:Array) -> Tuple[Array,Array,Array]:
     h, s, i = rgb2hsi_cl(r, g, b)
     return h, s, i
 
-def hsi2rgb(h:Array, s:Array, i:Array) -> Tuple[Array,Array,Array]:
+def hsi2rgb(h:Image1, s:Image1, i:Image1) -> Tuple[Array,Array,Array]:
     """
     Reverse rgb2hsi
 

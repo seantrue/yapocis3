@@ -79,7 +79,7 @@ def INTERFACECL_BNF() -> OneOrMore:
 
 
 class InterfaceCL:
-    """\
+    """
     Manages the kernel definitions, particularly the parameter specifications.
     """
 

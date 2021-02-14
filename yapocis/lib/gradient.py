@@ -10,7 +10,7 @@ from yapocis.utils.typing import *
 gradient_cl = None
 program, kernels = yapocis.rpc.programs.import_program("gradient", gradient="gradient_cl")
 
-def gradient(image:Array, reach:int=1) -> Tuple[Array,Array]:
+def gradient(image:Image1, reach:int=1) -> Tuple[Image1,Image1]:
     """
     Return gradient and and angle array for an input 2d Array
 

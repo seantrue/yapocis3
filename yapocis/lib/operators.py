@@ -5,4 +5,6 @@ Wrappers for binary operations of the form c = a + b, in both resident and inout
 
 import yapocis.rpc.programs
 
-program, _ = yapocis.rpc.programs.import_program("operators", import_kernels="*", operators=[("add", "+"), ("sub", "-"), ("mul", "*"), ("div", "/")])
+add = add_res = sub = sub_res = mul = mul_res = div = div_res = None
+program, _ = yapocis.rpc.programs.import_program("operators", import_kernels="*",
+                                                 operators=[("add", "+"), ("sub", "-"), ("mul", "*"), ("div", "/")])

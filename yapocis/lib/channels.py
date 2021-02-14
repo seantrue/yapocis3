@@ -9,7 +9,7 @@ import numpy as np
 
 from yapocis.utils.typing import *
 
-def histeq(im:Array, nbr_bins:int =2 ** 16) -> Array:
+def histeq(im:Image1, nbr_bins:int =2 ** 16) -> Image1:
     """
     Histogram equalization of a 2D array
 
@@ -32,7 +32,7 @@ def histeq(im:Array, nbr_bins:int =2 ** 16) -> Array:
     return np.array(im2, np.float32).reshape(im.shape)
 
 
-def split_channels(rgb:Array) -> Tuple[Array,Array,Array]:
+def split_channels(rgb:Image3) -> Tuple[Image1,Image1,Image1]:
     """
     Split a 3xWxH array into WxH, WxH, WxH
 
@@ -46,7 +46,7 @@ def split_channels(rgb:Array) -> Tuple[Array,Array,Array]:
     return r.copy(), g.copy(), b.copy()
 
 
-def join_channels(r: Array, g: Array, b: Array) -> Array:
+def join_channels(r: Image1, g: Image1, b: Image1) -> Image3:
     """
     Join WxH, WxH, WxH 2D arrays into a 3D Array with copied data
 
@@ -64,3 +64,22 @@ def join_channels(r: Array, g: Array, b: Array) -> Array:
     rgb = np.empty(tuple(shape), dtype=r.dtype)
     rgb[:, :, 0], rgb[:, :, 1], rgb[:, :, 2] = r.copy(), g.copy(), b.copy()
     return rgb
+
+def split_planes(image: Image1234) -> Tuple:
+    if len(image.shape) == 2:
+        return image.copy()
+    planes = (image[:,:,i].copy() for i in range(image.shape[2]))
+    return planes
+
+def join_planes(plane:Image1, *planes) -> Image1234:
+    if len(planes) == 0:
+        return plane.copy()
+    shape = list(plane.shape)
+    shape.append(len(planes)+1)
+    image = np.empty(tuple(shape), dtype=plane.dtype)
+    image[:,:,0] = plane
+    for i, pln in enumerate(planes):
+        image[:,:,i+1] = pln
+    return image
+
+

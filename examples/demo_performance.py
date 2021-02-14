@@ -88,7 +88,7 @@ for iengine, engine in enumerate(engines):
 
     # Lines show performance improvement over scipy
     # Filled areas show total seconds per engine
-    ax1.set_title(engine)
+    ax1.set_title(engine, loc="left")
     ax1.set_xlabel("Pixels(k)", fontsize="medium")
     # ax1.plot(areas, scipy_deltas, color="darkgreen", label="numpy")
     ax1.plot(areas, slow_deltas, color="magenta", label="slow")
@@ -107,3 +107,7 @@ for iengine, engine in enumerate(engines):
 plot.tight_layout()
 plot.savefig("docs/images/median3x3-performance.png")
 plot.show()
+print("^C to continue")
+while True:
+    time.sleep(1)
+    
