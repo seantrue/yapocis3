@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from yapocis.lib.channels import split_channels
+from yapocis.lib.channels import split_planes
 from yapocis.lib.graphics import to_list, coerce_coords
 from yapocis.lib.kerneldraw import AbstractKernelDraw, KernelDraw
 
@@ -14,7 +14,7 @@ class KernelDraw3(AbstractKernelDraw):
         self.a = a
         self.color = (None, None, None)
         self.alpha = 1.0
-        self.channels = split_channels(a)
+        self.channels = list(split_planes(a))
         self.ads = [KernelDraw(a) for a in self.channels]
 
     def set_color(self, color, alpha=None):
@@ -71,6 +71,6 @@ class KernelDraw3(AbstractKernelDraw):
     def read(self):
         for ad in self.ads:
             ad.read()
-        r, g, b = self.channels
-        self.a[:, :, 0], self.a[:, :, 1], self.a[:, :, 2] = r.copy(), g.copy(), b.copy()
+        for i, channel in enumerate(self.channels):
+            self.a[:, :, i] = channel
         return self.a

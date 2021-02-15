@@ -122,9 +122,14 @@ def get_gaussian_kernel(scale: int) -> Array:
 
 def gauss_image(a: Image1, scale: int):
     g = get_gaussian_kernel(scale)
-    b = g(0, a)
-    c = g(1, b)
-    return c.copy()
+    a = a.copy()
+    b = np.empty_like(a)
+    g.program.write(a)
+    g.program.write(b)
+    g.res(0,a,b)
+    g.res(1,b,a)
+    g.read(a)
+    return a
 
 
 def zcsdog(a: Image1, scale: int, clearmargin: bool = True, frame: bool = True, res: bool = True) -> \
@@ -133,10 +138,10 @@ def zcsdog(a: Image1, scale: int, clearmargin: bool = True, frame: bool = True, 
         g = get_gaussian_kernel(scale)
         g1 = get_gaussian_kernel(scale + 1)
         g.write(a)
-        smaller = np.zeros_like(a)
-        larger = np.zeros_like(a)
-        tmp = np.zeros_like(a)
-        zca = np.zeros_like(a)
+        smaller = np.empty_like(a)
+        larger = np.empty_like(a)
+        tmp = np.empty_like(a)
+        zca = np.empty_like(a)
         g.write(smaller)
         g.write(larger)
         g.write(tmp)

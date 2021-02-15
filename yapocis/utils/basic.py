@@ -175,14 +175,17 @@ def newsize(img: PILImage, width: int, height: int, longest: int) -> Tuple[bool,
     return False, width, height
 
 
-def imread(filename: str, longest: Optional[int] = None) -> Union[Image1,Image3]:
+def imread(filename: str, longest: Optional[int] = None, keep_alpha:bool=False) -> Union[Image1,Image3]:
     img = Image.open(filename)
+    mode = img.mode
+    if mode == "P":
+        img = img.convert("RGBA")
     width, height = img.size
-    resize = newsize(img, width, height, longest)
+    resize,w,h = newsize(img, width, height, longest)
     if resize:
-        img = img.resize((width, height))
+        img = img.resize((w, h))
     a = from_image(img).astype(np.float32)
-    if len(a.shape) == 3 and a.shape[2] == 4:
+    if not keep_alpha and len(a.shape) == 3 and a.shape[2] == 4:
         a = a[:, :, 0:3]
     return a
 

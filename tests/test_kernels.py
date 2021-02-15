@@ -5,7 +5,7 @@ import time
 
 import yapocis.rpc.programs
 from yapocis.utils.basic import show_array, stage, imread
-from yapocis.lib.hsi import rgb2hsi, hsi2rgb
+from yapocis.lib.hsi import rgb2hsi, hsi2rgb, rgb2hsi3, hsi2rgb3
 from yapocis.lib.channels import split_channels, join_channels, split_planes, join_planes
 
 from yapocis.rpc.engines import get_available
@@ -89,7 +89,6 @@ def test_gradient():
         c = program.gradient(a, 1)
         print("Engine %s seconds %s" % (engine_name, time.time() - t))
 
-
 def test_hsi():
     r = np.empty((256, 256), dtype=np.float32)
     g = np.empty_like(r)
@@ -99,18 +98,20 @@ def test_hsi():
         g[:, i] = i
         b[i, :] = 255 - i
     rgb = join_channels(r, g, b)
-    rgb /= 255.0
+    rgb /= 256.0
     show_array("Test data", rgb)
     r, g, b = split_channels(rgb)
     rgb2 = join_channels(r, g, b)
-    show_array("Test split and join", rgb2)
+    assert np.sum(rgb-rgb2) == 0.0
     h, s, i = rgb2hsi(r, g, b)
-    show_array("I", i)
-    show_array("H", h)
-    show_array("S", s)
-    r, g, b = hsi2rgb(h, s, i)
-    rgb3 = join_channels(r, g, b)
-    show_array("from HSI", rgb3)
+    hsi3 = rgb2hsi3(rgb)
+    h3,s3,i3 = split_channels(hsi3)
+    assert np.sum(i-i3) == 0.0
+    assert np.sum(s-s3) == 0.0
+    assert np.sum(h-h3) == 0.0
+    rgb3 = hsi2rgb3(hsi3)
+    show_array("from HSI3", rgb3)
+    assert abs(np.sum(rgb.flatten()-rgb3.flatten()))/rgb.size < .00001
     print(program)
 
 
@@ -194,8 +195,9 @@ def test_perona_malik():
 def test_perona2_malik():
     config = get_device_config()
     if config["native_vector_width_float"] > 2:
-        print(config["preferred_vector_width_float"])
-        raise RuntimeError("This OpenCL engine does not support float2")
+        print("preferred_vector_width_float", config["preferred_vector_width_float"])
+        print("This OpenCL engine does not support float2")
+        return
     rgb = imread(test_image).astype(np.float32) / 256
     show_array("org rg", rgb)
     r,g,b = split_planes(rgb)
@@ -211,8 +213,9 @@ def test_perona2_malik():
 def test_perona3_malik():
     config = get_device_config()
     if config["preferred_vector_width_float"] > 3:
-        print(config["preferred_vector_width_float"])
-        raise RuntimeError("This OpenCL engine does not support float3")
+        print("preferred_vector_width_float", config["preferred_vector_width_float"])
+        print("This OpenCL engine does not support float3")
+        return
     rgb = imread(test_image).astype(np.float32) / 256
     show_array("org rgb", rgb)
     for i, rgb2 in enumerate(anisodiff(rgb)):

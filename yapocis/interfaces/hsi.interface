@@ -1,4 +1,6 @@
 interface hsi {
     kernel rgb2hsi(in float *r, in float *g, in float *b, outlike r, outlike r, outlike r);
     kernel hsi2rgb(in float *h, in float *s, in float *i, outlike h, outlike h, outlike h);
+    kernel rgb2hsi3(in float *rgb, outlike rgb);
+    kernel hsi2rgb3(in float *hsi, outlike hsi);
 };

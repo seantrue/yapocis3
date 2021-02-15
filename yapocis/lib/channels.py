@@ -34,7 +34,7 @@ def histeq(im:Image1, nbr_bins:int =2 ** 16) -> Image1:
 
 def split_channels(rgb:Image3) -> Tuple[Image1,Image1,Image1]:
     """
-    Split a 3xWxH array into WxH, WxH, WxH
+    Split a WxHx3 array into WxH, WxH, WxH
 
     Args:
         rgb: 3D array
@@ -42,9 +42,8 @@ def split_channels(rgb:Image3) -> Tuple[Image1,Image1,Image1]:
     Returns:
         Tuple of 2D arrays that are copies of the original data
     """
-    r, g, b = rgb[:, :, 0], rgb[:, :, 1], rgb[:, :, 2]
-    return r.copy(), g.copy(), b.copy()
-
+    channels =  np.dsplit(rgb, indices_or_sections=3)
+    return [np.ascontiguousarray(np.squeeze(channel)) for channel in channels]
 
 def join_channels(r: Image1, g: Image1, b: Image1) -> Image3:
     """
@@ -59,27 +58,17 @@ def join_channels(r: Image1, g: Image1, b: Image1) -> Image3:
         3xWxH array
 
     """
-    shape = list(r.shape)
-    shape.append(3)
-    rgb = np.empty(tuple(shape), dtype=r.dtype)
-    rgb[:, :, 0], rgb[:, :, 1], rgb[:, :, 2] = r.copy(), g.copy(), b.copy()
+    rgb = np.ascontiguousarray(np.dstack((r,g,b)))
     return rgb
 
 def split_planes(image: Image1234) -> Tuple:
     if len(image.shape) == 2:
         return image.copy()
-    planes = (image[:,:,i].copy() for i in range(image.shape[2]))
+    planes = [np.ascontiguousarray(np.squeeze(plane)) for plane in np.dsplit(image, indices_or_sections=image.shape[-1])]
     return planes
 
-def join_planes(plane:Image1, *planes) -> Image1234:
-    if len(planes) == 0:
-        return plane.copy()
-    shape = list(plane.shape)
-    shape.append(len(planes)+1)
-    image = np.empty(tuple(shape), dtype=plane.dtype)
-    image[:,:,0] = plane
-    for i, pln in enumerate(planes):
-        image[:,:,i+1] = pln
+def join_planes(*planes) -> Image1234:
+    image = np.ascontiguousarray(np.dstack(planes))
     return image
 
 

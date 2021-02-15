@@ -5,12 +5,14 @@ Created on Jul 22, 2011
 '''
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-import yapocis.rpc.programs
+from yapocis.rpc.programs import import_program
 
 from yapocis.utils.typing import *
 
-rgb2hsi_cl = hsi2rgb_cl = None
-program, kernels = yapocis.rpc.programs.import_program("hsi", rgb2hsi="rgb2hsi_cl", hsi2rgb="hsi2rgb_cl")
+rgb2hsi_cl = hsi2rgb_cl = rgb2hsi3_cl =hsi2rgb3_cl = None
+program, kernels = import_program("hsi",
+                                  rgb2hsi="rgb2hsi_cl", hsi2rgb="hsi2rgb_cl",
+                                  rgb2hsi3="rgb2hsi3_cl", hsi2rgb3="hsi2rgb3_cl" )
 
 def rgb2hsi(r:Image1, g:Image1, b:Image1) -> Tuple[Image1,Image1,Image1]:
     """
@@ -42,4 +44,30 @@ def hsi2rgb(h:Image1, s:Image1, i:Image1) -> Tuple[Array,Array,Array]:
     r,g,b = hsi2rgb_cl(h,s,i)
     return r,g,b
 
+def rgb2hsi3(rgb: Image3) -> Image3:
+    """
+    Convert rgb to hue,saturation,intensity
+
+    Args:
+        rgb: red,
+        g: green, ""
+        b: blue, ""
+
+    Returns:  hue, saturation, intensity as tuple of three arrays
+
+    """
+    hsi = rgb2hsi3_cl(rgb, global_size=rgb.size//3)
+    return hsi
+
+def hsi2rgb3(hsi: Image3) -> Image3:
+    """
+    Reverse rgb2hsi3
+
+    Args:
+        hsi: hue, saturation, intensity Image3
+    Returns: rgb Image3
+
+    """
+    rgb = hsi2rgb3_cl(hsi, global_size=hsi.size//3)
+    return rgb
 

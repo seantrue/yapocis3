@@ -9,7 +9,7 @@ from random import randint, shuffle
 from yapocis.utils.basic import show_array, imread
 from yapocis.lib.kerneldraw4 import KernelDraw4
 from yapocis.lib.graphics4 import lines, rects, circles, triangles, ellipses, composite, sprites, draw_strings
-
+from yapocis.icons import icons, icon
 from . import test_image_path
 
 test_image = test_image_path()
@@ -41,6 +41,26 @@ def image_sprites(steps=4):
         for y in range(0, dimension, step):
             sprites.append(((x,y),image[x:x + step, y:y + step,:]))
     return sprites
+
+def random_icons(n=100):
+
+    icon_names = icons()
+    shuffle(icon_names)
+    icon_names = icon_names[:n]
+    colors = random_colors(n)
+    icns = [icon(icon_name,size=100) for icon_name in icon_names]
+    for icon_name, icn, color in zip(icon_names, icns, colors):
+        if "essential" in icon_name:
+            icn[:,:,:3] = (1.0 - icn[:,:,:3])
+            # icn[:,:,:] *= color
+            # icn[:,:,3] = 1.0
+            # icn[:,:,:] = (1.0-icn[:,:,:])
+            pass
+    while len(icns) < n:
+        icns = icns+icns
+    shuffle(icns)
+    icns = icns[:n]
+    return icns
 
 
 def random_points(n=100):
@@ -115,7 +135,7 @@ def random_ellipses(n=100):
 
 def random_composites(n=100):
     locations = random_points(n)
-    sprites = [sprite for _,sprite in image_sprites()]
+    sprites = [sprite for _,sprite in image_sprites(n, ASIZE)]
     blocks = sprites[:]
     while len(blocks) < n:
         blocks += sprites
@@ -125,7 +145,7 @@ def random_composites(n=100):
 
 def random_sprites(n=100):
     random_coords, random_sprites = random_composites(n)
-    random_sprites = random_sprites[:10]
+    random_sprites = random_sprites[:n]
     for i in range(len(random_coords)):
         j = int(i % len(random_sprites))
         random_coords[i].insert(0, j)
@@ -212,7 +232,7 @@ def test_composite_sprites(canvas):
 
 def test_composite_mosaic(canvas):
     from random import shuffle
-    sprites = image_sprites(5)
+    sprites = image_sprites(5, ASIZE)
     coords, blocks = zip(*sprites)
     coords = list(coords)
     blocks = list(blocks)
@@ -222,6 +242,28 @@ def test_composite_mosaic(canvas):
     shuffle(blocks)
     composite(iout, coords, blocks)
     show_array("mosaic", iout)
+
+def test_simple_icons(canvas):
+    locations = []
+    # canvas[:,:,:] = .5
+    for x in range(100, ASIZE, 100):
+        for y in range(100, ASIZE, 100):
+            locations.append((x,y))
+    blocks = random_icons(len(locations))
+    colors = random_colors(len(locations))
+    for block, color in zip(blocks,colors):
+        block[:,:,:] *= color
+    composite(canvas, locations, blocks)
+    show_array("icons", canvas)
+
+def test_random_icons(canvas):
+    locations = random_points()
+    blocks = random_icons(len(locations))
+    colors = random_colors(len(locations))
+    for block, color in zip(blocks,colors):
+        block[:,:,:] *= color
+    composite(canvas, locations, blocks)
+    show_array("icons", canvas)
 
 
 def test_simple_texts(canvas):
