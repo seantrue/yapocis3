@@ -56,7 +56,7 @@ def rgb2hsi3(rgb: Image3) -> Image3:
     Returns:  hue, saturation, intensity as tuple of three arrays
 
     """
-    hsi = rgb2hsi3_cl(rgb, global_size=rgb.size//3)
+    hsi = rgb2hsi3_cl(rgb, global_size=rgb.size//rgb.shape[-1])
     return hsi
 
 def hsi2rgb3(hsi: Image3) -> Image3:
@@ -68,6 +68,6 @@ def hsi2rgb3(hsi: Image3) -> Image3:
     Returns: rgb Image3
 
     """
-    rgb = hsi2rgb3_cl(hsi, global_size=hsi.size//3)
+    rgb = hsi2rgb3_cl(hsi, global_size=hsi.size//hsi.shape[-1])
     return rgb
 

@@ -25,7 +25,7 @@ def zcs(image):
     return handler(image, global_size=global_size)
 
 
-def zcs_res(image):
+def zcs_res(image, zcs):
     if len(image.shape) == 2:
         handler = zcs1_res
         global_size = image.size
@@ -38,4 +38,4 @@ def zcs_res(image):
     elif image.shape[2] == 4:
         handler = zcs4_res
         global_size = image.size // 4
-    handler(image, global_size=global_size)
+    handler(image, zcs, global_size=global_size)

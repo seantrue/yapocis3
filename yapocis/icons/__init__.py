@@ -3,10 +3,20 @@
 
 import os
 from yapocis.utils.typing import *
-from yapocis.utils.basic import imread
+from yapocis.utils.basic import imread, get_yapocis_dirs
 
 from PIL import Image
-print("""Flaticon icons made by Smashicons (https://www.flaticon.com/authors/smashicons) on https://www.flaticon.com""")
+
+def get_icon_dirs():
+    dirname = os.path.dirname(__file__)
+    dirnames = [dirname]
+    for dirname in get_yapocis_dirs():
+        font_path = os.path.join(dirname, "icons")
+        if os.path.isdir(font_path):
+            if font_path not in dirnames:
+                dirnames.append(font_path)
+    return dirnames
+
 
 def icons() -> List[str]:
     """
@@ -14,10 +24,11 @@ def icons() -> List[str]:
     Returns:
 
     """
-    dirname = os.path.dirname(__file__)
+    dirnames = get_icon_dirs()
     icons = []
-    for dir_name, dir_names, file_names in os.walk(dirname):
-        icons += [os.path.join(dir_name,icon_name) for icon_name in file_names if icon_name.endswith(".png")]
+    for dirname in dirnames:
+        for subdir_name, dir_names, file_names in os.walk(dirname):
+            icons += [os.path.join(dirname,subdir_name,icon_name) for icon_name in file_names if icon_name.endswith(".png")]
     return icons
 
 def icon_path(icon_name:str) -> str:

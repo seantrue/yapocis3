@@ -84,10 +84,14 @@ def gaussian_kernels(gs):
     global program
     convs = [("gauss%s" % len(a), a) for a in gs]
     convsres = [("gauss%s_res" % len(a), a) for a in gs]
+    convsh = [("gauss%s_h" % len(a), a) for a in gs]
+    convsv = [("gauss%s_v" % len(a), a) for a in gs]
     program = yapocis.rpc.programs.load_program("convolvesep", convs=convs)
     krnls = [getattr(program, name) for (name, conv) in convs]
     for i, (name, conv) in enumerate(convs):
         krnls[i].res = getattr(program, convsres[i][0])
+        krnls[i].h = getattr(program, convsh[i][0])
+        krnls[i].v = getattr(program, convsv[i][0])
         krnls[i].width = len(conv)
     return krnls
 
@@ -126,8 +130,8 @@ def gauss_image(a: Image1, scale: int):
     b = np.empty_like(a)
     g.program.write(a)
     g.program.write(b)
-    g.res(0,a,b)
-    g.res(1,b,a)
+    g.h(a,b)
+    g.v(b,a)
     g.read(a)
     return a
 

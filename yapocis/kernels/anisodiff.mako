@@ -8,6 +8,10 @@
 #define ONE2 (float2)(ONE,ONE)
 #define ONE3 (float3)(ONE,ONE,ONE)
 #define ONE4 (float4)(ONE,ONE,ONE,ONE)
+#define FLOAT float
+#define FLOAT2 float2
+#define FLOAT3 float3
+#define FLOAT4 float4
 
 %for planes in ["",2,3,4]:
 #define ZEROS ZERO${planes}
@@ -15,28 +19,24 @@
 #define FLOAT float${planes}
 
 __kernel 
-void filterImage${planes}(int width, int height, __global FLOAT *input, float scale, float step_size, __global FLOAT *output)
+void filterImage${planes}(int width, int height, __global FLOAT${planes} *input, float scale, float step_size, __global FLOAT${planes} *output)
 {
     size_t i = get_global_id(0);
     size_t last = width*height;
     int x = i / height;
     int y = i%height;
-    int updated = 0;
-    FLOAT CF;
-    // Linear coordinates for y-1,x-1,x+1,y+1
-    size_t yb = i-1, xl = i-height, xr = i + height, yt = i+1;
-    // and if cell neigborhood is in bounds
-    FLOAT central = input[i];
-    FLOAT invscale = 1.0f/scale;
+    FLOAT${planes} CF;
+    FLOAT${planes} central = input[i];
+    FLOAT${planes} invscale = 1.0f/scale;
     if ((0<x) && (x<(width-1)) && ((0<y) && (y<(height-1)))) {
-      FLOAT n = input[i+1];
-      FLOAT s = input[i-1];
-      FLOAT e = input[i-height];
-      FLOAT w = input[i+height];
-      FLOAT di = n-central;
+      FLOAT${planes} n = input[i+1];
+      FLOAT${planes} s = input[i-1];
+      FLOAT${planes} e = input[i-height];
+      FLOAT${planes} w = input[i+height];
+      FLOAT${planes} di = n-central;
       CF = di*invscale;
       CF = ONES/(ONES + (CF * CF));
-      FLOAT accumulator = di * CF;
+      FLOAT${planes} accumulator = di * CF;
       di = s-central;
       CF = (di*invscale);
       CF = ONES/(ONES + (CF * CF));

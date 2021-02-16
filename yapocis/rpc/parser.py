@@ -55,12 +55,13 @@ def INTERFACECL_BNF() -> OneOrMore:
         resident_ = Keyword("resident")
         widthof_ = Keyword("widthof")
         heightof_ = Keyword("heightof")
+        depthof_ = Keyword("depthof")
         sizeof_ = Keyword("sizeof")
 
         identifier = Word(alphas, alphanums + "_")
         typeName = (
                     boolean_ ^ char_ ^ int16_ ^ int32_ ^ float32_ ^ complex64_ ^ uint16_ ^ uint32_ ^ int_ ^ float_ ^ short_)
-        bufferHints = (inout_ | in_ | out_ | outlike_ | resident_ | widthof_ | heightof_ | sizeof_)
+        bufferHints = (inout_ | in_ | out_ | outlike_ | resident_ | widthof_ | heightof_ | sizeof_ | depthof_)
         paramlist = delimitedList(Group(bufferHints + Optional(typeName) + Optional(star) + identifier))
         interfaceItem = ((kernel_ ^ void_ ^ alias_ ^ typeName) + identifier + Optional(
             Group(as_ + identifier)) + lparen + Optional(paramlist) + rparen + semi)
@@ -120,13 +121,13 @@ def fix_param(param: List[Any]) -> List[Any]:
     # Length 4 direction, dtype, *, identifier
     op = ["", "", "", ""]
     if len(param) == 2:
-        expected(param[0], ("outlike", "resident", "sizeof", "widthof", "heightof"))
+        expected(param[0], ("outlike", "resident", "sizeof", "widthof", "heightof", "depthof"))
         op[0] = param[0]
         op[2] = '*'
         op[3] = param[1]
     elif len(param) == 3:
-        expected(param[0], ("in", "outlike", "resident", "sizeof", "widthof", "heightof"))
-        if param[0] in ("outlike", "sizeof", "widthof", "heightof"):
+        expected(param[0], ("in", "outlike", "resident", "sizeof", "widthof", "heightof", "depthof"))
+        if param[0] in ("outlike", "sizeof", "widthof", "heightof", "depthof"):
             op[0] = param[0]
             op[1] = param[1]
             op[2] = '*'

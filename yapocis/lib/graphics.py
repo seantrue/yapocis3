@@ -107,14 +107,13 @@ def composite_setup(locations, blocks, alpha=None, alphas=None):
     ipixels = []
     for block, location, alpha in zip(blocks, locations, alphas):
         height, width = block.shape
-        block = block.flatten()
         x, y = location
         coords.append((x, y, width, height))
         ipixels.append(ipixel)
-        ipixel += len(block)
+        ipixel += block.size
         pixel_buffer.append(block.flatten())
         if not isinstance(alpha, np.ndarray):
-            alpha = arrayify1d(alpha, len(block), default=1.0, dtype=None)
+            alpha = arrayify1d(alpha, block.size, default=1.0, dtype=None)
         alpha_buffer.append(alpha.flatten())
     pixel_buffer = np.concatenate(pixel_buffer)
     alpha_buffer = np.concatenate(alpha_buffer)
@@ -263,5 +262,5 @@ def setup_texts(locations, texts, font=None, fonts=None, size=None, sizes=None, 
 
 
 def draw_strings(image, locations, texts, **kwargs):
-    locations, blocks, alpha = setup_texts(locations, texts, **kwargs)
-    composite(image, locations, blocks)
+    locations, blocks, alphas = setup_texts(locations, texts, **kwargs)
+    composite(image, locations, blocks, alphas=alphas)

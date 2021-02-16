@@ -132,9 +132,6 @@ void composite(int width, int height,  READWRITE float *a, int n, READONLY int4 
 {
     size_t i =  get_global_id(0);
     float color = a[i];
-#ifdef DEBUG
-    float saved_color = color;
-#endif
     int2 xy = (int2) (i/height,(i-((i/height)*height)));
     for (int j=0; j < n; j++) {
         // Get the x,y,w,h of the destination
@@ -152,23 +149,6 @@ void composite(int width, int height,  READWRITE float *a, int n, READONLY int4 
         float2 color_alpha = inside ? pixels[ipixel_source] : (float2)(0.0f,0.0f);
         float clr = (color_alpha.s0*color_alpha.s1)+(color*(1.0-color_alpha.s1));
         color = inside ? clr : color;
-#ifdef DEBUG
-        if (inside && xy.x < 100 && xy.y < 100) {
-            printf("\n");
-            printf("x,y %d %d\n", xy.x, xy.y);
-            printf("w,h %d %d\n", width, height);
-            printf("ipixel %d\n", ipixel);
-            printf("i,j %d %d\n", i, j);
-            printf("lb %d %d yt %d %d\n", lb.x, lb.y, yt.x, yt.y);
-            printf("outside %d\n", outside);
-            printf("source location %d %d\n", source_location.x, source_location.y);
-            printf("source offset %d\n", source_offset);
-            printf("ipixel+source_offset %d\n", ipixel_source);
-            printf("a[i] %.4f color_alpha %.4f %.4f\n", saved_color, color_alpha.s0, color_alpha.s1);
-            printf("new color %.4f",clr);
-            printf("\n");
-        }
-#endif
     }
     a[i] = color;
     barrier(CLK_GLOBAL_MEM_FENCE);

@@ -94,9 +94,7 @@ __kernel void triangles(int width, int height, READWRITE float4 *a, int nelement
   float4 pixel = a[i];
   int x = i / height;
   int y = i - (x * height);
-  float2 center;
   float2 point = (float2)((float)x, (float)y);
-  float radius;
   for (int ielement = 0; ielement < nelements; ielement++) {
     float4 rgba = *colors++;
     float4 alpha = (float4)(rgba.s3, rgba.s3, rgba.s3, 0.0f);

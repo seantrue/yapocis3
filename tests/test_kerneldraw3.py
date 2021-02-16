@@ -12,13 +12,12 @@ ASIZE=1000
 
 @pytest.fixture
 def canvas():
-    return np.zeros((ASIZE, ASIZE)).astype(np.float32)
+    return np.zeros((ASIZE, ASIZE, 3)).astype(np.float32)
 
 
 
-def test_kerneldraw3_batch(canvas):
+def test_batch(canvas):
     random_coords = random_ellipses()
-    canvas = join_channels(canvas, canvas, canvas)
     ad = KernelDraw3(canvas)
     circles = random_circles()
     rects = random_rects()
@@ -45,9 +44,8 @@ def test_kerneldraw3_batch(canvas):
     show_array(f"batch 3", canvas)
 
 
-def test_kerneldraw3_displaylist(canvas):
+def test_displaylist(canvas):
     canvas[:,:] = 1.0
-    canvas = join_channels(canvas, canvas, canvas)
     ad = KernelDraw3(canvas)
     circles = random_circles()
     rects = random_rects()

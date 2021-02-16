@@ -3,11 +3,22 @@
 
 import os
 from yapocis.utils.typing import *
-
+from yapocis.utils.basic import get_yapocis_dirs
 try:
     from PIL.ImageFont import truetype
 except ImportError:
     truetype = None
+
+
+def get_font_dirs():
+    dirname = os.path.dirname(__file__)
+    dirnames = [dirname]
+    for dirname in get_yapocis_dirs():
+        font_path = os.path.join(dirname, "fonts")
+        if os.path.isdir(font_path):
+            if font_path not in dirnames:
+                dirnames.append(font_path)
+    return dirnames
 
 def fonts() -> List[str]:
     """
@@ -15,8 +26,10 @@ def fonts() -> List[str]:
     Returns:
 
     """
-    dirname = os.path.dirname(__file__)
-    fonts = [font_name for font_name in os.listdir(dirname) if font_name.endswith(".ttf")]
+    font_dirs = get_font_dirs()
+    fonts = []
+    for font_dir in font_dirs:
+        fonts += [font_name for font_name in os.listdir(font_dir) if font_name.endswith(".ttf")]
     return fonts
 
 def font_path(font_name:str) -> str:
@@ -28,11 +41,13 @@ def font_path(font_name:str) -> str:
     Returns:
 
     """
-    dirname = os.path.dirname(__file__)
-    font_path = os.path.join(dirname, font_name)
-    if not os.path.exists(font_path):
-        raise ValueError(f"{font_name} not found, use one of: {' '.join(fonts())}")
-    return font_path
+    font_dirs = get_font_dirs()
+    for font_dir in font_dirs:
+        font_path = os.path.join(font_dir, font_name)
+        if  os.path.exists(font_path):
+            print("Using font", font_path)
+            return font_path
+    raise ValueError(f"{font_name} not found, use one of: {' '.join(fonts())}")
 
 def font(font_suggestion:str) ->str:
     """

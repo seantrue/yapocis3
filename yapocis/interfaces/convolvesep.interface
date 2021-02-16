@@ -2,5 +2,7 @@ interface convolvesep {
 %for name,conv in convs:
         kernel ${name}(in int vertical, widthof input, heightof input, in float* input, outlike input);
         alias ${name}_res as ${name}(in int vertical, widthof input, heightof input, resident float* input, resident float *output);
-%endfor 
+        kernel ${name}_h(widthof input, heightof input, resident float* input, resident float *output);
+        kernel ${name}_v(widthof input, heightof input, resident float* input, resident float *output);
+%endfor
     };

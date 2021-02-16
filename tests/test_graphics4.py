@@ -1,4 +1,4 @@
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+# Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import pytest
 
@@ -10,7 +10,7 @@ from yapocis.utils.basic import show_array, imread
 from yapocis.lib.kerneldraw4 import KernelDraw4
 from yapocis.lib.graphics4 import lines, rects, circles, triangles, ellipses, composite, sprites, draw_strings
 from yapocis.icons import icons, icon
-from . import test_image_path
+from tests import test_image_path
 
 test_image = test_image_path()
 
@@ -135,7 +135,7 @@ def random_ellipses(n=100):
 
 def random_composites(n=100):
     locations = random_points(n)
-    sprites = [sprite for _,sprite in image_sprites(n, ASIZE)]
+    sprites = [sprite for _,sprite in image_sprites(8)]
     blocks = sprites[:]
     while len(blocks) < n:
         blocks += sprites
@@ -232,7 +232,7 @@ def test_composite_sprites(canvas):
 
 def test_composite_mosaic(canvas):
     from random import shuffle
-    sprites = image_sprites(5, ASIZE)
+    sprites = image_sprites(5)
     coords, blocks = zip(*sprites)
     coords = list(coords)
     blocks = list(blocks)
@@ -268,10 +268,10 @@ def test_random_icons(canvas):
 
 def test_simple_texts(canvas):
     locations = []
-    string = "Hello world"
+    s = "Hello world"
     for x in range(100, ASIZE, 100):
         locations.append((x // 2, x))
-    strings = ["string"] * len(locations)
+    strings = [s] * len(locations)
     colors = random_colors(len(strings))
     draw_strings(canvas, locations, strings, colors=colors)
     show_array("simple texts", canvas)
@@ -314,63 +314,3 @@ def test_texts(canvas):
     show_array("texts", canvas)
 
 
-def test_kerneldraw4_batch(canvas):
-    random_coords = random_ellipses()
-    ad = KernelDraw4(canvas)
-    circles = random_circles()
-    rects = random_rects()
-    lines = random_lines()
-    locations, blocks = random_composites()
-    sprite_locations, sprites = random_sprites()
-    ad.ellipses(random_coords, colors=random_colors())
-    ad.circles(circles, colors=random_colors())
-    ad.rects(rects, colors=random_colors())
-    ad.lines(lines, colors=random_colors(), distance=1.5)
-    ad.composite(locations, blocks)
-    ad.sprites(sprite_locations, sprites)
-    ad.render()
-    a = ad.read()
-    show_array(f"batch", canvas)
-
-
-def test_kerneldraw4_displaylist(canvas):
-    random_coords = random_ellipses()
-    ad = KernelDraw4(canvas)
-    circles = random_circles()
-    rects = random_rects()
-    lines = random_lines()
-    for xyxy, color in zip(lines, random_colors()):
-        ad.line(xyxy, color=color, distance=1.5)
-    for rect, color in zip(rects, random_colors()):
-        ad.rect(rect, color=color)
-    for x in range(0, ASIZE, 100):
-        ad.draw_string((x, x), "Hello world!", color=[1,1,1,.5])
-    ad.render()
-    a = ad.read()
-    show_array(f"displaylist", canvas)
-
-
-def test_kerneldraw_chunking(canvas):
-    random_coords = random_ellipses()
-    ELEMENTS=1000
-    rects = random_rects(ELEMENTS)
-    lines = random_lines(ELEMENTS)
-    circles = random_circles(ELEMENTS)
-    colors = random_colors(ELEMENTS)
-    alphas = random_alpha(ELEMENTS)
-    times = []
-    for chunk_size in (None, 10, 100, 500, 10000):
-        canvas[:,:] = 0.0
-        t = time.time()
-        ad = KernelDraw4(canvas, chunk_size=chunk_size)
-        for xyxy, color, alpha in zip(lines, colors, alphas):
-            ad.line(xyxy, distance=1.5, color=color, alpha=alpha)
-        for rect, color, alpha in zip(rects, colors, alphas):
-            ad.rect(rect, color=color, alpha=alpha)
-        for x in range(0, ASIZE, 100):
-            ad.draw_string((x, x), "Hello world!")
-        ad.render()
-        canvas = ad.read()
-        times.append(time.time()-t)
-        # show_array(f"chunked", canvas)
-    print(times)

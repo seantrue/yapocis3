@@ -9,30 +9,10 @@ import pyopencl
 from mako.lookup import TemplateLookup
 from mako.template import Template
 
-import yapocis
 from yapocis.rpc.engines import get_engine, Engine
 from yapocis.rpc.parser import InterfaceCL, get_interface
+from yapocis.utils.basic import find_yapocis_file
 from yapocis.utils.typing import Context, Array
-
-
-def find_file(dirs: List[str], subdirs: List[str], filename: str) -> Optional[str]:
-    for d in dirs:
-        for sd in subdirs:
-            pth = os.path.join(d, sd, filename)
-            if os.path.exists(pth):
-                return pth
-    return None
-
-
-def find_yapocis_file(subdirs:List[str], filename:str) -> Optional[str]:
-    yapocis_dir = os.path.dirname(yapocis.__file__)
-    current_dir = os.getcwd()
-    directories = [yapocis_dir, current_dir]
-    yapocis_path = os.environ.get("YAPOCIS_PATH",None)
-    if yapocis_path:
-        directories.append(yapocis_path)
-    tfilename = find_file(directories, subdirs, filename)
-    return tfilename
 
 
 def render_program(base_filename: str, **context: Context) -> str:
@@ -49,7 +29,8 @@ def render_program(base_filename: str, **context: Context) -> str:
         raise Exception("Can't find template '%s'" % filename)
     mylookup = TemplateLookup(directories=[os.path.dirname(tfilename)])
     t = Template(filename=tfilename, lookup=mylookup)
-    return str(t.render(**context))
+    source =  str(t.render(**context))
+    return source
 
 
 def render_interface(source: str, **context: Context) -> str:
@@ -143,7 +124,7 @@ def load_interface(interface_spec:str) -> str:
     if interface_spec.strip().startswith("interface "):
         return interface_spec
     filename= f"{interface_spec}.interface"
-    path = find_yapocis_file(["interfaces","."], filename)
+    path = find_yapocis_file(["interfaces", "."], filename)
     if path is None:
         raise RuntimeError(f"Can't find {filename}")
     with open(path) as inf:

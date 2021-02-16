@@ -29,8 +29,8 @@ def render_text(text:str, font_name:str="default", size:int=32, rotation:Optiona
     rendered = get_render_buffer((w,h))
     rendered.paste(0, box=(0,0,w,h))
     draw = ImageDraw.ImageDraw(rendered)
-    draw.text((0,0),text, font=font,fill=255)
-    if rotation is not None:
+    draw.text((0,0),text, font=font,fill=255,stroke=255)
+    if rotation:
         pixels =  rendered.crop((0,0,w,h))
         wh = max(w,h)*2
         rendered = get_render_buffer((wh,wh))
