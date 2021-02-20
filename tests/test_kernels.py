@@ -179,13 +179,13 @@ def test_perona_malik():
          break
    show_array(f"filtered 100", rgb2)
 
-def test_perona3_malik():
-   rgb = imread(test_image).astype(np.float32)/256
-   show_array("org", rgb)
-   for i, rgb2 in enumerate(anisodiff(rgb)):
-      if i >= 50:
-         break
-   show_array(f"filtered rgb", rgb2[:,:,:3])
+#def test_perona3_malik():
+#   rgb = imread(test_image).astype(np.float32)/256
+#   show_array("org", rgb)
+#   for i, rgb2 in enumerate(anisodiff(rgb)):
+#      if i >= 50:
+#         break
+#   show_array(f"filtered rgb", rgb2[:,:,:])
 
 def test_perona4_malik():
    rgb = imread(test_image).astype(np.float32)/256

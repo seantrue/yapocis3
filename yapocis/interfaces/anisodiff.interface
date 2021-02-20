@@ -4,7 +4,7 @@ interface anisodiff {
     kernel filterImage2(widthof input, heightof input, in float *input, in float scale, in float size_step, outlike input);
     alias filterImage_res2 as filterImage2(widthof input, heightof input, resident float *input, in float scale, in float size_step, resident float *output);
     kernel filterImage3(widthof input, heightof input, in float *input, in float scale, in float size_step, outlike input);
-    alias filterImage_res3 as filterImage4(widthof input, heightof input, resident float *input, in float scale, in float size_step, resident float *output);
+    alias filterImage_res3 as filterImage3(widthof input, heightof input, resident float *input, in float scale, in float size_step, resident float *output);
     kernel filterImage4(widthof input, heightof input, in float *input, in float scale, in float size_step, outlike input);
     alias filterImage_res4 as filterImage4(widthof input, heightof input, resident float *input, in float scale, in float size_step, resident float *output);
     };
