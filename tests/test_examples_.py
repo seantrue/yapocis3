@@ -1,8 +1,5 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-import numpy as np
-
-from yapocis.utils.basic import imread
 from yapocis.lib.gradient import gradient
 from yapocis.lib.hsi import rgb2hsi
 from yapocis.lib.channels import split_channels

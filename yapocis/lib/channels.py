@@ -1,5 +1,5 @@
 """
-Accomodate the differences between PIL, Numpy, and convenient programming models for OpenCL
+Accommodate the differences between PIL, Numpy, and convenient programming models for OpenCL
 HWC <-> CHW ordering, conceptually.
 """
 
@@ -24,9 +24,8 @@ def histeq(im:Image1, nbr_bins:int =2 ** 16) -> Image1:
     imhist[0] = 0
 
     cdf = imhist.cumsum() #cumulative distribution function
-    cdf ** .5
     cdf = (nbr_bins - 1) * cdf / cdf[-1]
-    cdf = cdf / (nbr_bins)
+    cdf = cdf / nbr_bins
 
     im2 = np.interp(im.flatten(), bins[:-1], cdf)
     return np.array(im2, np.float32).reshape(im.shape)

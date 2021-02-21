@@ -8,7 +8,8 @@ import yapocis.rpc.programs
 from yapocis.utils.typing import *
 
 gradient_cl = None
-program, kernels = yapocis.rpc.programs.import_program("gradient", gradient="gradient_cl")
+gp = yapocis.rpc.programs.load_program("gradient")
+
 
 def gradient(image:Image1, reach:int=1) -> Tuple[Image1,Image1]:
     """
@@ -21,7 +22,7 @@ def gradient(image:Image1, reach:int=1) -> Tuple[Image1,Image1]:
     Returns: tuple of 2D arrays
 
     """
-    grad, theta = gradient_cl(image, reach)
+    grad, theta = gp.gradient(image, reach)
     # TODO: gradientCL should not be returning nans, and is
     theta[np.where(np.isnan(theta))] = 0.0
     grad[np.where(np.isnan(grad))] = 0.0
