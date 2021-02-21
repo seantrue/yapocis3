@@ -8,13 +8,14 @@ from tests.test_graphics import random_ellipses, random_circles, random_rects, r
 from yapocis.lib.kerneldraw import KernelDraw
 from yapocis.utils.basic import show_array
 
-@pytest.fixture
-def canvas():
-    return np.zeros((ASIZE, ASIZE)).astype(np.float32)
+def setup():
+    canvas = np.zeros((ASIZE, ASIZE)).astype(np.float32)
+    return canvas, KernelDraw(canvas)
 
-def test_batch(canvas):
+
+def test_batch():
     random_coords = random_ellipses()
-    ad = KernelDraw(canvas)
+    _, ad = setup()
     circles = random_circles()
     rects = random_rects()
     lines = random_lines()
@@ -31,9 +32,9 @@ def test_batch(canvas):
     show_array(f"batch", a)
 
 
-def test_displaylist(canvas):
+def test_displaylist():
     random_coords = random_ellipses()
-    ad = KernelDraw(canvas)
+    _, ad = setup()
     circles = random_circles()
     rects = random_rects()
     lines = random_lines()
@@ -41,15 +42,16 @@ def test_displaylist(canvas):
         ad.line(xyxy, distance=1.5, color=color, alpha=alpha)
     for rect, color, alpha in zip(rects, random_colors(), random_alpha()):
         ad.rect(rect, color=color, alpha=alpha)
-    for x in range(0, ASIZE, 100):
+    for x in range(100, ASIZE, 100):
         ad.draw_string((x, x), "Hello world!")
     ad.render()
     canvas = ad.read()
     show_array(f"displaylist", canvas)
 
 
-def test_chunking(canvas):
-    ellipsed = random_ellipses()
+def test_chunking():
+    canvas, _ = setup()
+    ellipses = random_ellipses()
     rects = random_rects(1000)
     lines = random_lines(1000)
     circles = random_circles(1000)

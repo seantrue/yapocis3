@@ -9,22 +9,18 @@ from yapocis.utils.basic import show_array, imread
 from yapocis.lib.channels import split_channels
 from yapocis.lib.hsi import rgb2hsi
 from yapocis.lib.graphics import lines, rects, circles, triangles, ellipses, composite, sprites, draw_strings
+from . import image_test
 
-from . import test_image_path
-
-test_image = test_image_path()
 
 ASIZE = 1000
 
 
-@pytest.fixture
-def canvas():
+def setup():
     return np.zeros((ASIZE, ASIZE)).astype(np.float32)
 
 
 def image_source(align=5):
-    image = np.float32(imread(test_image))
-    image /= 256.
+    image = image_test()
     r, g, b = split_channels(image)
     h, s, i = rgb2hsi(r, g, b)
     d = min(*i.shape)
@@ -128,7 +124,8 @@ def random_sprites(n=100):
     return random_coords, random_sprites
 
 
-def test_lines(canvas):
+def test_lines():
+    canvas = setup()
     random_coords = random_lines()
     coords = []
     for i in range(100, ASIZE, 100):
@@ -139,7 +136,8 @@ def test_lines(canvas):
     show_array(f"draw", canvas)
 
 
-def test_rects(canvas):
+def test_rects():
+    canvas = setup()
     random_coords = random_lines()
     coords = []
     for i in range(100, ASIZE, 100):
@@ -150,7 +148,8 @@ def test_rects(canvas):
     show_array(f"rects", canvas)
 
 
-def test_circles(canvas):
+def test_circles():
+    canvas = setup()
     random_coords = random_circles()
     coords = []
     for i in range(100, ASIZE, 100):
@@ -161,7 +160,8 @@ def test_circles(canvas):
     show_array(f"circles", canvas)
 
 
-def test_triangles(canvas):
+def test_triangles():
+    canvas = setup()
     random_coords = random_triangles()
     coords = []
     for i in range(100, ASIZE, 100):
@@ -172,7 +172,8 @@ def test_triangles(canvas):
     show_array(f"triangles", canvas)
 
 
-def test_ellipses(canvas):
+def test_ellipses():
+    canvas = setup()
     random_coords = random_ellipses()
     coords = []
     for i in range(100, ASIZE, 100):
@@ -189,22 +190,24 @@ def test_ellipses(canvas):
     show_array(f"ellipses", canvas)
 
 
-def test_composite(canvas):
+def test_composite():
+    canvas = setup()
     random_coords, random_blocks = random_composites()
     composite(canvas, random_coords, random_blocks)
     show_array("composite", canvas)
 
 
-def test_composite_sprites(canvas):
+def test_composite_sprites():
+    canvas = setup()
     random_coords, random_sprites_ = random_sprites()
     sprites(canvas, random_coords, random_sprites_)
     show_array("sprites", canvas)
 
 
-def test_composite_mosaic(canvas):
+def test_composite_mosaic():
+    canvas = setup()
+    image = image_test()
     from random import shuffle
-    image = np.float32(imread(test_image))
-    image /= 256.
     r, g, b = split_channels(image)
     h, s, i = rgb2hsi(r, g, b)
     d = min(*i.shape)
@@ -225,7 +228,8 @@ def test_composite_mosaic(canvas):
     show_array("mosaic", iout)
 
 
-def test_simple_texts(canvas):
+def test_simple_texts():
+    canvas = setup()
     locations = []
     s = "Hello world"
     for x in range(100, ASIZE, 100):
@@ -235,7 +239,8 @@ def test_simple_texts(canvas):
     show_array("simple texts", canvas)
 
 
-def test_texts(canvas):
+def test_texts():
+    canvas = setup()
     locations = random_points(300)
     strings = ["Hello", "sympathy", "goodbye", "Aqua"]
     fonts = ["bold", "italic", "light", "regular"]

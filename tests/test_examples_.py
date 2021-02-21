@@ -8,13 +8,11 @@ from yapocis.lib.hsi import rgb2hsi
 from yapocis.lib.channels import split_channels
 
 from yapocis.utils.advanced import show_array, show_arraygrad
-from . import test_image_path
+from . import image_test
 
-test_image = test_image_path()
 
 def test_advanced_showarraygrad():
-    image = np.float32(imread(test_image))
-    image /= 256.
+    image = image_test()
     image = image[::2,::2,:]
 
     r, g, b = split_channels(image)

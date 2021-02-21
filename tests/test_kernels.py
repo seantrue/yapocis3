@@ -9,9 +9,7 @@ from yapocis.lib.channels import split_channels, join_channels
 from yapocis.lib.operators import add, add_res, program, sub, sub_res, mul, mul_res
 from yapocis.lib.median import median3x3fast, median3x3slow
 
-from . import test_image_path
-
-test_image = test_image_path()
+from . import image_path_test
 
 def test_hsi():
     r = np.empty((256, 256), dtype=np.float32)

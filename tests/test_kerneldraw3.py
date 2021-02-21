@@ -10,15 +10,15 @@ from yapocis.lib.kerneldraw3 import KernelDraw3
 
 ASIZE=1000
 
-@pytest.fixture
-def canvas():
-    return np.zeros((ASIZE, ASIZE, 3)).astype(np.float32)
+def setup():
+    canvas = np.zeros((ASIZE, ASIZE,3)).astype(np.float32)
+    return canvas, KernelDraw3(canvas)
 
 
 
-def test_batch(canvas):
+def test_batch():
     random_coords = random_ellipses()
-    ad = KernelDraw3(canvas)
+    canvas, ad = setup()
     circles = random_circles()
     rects = random_rects()
     lines = random_lines()
@@ -40,13 +40,12 @@ def test_batch(canvas):
     ad.set_color((1, 1, 1))
     ad.ellipses(ellipses, color=(.5, .5, .2), alphas=alphas)
     ad.render()
-    a = ad.read()
+    canvas = ad.read()
     show_array(f"batch 3", canvas)
 
 
-def test_displaylist(canvas):
-    canvas[:,:] = 1.0
-    ad = KernelDraw3(canvas)
+def test_displaylist():
+    canvas, ad = setup()
     circles = random_circles()
     rects = random_rects()
     lines = random_lines()
@@ -61,5 +60,5 @@ def test_displaylist(canvas):
     for x in range(100, ASIZE, 100):
         ad.draw_string((x // 2, x), "Hello world!", alpha="bug")
     ad.render()
-    a = ad.read()
+    canvas = ad.read()
     show_array(f"displaylist 3", canvas)

@@ -12,13 +12,13 @@ from yapocis.lib.kerneldraw4 import KernelDraw4
 from tests.test_graphics4 import random_composites, random_sprites
 ASIZE=1000
 
-@pytest.fixture
-def canvas():
-    return np.zeros((ASIZE, ASIZE,4)).astype(np.float32)
+def setup():
+    canvas = np.zeros((ASIZE, ASIZE,4)).astype(np.float32)
+    return canvas, KernelDraw4(canvas)
 
-def test_batch(canvas):
+def test_batch():
     random_coords = random_ellipses()
-    ad = KernelDraw4(canvas)
+    canvas, ad = setup()
     circles = random_circles()
     rects = random_rects()
     lines = random_lines()
@@ -35,8 +35,8 @@ def test_batch(canvas):
     show_array(f"batch", canvas)
 
 
-def test_displaylist(canvas):
-    ad = KernelDraw4(canvas)
+def test_displaylist():
+    canvas, ad = setup()
     rects = random_rects()
     lines = random_lines()
     for xyxy, color in zip(lines, random_colors()):
@@ -46,19 +46,20 @@ def test_displaylist(canvas):
     for x in range(0, ASIZE, 100):
         ad.draw_string((x, x), "Hello world!", color=[1,1,1,.5])
     ad.render()
-    a = ad.read()
+    canvas = ad.read()
     show_array(f"displaylist", canvas)
 
 
-def test_chunking(canvas):
+def test_chunking():
     ELEMENTS=1000
     rects = random_rects(ELEMENTS)
     lines = random_lines(ELEMENTS)
     colors = random_colors(ELEMENTS)
     alphas = random_alpha(ELEMENTS)
+
     times = []
     for chunk_size in (None, 10, 100, 500, 10000):
-        canvas[:,:] = 0.0
+        canvas, _ = setup()
         t = time.time()
         ad = KernelDraw4(canvas, chunk_size=chunk_size)
         for xyxy, color, alpha in zip(lines, colors, alphas):

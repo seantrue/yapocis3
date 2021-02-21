@@ -2,22 +2,20 @@
 import pytest
 import numpy as np
 
-from tests.test_kernels import test_image
 from yapocis.lib.anisodiff import anisodiff, anisodiff_rgbIS
 from yapocis.lib.channels import split_planes, join_planes
 from yapocis.lib.hsi import rgb2hsi3, hsi2rgb3
 from yapocis.utils.basic import imread, show_array
 from yapocis.utils.config import get_device_config
-from . import test_image_path
+from . import image_test
 
 
-@pytest.fixture
-def rgb():
-    test_image = test_image_path()
-    rgb = imread(test_image).astype(np.float32) / 256
-    return rgb
+# Note: Don't make this a fixture, we want a fresh one every time
+def setup():
+    return image_test()
 
-def test_anisodiff_planes(rgb):
+def test_anisodiff_planes():
+    rgb = setup()
     hsi = rgb2hsi3(rgb)
     H,S,I = split_planes(hsi)
     for i, fI in enumerate(anisodiff(I)):
@@ -28,14 +26,16 @@ def test_anisodiff_planes(rgb):
     show_array(f"filtered IS", rgb2)
 
 
-def test_anisodiff_IS(rgb):
+def test_anisodiff_IS():
+    rgb = setup()
     for i, rgb2 in enumerate(anisodiff_rgbIS(rgb)):
         if i >= 50:
             break
     show_array(f"filtered IS", rgb2)
 
 
-def test_anisodiff2(rgb):
+def test_anisodiff2():
+    rgb = setup()
     config = get_device_config()
     if config["native_vector_width_float"] > 2:
         print("preferred_vector_width_float", config["preferred_vector_width_float"])
@@ -51,7 +51,8 @@ def test_anisodiff2(rgb):
     show_array(f"filtered 2", rgb2)
 
 
-def test_anisodiff3(rgb):
+def test_anisodiff3():
+    rgb = setup()
     config = get_device_config()
     if config["preferred_vector_width_float"] > 3:
         print("preferred_vector_width_float", config["preferred_vector_width_float"])
@@ -63,7 +64,8 @@ def test_anisodiff3(rgb):
     show_array(f"filtered 3", rgb2)
 
 
-def test_anisodiff4(rgb):
+def test_anisodiff4():
+    rgb = setup()
     shape4 = list(rgb.shape)
     shape4[2] = 4
     rgba = np.zeros((shape4), dtype=np.float32)
