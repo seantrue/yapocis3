@@ -48,7 +48,7 @@ def _show_array(*args, normalize=True):
             array = array[:,:]
         except:
             array = array[:,:,:]
-    if normalize and array.dtype in (np.float32, np.float64):
+    if normalize and array.dtype in (np.float32, np.float64, np.float):
         array -= array.min()
         array /= array.max()
     array = sign(title, array)
