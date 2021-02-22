@@ -9,7 +9,7 @@ from mako.template import Template
 
 from yapocis.rpc.device_manager import DeviceManager
 from yapocis.rpc.kernel import Kernel
-from yapocis.rpc.interface import InterfaceCL, get_interface, load_interface
+from yapocis.rpc.interface import Interface, get_interface, load_interface
 from yapocis.utils.basic import find_yapocis_file
 from yapocis.utils.typing import Context
 
@@ -34,7 +34,7 @@ def render_program(base_filename: str, **context: Context) -> str:
 
 def render_interface(source: str, **context: Context) -> str:
     """
-    Takes the source for a mako definition of a yapocis.rpc interface and generates
+    Takes the source for a mako definition of a yapocis.rpc1 interface and generates
     a parsable definition. Useful when the template can generate multiple parameterized
     routines.
     """
@@ -49,12 +49,13 @@ class KernelManager:
     Manages buffers on the OpenCL device to prevent over-allocation.
     """
 
-    def __init__(self, interface: InterfaceCL, device_name: str, debug: bool = False, **context: Context):
+    def __init__(self, interface: Interface, device_name: str, debug: bool = False, **context: Context):
+        self.interface = interface
         self.dmgr = DeviceManager(device_name=device_name)
         try:
-            source = render_program(interface.interface_name, **context)
+            source = render_program(interface.name, **context)
         except:
-            print(f"Source rendering issue for {interface.interface_name}")
+            print(f"Source rendering issue for {interface.name}")
             print(context)
             raise
         self.source = source
@@ -62,18 +63,24 @@ class KernelManager:
             print("Source")
             print(source)
         self.mf = pyopencl.mem_flags
-        interface.kernel_manager = self.dmgr.build(source)
+        self.program = self.dmgr.build(source)
         self.callable = {}
-        self.interface = interface
-        program = interface.kernel_manager
         self.hits = 0
         self.misses = 0
         self.calls = 0
         self.runtime = 0.0
-        for kernel in interface.kernels():
-            alias = interface.kernel_alias(kernel)
-            self.callable[kernel] = Kernel(self, getattr(program, alias), interface.kernel_params(kernel))
-            self.callable[kernel].name = kernel
+        for kernel in interface.kernels:
+            name = kernel.alias if kernel.alias else kernel.name
+            self.callable[kernel.name] = Kernel(name, self, getattr(self.program, name), kernel.parameters)
+
+    def read(self, a):
+        return self.dmgr.read(a)
+
+    def write(self, a):
+        return self.dmgr.write(a)
+
+    def purge(self):
+        return self.dmgr.purge()
 
     def __getattr__(self, attr: str) -> Callable:
         "Any unbound attribute is checked to see if it is a callable"
@@ -82,20 +89,18 @@ class KernelManager:
             raise KeyError(attr)
         return self.callable[attr]
 
-    @property
     def stats(self):
-        self.purge()
-        return dict(interfacename=self.interface.interface_name,
+        self.dmgr.purge()
+        return dict(interfacename=self.interface.name,
                     calls=self.calls,
                     hits=self.hits,
                     misses=self.misses,
-                    buffers=len(self.buffers),
+                    buffers=len(self.dmgr.buffers),
                     runtime=self.runtime,
-                    device=self.device_name)
+                    device=self.dmgr.device_name)
 
     def __str__(self):
-        self.purge()
-        s = " ".join([f"{key}: {value}" for key,value in self.stats.items()])
+        s = " ".join([f"{key}: {value}" for key,value in self.stats().items()])
         return s
 
     @classmethod
@@ -106,7 +111,6 @@ class KernelManager:
         source = load_interface(interface_spec)
         source = render_interface(source, **context)
         interface = get_interface(source)
-        interface.source = source
         if debug:
             print("Interface", interface)
         return KernelManager(interface, device_name, debug=debug, **context)
@@ -114,7 +118,7 @@ class KernelManager:
     @classmethod
     def import_program(cls, interface_spec: str, device_name: Optional[str] = None,
                        namespace: bool = False, debug: bool = False, import_kernels=None, **context: Context):
-        program = load_program(interface_spec, device_name=device_name, debug=debug, **context)
+        program = cls.load_program(interface_spec, device_name=device_name, debug=debug, **context)
         import inspect
         caller = inspect.currentframe().f_back
         target = inspect.getmodule(caller.f_code)

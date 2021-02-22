@@ -3,7 +3,7 @@ Low level wrapper for zero crossing detector kernel
 """
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-from yapocis.rpc.programs import import_program
+from yapocis.rpc.kernel_manager import import_program
 
 zcs1 = zcs1_res = zcs2 = zcs2_res = zcs3 = zcs3_res = zcs4 = zcs4_res = None
 program, kernels = import_program("zcs", import_kernels="*")

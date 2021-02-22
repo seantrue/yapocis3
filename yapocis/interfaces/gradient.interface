@@ -1,4 +1,4 @@
 interface gradient {
-    kernel gradient(widthof int input, heightof int input, in float* input, in int reach,  outlike input, outlike input );
-    alias gradient_res as gradient(widthof int input, heightof int input, resident float* input, in int reach, resident float *grad, resident float *theta );
+    kernel gradient(width_of input, height_of input, in float input, int reach,  out_like input, out_like input );
+    alias gradient_res as gradient(width_of input, height_of input, resident float input, int reach, resident float grad, resident float theta );
 };

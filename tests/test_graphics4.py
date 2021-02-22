@@ -9,11 +9,15 @@ from random import randint, shuffle
 from yapocis.utils.basic import show_array, imread
 from yapocis.lib.kerneldraw4 import KernelDraw4
 from yapocis.lib.graphics4 import lines, rects, circles, triangles, ellipses, composite, sprites, draw_strings
+from tests.test_graphics import random_texts
 from yapocis.icons import icons, icon
 from . import image_test
 
 
 ASIZE=1000
+
+def show(label, a):
+    show_array(f"graphics4: {label}", a)
 
 def setup():
     return np.zeros((ASIZE, ASIZE, 4)).astype(np.float32)
@@ -160,7 +164,7 @@ def test_lines():
     colors[:,:] = 1.0
     lines(canvas, coords, colors=colors, width=1.5)
     # lines(canvas, random_coords, colors=random_colors(), width=1.5)
-    show_array(f"draw", canvas)
+    show(f"draw", canvas)
 
 
 def test_rects():
@@ -172,7 +176,7 @@ def test_rects():
     colors = random_colors(len(coords))
     rects(canvas, coords, colors)
     rects(canvas, random_lines(), random_colors())
-    show_array(f"rects", canvas)
+    show(f"rects", canvas)
 
 
 def test_circles():
@@ -185,7 +189,7 @@ def test_circles():
     colors = random_colors((len(coords)))
     circles(canvas, coords, colors)
     circles(canvas, random_coords, random_colors())
-    show_array(f"circles", canvas)
+    show(f"circles", canvas)
 
 
 def test_triangles():
@@ -198,7 +202,7 @@ def test_triangles():
     colors = random_colors((len(coords)))
     triangles(canvas, coords, colors)
     triangles(canvas, random_coords, random_colors())
-    show_array(f"triangles", canvas)
+    show(f"triangles", canvas)
 
 
 def test_ellipses():
@@ -217,21 +221,21 @@ def test_ellipses():
     colors = components_to_colors(colors,colors,colors,colors)
     ellipses(canvas, coords, colors)
     ellipses(canvas, random_coords, random_colors())
-    show_array(f"ellipses", canvas)
+    show(f"ellipses", canvas)
 
 
 def test_composite():
     canvas = setup()
     random_coords, random_blocks = random_composites()
     composite(canvas, random_coords, random_blocks)
-    show_array("composite", canvas)
+    show("composite", canvas)
 
 
 def test_composite_sprites():
     canvas = setup()
     random_coords, random_sprites_ = random_sprites()
     sprites(canvas, random_coords, random_sprites_)
-    show_array("sprites", canvas)
+    show("sprites", canvas)
 
 
 def test_composite_mosaic():
@@ -246,7 +250,7 @@ def test_composite_mosaic():
     iout = np.zeros((d,d,chan),dtype=np.float32)
     shuffle(blocks)
     composite(iout, coords, blocks)
-    show_array("mosaic", iout)
+    show("mosaic", iout)
 
 def test_simple_icons():
     canvas = setup()
@@ -260,7 +264,7 @@ def test_simple_icons():
     for block, color in zip(blocks,colors):
         block[:,:,:] *= color
     composite(canvas, locations, blocks)
-    show_array("icons", canvas)
+    show("simple icons", canvas)
 
 def test_random_icons():
     canvas = setup()
@@ -270,7 +274,7 @@ def test_random_icons():
     for block, color in zip(blocks,colors):
         block[:,:,:] *= color
     composite(canvas, locations, blocks)
-    show_array("icons", canvas)
+    show("random icons", canvas)
 
 
 def test_simple_texts():
@@ -282,9 +286,9 @@ def test_simple_texts():
     strings = [s] * len(locations)
     colors = random_colors(len(strings))
     draw_strings(canvas, locations, strings, colors=colors)
-    show_array("simple texts", canvas)
+    show("simple texts", canvas)
 
-def test_rotated_texts():
+def test_text_rotation():
     canvas = setup()
     rotations = list(range(0,360,30))
     center = canvas.shape[0]//2
@@ -293,9 +297,15 @@ def test_rotated_texts():
     color = np.array([1,1,1,1])
     draw_strings(canvas, locations, strings, color=color, rotations=rotations, alpha="mask")
     circles(canvas, [(500,500,20)],[1,0,0,.5])
-    show_array("simple texts", canvas)
+    show("rotated texts", canvas)
 
-def test_texts():
+def test_texts_stressed():
+    canvas = setup()
+    locations, strings, fonts, sizes, rotations, alphas = random_texts(300)
+    draw_strings(canvas, locations, strings, colors=random_colors(300), fonts=fonts, sizes=sizes, rotations=rotations, alphas=alphas)
+    show("texts", canvas)
+
+def test_texts_stressed_rotation():
     canvas = setup()
     locations = random_points(300)
     strings = ["Hello", "sympathy", "goodbye", "Aqua"]
@@ -321,6 +331,6 @@ def test_texts():
     rotations = rotations[:len(sizes)]
     shuffle(alpha)
     draw_strings(canvas, locations, strings, colors=random_colors(len(locations)), fonts=fonts, sizes=sizes, rotations=rotations, alphas=alpha)
-    show_array("texts", canvas)
+    show("texts", canvas)
 
 

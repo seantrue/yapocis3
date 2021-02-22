@@ -1,6 +1,6 @@
 '''
 Created on Jul 21, 2011
-@summary: Test yapocis lib
+@summary: Test yapocis lib1
 @author: seant
 '''
 
@@ -13,6 +13,7 @@ from yapocis.lib.median import median3x3
 from yapocis.lib.gradient import gradient
 from yapocis.lib.hsi import rgb2hsi, hsi2rgb
 from yapocis.lib.channels import split_channels, join_channels
+from yapocis.lib.gaussian import gauss_image
 
 
 def test():
@@ -36,7 +37,6 @@ def test():
     show_array("S", s)
     show_array("H", h)
 
-    from yapocis.lib.gaussian import gauss_image
     h,s,i = rgb2hsi(r,g,b)
     blur = gauss_image(i, 3)
     show_array("Blur", blur)

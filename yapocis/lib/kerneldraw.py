@@ -78,8 +78,8 @@ class AbstractKernelDraw:
     def sprite(self, xy, sprite, **kwargs):
         self._sprites.append((xy, sprite, kwargs))
 
-    def draw_string(self, xy, text, **kwargs):
-        self._draw_strings.append((xy, text, kwargs))
+    def draw_string(self, xy, text, font=None, size=None,  alpha=None, color=None, rotation=None):
+        self._draw_strings.append((xy, text, dict(font=font, size=size,  alpha=alpha, color=color, rotation=rotation)))
 
     def _render_list(self, handler, arglist, columns):
         columns = {}

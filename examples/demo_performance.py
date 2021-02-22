@@ -12,10 +12,8 @@ except ImportError:
     print("Please install scipy and matplotlib to compare median filter performance")
     sys.exit(1)
 
-from yapocis.lib import median
-from yapocis.utils.config import get_available
-
-
+from yapocis.rpc.device import get_available_device_names
+from yapocis.lib.median import Median
 def median3x3_scipy(input, iterations=1):
     for i in range(iterations):
         input = median_filter(input, 3)
@@ -25,10 +23,10 @@ def median3x3_scipy(input, iterations=1):
 ITERATIONS = 20
 SAMPLES = 20
 SMALLEST=100
-LARGEST=4000
+LARGEST=1000
 
 # Get just the official device name
-engines = list(get_available(aliases=False).keys())
+device_names = get_available_device_names()
 
 # Range of images widths spaced logarithmically
 widths = np.logspace(np.log2(SMALLEST), np.log2(LARGEST), num=SAMPLES, base=2).astype(int)
@@ -48,9 +46,10 @@ for width, img in zip(widths, images):
 
 # Slow (fetch result for each iteration)
 # and fast (resident ping pong buffers)
-by_engine = {}
-for engine in engines:
-    print(engine)
+by_device = {}
+for device_name in device_names:
+    print(device_name)
+    median = Median(device_name=device_name)
     areas = []
     fast_deltas = []
     slow_deltas = []
@@ -69,15 +68,15 @@ for engine in engines:
         slow_deltas.append(slow_delta)
         fast_deltas.append(fast_delta)
     print()
-    by_engine[engine] = (areas, slow_deltas, fast_deltas)
+    by_device[device_name] = (areas, slow_deltas, fast_deltas)
 
 # Graphic is a set of verticallu stacked plots, with a common X axis
-fig, axs = plot.subplots(len(engines), 1, sharex=True)
+fig, axs = plot.subplots(len(device_names), 1, sharex=True)
 fig.suptitle(f"Yapocis Performance Comparison:\nmedian 3x3 filter, {ITERATIONS} iterations", fontsize="large")
 
-for iengine, engine in enumerate(engines):
+for iengine, device_name in enumerate(device_names):
     # Fetch the stats, and compute the performance ratios
-    areas, slow_deltas, fast_deltas = by_engine[engine]
+    areas, slow_deltas, fast_deltas = by_device[device_name]
     ax1 = axs[iengine]
     areas = np.array(areas) / 1000.
     scipy_deltas = np.array(scipy_deltas)
@@ -88,7 +87,7 @@ for iengine, engine in enumerate(engines):
 
     # Lines show performance improvement over scipy
     # Filled areas show total seconds per engine
-    ax1.set_title(engine, loc="left")
+    ax1.set_title(device_name, loc="left")
     ax1.set_xlabel("Pixels(k)", fontsize="medium")
     # ax1.plot(areas, scipy_deltas, color="darkgreen", label="numpy")
     ax1.plot(areas, slow_deltas, color="magenta", label="slow")

@@ -1,3 +1,3 @@
 interface convolve {
-    kernel ${name}(sizeof a, in float* a, outlike a);
+    kernel ${name}(size_of a, in float a, out_like a);
 };

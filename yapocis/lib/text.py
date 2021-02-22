@@ -27,7 +27,7 @@ def render_text(text:str, font_name:str="default", size:int=32, rotation:Optiona
     x,y, w,h = bbox
     h += 1
     rendered = get_render_buffer((w,h))
-    rendered.paste(0, box=(0,0,w,h))
+    rendered.paste(0, box=(0,0,w*2,h*2))
     draw = ImageDraw.ImageDraw(rendered)
     draw.text((0,0),text, font=font,fill=255,stroke=255)
     if rotation:

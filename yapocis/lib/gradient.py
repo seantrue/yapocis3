@@ -4,11 +4,10 @@ Wrapper for 2D gradient kernel
 
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-import yapocis.rpc.programs
 from yapocis.utils.typing import *
-
+from yapocis.rpc.kernel_manager import load_program
 gradient_cl = None
-gp = yapocis.rpc.programs.load_program("gradient")
+gp = load_program("gradient")
 
 
 def gradient(image:Image1, reach:int=1) -> Tuple[Image1,Image1]:

@@ -3,7 +3,7 @@ import pytest
 import numpy as np
 
 from tests.test_graphics import random_ellipses, random_circles, random_rects, random_lines, random_triangles, \
-    random_colors, random_alpha, ASIZE
+    random_colors, random_alpha, ASIZE, random_texts
 from yapocis.utils.basic import show_array
 from yapocis.lib.channels import join_channels
 from yapocis.lib.kerneldraw3 import KernelDraw3
@@ -11,14 +11,16 @@ from yapocis.lib.kerneldraw3 import KernelDraw3
 ASIZE=1000
 
 def setup():
-    canvas = np.zeros((ASIZE, ASIZE,3)).astype(np.float32)
+    canvas = np.zeros((ASIZE, ASIZE,3),dtype=np.float32)
     return canvas, KernelDraw3(canvas)
 
-
+def show(label, a):
+    show_array(f"kerneldraw3: {label}", a)
 
 def test_batch():
-    random_coords = random_ellipses()
     canvas, ad = setup()
+    locations, strings, fonts, sizes, rotations, text_alphas = random_texts()
+    random_coords = random_ellipses()
     circles = random_circles()
     rects = random_rects()
     lines = random_lines()
@@ -39,9 +41,10 @@ def test_batch():
     ad.triangles(triangles, colors=colors, alphas=alphas)
     ad.set_color((1, 1, 1))
     ad.ellipses(ellipses, color=(.5, .5, .2), alphas=alphas)
+    ad.draw_strings(locations, strings, fonts=fonts, sizes=sizes, rotations=rotations, colors=colors, alpha="mask")
     ad.render()
-    canvas = ad.read()
-    show_array(f"batch 3", canvas)
+    a = ad.read()
+    show(f"batch 3", a)
 
 
 def test_displaylist():
@@ -60,5 +63,5 @@ def test_displaylist():
     for x in range(100, ASIZE, 100):
         ad.draw_string((x // 2, x), "Hello world!", alpha="bug")
     ad.render()
-    canvas = ad.read()
-    show_array(f"displaylist 3", canvas)
+    a = ad.read()
+    show(f"displaylist", a)

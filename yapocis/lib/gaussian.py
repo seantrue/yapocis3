@@ -1,12 +1,12 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-import yapocis.rpc.programs
+from yapocis.rpc.kernel import Kernel
+from yapocis.rpc.kernel_manager import load_program
 
 from yapocis.utils.basic import set_margin, set_frame
 from yapocis.lib.gradient import gradient
 
 from yapocis.lib.operators import sub_res
-from yapocis.lib.zcs import zcs, zcs_res
 from yapocis.utils.typing import *
 
 
@@ -15,161 +15,185 @@ def are_close(a: Array, b: Array) -> bool:
     return abs(a - b) <= eps
 
 
-def gauss_1d(sigma: float = 1., dt: float = 1., limit: float = .01, normalize: bool = True) -> Array:
-    """
-    Get a Gaussian distribution that sums to 1 along 1 dimension, quantized by discrete steps.
+class GaussianWeights:
+    def __init__(self, max_width=100, **kwargs):
+        self.gws = self.compute_gaussian_weights(max_width, **kwargs)
 
-    Args:
-        sigma: width
-        dt: step
-        limit: smallest change
-        normalize: normalize sum to 1.0
+    def gaussian_weights(self):
+        return self.gws
+    
+    def compute_gaussian_weights(self, max_width: int = 100, scale: float = 1.6, limit: float = .001,
+                         sigmas: Optional[List[float]] = None) -> List[Array]:
+        """
+        Generate a list of gaussian kernels with size less than max_width
+        Args:
+            max_width:
+            sigma:
+            scale:
+            limit:
+            sigmas:
 
-    Returns: 1D Array
+        Returns:
+            List of numpy arrays as a 1D gaussian
+        """
+        sigma = 1.0
+        gws = []
+        if sigmas:
+            for sigma in sigmas:
+                gws.append(self.compute_gaussian_weight(sigma, limit=limit))
+        else:
+            while 1:
+                gw = self.compute_gaussian_weight(sigma, limit=limit)
+                if len(gw) > max_width:
+                    break
+                gws.append(gw)
+                sigma *= scale
+        return gws
 
-    """
-    tail = []
-    x = 0.
-    val = 1.
-    two_times_sigma_squared = 2 * sigma * sigma
-    scale_factor = 1. / np.sqrt(two_times_sigma_squared * np.pi)
-    while val > limit:
-        val = float(np.exp(-(x * x) / two_times_sigma_squared) * scale_factor)
-        tail.append(val)
-        x += dt
+    @staticmethod
+    def compute_gaussian_weight(sigma: float = 1., dt: float = 1., limit: float = .01, normalize: bool = True) -> Array:
+        """
+        Get a Gaussian distribution that sums to 1 along 1 dimension, quantized by discrete steps.
 
-    k = tail[::-1]  # Make a copy of the reversed tail
-    k.extend(tail[1:])  # Reflect
+        Args:
+            sigma: width
+            dt: step
+            limit: smallest change
+            normalize: normalize sum to 1.0
 
-    # Normalize
-    if normalize:
-        k = np.divide(k, np.sum(k) / dt)
+        Returns: 1D Array
 
-    return k
+        """
+        tail = []
+        x = 0.
+        val = 1.
+        two_times_sigma_squared = 2 * sigma * sigma
+        scale_factor = 1. / np.sqrt(two_times_sigma_squared * np.pi)
+        while val > limit:
+            val = float(np.exp(-(x * x) / two_times_sigma_squared) * scale_factor)
+            tail.append(val)
+            x += dt
 
+        k = tail[::-1]  # Make a copy of the reversed tail
+        k.extend(tail[1:])  # Reflect
 
-def gaussians(maxwidth: int = 100, sigma: float = 1.0, scale: float = 1.6, limit: float = .001,
-              sigmas: Optional[List[float]] = None) -> List[Array]:
-    """
-    Generate a list of gaussian kernels with size less than maxwidth
-    Args:
-        maxwidth:
-        sigma:
-        scale:
-        limit:
-        sigmas:
+        # Normalize
+        if normalize:
+            k = np.divide(k, np.sum(k) / dt)
 
-    Returns:
+        return k
 
-    """
-    sigma = 1.0
-    gs = []
-    if sigmas:
-        for sigma in sigmas:
-            gs.append(gauss_1d(sigma, limit=limit))
-    else:
-        while 1:
-            g = gauss_1d(sigma, limit=limit)
-            if len(g) > maxwidth:
-                break
-            gs.append(g)
-            sigma *= scale
-    return gs
+    def get_gaussian_weight(self, scale: int) -> np.ndarray:
+        return self.gws[scale]
 
+    def get_scales(self) -> int:
+        return len(self.gws)
 
-program = None
-
-
-def gaussian_kernels(gs):
-    global program
-    convs = [("gauss%s" % len(a), a) for a in gs]
-    convsres = [("gauss%s_res" % len(a), a) for a in gs]
-    convsh = [("gauss%s_h" % len(a), a) for a in gs]
-    convsv = [("gauss%s_v" % len(a), a) for a in gs]
-    program = yapocis.rpc.programs.load_program("convolvesep", convs=convs)
-    krnls = [getattr(program, name) for (name, conv) in convs]
-    for i, (name, conv) in enumerate(convs):
-        krnls[i].res = getattr(program, convsres[i][0])
-        krnls[i].h = getattr(program, convsh[i][0])
-        krnls[i].v = getattr(program, convsv[i][0])
-        krnls[i].width = len(conv)
-    return krnls
+    def get_gaussian_width(self, scale:int) -> int:
+        return len(self.get_gaussian_weight(scale))
 
 
-_gaussian_basis = gaussians()
+class Gaussian:
+    def __init__(self, device_name: Optional[str]=None, gaussian_weights: Optional[List[np.ndarray]] = None):
+        self.gaussian_weights = GaussianWeights() if gaussian_weights is None else gaussian_weights
+        gws = self.gaussian_weights.gaussian_weights()
+        convs = [("gauss%s" % len(a), a) for a in gws]
+        convsres = [("gauss%s_res" % len(a), a) for a in gws]
+        convsh = [("gauss%s_h" % len(a), a) for a in gws]
+        convsv = [("gauss%s_v" % len(a), a) for a in gws]
+        self.program = program = load_program("convolvesep", device_name=device_name, convs=convs)
+        self.zcs = load_program("zcs", device_name=device_name)
+        self.gaussian_kernels: List[Kernel] = [getattr(program, name) for (name, conv) in convs]
+        for i, (name, conv) in enumerate(convs):
+            self.gaussian_kernels[i].res = getattr(program, convsres[i][0])
+            self.gaussian_kernels[i].h = getattr(program, convsh[i][0])
+            self.gaussian_kernels[i].v = getattr(program, convsv[i][0])
+            self.gaussian_kernels[i].width = len(conv)
 
+    def get_scales(self):
+        return len(self.gaussian_kernels)
 
-def get_gaussian(scale: int):
-    assert 0 <= scale and scale < len(_gaussian_basis)
-    return _gaussian_basis[scale]
+    def get_gaussian_kernels(self):
+        return self.gaussian_kernels
 
+    def get_gaussian_kernel(self, scale: int) -> Kernel:
+        return self.gaussian_kernels[scale]
 
-def get_scales() -> int:
-    return (len(_gaussian_basis))
-
-
-def get_gaussian_width(scale):
-    return len(get_gaussian(scale))
-
-
-_gaussian_kernels = gaussian_kernels(_gaussian_basis)
-
-
-def get_gaussian_kernels():
-    return _gaussian_kernels
-
-
-def get_gaussian_kernel(scale: int) -> Array:
-    assert 0 <= scale and scale < len(_gaussian_kernels)
-    return _gaussian_kernels[scale]
-
-
-def gauss_image(a: Image1, scale: int):
-    g = get_gaussian_kernel(scale)
-    a = a.copy()
-    b = np.empty_like(a)
-    g.program.write(a)
-    g.program.write(b)
-    g.h(a,b)
-    g.v(b,a)
-    g.read(a)
-    return a
-
-
-def zcsdog(a: Image1, scale: int, clearmargin: bool = True, frame: bool = True, res: bool = True) -> \
-        Tuple[Image1, Image1, Image1]:
-    if res:
-        g = get_gaussian_kernel(scale)
-        g1 = get_gaussian_kernel(scale + 1)
+    def gauss_image(self, a: Image1, scale: int) -> Image1:
+        g = self.get_gaussian_kernel(scale)
+        a = a.copy()
+        b = np.empty_like(a)
         g.write(a)
-        smaller = np.empty_like(a)
-        larger = np.empty_like(a)
-        tmp = np.empty_like(a)
-        zca = np.empty_like(a)
-        g.write(smaller)
-        g.write(larger)
-        g.write(tmp)
-        g.write(zca)
-        g.res(0, a, tmp)
-        g.res(1, tmp, smaller)
-        g1.res(0, a, tmp)
-        g1.res(1, tmp, larger)
-        sub_res(larger, smaller, tmp)
-        zcs_res(tmp, zca)
-        g.read(zca)
-        g.read(smaller)
-    else:
-        smaller = gauss_image(a, scale)
-        larger = gauss_image(a, scale + 1)
-        dog = smaller - larger
-        zca = zcs(dog)
-    # Zero out of bounds and create a frame.
-    grad, theta = gradient(smaller)
-    margin = get_gaussian_width(scale) + 1
-    if clearmargin:
-        set_margin(zca, margin)
-        set_margin(grad, margin)
-        set_margin(theta, margin)
-    if frame:
-        set_frame(zca, margin)
-    return zca.copy(), grad.copy(), theta.copy()
+        g.write(b)
+        g.h(a, b)
+        g.v(b, a)
+        g.read(a)
+        return a
+
+    def zcs(self, image):
+        if len(image.shape) == 2:
+            handler = self.zcs.zcs1
+            global_size = image.size
+        elif image.shape[2] == 2:
+            handler = self.zcs.zcs2
+            global_size = image.size // 2
+        elif image.shape[2] == 3:
+            handler = self.zcs.zcs3
+            global_size = image.size // 3
+        elif image.shape[2] == 4:
+            handler = self.zcs.zcs4
+            global_size = image.size // 4
+        return handler(image, global_size=global_size)
+
+    def zcs_res(self, image, zcs):
+        if len(image.shape) == 2:
+            handler = self.zcs.zcs1_res
+            global_size = image.size
+        elif image.shape[2] == 2:
+            handler = self.zcs.zcs2_res
+            global_size = image.size // 2
+        elif image.shape[2] == 3:
+            handler = self.zcs.zcs3_res
+            global_size = image.size // 3
+        elif image.shape[2] == 4:
+            handler = self.zcs.zcs4_res
+            global_size = image.size // 4
+        handler(image, zcs, global_size=global_size)
+
+    def zcsdog(self, a: Image1, scale: int, clearmargin: bool = True, frame: bool = True, res: bool = True) -> \
+            Tuple[Image1, Image1, Image1]:
+        if res:
+            g = self.get_gaussian_kernel(scale)
+            g1 = self.get_gaussian_kernel(scale + 1)
+            g.write(a)
+            smaller = np.empty_like(a)
+            larger = np.empty_like(a)
+            tmp = np.empty_like(a)
+            zca = np.empty_like(a)
+            g.write(smaller)
+            g.write(larger)
+            g.write(tmp)
+            g.write(zca)
+            g.res(0, a, tmp)
+            g.res(1, tmp, smaller)
+            g1.res(0, a, tmp)
+            g1.res(1, tmp, larger)
+            self.zcs.sub_res(larger, smaller, tmp)
+            self.zcs.zcs1_res(tmp, zca)
+            g.read(zca)
+            g.read(smaller)
+        else:
+            smaller = self.gauss_image(a, scale)
+            larger = self.gauss_image(a, scale + 1)
+            dog = smaller - larger
+            zca = self.zcs.zcs(dog)
+        # Zero out of bounds and create a frame.
+        grad, theta = gradient(smaller)
+        margin = self.gaussian_weights.get_gaussian_width(scale) + 1
+        if clearmargin:
+            set_margin(zca, margin)
+            set_margin(grad, margin)
+            set_margin(theta, margin)
+        if frame:
+            set_frame(zca, margin)
+        return zca.copy(), grad.copy(), theta.copy()

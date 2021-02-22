@@ -60,6 +60,7 @@ class KernelDraw3(AbstractKernelDraw):
     def draw_strings(self, locations, texts, **kwargs):
         if not locations:
             return
+
         for ad in self.ads:
             ad.draw_strings(locations, texts, **kwargs)
 

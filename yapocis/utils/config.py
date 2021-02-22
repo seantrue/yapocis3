@@ -1,13 +1,13 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 from yaml import safe_dump as dump
-from yapocis.rpc.engines import get_available, get_yapocis_device
+from yapocis.rpc.device import get_available_device_names, get_device
 from yapocis.utils.typing import *
 
 DEPRECATED_OPENCL_ATTRIBUTES = {"persistent_unique_id"}
 def get_device_config(device_name:Optional[str]=None) -> Config:
     cfg:Config = {}
-    _,device = get_yapocis_device(device_name)
+    _,device = get_device(device_name)
     for attr in dir(device):
         if attr.startswith("_"):
             continue
@@ -29,7 +29,7 @@ def get_device_config(device_name:Optional[str]=None) -> Config:
     return cfg
 
 def get_platform_config() -> Dict[str,Config]:
-    device_names  = list(get_available().keys())
+    device_names  = get_available_device_names()
     config = {}
     for name in device_names:
         config[name] = get_device_config(name)

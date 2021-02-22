@@ -3,7 +3,7 @@ from typing import Optional
 
 import numpy as np
 
-from yapocis.rpc.programs import load_program
+from yapocis.rpc1.programs import load_program
 from yapocis.utils.basic import chunker
 from yapocis.utils.typing import Coords
 

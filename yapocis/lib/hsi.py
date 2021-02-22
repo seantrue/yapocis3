@@ -5,7 +5,7 @@ Created on Jul 22, 2011
 '''
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-from yapocis.rpc.programs import load_program
+from yapocis.rpc.kernel_manager import load_program
 
 from yapocis.utils.typing import *
 

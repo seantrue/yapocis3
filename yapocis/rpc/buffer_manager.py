@@ -35,9 +35,8 @@ class BufferManager:
 
     def purge_buffers(self):
         # Drop buffers if no array or data buffer is referencing them
-        buffer_ids = set(self.arrays.keys())
         for buffer_id in list(self.buffers.keys()):
-            if not buffer_id in buffer_ids:
+            if not buffer_id in self.arrays:
                 del self.buffers[buffer_id]
                 self.purged += 1
 
@@ -81,9 +80,8 @@ class BufferManager:
     def find_buffer(self, a:Array, op:int) -> Optional[pyopencl.Buffer]:
         "Find an appropriate buffer. Tricky."
         assert op in (self.READ, self.WRITE)
-        self.purge_buffers()
         buffer_id = id(a)
-        havea = buffer_id in self.buffers
+        havea = buffer_id in self.buffers and buffer_id in self.arrays
         # Complete match, easy decision
         if havea:
             self.hits += 1

@@ -45,7 +45,6 @@ def font_path(font_name:str) -> str:
     for font_dir in font_dirs:
         font_path = os.path.join(font_dir, font_name)
         if  os.path.exists(font_path):
-            print("Using font", font_path)
             return font_path
     raise ValueError(f"{font_name} not found, use one of: {' '.join(fonts())}")
 
@@ -72,7 +71,7 @@ def font(font_suggestion:str) ->str:
 
 
 _fontcache = {}
-def image_font(font_name="default", size=14, index=0, encoding="", layout_engine=None) -> "FreeTypeFont":
+def image_font(font_name: Optional[str]="default", size=14, index=0, encoding="", layout_engine=None) -> "FreeTypeFont":
     """
     Return a font wrapper, caching as possible
     Args:
@@ -85,6 +84,8 @@ def image_font(font_name="default", size=14, index=0, encoding="", layout_engine
     Returns: PIL freetypefont
 
     """
+    font_name = "default" if font_name is None else font_name
+    size = 14 if size is None else size
     if truetype is None:
         raise RuntimeError(f"PIL with TrueType support is not installed")
     font_path = font(font_name)

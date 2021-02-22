@@ -5,11 +5,11 @@ Low level wrappers around the OpenCL graphics kernels.
 
 import numpy as np
 
-import yapocis.rpc.programs
+from yapocis.rpc.kernel_manager import import_program
 from yapocis.lib.text import render_text
 
 lines_cl = rects_cl = circles_cl = triangles_cl = ellipses_cl = composite_cl = None
-program, _ = yapocis.rpc.programs.import_program("graphics",
+program, _ = import_program("graphics",
                                                  lines="lines_cl", rects="rects_cl", circles="circles_cl",
                                                  triangles="triangles_cl", ellipses="ellipses_cl",
                                                  composite="composite_cl")
@@ -27,12 +27,12 @@ def arrayify1d(scalar_or_vector, length, default=None, dtype=np.float32):
     if scalar_or_vector is None:
         raise ValueError(f"Both value and default are None")
     if isinstance(scalar_or_vector, np.ndarray):
-        vector = scalar_or_vector.astype(dtype)
+        vector = scalar_or_vector.astype(dtype, copy=False)
     elif isinstance(scalar_or_vector, (list, tuple)):
         vector = np.array(scalar_or_vector, dtype=dtype)
     else:
-        vector = [scalar_or_vector] * length
-        vector = np.asarray(vector)
+        vector = np.empty(length, dtype=dtype)
+        vector[:] = scalar_or_vector
     if vector.shape[0] != length:
         raise ValueError(f"value length {vector.shape[0]} does not match specified {length}")
     return vector
@@ -58,6 +58,7 @@ def to_list(scalar, vector, n, default=None):
     if scalar is None and vector is None:
         scalar = default
     coerced = list(vector) if isinstance(vector, (tuple, list, np.ndarray)) else [scalar] * n
+    coerced = [default if value is None else value for value in coerced]
     return coerced
 
 
@@ -85,7 +86,7 @@ def composite_setup(locations, blocks, alpha=None, alphas=None):
     Compute the information for compositing a set of distinct blocks
 
     Args:
-        coords: list of tuples composed of a location (x,y)
+        locations: list of tuples composed of a location (x,y)
         blocks: list of pixel blocks, one per element of coords
         alpha: list of scalar or vector of opacity
 
@@ -103,23 +104,21 @@ def composite_setup(locations, blocks, alpha=None, alphas=None):
     pixel_buffer = []
     alpha_buffer = []
     ipixel = 0
-    coords = []
-    ipixels = []
-    for block, location, alpha in zip(blocks, locations, alphas):
+    coords = np.empty((len(locations),4),dtype=np.int32)
+    ipixels = np.empty(len(locations),dtype=np.int32)
+    for i, (block, location, alpha) in enumerate(zip(blocks, locations, alphas)):
         height, width = block.shape
         x, y = location
-        coords.append((x, y, width, height))
-        ipixels.append(ipixel)
+        coords[i,:] = [x, y, width, height]
+        ipixels[i] = ipixel
         ipixel += block.size
-        pixel_buffer.append(block.flatten())
+        pixel_buffer.append(block.ravel())
         if not isinstance(alpha, np.ndarray):
-            alpha = arrayify1d(alpha, block.size, default=1.0, dtype=None)
-        alpha_buffer.append(alpha.flatten())
+            alpha = arrayify1d(alpha, block.size, default=1.0, dtype=np.float32)
+        alpha_buffer.append(alpha.ravel())
     pixel_buffer = np.concatenate(pixel_buffer)
     alpha_buffer = np.concatenate(alpha_buffer)
     buffer = np.column_stack([pixel_buffer, alpha_buffer])
-    coords = coerce_coords(coords, 4, np.int32)
-    ipixels = np.array(ipixels, dtype=np.int32)
     return coords, buffer, ipixels
 
 
@@ -147,12 +146,12 @@ def sprites_setup(locations, sprites, alpha=None, alphas=None):
     ipixel = 0
     ipixels = []
     for sprite, alpha in zip(sprites, alphas):
-        sprite = sprite.flatten()
+        sprite = sprite.ravel()
         ipixels.append(ipixel)
         ipixel += len(sprite)
-        pixel_buffer.append(sprite.flatten())
+        pixel_buffer.append(sprite)
         alpha = arrayify1d(alpha, len(sprite), default=1.0)
-        alpha_buffer.append(alpha.flatten())
+        alpha_buffer.append(alpha.ravel())
     pixel_buffer = np.concatenate(pixel_buffer)
     alpha_buffer = np.concatenate(alpha_buffer)
     buffer = np.column_stack([pixel_buffer, alpha_buffer])

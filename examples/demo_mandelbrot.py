@@ -1,6 +1,6 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-# I adapted Holger's adaptation to show use of pyopencl.rpc
+# I adapted Holger's adaptation to show use of pyopencl.rpc1
 # Thanks to Holger and Ian for the very useful demo.
 # Sean True
 # August 15, 2011
@@ -31,13 +31,12 @@ from functools import reduce
 # Speed notes are listed in the same place
 
 # set width and height of window, more pixels take longer to calculate
-import yapocis.rpc.programs
-
+from yapocis.rpc.kernel_manager import import_program
 w = 1024
 h = 1024
 
 # Use the rpc extension to define and load the kernel as a callable, importing the kernel "mandelbrot" as "calc_fractal_opencl"
-yapocis.rpc.programs.import_program("mandelbrot", mandelbrot="calc_fractal_opencl", engine=0)
+import_program("mandelbrot", mandelbrot="calc_fractal_opencl")
 
 
 

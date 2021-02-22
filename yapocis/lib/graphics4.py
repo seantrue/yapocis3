@@ -5,12 +5,12 @@ Low level wrappers around the OpenCL graphics kernels.
 
 import numpy as np
 
-import yapocis.rpc.programs
+from yapocis.rpc.kernel_manager import import_program
 from yapocis.lib.text import render_text
 from yapocis.lib.graphics import to_list, to_vector
 
 lines_cl = rects_cl = circles_cl = triangles_cl = ellipses_cl = composite_cl = None
-program, _ = yapocis.rpc.programs.import_program("graphics4", lines="lines_cl", rects="rects_cl", circles="circles_cl",
+program, _ = import_program("graphics4", lines="lines_cl", rects="rects_cl", circles="circles_cl",
                                               triangles="triangles_cl", ellipses="ellipses_cl", composite="composite_cl")
 
 
@@ -61,7 +61,7 @@ def setup_composite(locations, blocks):
     for block, location in zip(blocks, locations):
         height,width,depth = block.shape
         assert depth == 4
-        block = block.flatten()
+        block = block.ravel()
         pixel_buffer.append(block)
         x, y = location
         coords.append((x, y, width, height))
@@ -93,10 +93,10 @@ def setup_sprites(locations, sprites):
     ipixel = 0
     ipixels = []
     for sprite in sprites:
-        sprite = sprite.flatten()
+        sprite = sprite.ravel()
         ipixels.append(ipixel)
         ipixel += len(sprite)//4
-        pixel_buffer.append(sprite.flatten())
+        pixel_buffer.append(sprite)
     buffer = np.concatenate(pixel_buffer)
     coords = []
     for isprite, x, y in locations:

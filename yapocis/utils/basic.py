@@ -273,7 +273,8 @@ def _show_array(*args) -> Tuple[str, PILImage]:
         array = array.copy()
         if array.dtype in (np.float32, np.float64, float):
             array -= array.min()
-            array /= array.max()
+            mx = array.max()
+            array /= mx if mx != 0.0 else 1.0
             array *= 255.
             array = array.astype(np.uint8)
     img = Image.fromarray(array)
@@ -400,7 +401,7 @@ def histeq_large(im: Image1, nbr_bins=2 ** 16) -> Array:
     Returns:
         2d Array, dtype=np.float32
     """
-    imhist, bins = np.histogram(im.flatten(), nbr_bins, normed=True)
+    imhist, bins = np.histogram(im.ravel(), nbr_bins, normed=True)
     imhist[0] = 0
 
     cdf = imhist.cumsum()  # cumulative distribution function
@@ -410,7 +411,7 @@ def histeq_large(im: Image1, nbr_bins=2 ** 16) -> Array:
     cdf = (nbr_bins- 1) * cdf / cdf[-1]  # normalize
 
     # use linear interpolation of cdf to find new pixel values
-    im2 = np.interp(im.flatten(), bins[:-1], cdf)
+    im2 = np.interp(im.ravel(), bins[:-1], cdf)
     return np.array(im2, np.float32).reshape(im.shape)
 
 
@@ -424,10 +425,10 @@ def histeq(im: Image1, nbr_bins: int = 256) -> Tuple[Array, Array]:
     Returns: array like im, and the cumulative density table
 
     """
-    imhist, bins = np.histogram(im.flatten(), nbr_bins, normed=True)
+    imhist, bins = np.histogram(im.ravel(), nbr_bins, normed=True)
     cdf = imhist.cumsum()  # cumulative distribution function
     cdf = 255 * cdf / cdf[-1]  # normalize
-    im2 = np.interp(im.flatten(), bins[:-1], cdf)
+    im2 = np.interp(im.ravel(), bins[:-1], cdf)
     return im2.reshape(im.shape), cdf
 
 

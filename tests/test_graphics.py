@@ -9,7 +9,7 @@ from yapocis.utils.basic import show_array, imread
 from yapocis.lib.channels import split_channels
 from yapocis.lib.hsi import rgb2hsi
 from yapocis.lib.graphics import lines, rects, circles, triangles, ellipses, composite, sprites, draw_strings
-from . import image_test
+from . import image_test, text_test
 
 
 ASIZE = 1000
@@ -18,6 +18,8 @@ ASIZE = 1000
 def setup():
     return np.zeros((ASIZE, ASIZE)).astype(np.float32)
 
+def show(label, a):
+    show_array(f"graphics: {label}", a)
 
 def image_source(align=5):
     image = image_test()
@@ -123,6 +125,31 @@ def random_sprites(n=100):
         random_coords[i].insert(0, j)
     return random_coords, random_sprites
 
+def interesting_words(n=10):
+    words = text_test()
+    shuffle(words)
+    return words[:n]
+
+def double_shuffle(lst, n):
+    while len(lst) < n:
+        lst += lst
+    lst = lst[:n]
+    shuffle(lst)
+    return lst
+
+def random_texts(n=100):
+    locations = random_points(n)
+    strings = interesting_words(n//10)
+    fonts = ["bold", "italic", "light", "regular"]
+    sizes = [18, 36, 72, 112]
+    alphas = ["bug", "mask", .5, 1.0]
+    rotations = double_shuffle(list(range(0,360,30)), n)
+    strings = double_shuffle(strings, n)
+    sizes = double_shuffle(sizes, n)
+    fonts = double_shuffle(fonts, n)
+    alphas = double_shuffle(alphas, n)
+    return locations, strings, fonts, sizes, rotations, alphas
+
 
 def test_lines():
     canvas = setup()
@@ -133,7 +160,7 @@ def test_lines():
             coords.append([0, 0, i, j])
     lines(canvas, coords, 1.5, color=1.0, alpha=1.0)
     lines(canvas, random_coords, 1.5, color=1.0, alphas=random_alpha())
-    show_array(f"draw", canvas)
+    show(f"draw", canvas)
 
 
 def test_rects():
@@ -145,7 +172,7 @@ def test_rects():
             coords.append([i - 25, j - 25, i + 25, j + 25])
     rects(canvas, coords, color=1.0, alpha=0.5)
     rects(canvas, random_coords, colors=random_colors(), alphas=random_alpha())
-    show_array(f"rects", canvas)
+    show(f"rects", canvas)
 
 
 def test_circles():
@@ -157,7 +184,7 @@ def test_circles():
             coords.append([i, j, 100])
     circles(canvas, coords, color=1.0, alpha=0.5)
     circles(canvas, random_coords, colors=random_colors(), alphas=random_alpha())
-    show_array(f"circles", canvas)
+    show(f"circles", canvas)
 
 
 def test_triangles():
@@ -169,7 +196,7 @@ def test_triangles():
             coords.append([i, j, i + 50, j + 0, i + 50, j - 50])
     triangles(canvas, coords, color=1.0, alpha=0.5)
     triangles(canvas, random_coords, colors=random_colors(), alphas=random_alpha())
-    show_array(f"triangles", canvas)
+    show(f"triangles", canvas)
 
 
 def test_ellipses():
@@ -187,25 +214,24 @@ def test_ellipses():
     alpha = 1.0
     ellipses(canvas, coords, colors=colors, alpha=alpha)
     ellipses(canvas, random_coords, colors=random_colors(), alphas=random_alpha())
-    show_array(f"ellipses", canvas)
+    show(f"ellipses", canvas)
 
 
 def test_composite():
     canvas = setup()
     random_coords, random_blocks = random_composites()
     composite(canvas, random_coords, random_blocks)
-    show_array("composite", canvas)
+    show("composite", canvas)
 
 
 def test_composite_sprites():
     canvas = setup()
     random_coords, random_sprites_ = random_sprites()
     sprites(canvas, random_coords, random_sprites_)
-    show_array("sprites", canvas)
+    show("sprites", canvas)
 
 
 def test_composite_mosaic():
-    canvas = setup()
     image = image_test()
     from random import shuffle
     r, g, b = split_channels(image)
@@ -213,7 +239,7 @@ def test_composite_mosaic():
     d = min(*i.shape)
     d = d - int(d % 5);
     i = i[:d, :d]
-    show_array("i", i)
+    show("i", i)
     iout = np.zeros_like(i)
     step = d // 5
     blocks = [i]
@@ -225,41 +251,29 @@ def test_composite_mosaic():
             blocks.append(block)
     shuffle(blocks)
     composite(iout, coords, blocks)
-    show_array("mosaic", iout)
+    show("mosaic", iout)
 
 
 def test_simple_texts():
     canvas = setup()
     locations = []
-    s = "Hello world"
+    text = interesting_words(100)
     for x in range(100, ASIZE, 100):
         locations.append((x // 2, x))
-    strings = [s] * len(locations)
+    strings = double_shuffle(text, len(locations))
     draw_strings(canvas, locations, strings, font="default", size=32, alpha="bug")
-    show_array("simple texts", canvas)
+    show("simple texts", canvas)
 
 
 def test_texts():
     canvas = setup()
-    locations = random_points(300)
-    strings = ["Hello", "sympathy", "goodbye", "Aqua"]
-    fonts = ["bold", "italic", "light", "regular"]
-    sizes = [18, 36, 72, 112]
-    alphas = ["bug", "mask", .5, 1.0]
-    while len(strings) < len(locations):
-        strings += strings
-        sizes += sizes
-        fonts += fonts
-        alphas += alphas
-    strings = strings[:len(locations)]
-    sizes = sizes[:len(strings)]
-    fonts = fonts[:len(sizes)]
-    alphas = alphas[:len(sizes)]
-    shuffle(strings)
-    shuffle(sizes)
-    shuffle(fonts)
-    shuffle(alphas)
+    locations, strings, fonts, sizes, rotations, alphas = random_texts(1000)
     draw_strings(canvas, locations, strings, fonts=fonts, sizes=sizes, alphas=alphas)
-    show_array("texts", canvas)
+    show("texts", canvas)
 
+def test_stressed_texts():
+    canvas = setup()
+    locations, strings, fonts, sizes, rotations, _ = random_texts(300)
+    draw_strings(canvas, locations, strings, fonts=fonts, sizes=sizes, rotations=rotations, alpha="mask")
+    show("texts", canvas)
 

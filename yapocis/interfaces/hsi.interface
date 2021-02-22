@@ -1,6 +1,6 @@
 interface hsi {
-    kernel rgb2hsi(in float *r, in float *g, in float *b, outlike r, outlike r, outlike r);
-    kernel hsi2rgb(in float *h, in float *s, in float *i, outlike h, outlike h, outlike h);
-    kernel rgb2hsi3(depthof rgb, in float *rgb, outlike rgb);
-    kernel hsi2rgb3(depthof hsi, in float *hsi, outlike hsi);
+    kernel rgb2hsi(in float r, in float g, in float b, out_like float r, out_like float r, out_like float r);
+    kernel hsi2rgb(in float h, in float s, in float i, out_like h, out_like h, out_like h);
+    kernel rgb2hsi3(depth_of rgb, in float rgb, out_like rgb);
+    kernel hsi2rgb3(depth_of hsi, in float hsi, out_like hsi);
 };

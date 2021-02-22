@@ -10,15 +10,12 @@ from yapocis.lib.channels import split_channels, join_channels, join_planes, spl
 from yapocis.lib.hsi import *
 from yapocis.utils.typing import *
 
-from yapocis.rpc.programs import import_program
-
-filterImage = filterImage_res = filterImage2 = filterImage2_res = filterImage3 = filterImage3_res = filterImage4 = filterImage4_res = None
-program, kernels = import_program("anisodiff", import_kernels="*")
+from yapocis.rpc.kernel_manager import  import_program, load_program
 
 
 class Anisodiff:
     def __init__(self, device_name: str = None):
-        self.kmgr = load_program("anisodiff", engine_name=device_name)
+        self.kmgr = load_program("anisodiff", device_name=device_name)
         self.filter_by_depth= ["filterImage","filterImage2", "filterImage3", "filterImage4"]
 
     def get_image_depth(self, image):

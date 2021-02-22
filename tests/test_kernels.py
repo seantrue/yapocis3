@@ -7,7 +7,7 @@ from yapocis.lib.hsi import rgb2hsi, rgb2hsi3, hsi2rgb3
 from yapocis.lib.channels import split_channels, join_channels
 
 from yapocis.lib.operators import add, add_res, program, sub, sub_res, mul, mul_res
-from yapocis.lib.median import median3x3fast, median3x3slow
+from yapocis.lib.median import Median
 
 from . import image_path_test
 
@@ -32,27 +32,28 @@ def test_hsi():
     assert np.sum(s-s3) == 0.0
     assert np.sum(h-h3) == 0.0
     rgb3 = hsi2rgb3(hsi3)
-    assert abs(np.sum(rgb.flatten()-rgb3.flatten()))/rgb.size < .00001
+    assert abs(np.sum(rgb.ravel()-rgb3.ravel()))/rgb.size < .00001
     rgb4 = np.zeros((256,256,4), dtype=np.float32)
     rgb4[:,:,:3] = rgb[:,:,:]
     hsi4 = rgb2hsi3(rgb4)
     rgb5 = hsi2rgb3(hsi4)
     rgb5 = rgb5[:,:,:3]
-    assert abs(np.sum(rgb.flatten()-rgb5.flatten()))/rgb.size < .00001
+    assert abs(np.sum(rgb.ravel()-rgb5.ravel()))/rgb.size < .00001
     show_array("from HSI4", rgb5)
     print(program)
 
 
 def test_median3():
+    median = Median()
     a1 = np.random.sample((500, 500)).astype(np.float32)
     a2 = a1.copy()
     stage("slow")
-    b1 = median3x3slow(a1, 500)
+    b1 = median.median3x3slow(a1, 500)
     stage()
     stage("fast")
-    b2 = median3x3fast(a2, 500)
+    b2 = median.median3x3fast(a2, 500)
     stage()
-    error = np.sum(np.abs(b1.flatten() - b2.flatten()))
+    error = np.sum(np.abs(b1.ravel() - b2.ravel()))
     assert error == 0.0
 
 

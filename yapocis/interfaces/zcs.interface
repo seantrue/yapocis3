@@ -1,10 +1,13 @@
 interface zcs {
-    kernel zcs1(widthof int input, heightof int input, in float *input, outlike input);
-    alias zcs1_res as zcs1(widthof int input, heightof int input, resident float *input, resident float *zcs);
-    kernel zcs2(widthof int input, heightof int input, in float *input, outlike input);
-    alias zcs2_res as zcs2(widthof int input, heightof int input, resident float *input, resident float *zcs);
-    kernel zcs3(widthof int input, heightof int input, in float *input, outlike input);
-    alias zcs3_res as zcs3(widthof int input, heightof int input, resident float *input, resident float *zcs);
-    kernel zcs4(widthof int input, heightof int input, in float *input, outlike input);
-    alias zcs4_res as zcs4(widthof int input, heightof int input, resident float *input, resident float *zcs);
+    kernel zcs1(width_of input, height_of input, in float input, out_like input);
+    alias zcs1_res as zcs1(width_of input, height_of input, resident float input, resident float zcs);
+    kernel zcs2(width_of input, height_of input, in float input, out_like input);
+    alias zcs2_res as zcs2(width_of input, height_of input, resident float input, resident float zcs);
+    kernel zcs3(width_of input, height_of input, in float input, out_like input);
+    alias zcs3_res as zcs3(width_of input, height_of input, resident float input, resident float zcs);
+    kernel zcs4(width_of input, height_of input, in float input, out_like input);
+    alias zcs4_res as zcs4(width_of input, height_of input, resident float input, resident float zcs);
+    kernel sub(in float input1, in float input2, out_like input1);
+    alias sub_res as sub(resident float input1, resident float input2, resident float output);
+
 };

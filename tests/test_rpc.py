@@ -2,14 +2,14 @@
 
 import numpy as np
 
-from yapocis.rpc.parser import get_interface
-from yapocis.rpc.engines import get_engine, get_available, get_yapocis_device
-from yapocis.rpc.programs import load_program, import_program
+from yapocis.rpc.interface import get_interface
+from yapocis.rpc.device import get_device, get_available_device_names, get_available_devices, get_platforms
+from yapocis.rpc.device_manager import DeviceManager
+from yapocis.rpc.kernel_manager import load_program, import_program
 
 
 def test_buffers():
-    engine = get_engine()
-    bmgr = engine.bmgr
+    bmgr = DeviceManager()
     a = np.random.sample((100,)).astype(np.float32)
     b = a.copy()
     bmgr.write_buffer(a)
@@ -46,84 +46,39 @@ def test_buffers():
     # assert len(bmgr.arrays.keys())==0
 
 
-def test_getinterfacecl():
+def test_getinterface():
     interface = get_interface(
         """
         interface boundedmedian {
-             kernel boundedmedian(sizeof int input, in float32 *input, in int32 *zcs, outlike int16 input, out short *trace);
-             alias bm as boundedmedian(in int32 offset, resident float32 *input, in int32 *zcs, resident float *input, out int16 *trace);
+             kernel boundedmedian(sizeof input, in float input, widthof zcs, in int zcs, outlike input, out short trace);
+             alias bm as boundedmedian(in int offset, resident float input, widthof zcs, in int zcs, resident float output, out short trace);
           };
         """
     )
-    print("Interface:", interface.interface_name)
-    for kernel in interface.kernels():
-        print("Kernel: %s alias for %s" % (kernel, interface.kernel_alias(kernel)))
-        symbols = {}
-        iparam = 0
-        for param in interface.kernel_params(kernel):
-            assert len(param) == 4
-            print("Param:", param, end=' ')
-            direction, dtype, isbuffer, name = param
-            assert direction in ("in", "out", "inout", "outlike", "resident", "sizeof", "widthof", "heightof")
-            if direction == "outlike":
-                assert name in symbols
-                iparam, olparam = symbols[name]
-                dtype, isbuffer = olparam[1], olparam[2]
-                print("->", olparam, end=' ')
-                assert isbuffer
-            else:
-                symbols[name] = iparam, param
-                iparam += 1
-            assert isbuffer in ("*", "")
-            assert dtype in ("int16", "int32", "float32", "uint16", "uint32", "complex64", "int", "float", "short")
-            togpu = direction in ("in", "inout")
-            fromgpu = direction in ("out", "inout", "outlike")
-            if isbuffer:
-                if direction == "resident":
-                    print("Buffer is resident on GPU.", end=' ')
-                elif direction == "outlike":
-                    print("Allocate a buffer like %(name)s (position=%(iparam)s). (%(olparam)s)" % locals(), end=' ')
-                elif direction in ("sizeof", "heightof", "widthof"):
-                    print("Pass in %s of %s" % (direction, name), end=' ')
-                else:
-                    print("Coerce %(name)s to numpy.%(dtype)s. " % locals(), end=' ')
-                    print("Allocate a buffer for %(name)s. " % locals(), end=' ')
-                if togpu:
-                    print("Copy to GPU. ", end=' ')
-                if fromgpu:
-                    print("Copy back from GPU.", end=' ')
-            else:
-                assert not fromgpu
-                print("Use as parameter.", end=' ')
-            print()
-        print()
 
 
 def test_compiling():
-    interfaces = [("convolve", dict(name="convolve", conv=[1, 2, 3, 4, 3, 2, 1])),
-                  ("median3x3", dict(steps=[9], width=9)),
-                  ("gradient", {}),
-                  ("convolves", dict(convs=[("boxone", [1, 1, 1]), ("triangle", [.5, 1, .5])])),
-                  ("mandelbrot", {}),
-                  ("demo", {}),
-                  ("hsi", {}),
-                  ]
+    interfaces = [
+        ("convolve", dict(name="convolve", conv=[1, 2, 3, 4, 3, 2, 1])),
+        ("median3x3", dict(steps=[9], width=9)),
+        ("gradient", {}),
+        ("convolves", dict(convs=[("boxone", [1, 1, 1]), ("triangle", [.5, 1, .5])])),
+        ("mandelbrot", {}),
+        ("demo", {}),
+        ("hsi", {}),
+        ("operators",dict(operators=[("add", "+"), ("sub", "-"), ("mul", "*"), ("div", "/")]))
+    ]
 
-    for engine_name in get_available().keys():
+    for device_name in get_available_device_names():
         for itest, (interface, context) in enumerate(interfaces):
-            print(engine_name, interface)
-            program = load_program(interface, engine_name=engine_name, debug=True, **context)
-            print("Interface", program.interface.interface_name)
-            for kernel in program.interface.kernels():
-                print("Kernel", kernel)
-                print("Params", program.interface.kernel_params(kernel))
-                print("OpenCL entry", getattr(program.interface.program, program.interface.kernel_alias(kernel)))
-                print("Callable", getattr(program, kernel))
-            print()
+            print(device_name, interface)
+            program = load_program(interface, device_name=device_name, debug=False, **context)
+            print("Interface", program.interface.name)
+            print(f"Kernels: {len(program.interface.kernels)}")
 
 
 def test_context():
-    engine = get_engine()
+    engine = DeviceManager()
     a = np.random.sample((100,)).astype(np.float32)
     b = a.copy()
     # b[0]=b[1]
@@ -140,7 +95,7 @@ def test_context():
 
 
 def test_demo():
-    _,entrypoints = import_program("demo",sum="sum")
+    _, entrypoints = import_program("demo", sum="sum")
     assert sum == entrypoints[0]
     a = np.array([0, 1, 2, 3]).astype(np.float32)
     b = np.array([1, 1, 1, 1]).astype(np.float32)
