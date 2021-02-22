@@ -12,9 +12,6 @@ from yapocis.utils.typing import *
 
 from yapocis.rpc.programs import load_program
 
-filterImage = filterImage_res = filterImage2 = filterImage2_res = filterImage3 = filterImage3_res = filterImage4 = filterImage4_res = None
-program, kernels = import_program("anisodiff", import_kernels="*")
-
 
 class Anisodiff:
     def __init__(self, device_name: str = None):
