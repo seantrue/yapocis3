@@ -10,7 +10,7 @@ from yapocis.lib.channels import split_channels, join_channels, join_planes, spl
 from yapocis.lib.hsi import *
 from yapocis.utils.typing import *
 
-from yapocis.rpc.programs import load_program
+from yapocis.rpc.programs import import_program
 
 filterImage = filterImage_res = filterImage2 = filterImage2_res = filterImage3 = filterImage3_res = filterImage4 = filterImage4_res = None
 program, kernels = import_program("anisodiff", import_kernels="*")
