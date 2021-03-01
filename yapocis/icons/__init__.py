@@ -3,7 +3,8 @@
 
 import os
 from yapocis.utils.typing import *
-from yapocis.utils.basic import imread, get_yapocis_dirs
+from yapocis.utils.basic import imread
+from yapocis.utils.internals import get_yapocis_dirs
 
 from PIL import Image
 

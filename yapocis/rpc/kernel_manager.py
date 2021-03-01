@@ -10,7 +10,7 @@ from mako.template import Template
 from yapocis.rpc.device_manager import DeviceManager
 from yapocis.rpc.kernel import Kernel
 from yapocis.rpc.interface import Interface, get_interface, load_interface
-from yapocis.utils.basic import find_yapocis_file
+from yapocis.utils.internals import find_yapocis_file
 from yapocis.utils.typing import Context
 
 

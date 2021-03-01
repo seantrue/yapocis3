@@ -1,0 +1,8 @@
+-r requirements.txt
+pytest
+matplotlib
+scipy
+sphinx
+sphinx-autoapi
+recommonmark
+

@@ -8,15 +8,15 @@ setup(
     zip_safe=False,
     # Requirements are in requirements.txt
     package_data = {
-        '': ['test.jpg','requirements.txt'],
+        '': ['test.jpg','test.txt','requirements.txt','requirements_dev.txt','*.ttf',"*.interface","*.mako","*.cl"],
     },
-
+    install_requires = [s.strip() for s in open("requirements.txt").readlines()],
     # metadata for upload to PyPI
     author = "Sean D. True",
     author_email = "sean.true@gmail.com",
     description = "Yet another PyOpenCL interface specifier",
     license = "PSF",
-    keywords = "opencl pyopencl thunk rpc1 image",
+    keywords = "opencl pyopencl thunk rpc image",
     url = "https://github.com/seantrue/Yapocis/",
     classifiers = ["Development Status :: 3 - Alpha",
                    "Intended Audience :: Developers",

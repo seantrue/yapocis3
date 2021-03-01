@@ -3,7 +3,8 @@
 
 import os
 from yapocis.utils.typing import *
-from yapocis.utils.basic import get_yapocis_dirs
+from yapocis.utils.internals import get_yapocis_dirs
+
 try:
     from PIL.ImageFont import truetype
 except ImportError:
