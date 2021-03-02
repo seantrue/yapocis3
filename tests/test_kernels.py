@@ -9,18 +9,18 @@ from yapocis.lib.channels import split_channels, join_channels
 from yapocis.lib.operators import add, add_res, program, sub, sub_res, mul, mul_res
 from yapocis.lib.median import Median
 
-from . import image_path_test
+from . import image_path_test, ASIZE
 
 def test_hsi():
-    r = np.empty((256, 256), dtype=np.float32)
+    r = np.empty((ASIZE, ASIZE), dtype=np.float32)
     g = np.empty_like(r)
     b = np.empty_like(r)
-    for i in range(256):
+    for i in range(ASIZE):
         r[i, :] = i
         g[:, i] = i
-        b[i, :] = 255 - i
+        b[i, :] = ASIZE - i
     rgb = join_channels(r, g, b)
-    rgb /= 256.0
+    rgb /= ASIZE
     show_array("Test data", rgb)
     r, g, b = split_channels(rgb)
     rgb2 = join_channels(r, g, b)
@@ -33,7 +33,7 @@ def test_hsi():
     assert np.sum(h-h3) == 0.0
     rgb3 = hsi2rgb3(hsi3)
     assert abs(np.sum(rgb.ravel()-rgb3.ravel()))/rgb.size < .00001
-    rgb4 = np.zeros((256,256,4), dtype=np.float32)
+    rgb4 = np.zeros((ASIZE,ASIZE,4), dtype=np.float32)
     rgb4[:,:,:3] = rgb[:,:,:]
     hsi4 = rgb2hsi3(rgb4)
     rgb5 = hsi2rgb3(hsi4)
@@ -45,7 +45,7 @@ def test_hsi():
 
 def test_median3():
     median = Median()
-    a1 = np.random.sample((500, 500)).astype(np.float32)
+    a1 = np.random.sample((ASIZE, ASIZE)).astype(np.float32)
     a2 = a1.copy()
     stage("slow")
     b1 = median.median3x3slow(a1, 500)
@@ -59,7 +59,7 @@ def test_median3():
 
 def test_operators():
     # 1+0 -> 1
-    a = np.ones((100, 100), dtype=np.float32)
+    a = np.ones((ASIZE, ASIZE), dtype=np.float32)
     b = np.zeros_like(a)
     c = add(a, b)
     d = np.empty_like(a)

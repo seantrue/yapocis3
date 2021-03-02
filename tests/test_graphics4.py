@@ -11,10 +11,7 @@ from yapocis.lib.kerneldraw4 import KernelDraw4
 from yapocis.lib.graphics4 import lines, rects, circles, triangles, ellipses, composite, sprites, draw_strings
 from tests.test_graphics import random_texts
 from yapocis.icons import icons, icon
-from . import image_test
-
-
-ASIZE=1000
+from . import image_test, text_test_lines, ASIZE
 
 def show(label, a):
     show_array(f"graphics4: {label}", a)
@@ -163,7 +160,7 @@ def test_lines():
     colors = random_colors(len(coords))
     colors[:,:] = 1.0
     lines(canvas, coords, colors=colors, width=1.5)
-    # lines(canvas, random_coords, colors=random_colors(), width=1.5)
+    lines(canvas, random_coords, colors=random_colors(), width=1.)
     show(f"draw", canvas)
 
 
@@ -296,7 +293,7 @@ def test_text_rotation():
     strings = [f"--------{r:03d}" for r in rotations]
     color = np.array([1,1,1,1])
     draw_strings(canvas, locations, strings, color=color, rotations=rotations, alpha="mask")
-    circles(canvas, [(500,500,20)],[1,0,0,.5])
+    circles(canvas, [(ASIZE//2,ASIZE//2,20)],[1,0,0,.5])
     show("rotated texts", canvas)
 
 def test_texts_stressed():
@@ -333,4 +330,18 @@ def test_texts_stressed_rotation():
     draw_strings(canvas, locations, strings, colors=random_colors(len(locations)), fonts=fonts, sizes=sizes, rotations=rotations, alphas=alpha)
     show("texts", canvas)
 
-
+def test_text():
+    canvas = setup()
+    lines = text_test_lines()
+    x,y = 60,60
+    locations = [(x,y+i*30) for i in range(len(lines)) if lines[i]]
+    lines = [line for line in lines if line]
+    sizes = [24] * len(lines)
+    sizes[0] = 32
+    colors = [None] * len(lines)
+    colors[0] = [0.,1.,.1,0]
+    for i in range(len(lines)):
+        if "Tyger" in lines[i]:
+            colors[i] = [1.0,.8,0,0]
+    draw_strings(canvas, locations, lines, sizes=sizes, colors=colors)
+    show("text", canvas)

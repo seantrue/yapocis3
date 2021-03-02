@@ -1,5 +1,11 @@
 #define READONLY __constant
 #define READWRITE __global
+
+__inline float dxdy2(float2 a, float2 b) {
+    float2 dxdy =  (a-b)*(a-b);
+    return dxdy.x + dxdy.y;
+}
+
 __kernel
 void lines(int width, int height,  READWRITE float *a, int nlines, READONLY float2 *coords, float rdist, READONLY float2 *colors)
 {
@@ -8,6 +14,7 @@ void lines(int width, int height,  READWRITE float *a, int nlines, READONLY floa
     int x = i/height;
     int y = i-(x*height);
     float threshold = (rdist * .5) + .5;
+    threshold *= threshold;
     float2 point = (float2)((float)x,(float)y);
     for (int iline=0; iline < nlines; iline++) {
         float2 linestart  = *coords++;
@@ -15,14 +22,14 @@ void lines(int width, int height,  READWRITE float *a, int nlines, READONLY floa
         float2 value_alpha = *colors++;
         float value = value_alpha.s0;
         float alpha = value_alpha.s1;
-        float linemag = distance( lineend, linestart );
+        float linemag2 = fast_distance( lineend, linestart );
         float2 delta = lineend-linestart;
         float2 u2 = (point-linestart)*(delta);
-        float u = (u2.x+u2.y)/(linemag*linemag);
+        float u = (u2.x+u2.y)/linemag2;
         float2 intersection = linestart + (u * delta);
-        float dist = distance(point, intersection);
+        float dist2 = dxdy2(point, intersection);
         float clr = (value*alpha)+(color*(1.0-alpha));
-        color = (u >= 0.0f && u <= 1.0 && dist < threshold) ? clr : color;
+        color = (u >= 0.0f && u <= 1.0 && dist2 < threshold) ? clr : color;
     }
     a[i] = color;
     barrier(CLK_GLOBAL_MEM_FENCE);
@@ -66,9 +73,9 @@ void circles(int width, int height,  READWRITE float *a, int nlines, READONLY fl
         float radius = *coords++;
         float2 rc = *colors++;
         float clr = (rc.x*rc.y)+(color*(1.0-rc.y));
-
+        radius *= radius;
         float2 center = (float2) (x,y);
-        color = distance(center,point) <= radius ? clr : color;
+        color = dxdy2(center,point) <= radius ? clr : color;
     }
     a[i] = color;
     barrier(CLK_GLOBAL_MEM_FENCE);

@@ -62,22 +62,22 @@ def test_zcs():
     show_array("dog", dog)
     show_array("zca", zca)
 
-def test_zcs_scales():
-    g = Gaussian()
-    for res in (False, True):
-        subtotal = 0.0
-        for scale in range(g.get_scales() - 1):
-            a = np.zeros((400, 400), dtype=np.float32)
-            a[200, :] = 1.0
-            a[:, 200] = 1.0
-            t = time.time()
-            zca, grad, theta = g.zcsdog(a, scale)
-            subtotal += (time.time() - t)
-            # show_array("org %s" % scale, a)
-            # show_array("zcs %s" % scale, zca)
-            # show_array("grad %s" % scale, grad)
-            show_array("theta %s" % scale, theta)
-        print("Res", res, "seconds", subtotal)
+# def test_zcs_scales():
+#     g = Gaussian()
+#     for res in (False, True):
+#         subtotal = 0.0
+#         for scale in range(g.get_scales() - 1):
+#             a = np.zeros((400, 400), dtype=np.float32)
+#             a[200, :] = 1.0
+#             a[:, 200] = 1.0
+#             t = time.time()
+#             zca, grad, theta = g.zcsdog(a, scale)
+#             subtotal += (time.time() - t)
+#             show_array("org %s" % scale, a)
+#             show_array("zcs %s" % scale, zca)
+#             show_array("grad %s" % scale, grad)
+            # show_array("theta %s" % scale, theta)
+        # print("Res", res, "seconds", subtotal)
 
 
 def test_gradient():

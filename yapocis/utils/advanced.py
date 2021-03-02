@@ -1,10 +1,12 @@
 DEBUG = False
 
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+import os, sys
 import copy
 from yapocis.utils.basic import *
 from yapocis.lib.kerneldraw import KernelDraw
 from yapocis.lib.kerneldraw3 import KernelDraw3
+BENCHMARKING = os.environ.get('BENCHMARKING',None)
 
 
 def sign(title: str, img: np.ndarray) -> np.ndarray:
@@ -57,6 +59,9 @@ def _show_array(*args, normalize=True):
 
 
 def show_array(*args, **kwargs):
+    if BENCHMARKING:
+        print(args[:-1], file=sys.stderr)
+        return
     title, img = _show_array(*args, **kwargs)
     img.show()
 

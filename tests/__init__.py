@@ -6,6 +6,8 @@ import numpy as np
 
 from yapocis.utils.basic import imread
 
+ASIZE=1200
+
 def image_path_test(image_name="test.jpg"):
     dirname = os.path.dirname(__file__)
     return os.path.join(dirname, image_name)
@@ -14,6 +16,11 @@ def image_test():
     test_image = image_path_test()
     img = imread(test_image).astype(np.float32) / 256
     return img
+
+def text_test_lines(text_name="test.txt"):
+    dirname = os.path.dirname(__file__)
+    lines = [line.strip() for line in open(os.path.join(dirname, "test.txt")).read().splitlines()]
+    return lines
 
 def text_test():
     dirname = os.path.dirname(__file__)

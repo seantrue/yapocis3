@@ -5,13 +5,13 @@ import time
 import numpy as np
 
 from tests.test_graphics4 import random_ellipses, random_circles, random_rects, random_lines, random_triangles, \
-    random_colors, random_alpha, ASIZE
+    random_colors, random_alpha
 from yapocis.utils.basic import show_array
 from yapocis.lib.kerneldraw4 import KernelDraw4
 
 from tests.test_graphics4 import random_composites, random_sprites
 
-ASIZE = 1000
+from . import ASIZE
 
 
 def just_canvas():

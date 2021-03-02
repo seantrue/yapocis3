@@ -4,10 +4,10 @@ import numpy as np
 import pytest
 
 from tests.test_graphics import random_ellipses, random_circles, random_rects, random_lines, random_composites, \
-    random_sprites, random_colors, random_alpha, random_texts, ASIZE
+    random_sprites, random_colors, random_alpha, random_texts
 from yapocis.lib.kerneldraw import KernelDraw
 from yapocis.utils.basic import show_array
-
+from . import ASIZE
 
 def just_canvas():
     canvas = np.zeros((ASIZE, ASIZE), dtype=np.float32)

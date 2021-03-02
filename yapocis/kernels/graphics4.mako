@@ -5,6 +5,11 @@
 #define READONLY __global
 #define READWRITE __global
 
+__inline float dxdy2(float2 a, float2 b) {
+    float2 dxdy =  (a-b)*(a-b);
+    return dxdy.x + dxdy.y;
+}
+
 #define ONES (float4)(1.0f, 1.0f, 1.0f, 1.0f)
 #define ZEROS (float4)(0.0f, 0.0f, 0.0f, 0.0f)
 
@@ -16,21 +21,22 @@ __kernel void lines(int width, int height, READWRITE float4 *a, int nelements,
   int y = i - (x * height);
   float4 color = a[i];
 
-  float threshold = (rdist * .5) + .5;
+  float threshold2 = ((rdist * .5) + .5);
+  threshold2 *= threshold2;
   float2 point = (float2)((float)x, (float)y);
   for (int ielement = 0; ielement < nelements; ielement++) {
     float2 linestart = *coords++;
     float2 lineend = *coords++;
     float4 rgba = *colors++;
     float4 alpha = (float4)(rgba.s3, rgba.s3, rgba.s3, 0.0f);
-    float linemag = distance(lineend, linestart);
+    float linemag2 = dxdy2(lineend, linestart);
     float2 delta = lineend - linestart;
     float2 u2 = (point - linestart) * (delta);
-    float u = (u2.x + u2.y) / (linemag * linemag);
+    float u = (u2.x + u2.y) / linemag2;
     float2 intersection = linestart + (u * delta);
-    float dist = distance(point, intersection);
+    float dist = dxdy2(point,intersection);
     float4 clr = (rgba * alpha) + (color * (ONES - alpha));
-    color = (u >= 0.0f && u <= 1.0f && dist < threshold) ? clr : color;
+    color = (u >= 0.0f && u <= 1.0f && dist < threshold2) ? clr : color;
   }
   color.s3 = 0.0f;
   a[i] = color;
@@ -77,9 +83,10 @@ __kernel void circles(int width, int height, READWRITE float4 *a, int nelements,
     float x = *coords++;
     float y = *coords++;
     float radius = *coords++;
+    radius *= radius;
 
     float2 center = (float2)(x, y);
-    pixel = distance(center, point) <= radius ? clr : pixel;
+    pixel = dxdy2(center, point) <= radius ? clr : pixel;
   }
   a[i] = pixel;
   barrier(CLK_GLOBAL_MEM_FENCE);

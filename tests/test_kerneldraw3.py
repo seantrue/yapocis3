@@ -8,7 +8,7 @@ from yapocis.utils.basic import show_array
 from yapocis.lib.channels import join_channels
 from yapocis.lib.kerneldraw3 import KernelDraw3
 
-ASIZE=1000
+from . import ASIZE
 
 def setup():
     canvas = np.zeros((ASIZE, ASIZE,3),dtype=np.float32)

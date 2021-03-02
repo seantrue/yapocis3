@@ -6,7 +6,8 @@ Low level wrappers around the OpenCL graphics kernels.
 import numpy as np
 
 from yapocis.rpc.kernel_manager import import_program
-from yapocis.lib.text import render_text
+from yapocis.lib.typeset import render_text, compute_offset
+from yapocis.utils.basic import compute_360_to_180
 from yapocis.lib.graphics import to_list, to_vector
 
 lines_cl = rects_cl = circles_cl = triangles_cl = ellipses_cl = composite_cl = None
@@ -191,29 +192,15 @@ def setup_texts(locations, texts, font=None, fonts=None, size=None, sizes=None,
     rotations = to_list(rotation, rotations, n, default=0.0)
     colors = np.asarray(colors, dtype=np.float32)
     assert colors.shape == (len(locations),4)
-    blocks = [render_text(text, font_name, size,rotation=rotation) for text, font_name, size, rotation in zip(texts, fonts, sizes, rotations)]
-    bboxes,blocks = zip(*blocks)
-    new_locations = []
-    for ilocation in range(len(locations)):
-        location = locations[ilocation]
-        rotation = rotations[ilocation]
-        if rotation is None:
-            new_locations.append(location)
-        else:
-            bbox = bboxes[ilocation]
-            block = blocks[ilocation]
-            h,w = block.shape
-            ww,ll = bbox[2:]
-            radians = 2 * np.pi * (rotation/360)
-            dy = np.sin(radians) * ww/2
-            dx = np.cos(radians) * ww/2
-            x,y = location
-            x -= w//2
-            y -= h//2
-            x += int(dx)
-            y -= int(dy)
-            new_locations.append((x,y))
-    locations = new_locations
+    rotations = to_list(rotation, rotations, n, default=0)
+    rotations = [compute_360_to_180(rotation) for rotation in rotations]
+
+    bbox_blocks = [render_text(text, font_name=font_name, size=size, rotation=rotation)
+                   for text, font_name, size, rotation in zip(texts, fonts, sizes, rotations)]
+    bboxes, blocks = zip(*bbox_blocks)
+    dxdy = [compute_offset(angle, h, w) for ((_, _, h, w), angle) in zip(bboxes, rotations)]
+    locations = [(x + dx, y + dy) for ((x, y), (dx, dy)) in zip(locations, dxdy)]
+
 
     if isinstance(alphas, (list, tuple)):
         new_alphas = []

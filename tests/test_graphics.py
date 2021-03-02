@@ -9,11 +9,7 @@ from yapocis.utils.basic import show_array, imread
 from yapocis.lib.channels import split_channels
 from yapocis.lib.hsi import rgb2hsi
 from yapocis.lib.graphics import lines, rects, circles, triangles, ellipses, composite, sprites, draw_strings
-from . import image_test, text_test
-
-
-ASIZE = 1000
-
+from . import image_test, text_test, ASIZE
 
 def setup():
     return np.zeros((ASIZE, ASIZE)).astype(np.float32)
@@ -264,10 +260,34 @@ def test_simple_texts():
     draw_strings(canvas, locations, strings, font="default", size=32, alpha="bug")
     show("simple texts", canvas)
 
+def test_text_rotation_centered():
+    canvas = setup()
+    rotations = list(range(-180,180,30))
+    center = canvas.shape[0]//2
+    locations = [(center,center)] * len(rotations)
+    strings = [f"-------- {r:03d}" for r in rotations]
+    draw_strings(canvas, locations, strings, rotations=rotations, color=1, alpha="mask")
+    circles(canvas, [(center,center,20)],color=.5)
+    show("rotated texts", canvas)
+
+def test_text_rotation():
+    canvas = setup()
+    rotations = list(range(0,360,10))
+    center = canvas.shape[0]//2
+    locations = [[center,center] for y in range(100,1000,800//len(rotations))]
+    locations = locations[:len(rotations)]
+    strings = [f"-------------------- {r:03d}" for r in rotations]
+    draw_strings(canvas, locations, strings, size=32, rotations=rotations, color=1, alpha="mask")
+    for location in locations:
+        location.append(10)
+        location[0],location[1] = location[1],location[0]
+    circles(canvas, locations[:-1],color=.5)
+    show("rotated texts", canvas)
+
 
 def test_texts():
     canvas = setup()
-    locations, strings, fonts, sizes, rotations, alphas = random_texts(1000)
+    locations, strings, fonts, sizes, rotations, alphas = random_texts(300)
     draw_strings(canvas, locations, strings, fonts=fonts, sizes=sizes, alphas=alphas)
     show("texts", canvas)
 

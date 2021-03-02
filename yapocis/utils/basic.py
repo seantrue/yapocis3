@@ -1,11 +1,11 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
-
+import os, sys
 from PIL import Image, ImageFont, ImageDraw
 
 from yapocis.utils.typing import *
 
 DEBUG = False
-
+BENCHMARKING = os.environ.get('BENCHMARKING',None)
 
 # bytescale, fromimage, toimage borrowed from scipy.misc
 # Used under the liberal BSD license
@@ -295,6 +295,9 @@ def _show_array(*args) -> Tuple[str, PILImage]:
 
 
 def show_array(*args) -> None:
+    if BENCHMARKING:
+        print(args[:-1], file=sys.stderr)
+        return
     title, img = _show_array(*args)
     img.show()
 
@@ -506,6 +509,12 @@ def set_frame(a: Image1, width: int, frame: Optional[float] = 1.0, margin: Optio
     a[:, 0] = frame
     a[-1, :] = frame
     a[:, -1] = frame
+
+def compute_360_to_180(rotation:float) -> float:
+    rotation = rotation % 360
+    if rotation > 180:
+        rotation = -180 + (rotation - 180)
+    return rotation
 
 def chunker(data: Iterable, chunk_size:int=100) -> Iterator[List]:
     """
