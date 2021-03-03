@@ -28,11 +28,16 @@ def INTERFACECL_BNF() -> OneOrMore:
     semi = Literal(";")
 
     # keywords
+    alias_ = Keyword("alias")
+    as_ = Keyword("as")
     boolean_ = Keyword("boolean")
     char_ = Keyword("char")
     complex64_ = Keyword("complex64")
+    depthof_ = Keyword("depthof") | Keyword("depth_of")
+    extension_ = Keyword("extension")
     float_ = Keyword("float")
     float32_ = Keyword("float32")
+    heightof_ = Keyword("heightof") | Keyword("height_of")
     inout_ = Keyword("inout")
     interface_ = Keyword("interface")
     in_ = Keyword("in")
@@ -40,23 +45,20 @@ def INTERFACECL_BNF() -> OneOrMore:
     int16_ = Keyword("int16")
     int32_ = Keyword("int32")
     kernel_ = Keyword("kernel")
+    of_ = Keyword("of")
     out_ = Keyword("out")
+    out_like_ = Keyword("out_like") | Keyword("outlike")
+    resident_ = Keyword("resident")
     short_ = Keyword("short")
+    sizeof_ = Keyword("sizeof") | Keyword("size_of")
     uint16_ = Keyword("uint16")
     uint32_ = Keyword("uint32")
     void_ = Keyword("void")
-    # Special keywords
-    alias_ = Keyword("alias")
-    as_ = Keyword("as")
-    out_like_ = Keyword("out_like") | Keyword("outlike")
-    resident_ = Keyword("resident")
-    depthof_ = Keyword("depthof") | Keyword("depth_of")
     widthof_ = Keyword("widthof") | Keyword("width_of")
-    heightof_ = Keyword("heightof") | Keyword("height_of")
-    sizeof_ = Keyword("sizeof") | Keyword("size_of")
 
     identifier = Word(alphas, alphanums + "_")
-    as_identifier = as_ + identifier("alias")
+    as_identifier = as_ + identifier("aliasof")
+    extension_identifier = of_ + identifier("aliasof")
     typeName = (boolean_ ^ char_ ^
                 int16_ ^ int32_ ^
                 float_ ^ float32_ ^ complex64_ ^
@@ -66,9 +68,9 @@ def INTERFACECL_BNF() -> OneOrMore:
     paramlist = delimitedList(Group(Optional(bufferHints | bufferDim) +
                                     Optional(typeName("data_type")) +
                                     identifier("name")))
-    interfaceItem = Group((Optional(kernel_ ^ void_ ^ alias_ ^ typeName)("kernel_type") +
+    interfaceItem = Group((Optional(kernel_ ^ void_ ^ alias_ ^ typeName ^ extension_)("kernel_type") +
                            identifier("name") +
-                           Optional(as_identifier("aliasof")) +
+                           Optional(as_identifier ^ extension_identifier) +
                            lparen +
                            Optional(paramlist("parameters")) + rparen + semi)
                           )
@@ -119,18 +121,28 @@ def get_interfaces(s: str) -> List[Interface]:
     Builds an InterfaceCL for the source interface definition.
     """
     interfaces = []
-    for interface in bnf.parseString(s):
+    try:
+        parsed_interfaces =  bnf.parseString(s)
+    except ParseException as e:
+        print(e.args[0], e.args[2], e.line)
+        source = e.args[0].splitlines()
+        cursor = " "*(e.col-1)
+        cursor += "^"
+        source.insert(e.lineno, cursor)
+        source = "\n".join(source)
+        raise RuntimeError(f"Can't parse:\n{source}")
+    for interface in parsed_interfaces:
         kernel_definitions = []
         kernel_aliases = {}
         for kernel in interface.kernels:
-            alias = kernel.alias if kernel.alias else kernel.name
+            aliasof = kernel.aliasof
             param_definitions = scan_kernel_parameters(kernel)
             kernel_parameters = []
             for param in kernel.parameters:
                 if param.dim:
                     data_type = "int"
                 elif param.hint in ("outlike","out_like"):
-                    data_type = param_definitions[param.name].data_type
+                    data_type = param_definitions[param.name].data_type if param.data_type == '' else param.data_type
                 else:
                     data_type = param.data_type
                 np_dtype = ctype_to_nptype.get(data_type, data_type)
@@ -143,13 +155,14 @@ def get_interfaces(s: str) -> List[Interface]:
                                     data_type=data_type,
                                     np_dtype=np_dtype,
                                     derived=derived))
-            kernel_spec = KernelSpec(name=kernel.name,
-                                     alias=alias,
+            kernel_name = f"{aliasof}_{kernel.name}" if kernel.kernel_type == "extension" else kernel.name
+            kernel_spec = KernelSpec(name=kernel_name,
+                                     alias=aliasof,
                                      parameters=kernel_parameters,
                                      definitions=param_definitions)
             kernel_definitions.append(kernel_spec)
-            if kernel.alias:
-                kernel_aliases[kernel.name] = kernel.alias
+            if kernel.aliasof:
+                kernel_aliases[kernel_name] = kernel.aliasof
         interfaces.append(Interface(name=interface.name,
                                     kernels=kernel_definitions,
                                     aliases=kernel_aliases))

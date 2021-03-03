@@ -38,31 +38,19 @@ class Median:
         Returns: A copy of the array.
 
         """
-        if iterations == 1:
-            # One pass through
-            return self.kmgr.median3x3(image)
+        m3 = self.kmgr.median3x3_res
+        if iterations == 0:
+            return image.copy()
         input = image
-        output = np.zeros_like(input)
-        if iterations == 2:
-            # Send in data, don't retrieve
-            self.kmgr.first(input, output)
-            input,output = output,input
-            # Don't send in, retrieve data
-            self.kmgr.last(input, output)
-            return output
-        # Send in data, no retrieve
-        self.kmgr.first(input, output)
-        input,output = output,input
-        # Allow for first and last calls
-        iterations -= 2
-        while iterations > 1:
-            # Iterate with resident data
-            self.kmgr.step(input, output)
-            input,output = output,input
+        output = np.empty_like(input)
+        m3.write(input)
+        m3.write(output)
+        while True:
+            m3(input,output,resident=(input,output))
             iterations -= 1
-        # And retrieve the data
-        input,output = output,input
-        self.kmgr.last(input, output)
-        return output.copy()
+            if iterations <= 0:
+                m3.read(output)
+                return output.copy()
+            input,output = output,input
 
     median3x3=median3x3fast

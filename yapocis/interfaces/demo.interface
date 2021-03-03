@@ -1,3 +1,4 @@
 interface demo {
     kernel sum(in float a, in float b, out_like a);
+    extension res of sum(in float a, in float b, out float c);
     };

@@ -4,11 +4,11 @@ interface anisodiff {
     alias filterImage_res as filterImage(width_of input, height_of input, resident float input, float scale, float size_step, resident float output);
     // HxWx2 image
     kernel filterImage2(width_of input, height_of input, in float input, float scale, float size_step, out_like input);
-    alias filterImage_res2 as filterImage2(width_of input, height_of input, resident float input, float scale, float size_step, resident float output);
+    alias filterImage2_res as filterImage2(width_of input, height_of input, resident float input, float scale, float size_step, resident float output);
     // HxWx3 image
     kernel filterImage3(width_of input, height_of input, in float input, float scale, float size_step, out_like input);
-    alias filterImage_res3 as filterImage3(width_of input, height_of input, resident float input, float scale, float size_step, resident float output);
+    alias filterImage3_res as filterImage3(width_of input, height_of input, resident float input, float scale, float size_step, resident float output);
     // HxWx4 image
     kernel filterImage4(width_of input, height_of input, in float input, float scale, float size_step, out_like input);
-    alias filterImage_res4 as filterImage4(width_of input, height_of input, resident float input, float scale, float size_step, resident float output);
+    alias filterImage4_res as filterImage4(width_of input, height_of input, resident float input, float scale, float size_step, resident float output);
     };

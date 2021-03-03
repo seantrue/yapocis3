@@ -1,7 +1,7 @@
 interface convolvesep {
-%for name,conv in convs:
+%for name,_ in convs:
         kernel ${name}(int vertical, width_of input, height_of input, in float input, out_like input);
-        alias ${name}_res as ${name}(int vertical, width_of input, height_of input, resident float input, resident float output);
+        extension res of ${name}(int vertical, width_of input, height_of input, resident float input, resident float output);
         kernel ${name}_h(width_of input, height_of input, resident float input, resident float output);
         kernel ${name}_v(width_of input, height_of input, resident float input, resident float output);
 %endfor

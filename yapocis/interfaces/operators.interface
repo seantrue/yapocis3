@@ -1,6 +1,6 @@
 interface operators {
 %for name, operator in operators:
     kernel ${name}(in float input1, in float input2, out_like input1);
-    alias ${name}_res as ${name}(resident float input1, resident float input2, resident float output);
+    extension res of ${name}(resident float input1, resident float input2, resident float output);
 %endfor
 };

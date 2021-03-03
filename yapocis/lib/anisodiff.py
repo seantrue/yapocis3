@@ -8,41 +8,29 @@ Higher level wrapper for anisotropic filter (Perona/Malik).
 
 from yapocis.lib.channels import split_channels, join_channels, join_planes, split_planes
 from yapocis.lib.hsi import *
+from yapocis.utils.basic import get_image_depth
 from yapocis.utils.typing import *
 
-from yapocis.rpc.kernel_manager import  import_program, load_program
+from yapocis.rpc.kernel_manager import load_program
 
 
 class Anisodiff:
     def __init__(self, device_name: str = None):
         self.kmgr = load_program("anisodiff", device_name=device_name)
-        self.filter_by_depth= ["filterImage","filterImage2", "filterImage3", "filterImage4"]
-
-    def get_image_depth(self, image):
-        if len(image.shape) in (2, 3):
-            if len(image.shape) == 2:
-                return 1
-            elif image.shape[2] == 1:
-                return 1
-            elif image.shape[2] == 2:
-                return 2
-            elif image.shape[2] == 3:
-                return 3
-            elif image.shape[2] == 4:
-                return 4
-        raise ValueError(f'Array shape {image.shape} is not supported')
+        self.filter_by_depth = ["filterImage", "filterImage2", "filterImage3", "filterImage4"]
 
     def select_by_depth(self, image, suffix=""):
-        depth = self.get_image_depth(image)
-        attr = self.filter_by_depth[depth-1]
+        depth = get_image_depth(image)
+        attr = self.filter_by_depth[depth - 1]
+        attr = f"{attr}{suffix}" if suffix else attr
         selected = getattr(self.kmgr, attr, None)
         if selected is None:
             raise ValueError(f'No {attr} kernel found for array shape {image.shape}')
         return selected
 
     def global_size_by_depth(self, image):
-        depth = self.get_image_depth(image)
-        return image.size//depth
+        depth = get_image_depth(image)
+        return image.size // depth
 
     def anisodiff_n(self, image: Image1234, n: int, scale: float = 3.0, step_size: float = 0.2) -> Image1234:
         """
@@ -59,26 +47,21 @@ class Anisodiff:
         """
         if step_size > 0.25:
             raise ValueError('step_size parameter must be <= 0.25 for numerical stability.')
-        filtr = self.select_by_depth(image)
-        filter_res = self.select_by_depth(image,suffix="_res")
+        filter_res = self.select_by_depth(image, suffix="_res")
         global_size = self.global_size_by_depth(image)
         image = image.copy()
         if image.max() <= 1.0:
             print("Rescaling")
             image *= 256.
-        image1 = filtr(image, scale, step_size) / 256.
-        n -= 1
-        while 1:
-            if n <= 0:
-                self.kmgr.read(image1)
-                return image1 / 256.
-            filter_res(image1, scale, step_size, image, global_size=global_size)
-            n -= 1
-            if n <= 0:
-                self.kmgr.read(image)
-                return image / 256.
-            filter_res(image, scale, step_size, image1, global_size=global_size)
-            n -= 1
+        input = image
+        output = np.empty_like(input)
+        filter_res.write(input)
+        filter_res.write(output)
+        for i in range(n):
+            filter_res(input, scale, step_size, output, global_size=global_size, resident=(input, output))
+            input, output = output, input
+        filter_res.read(output)
+        return output / 256.
 
     def anisodiff(self, image: Image1234, scale: float = 3.0, step_size: float = 0.2) -> Iterator[Image1234]:
         """
@@ -90,19 +73,25 @@ class Anisodiff:
            step_size: Perona/Malik step
 
         Returns:
-          GeneratorExit
+          iterator of Image1234
         """
         if step_size > 0.25:
             raise ValueError('step_size parameter must be <= 0.25 for numerical stability.')
-        filtr = self.select_by_depth(image)
+        filter_res = self.select_by_depth(image, suffix="_res")
         global_size = self.global_size_by_depth(image)
         image = image.copy()
         if image.max() <= 1.0:
             print("Rescaling")
             image *= 256.
-        while 1:
-            image = filtr(image, scale, step_size, global_size=global_size)
-            yield image / 256
+        input = image
+        output = np.empty_like(input)
+        filter_res.write(input)
+        filter_res.write(output)
+        while True:
+            filter_res(input, scale, step_size, output, global_size=global_size, resident=(input, output))
+            filter_res.read(output)
+            yield output / 256
+            input, output = output, input
 
     def anisodiff_rgbI(self, rgb: Array, scale: float = 3.0, step_size: float = .2) -> Iterator[Image3]:
         """
@@ -110,12 +99,12 @@ class Anisodiff:
         Filtering is done by extracting and filtering the intensity component.
 
         Args:
-               rgb: 2d array, dtype = np.float32
+           rgb: 2d array, dtype = np.float32
            scale: Perona/Malik scale parameter
            step_size: Perona/Malik step step parameter
 
         Returns:
-           GeneratorExit
+           iterator of Image3
         """
         H, S, I = rgb2hsi(*split_channels(rgb))
         filtered = self.anisodiff(I, scale=scale, step_size=step_size)

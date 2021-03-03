@@ -32,23 +32,23 @@ class KernelDraw4(AbstractKernelDraw):
 
 
     def rects(self, coords:Coords, **kwargs):
-        self.render_immediate("rects_in", 4, coords, **kwargs)
+        self.render_immediate("rects_res", 4, coords, **kwargs)
 
     def circles(self, coords:Coords, **kwargs):
-        self.render_immediate("circles_in", 3, coords, **kwargs)
+        self.render_immediate("circles_res", 3, coords, **kwargs)
 
     def triangles(self, coords:Coords, **kwargs):
-        self.render_immediate("triangles_in", 6, coords, **kwargs)
+        self.render_immediate("triangles_res", 6, coords, **kwargs)
 
     def ellipses(self, coords:Coords, **kwargs):
-        self.render_immediate("ellipses_in", 4, coords, **kwargs)
+        self.render_immediate("ellipses_res", 4, coords, **kwargs)
 
     def lines(self, coords:Coords, distance:float=1.0, **kwargs):
-        self.render_immediate("lines_in", 4, coords, distance, **kwargs)
+        self.render_immediate("lines_res", 4, coords, distance, **kwargs)
 
     def render_setup(self, setup:Callable, locations, blocks):
         coords, buffer, pixel_indexes = setup(locations, blocks)
-        program.composite_in(self.a, coords, buffer, pixel_indexes, global_size=self.global_size)
+        program.composite_res(self.a, coords, buffer, pixel_indexes, global_size=self.global_size)
 
 
     def composite(self, locations, blocks):

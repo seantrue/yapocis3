@@ -530,3 +530,16 @@ def chunker(data: Iterable, chunk_size:int=100) -> Iterator[List]:
         yield data[i:i+chunk_size]
 
 
+def get_image_depth(image):
+    if len(image.shape) in (2, 3):
+        if len(image.shape) == 2:
+            return 1
+        elif image.shape[2] == 1:
+            return 1
+        elif image.shape[2] == 2:
+            return 2
+        elif image.shape[2] == 3:
+            return 3
+        elif image.shape[2] == 4:
+            return 4
+    raise ValueError(f'Array shape {image.shape} is not supported')

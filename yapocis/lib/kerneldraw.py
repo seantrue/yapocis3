@@ -188,36 +188,36 @@ class KernelDraw(AbstractKernelDraw):
 
     def lines(self, coords, distance=1.0, **kwargs):
         coords, colors = self.prepare_args(coords, 4, **kwargs)
-        program.lines_in(self.a, coords, distance, colors)
+        program.lines_res(self.a, coords, distance, colors)
 
     def rects(self, coords, **kwargs):
         coords, colors = self.prepare_args(coords, 4, **kwargs)
-        program.rects_in(self.a, coords, colors)
+        program.rects_res(self.a, coords, colors)
 
     def circles(self, coords, **kwargs):
         coords, colors = self.prepare_args(coords, 3, **kwargs)
-        program.circles_in(self.a, coords, colors)
+        program.circles_res(self.a, coords, colors)
 
     def triangles(self, coords, **kwargs):
         coords, colors = self.prepare_args(coords, 6, **kwargs)
-        program.triangles_in(self.a, coords, colors)
+        program.triangles_res(self.a, coords, colors)
 
     def ellipses(self, coords, **kwargs):
         coords, colors = self.prepare_args(coords, 4, **kwargs)
-        program.ellipses_in(self.a, coords, colors)
+        program.ellipses_res(self.a, coords, colors)
 
     def composite(self, locations, blocks, **kwargs):
         coords, buffer, pixel_indexes = composite_setup(locations, blocks, **kwargs)
-        program.composite_in(self.a, coords, buffer, pixel_indexes)
+        program.composite_res(self.a, coords, buffer, pixel_indexes)
 
     def sprites(self, locations, sprites, **kwargs):
         coords, buffer, pixel_indexes = sprites_setup(locations, sprites, **kwargs)
-        program.composite_in(self.a, coords, buffer, pixel_indexes)
+        program.composite_res(self.a, coords, buffer, pixel_indexes)
 
     def draw_strings(self, locations, texts, **kwargs):
         locations, blocks, alphas = setup_texts(locations, texts, **kwargs)
         coords, buffer, pixel_indexes = composite_setup(locations, blocks, alphas=alphas)
-        program.composite_in(self.a, coords, buffer, pixel_indexes)
+        program.composite_res(self.a, coords, buffer, pixel_indexes)
 
     def read(self):
         program.read(self.a)

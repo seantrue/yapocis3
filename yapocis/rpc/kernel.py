@@ -1,7 +1,7 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import time
-from typing import Callable, List, Tuple, Any, Union
+from typing import Callable, List, Tuple, Any, Union, Optional
 
 import numpy as np
 import pyopencl
@@ -45,13 +45,17 @@ class Kernel:
         self.argspecs = argspecs
         self.posbyname = posbyname
 
-    def prepare_arguments(self, args:List[Any]):
+    def prepare_arguments(self, args:List[Any], resident_arrays:Optional[List[str]]=None):
         "Takes the actual arguments and maps to the arguments needed by the kernel"
         assert len(self.posbyname) == len(args), f" Got {len(args)}, expected {len(self.posbyname)} arguments, [{self.posbyname}]"
         self.returns = []
+        if resident_arrays is not None:
+            resident_arrays = [id(ra) for ra in resident_arrays]
         realargs = [None] * len(self.params)
         for iparam, param in enumerate(self.argspecs):
             param = self.params[iparam]
+            if not param.np_dtype:
+                print(param)
             dtype = getattr(np, param.np_dtype)
             iarg = self.posbyname[param.name]
             if not param.hint and not param.dim:
@@ -66,6 +70,8 @@ class Kernel:
                 arg = args[iarg]
                 if not isinstance(arg, np.ndarray):
                     raise RuntimeError(f"Parameter {param.name} is defined as an array, but is a {type(arg)}")
+                if param.hint != "out_like" and resident_arrays and id(arg) in resident_arrays:
+                    method_name="handle_resident"
                 real_arg = getattr(self, method_name)(arg, dtype)
             realargs[iparam] = real_arg
         if self.global_size is None:
@@ -128,7 +134,10 @@ class Kernel:
         self.returns.append((arg, buf))
         return buf
 
-    handle_resident = handle_out
+    def handle_resident(self, arg, dtype):
+        arg = arg.astype(dtype, copy=False)
+        buf = self.ensure(arg)
+        return buf
 
     def __call__(self, *args: Tuple[Any], **kwargs):
         """Call a kernel, prepare arguments, and track performance"""
@@ -136,7 +145,8 @@ class Kernel:
         t = time.time()
         self.global_size = kwargs.pop("global_size", None)
         self.local_size = kwargs.pop("local_size", None)
-        prepared_args = self.prepare_arguments(args)
+        resident_arrays = kwargs.pop("resident", None)
+        prepared_args = self.prepare_arguments(args, resident_arrays=resident_arrays)
         def show_args():
             print("Python arguments")
             for iarg, arg in enumerate(args):

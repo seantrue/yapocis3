@@ -1,15 +1,14 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-import pytest
-
 import numpy as np
-from random import randint, shuffle
+from random import randint
 
-from yapocis.utils.basic import show_array, imread
+from yapocis.utils.basic import show_array
 from yapocis.lib.channels import split_channels
 from yapocis.lib.hsi import rgb2hsi
 from yapocis.lib.graphics import lines, rects, circles, triangles, ellipses, composite, sprites, draw_strings
-from . import image_test, text_test, ASIZE
+from . import image_test, ASIZE, interesting_words, double_shuffle
+
 
 def setup():
     return np.zeros((ASIZE, ASIZE)).astype(np.float32)
@@ -121,25 +120,14 @@ def random_sprites(n=100):
         random_coords[i].insert(0, j)
     return random_coords, random_sprites
 
-def interesting_words(n=10):
-    words = text_test()
-    shuffle(words)
-    return words[:n]
-
-def double_shuffle(lst, n):
-    while len(lst) < n:
-        lst += lst
-    lst = lst[:n]
-    shuffle(lst)
-    return lst
 
 def random_texts(n=100):
     locations = random_points(n)
-    strings = interesting_words(n//10)
+    strings = interesting_words(n // 10)
     fonts = ["bold", "italic", "light", "regular"]
     sizes = [18, 36, 72, 112]
     alphas = ["bug", "mask", .5, 1.0]
-    rotations = double_shuffle(list(range(0,360,30)), n)
+    rotations = double_shuffle(list(range(0, 360, 30)), n)
     strings = double_shuffle(strings, n)
     sizes = double_shuffle(sizes, n)
     fonts = double_shuffle(fonts, n)

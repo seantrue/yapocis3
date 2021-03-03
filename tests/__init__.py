@@ -2,6 +2,8 @@
 
 import os
 import string
+from random import shuffle
+
 import numpy as np
 
 from yapocis.utils.basic import imread
@@ -30,3 +32,17 @@ def text_test():
     s=s.translate(translator)
     words = [word for word in set(s.split()) if len(word) > 2]
     return words
+
+
+def interesting_words(n=10):
+    words = text_test()
+    shuffle(words)
+    return words[:n]
+
+
+def double_shuffle(lst, n):
+    while len(lst) < n:
+        lst += lst
+    lst = lst[:n]
+    shuffle(lst)
+    return lst

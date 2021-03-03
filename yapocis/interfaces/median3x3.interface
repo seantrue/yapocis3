@@ -1,6 +1,4 @@
 interface median3x3 {
     kernel median3x3(size_of int a, height_of int a, in float a, out_like a );
-    alias first as median3x3(size_of int a, height_of int a, in float a, in float ret );
-    alias step as median3x3(size_of int a, height_of int a, resident float a, resident float ret );
-    alias last as median3x3(size_of int a, height_of int a, resident float a, out float ret );
+    extension res of median3x3(size_of int a, height_of int a, in float a, out float ret );
 };

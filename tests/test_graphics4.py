@@ -11,7 +11,7 @@ from yapocis.lib.kerneldraw4 import KernelDraw4
 from yapocis.lib.graphics4 import lines, rects, circles, triangles, ellipses, composite, sprites, draw_strings
 from tests.test_graphics import random_texts
 from yapocis.icons import icons, icon
-from . import image_test, text_test_lines, ASIZE
+from . import image_test, text_test_lines, ASIZE, double_shuffle
 
 def show(label, a):
     show_array(f"graphics4: {label}", a)
@@ -54,10 +54,7 @@ def random_icons(n=100):
             # icn[:,:,3] = 1.0
             # icn[:,:,:] = (1.0-icn[:,:,:])
             pass
-    while len(icns) < n:
-        icns = icns+icns
-    shuffle(icns)
-    icns = icns[:n]
+    icns = double_shuffle(icns,n)
     return icns
 
 
@@ -135,9 +132,7 @@ def random_composites(n=100):
     locations = random_points(n)
     sprites = [sprite for _,sprite in image_sprites(8)]
     blocks = sprites[:]
-    while len(blocks) < n:
-        blocks += sprites
-    blocks = blocks[:n]
+    blocks = double_shuffle(blocks, n)
     return locations, blocks
 
 
@@ -303,45 +298,30 @@ def test_texts_stressed():
     show("texts", canvas)
 
 def test_texts_stressed_rotation():
+    N = 300
+    ANGLE_STEP=30
     canvas = setup()
-    locations = random_points(300)
-    strings = ["Hello", "sympathy", "goodbye", "Aqua"]
-    fonts = ["bold","italic","light","regular"]
-    sizes = [18, 36, 72, 112]
-    rotations = list(range(0,360,30))
-    alpha = ["bug","mask","bug","mask"]
-    while len(strings) < len(locations):
-        strings += strings
-        sizes += sizes
-        fonts += fonts
-        alpha += alpha
-        rotations += rotations
-    shuffle(strings)
-    shuffle(sizes)
-    shuffle(fonts)
-    shuffle(alpha)
-    shuffle(rotations)
-    strings = strings[:len(locations)]
-    sizes = sizes[:len(strings)]
-    fonts = fonts[:len(sizes)]
-    alpha = alpha[:len(sizes)]
-    rotations = rotations[:len(sizes)]
-    shuffle(alpha)
+    locations = random_points(N)
+    strings = double_shuffle(["Hello", "sympathy", "goodbye", "Aqua"], N)
+    fonts = double_shuffle(["bold","italic","light","regular"], N)
+    sizes = double_shuffle([18, 36, 72, 112],N)
+    alpha = double_shuffle(["bug","mask","bug","mask"], N)
+    rotations = double_shuffle(list(range(0,360,ANGLE_STEP)), N)
     draw_strings(canvas, locations, strings, colors=random_colors(len(locations)), fonts=fonts, sizes=sizes, rotations=rotations, alphas=alpha)
     show("texts", canvas)
 
-def test_text():
+def test_typesetting():
     canvas = setup()
     lines = text_test_lines()
     x,y = 60,60
     locations = [(x,y+i*30) for i in range(len(lines)) if lines[i]]
     lines = [line for line in lines if line]
     sizes = [24] * len(lines)
-    sizes[0] = 32
+    sizes[0] = 48
     colors = [None] * len(lines)
     colors[0] = [0.,1.,.1,0]
     for i in range(len(lines)):
         if "Tyger" in lines[i]:
-            colors[i] = [1.0,.8,0,0]
+            colors[i] = [1.0,.1,0,0.1]
     draw_strings(canvas, locations, lines, sizes=sizes, colors=colors)
     show("text", canvas)
