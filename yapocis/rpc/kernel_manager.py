@@ -7,7 +7,7 @@ import pyopencl
 from mako.lookup import TemplateLookup
 from mako.template import Template
 
-from yapocis.rpc.device_manager import DeviceManager
+from yapocis.rpc.device_manager import get_device_manager
 from yapocis.rpc.kernel import Kernel
 from yapocis.rpc.interface import Interface, get_interface, load_interface
 from yapocis.utils.internals import find_yapocis_file
@@ -49,9 +49,10 @@ class KernelManager:
     Manages buffers on the OpenCL device to prevent over-allocation.
     """
 
-    def __init__(self, interface: Interface, device_name: str, debug: bool = False, **context: Context):
+    def __init__(self, interface: Interface, device_name: str, debug: bool = False, async_write: bool = False,
+                 **context: Context):
         self.interface = interface
-        self.dmgr = DeviceManager(device_name=device_name)
+        self.dmgr = get_device_manager(device_name=device_name)
         try:
             source = render_program(interface.name, **context)
         except:
@@ -65,22 +66,37 @@ class KernelManager:
         self.mf = pyopencl.mem_flags
         self.program = self.dmgr.build(source)
         self.callable = {}
-        self.hits = 0
-        self.misses = 0
         self.calls = 0
         self.runtime = 0.0
+        self.async_write = async_write
         for kernel in interface.kernels:
             name = kernel.alias if kernel.alias else kernel.name
-            self.callable[kernel.name] = Kernel(name, self, getattr(self.program, name), kernel.parameters)
+            self.callable[kernel.name] = Kernel(name, self,
+                                                getattr(self.program, name),
+                                                kernel.parameters,
+                                                async_write=async_write)
 
     def read(self, a):
         return self.dmgr.read(a)
 
     def write(self, a):
-        return self.dmgr.write(a)
+        return self.dmgr.write(a, wait=self.async_write)
 
     def purge(self):
+        self.stats()
         return self.dmgr.purge()
+
+    def reset(self):
+        self.dmgr.reset()
+        self.runtime = self.calls = 0
+
+    def snapshot(self, **kwargs):
+        d = dict(interfacename=self.interface.name,
+                 calls=self.calls,
+                 runtime=self.runtime,
+                 device=self.dmgr.device_name)
+        d.update(kwargs)
+        self.dmgr.snapshot(**d)
 
     def __getattr__(self, attr: str) -> Callable:
         "Any unbound attribute is checked to see if it is a callable"
@@ -90,21 +106,20 @@ class KernelManager:
         return self.callable[attr]
 
     def stats(self):
-        self.dmgr.purge()
-        return dict(interfacename=self.interface.name,
-                    calls=self.calls,
-                    hits=self.hits,
-                    misses=self.misses,
-                    buffers=len(self.dmgr.buffers),
-                    runtime=self.runtime,
-                    device=self.dmgr.device_name)
+        d = dict(interfacename=self.interface.name,
+                 calls=self.calls,
+                 runtime=self.runtime,
+                 device=self.dmgr.device_name)
+        d.update(self.dmgr.stats())
+        return d
 
     def __str__(self):
-        s = " ".join([f"{key}: {value}" for key,value in self.stats().items()])
+        s = " ".join([f"{key}: {value}" for key, value in self.stats().items()])
         return s
 
     @classmethod
-    def load_program(cls, interface_spec: str, device_name: Optional[str] = None, debug: bool = False, **context: Context):
+    def load_program(cls, interface_spec: str, device_name: Optional[str] = None, debug: bool = False,
+                     **context: Context):
         """
         Factory returning runnable interface based on a interface specification.
         """

@@ -14,6 +14,7 @@ except ImportError:
 
 from yapocis.rpc.device import get_available_device_names
 from yapocis.lib.median import Median
+from yapocis.rpc.device_manager import display_stats, display_snapshots
 def median3x3_scipy(input, iterations=1):
     for i in range(iterations):
         input = median_filter(input, 3)
@@ -67,6 +68,7 @@ for device_name in device_names:
         areas.append(width * width)
         slow_deltas.append(slow_delta)
         fast_deltas.append(fast_delta)
+    median.snapshot(name="median")
     print()
     by_device[device_name] = (areas, slow_deltas, fast_deltas)
 
@@ -107,6 +109,7 @@ plot.tight_layout()
 plot.savefig("docs/images/median3x3-performance.png")
 plot.show()
 print("^C to continue")
+display_snapshots()
 while True:
     time.sleep(1)
     

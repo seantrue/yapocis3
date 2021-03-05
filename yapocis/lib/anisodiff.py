@@ -11,12 +11,12 @@ from yapocis.lib.hsi import *
 from yapocis.utils.basic import get_image_depth
 from yapocis.utils.typing import *
 
-from yapocis.rpc.kernel_manager import load_program
+from .bound_kernels import BoundKernels
 
+class Anisodiff(BoundKernels):
 
-class Anisodiff:
     def __init__(self, device_name: str = None):
-        self.kmgr = load_program("anisodiff", device_name=device_name)
+        super(Anisodiff, self).__init__("anisodiff", device_name=device_name)
         self.filter_by_depth = ["filterImage", "filterImage2", "filterImage3", "filterImage4"]
 
     def select_by_depth(self, image, suffix=""):

@@ -19,13 +19,13 @@ if __name__ == '__main__':
     s = """
     interface anisodiff {
         // HxW image
-        kernel filterImage(width_of input, height_of input, in float input, float scale, float size_step, out_like input);
+        kernel filterImage(width_of input, height_of input, in float input, float scale, float size_step, out float output);
         alias filterImage_res as filterImage(width_of input, height_of input, resident float input, float scale, float size_step, resident float output);
     };
     interface graphics {
         # Kernels have aliases for running on resident buffers
         kernel lines(width_of a, height_of a, inout float a, width_of lines, in float lines, float distance, in float rcolor);
-        alias lines_in as lines(width_of a, height_of a, resident float a, width_of lines, in float lines, float distance, in float rcolor);
+        extension res of lines(width_of a, height_of a, resident float a, width_of lines, in float lines, float distance, in float rcolor);
     };
 
     """

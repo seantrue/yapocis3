@@ -1,7 +1,7 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 from weakref import WeakValueDictionary as Weak
-
+import time
 import pyopencl
 from pyopencl import mem_flags as mf
 
@@ -15,23 +15,51 @@ from yapocis.utils.typing import *
 # Theona has an interesting approach, which I am ignoring
 # in favor of better sugar.
 
+def method_timer(self, name, method):
+    def timed_method(*args, **kwargs):
+        t = time.time()
+        value = method(*args, **kwargs)
+        t = time.time()-t
+        self.times[name] += t
+        return value
+    return timed_method
 
 class BufferManager:
     MEMFLAGS = mf.READ_WRITE | mf.COPY_HOST_PTR
     READ = 0
     WRITE = 1
     DEBUG = True
-
-    def __init__(self, context: pyopencl.Context, queue: Optional[pyopencl.CommandQueue] = None):
+    TIMED = False
+    TIMED_METHODS = ("make_buffer","ensure_buffer","read_buffer","write_buffer")
+    def __init__(self, context: pyopencl.Context, queue: pyopencl.CommandQueue, timed:bool=False):
         self.ctx = context
-        self.queue = queue
-        if self.queue is None:
-            self.queue = pyopencl.CommandQueue(self.ctx)
+        self.queue = pyopencl.CommandQueue(self.ctx) if queue is None else queue
         # Buffer management
         self.arrays = Weak()
         self.buffers = {}
         self.hits = self.misses = 0
         self.purged = 0
+        self.snapshots = []
+        self.timed = timed
+        self.times = {name:0 for name in self.TIMED_METHODS}
+        if self.timed or self.TIMED:
+            for name in self.TIMED_METHODS:
+                setattr(self, name, method_timer(self, name, getattr(self, name)))
+
+    def stats(self, **kwargs):
+        d = dict(purged=self.purged, hits=self.hits, misses=self.misses,
+                    buffers=len(self.buffers))
+        d.update(self.times)
+        d.update(kwargs)
+        return d
+
+    def reset(self):
+        self.purged = self.hits = self.misses = 0
+
+    def snapshot(self, **kwargs):
+        snap = self.stats(**kwargs)
+        self.snapshots.append(snap)
+        return snap
 
     def purge_buffers(self):
         # Drop buffers if no array or data buffer is referencing them
@@ -65,13 +93,16 @@ class BufferManager:
         a.strides = strides
         return buf
 
-    def write_buffer(self, a:Array) -> pyopencl.Buffer:
+    def write_buffer(self, a:Array, wait=True) -> pyopencl.Buffer:
         buf = self.ensure_buffer(a)
         shape = a.shape
         strides = a.strides
         a.shape = (a.size,)
         a.strides = (strides[-1],)
-        pyopencl.enqueue_copy(self.queue, buf, a).wait()
+        if wait:
+            pyopencl.enqueue_copy(self.queue, buf, a).wait()
+        else:
+            pyopencl.enqueue_copy(self.queue, buf, a)
         a.shape = shape
         a.strides = strides
         # pyopencl.enqueue_barrier(self.queue)

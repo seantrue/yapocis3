@@ -7,7 +7,7 @@ from yapocis.utils.basic import show_array
 from yapocis.lib.channels import split_channels
 from yapocis.lib.hsi import rgb2hsi
 from yapocis.lib.graphics import lines, rects, circles, triangles, ellipses, composite, sprites, draw_strings
-from . import image_test, ASIZE, interesting_words, double_shuffle
+from . import image_test, ASIZE, interesting_words, double_shuffle, cleanup
 
 
 def setup():

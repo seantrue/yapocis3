@@ -7,7 +7,8 @@ from yapocis.utils.basic import show_array
 from yapocis.rpc.device import get_available_device_names
 
 from yapocis.lib.gaussian import Gaussian, GaussianWeights, are_close
-
+from yapocis.lib.gradient import Gradient
+from . import cleanup
 
 def test_gaussian_1d():
     "Make sure that the kernel sums back to 1"
@@ -47,6 +48,7 @@ def test_gauss_image():
             a[xy, xy] = 1.0
         b = g.gauss_image(a, scale)
         show_array(f"gauss scale {scale}", b)
+    g.snapshot(test="gauss_image")
 
 
 def test_zcs():
@@ -57,6 +59,7 @@ def test_zcs():
     larger = g.gauss_image(image, 3)
     dog = smaller - larger
     zca = g.zcs.zcs1(dog)
+    g.snapshot(test="zcs")
     show_array("gauss 2", smaller)
     show_array("gauss 3", larger)
     show_array("dog", dog)
@@ -82,11 +85,10 @@ def test_zcs():
 
 def test_gradient():
     a = np.random.sample((1000, 1000)).astype(np.float32)
-    for engine_name in get_available_device_names():
-        if isinstance(engine_name,int):
-            continue
-        program = load_program("gradient", device_name=engine_name)
+    for device_name in get_available_device_names():
+        g = Gradient(device_name=device_name)
         t = time.time()
-        gr,th = program.gradient(a, 3)
+        gr,th = g.gradient(a, 3)
         elapsed = time.time()-t
-        show_array(f"Gradient {engine_name} {elapsed}", gr)
+        show_array(f"Gradient {device_name} {elapsed}", gr)
+        g.snapshot(name="gradient")

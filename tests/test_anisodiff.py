@@ -6,7 +6,7 @@ from yapocis.lib.hsi import rgb2hsi3, hsi2rgb3
 from yapocis.utils.basic import show_array
 from yapocis.utils.config import get_device_config
 from yapocis.utils.typing import *
-from . import image_test
+from . import image_test, cleanup
 
 import time
 class TS:
@@ -43,12 +43,13 @@ def test_anisodiff_I():
         hsi = join_planes(H,S,fI)
         rgb2 = hsi2rgb3(hsi)
         show("I", rgb2)
+    aniso.snapshot(test="generator I")
     with TS(f"[{N}]") as show:
         fI = aniso.anisodiff_n(I, N)
         hsi = join_planes(H,S,fI)
         rgb2 = hsi2rgb3(hsi)
         show("I", rgb2)
-
+    aniso.snapshot(test="iterator I")
 
 def test_anisodiff_IS():
     from yapocis.rpc.device import get_available_device_names
@@ -59,9 +60,11 @@ def test_anisodiff_IS():
                 if i >= N:
                     break
             show(f"IS", rgb2)
+        aniso.snapshot(test="generator IS")
         with TS(f"[{N}] {device_name[:24]}") as show:
             rgb2 = aniso.anisodiff_rgbIS_n(rgb, N)
             show(f"IS", rgb2)
+        aniso.snapshot(test="iterator IS")
 
 def test_anisodiff1():
     from yapocis.rpc.device import get_available_device_names
@@ -74,6 +77,7 @@ def test_anisodiff1():
             hsi = join_planes(H,S,fI)
             rgb2 = hsi2rgb3(hsi)
             show("vector1", rgb2)
+            aniso.snapshot(test="aniso1")
 
 
 def test_anisodiff2():
@@ -92,6 +96,7 @@ def test_anisodiff2():
             r2,g2 = split_planes(rg2)
             rgb2 = join_planes(r2,g2, b)
             show("vector2 RG", rgb2)
+            aniso.snapshot(test="aniso2")
 
 
 def test_anisodiff3():
@@ -106,6 +111,7 @@ def test_anisodiff3():
         with TS(f"[{N}] on {device_name[:24]}") as show:
             rgb2 = aniso.anisodiff_n(rgb,N)
             show("vector3", rgb2)
+            aniso.snapshot(test="aniso3")
 
 
 def test_anisodiff4():
@@ -119,3 +125,4 @@ def test_anisodiff4():
         with TS(f"[{N}] on {device_name[:24]}") as show:
             rgba2 = aniso.anisodiff_n(rgba, N)
             show(f"vector4", rgba2[:, :, :3])
+            aniso.snapshot(test="aniso4")

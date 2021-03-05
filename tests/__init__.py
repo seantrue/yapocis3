@@ -3,7 +3,7 @@
 import os
 import string
 from random import shuffle
-
+import pytest
 import numpy as np
 
 from yapocis.utils.basic import imread
@@ -46,3 +46,8 @@ def double_shuffle(lst, n):
     lst = lst[:n]
     shuffle(lst)
     return lst
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup(request):
+    from yapocis.rpc.device_manager import display_snapshots
+    request.addfinalizer(display_snapshots)

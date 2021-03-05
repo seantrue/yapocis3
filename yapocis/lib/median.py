@@ -7,11 +7,14 @@ from yapocis.utils.typing import *
 
 # Provision this program with just one median filter, fixed length of 9
 from yapocis.rpc.kernel_manager import load_program
+from .bound_kernels import BoundKernels
 
-class Median:
-    def __init__(self, device_name:Optional[str]=None):
-        self.kmgr = load_program("median3x3", device_name=device_name, width=9, steps=[9])
-    def median3x3slow(self, image:Image1, iterations:int=1) -> Image1:
+
+class Median(BoundKernels):
+    def __init__(self, device_name: Optional[str] = None):
+        super().__init__("median3x3", device_name=device_name, width=9, steps=[9])
+
+    def median3x3slow(self, image: Image1, iterations: int = 1) -> Image1:
         """
         3x3 median filter reading and writing the data on each pass
 
@@ -27,7 +30,7 @@ class Median:
             iterations -= 1
         return image.copy()
 
-    def median3x3fast(self, image:Image1, iterations:int=1) -> Image1:
+    def median3x3fast(self, image: Image1, iterations: int = 1) -> Image1:
         """
         3x3 median filter iterating use ping/pong buffers on the device.
 
@@ -46,11 +49,11 @@ class Median:
         m3.write(input)
         m3.write(output)
         while True:
-            m3(input,output,resident=(input,output))
+            m3(input, output, resident=(input, output))
             iterations -= 1
             if iterations <= 0:
                 m3.read(output)
                 return output.copy()
-            input,output = output,input
+            input, output = output, input
 
-    median3x3=median3x3fast
+    median3x3 = median3x3fast

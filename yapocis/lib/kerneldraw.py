@@ -12,7 +12,7 @@ from yapocis.utils.typing import *
 class AbstractKernelDraw:
     COLOR_WIDTH = 1
 
-    def __init__(self, chunk_size: Optional[int]=1000):
+    def __init__(self, chunk_size: Optional[int]=500):
         self.chunk_size = chunk_size
         self.alpha = 1.0
         self.color = 1.0

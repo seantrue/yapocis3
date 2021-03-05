@@ -1,13 +1,16 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import pytest
-
+import time
 import numpy as np
 
 from yapocis.rpc.interface import get_interface
 from yapocis.rpc.device import get_device, get_available_device_names, get_available_devices, get_platforms
 from yapocis.rpc.device_manager import DeviceManager
+from yapocis.rpc.buffer_manager import BufferManager
 from yapocis.rpc.kernel_manager import load_program, import_program
+from . import cleanup
+
 
 
 def test_buffers():
@@ -46,6 +49,31 @@ def test_buffers():
     print(list(bmgr.arrays.keys()), id(a), id(b))
     # Todo: why does the b buffer stay?
     # assert len(bmgr.arrays.keys())==0
+    bmgr.snapshot(name="buffers")
+
+def test_buffers_async_write():
+    bmgr = DeviceManager(timed=True, device_name=2)
+    a = np.random.sample((2000, 1000)).astype(np.float32)
+    t = a.sum()
+    for i in range(1000):
+        bmgr.write(a, wait=False)
+    a[:,:] = 0.0
+    bmgr.read(a)
+    assert a.sum() == t
+    print(bmgr.snapshot(name="async_write"))
+    del bmgr
+    bmgr = DeviceManager(timed=True, device_name=2)
+    arrays = []
+    a = np.random.sample((2000, 1000)).astype(np.float32)
+    t = a.sum()
+    for i in range(1000):
+        bmgr.write(a, wait=True)
+    a[:,:] = 0.0
+    bmgr.read(a)
+    assert a.sum() == t
+    print(bmgr.snapshot(name="sync_write"))
+    del bmgr
+
 
 
 def test_getinterface():

@@ -8,7 +8,7 @@ from collections import namedtuple
 from pyparsing import Optional, ParseException, OneOrMore, Literal, Keyword, Word, alphas, alphanums, \
     delimitedList, Group, ZeroOrMore, restOfLine, cStyleComment
 from yapocis.utils.internals import find_yapocis_file
-from yapocis.utils.typing import List
+from yapocis.utils.typing import List, Dict, Any
 
 # Map from OpenCL datatype to a numpy data type
 
@@ -115,12 +115,16 @@ KernelParamSpec = namedtuple("KernelParam", ["name", "hint", "dim", "pointer", "
 KernelSpec =      namedtuple("KernelSpec", ["name", "alias", "parameters", "definitions"])
 Interface =       namedtuple("InterfaceSpec", ["name", "kernels", "aliases"])
 
-
+_interfaces: Dict[str,Any] = {}
 def get_interfaces(s: str) -> List[Interface]:
     """\
     Builds an InterfaceCL for the source interface definition.
     """
-    interfaces = []
+    try:
+        interfaces = _interfaces[s]
+        return interfaces
+    except KeyError:
+        interfaces = []
     try:
         parsed_interfaces =  bnf.parseString(s)
     except ParseException as e:
@@ -166,6 +170,7 @@ def get_interfaces(s: str) -> List[Interface]:
         interfaces.append(Interface(name=interface.name,
                                     kernels=kernel_definitions,
                                     aliases=kernel_aliases))
+    _interfaces[s] = interfaces
     return interfaces
 
 def get_interface(s: str) -> Interface:
@@ -193,7 +198,7 @@ def load_interface(interface_spec:str) -> str:
 def dump_interface(interface):
     print("Interface:", interface.name)
     for kernel in interface.kernels:
-        print(f"Kernel: {kernel.name } alias for '{kernel.alias}")
+        print(f"Kernel: {kernel.name } alias for '{kernel.alias}'")
         iparam = 0
         for param in kernel.parameters:
             to_gpu = param.hint in ("in", "inout")
@@ -210,11 +215,15 @@ def dump_interface(interface):
                     print(f"  Buffer is resident on GPU")
                 elif param.hint == "out_like":
                     print(f"  Allocate a buffer like '{param.name}' position={iparam}")
+                    print("Read back as return value of {param.np_dtype}")
+                elif param.hint == "out":
+                    print(f"  Allocate a buffer for {param.name}")
+                    print("   Read back as return value of {param.np_dtype}")
                 else:
                     print(f"  Coerce '{param.name}' to {param.np_dtype}")
                     print(f"  Allocate a buffer for {param.name}")
             if param.dim:
-                print(f"  Pass in {param.dim} of `{param.name}`")
+                print(f"  Pass in {param.dim} of `{param.name}` as {param.np_dtype}")
             if to_gpu:
                 print("  Copy to GPU")
             if from_gpu:
@@ -222,7 +231,8 @@ def dump_interface(interface):
             if on_gpu:
                 print("  Already on GPU")
             if not from_gpu:
-                print("  Use as parameter")
+                pointer = "*" if param.hint else ""
+                print(f"  Use as parameter of type {pointer}{param.np_dtype}")
             print()
         print()
 

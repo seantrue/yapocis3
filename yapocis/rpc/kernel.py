@@ -14,7 +14,7 @@ class Kernel:
     Provide a callable interface to an OpenCL kernel function.
     """
 
-    def __init__(self, name, kernel_manager: "KernelManager", kernel: Callable, params: List[Tuple]):
+    def __init__(self, name, kernel_manager: "KernelManager", kernel: Callable, params: List[Tuple], async_write:bool=False):
         self.name = name
         self.kernel_manager = kernel_manager
         self.queue = kernel_manager.dmgr.queue
@@ -22,13 +22,14 @@ class Kernel:
         self.params = params
         self.autoflatten = kernel_manager.dmgr.autoflatten
         self.argspecs = self.posbyname = self.returns = self.global_size = None
+        self.async_write = async_write
         self.map_arguments()
 
     def read(self, a: Array):
         return self.kernel_manager.dmgr.read(a)
 
-    def write(self, a: Array):
-        return self.kernel_manager.dmgr.write(a)
+    def write(self, a: Array,wait=True):
+        return self.kernel_manager.dmgr.write(a,wait=wait)
 
     def ensure(self, a: Array):
         return self.kernel_manager.dmgr.ensure(a)
@@ -119,12 +120,12 @@ class Kernel:
 
     def handle_in(self, arg, dtype):
         arg = arg.astype(dtype, copy=False)
-        buf = self.write(arg)
+        buf = self.write(arg,wait=not self.async_write)
         return buf
 
     def handle_inout(self, arg, dtype):
         arg = arg.astype(dtype, copy=False)
-        buf = self.write(arg)
+        buf = self.write(arg,wait=not self.async_write)
         self.returns.append((arg, buf))
         return buf
 

@@ -4,11 +4,11 @@ from yapocis.rpc.kernel import Kernel
 from yapocis.rpc.kernel_manager import load_program
 
 from yapocis.utils.basic import set_margin, set_frame
-from yapocis.lib.gradient import gradient
+from yapocis.lib.gradient import Gradient
 
 from yapocis.lib.operators import sub_res
 from yapocis.utils.typing import *
-
+from .bound_kernels import BoundKernels
 
 def are_close(a: Array, b: Array) -> bool:
     eps = .00001
@@ -93,7 +93,7 @@ class GaussianWeights:
         return len(self.get_gaussian_weight(scale))
 
 
-class Gaussian:
+class Gaussian(BoundKernels):
     def __init__(self, device_name: Optional[str]=None, gaussian_weights: Optional[List[np.ndarray]] = None):
         self.gaussian_weights = GaussianWeights() if gaussian_weights is None else gaussian_weights
         gws = self.gaussian_weights.gaussian_weights()
@@ -101,13 +101,15 @@ class Gaussian:
         convsres = [("gauss%s_res" % len(a), a) for a in gws]
         convsh = [("gauss%s_h" % len(a), a) for a in gws]
         convsv = [("gauss%s_v" % len(a), a) for a in gws]
-        self.program = program = load_program("convolvesep", device_name=device_name, convs=convs)
+        super(Gaussian, self).__init__("convolvesep",device_name=device_name, convs=convs)
+        kmgr = self.kmgr
         self.zcs = load_program("zcs", device_name=device_name)
-        self.gaussian_kernels: List[Kernel] = [getattr(program, name) for (name, conv) in convs]
+        self.grad = Gradient(device_name=device_name)
+        self.gaussian_kernels: List[Kernel] = [getattr(kmgr, name) for (name, conv) in convs]
         for i, (name, conv) in enumerate(convs):
-            self.gaussian_kernels[i].res = getattr(program, convsres[i][0])
-            self.gaussian_kernels[i].h = getattr(program, convsh[i][0])
-            self.gaussian_kernels[i].v = getattr(program, convsv[i][0])
+            self.gaussian_kernels[i].res = getattr(kmgr, convsres[i][0])
+            self.gaussian_kernels[i].h = getattr(kmgr, convsh[i][0])
+            self.gaussian_kernels[i].v = getattr(kmgr, convsv[i][0])
             self.gaussian_kernels[i].width = len(conv)
 
     def get_scales(self):
@@ -188,7 +190,7 @@ class Gaussian:
             dog = smaller - larger
             zca = self.zcs.zcs(dog)
         # Zero out of bounds and create a frame.
-        grad, theta = gradient(smaller)
+        grad, theta = self.grad.gradient(smaller)
         margin = self.gaussian_weights.get_gaussian_width(scale) + 1
         if clearmargin:
             set_margin(zca, margin)
