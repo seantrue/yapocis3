@@ -1,284 +1,122 @@
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
-from typing import Optional
 
 import numpy as np
+from .bound_kernels import BoundKernels
 
-from yapocis.rpc1.programs import load_program
-from yapocis.utils.basic import chunker
-from yapocis.utils.typing import Coords
+class AbstractGraphicsSetup:
+    CHANNELS: [int] = 1
+    def coerce_coords(self, coords, width, dtype=np.int32, **kwargs):
+        raise NotImplementedError
+
+    def coerce_colors(self, coords, color=None, colors=None, alpha=None, alphas=None, **kwargs) -> np.ndarray:
+        raise NotImplementedError
 
 
-class AbstractGraphicsKernel:
-    def __init__(self, kernel_name, color_width, device_name: Optional[str] = None):
-        self.gp = load_program(kernel_name, device_name=device_name)
-        self.color_width = color_width
-        self.color = 1
+    def setup_composite(self, locations, blocks, alpha=None, alphas=None, **kwargs):
+        """
+        Compute the information for compositing a set of distinct blocks
 
-    def read(self, a):
-        return self.gp.read(a)
+        Args:
+            locations: list of tuples composed of a location (x,y)
+            blocks: list of pixel blocks, one per element of coords
+            alpha: list of scalar or vector of opacity
 
-    def write(self, a):
-        return self.gp.write(a)
+        Returns:
+            coords: list of tuples (x,y,block_width,block_height)
+            buffer: float32 array of intensity and opacity per point (2xN)
+            ipixels: index of start of block in buffer
 
-    def coerce_colors(self, n, color=None, colors=None, **kwargs):
-        # a tuple, list, array of COLOR_WIDTH floats
-        # a list or tuple of array/list/tuple of COLOR_WIDTH floats
-        # an array of nxCOLOR_WIDTH floats
-        if color is None and colors is None:
-            color = self.color
-        if color:
-            if self.color_width > 1:
-                color = np.asarray(color, dtype=np.float32)
-                colors = np.empty((n, self.color_width), dtype=np.float32)
-            else:
-                assert isinstance(color, (float, int))
-                colors = np.empty(n, dtype=np.float32)
-            colors[:] = color
-        else:
-            colors = np.asarray(colors, dtype=np.float32)
-            if self.color_width > 1:
-                if len(colors.shape) == 1:
-                    colors = np.column_stack([colors for _ in range(self.color_width)])
-                assert colors.shape == (n, self.color_width)
-            else:
-                assert colors.shape[0] == n
-        return colors
+        """
+        raise NotImplementedError
 
-    def coerce_coords(self, coords, width, dtype=np.int32):
-        if not hasattr(coords, "dtype"):
-            coords = np.array(coords, dtype=dtype)
-        assert len(coords.shape) == 2 and coords.shape[1] == width
-        return coords
 
-    def render_immediate(self, handle: str, coord_width: int, a: np.ndarray, coords: Coords, *args, **kwargs):
-        if not isinstance(coords, (np.ndarray, list, tuple)) or not coords:
-            return
-        args = self.prepare_args(coords, coord_width, *args, **kwargs)
-        args = list(args)
-        getattr(self.gp, handle)(a, *args, global_size=a.size / self.color_width)
+    def setup_sprites(self, locations, sprites, alpha=None, alphas=None, **kwargs):
+        """
+        Compute the information for compositing a set of reusable blocks, for graphical or repeated elements.
 
-    def rects(self, a, coords: Coords, **kwargs):
-        self.render_immediate("rects", 4, a, coords, **kwargs)
+        Args:
+            coords: list of tuples composed of a location (isprite, x,y) where isprite is the index into sprites
+            sprites: list of pixel blocks, one per element of coords
+            alpha: list of scalar or vector of opacity
 
-    def circles(self, a, coords: Coords, **kwargs):
-        self.render_immediate("circles_in", 3, a, coords, **kwargs)
+        Returns:
+            coords: list of tuples (x,y,block_width,block_height)
+            buffer: float32 array of intensity and opacity per point (2xN)
+            ipixels: index of start of block in buffer
 
-    def triangles(self, a, coords: Coords, **kwargs):
-        self.render_immediate("triangles_in", 6, a, coords, **kwargs)
+        """
+        raise NotImplementedError
 
-    def ellipses(self, a, coords: Coords, **kwargs):
-        self.render_immediate("ellipses_in", 4, a, coords, **kwargs)
-
-    def lines(self, a, coords: Coords, distance: float = 1.0, **kwargs):
-        self.render_immediate("lines", 4, a, coords, distance, **kwargs)
-
-    def composite(self, a, locations, blocks, **kwargs):
-        self.gp.composite(a, locations, blocks, **kwargs)
-
-    def sprites(self, a, locations, sprites, **kwargs):
-        self.gp.sprites(a, locations, sprites, **kwargs)
-
-    def draw_strings(self, a, locations, texts, **kwargs):
-        self.gp.draw_strings(a, locations, texts, **kwargs)
-
-    def rects_in(self, a, coords: Coords, **kwargs):
-        self.render_immediate("rects_in", 4, a, coords, **kwargs)
-
-    def circles_in(self, a, coords: Coords, **kwargs):
-        self.render_immediate("circles_in", 3, a, coords, **kwargs)
-
-    def triangles_in(self, a, coords: Coords, **kwargs):
-        self.render_immediate("triangles_in", 6, a, coords, **kwargs)
-
-    def ellipses_in(self, a, coords: Coords, **kwargs):
-        self.render_immediate("ellipses_in", 4, a, coords, **kwargs)
-
-    def lines_in(self, a, coords: Coords, distance: float, **kwargs):
-        self.render_immediate("lines_in", 4, a, coords, distance, **kwargs)
-
-    def composite_in(self, a, locations, blocks, **kwargs):
-        self.gp.composite_in(a, locations, blocks, **kwargs)
-
-    def sprites(self, a, locations, sprites, **kwargs):
-        self.gp.sprites_in(self.a, locations, sprites, **kwargs)
-
-    def draw_strings(self, a, locations, texts, **kwargs):
-        self.gp.draw_strings_in(a, locations, texts, **kwargs)
-
-    def prepare_args(self, coords, coord_width, **kwargs):
-        raise NotImplementedError("prepare_args is not implemented")
-
-    def setup_composite(self, locations, blocks, **kwargs):
-        raise NotImplementedError("setup_composite is not implemented")
-
-    def setup_sprites(self, locations, sprites, **kwargs):
-        raise NotImplementedError("setup_composite is not implemented")
-
-    def setup_texts(self, locations, texts, font=None, fonts=None, size=None, sizes=None, color=None,
+    def setup_texts(self, locations, texts, font=None, fonts=None, size=None, sizes=None, alpha=None, alphas=None, color=None,
                     colors=None, rotation=None, rotations=None, **kwargs):
-        raise NotImplementedError("setup_text is not implemented")
+        raise NotImplementedError
 
 
-class AbstractKernelDraw:
+class AbstractGraphics(BoundKernels):
 
-    def __init__(self, color_width: int = 1, chunk_size: Optional[int] = 1000):
-        self.color_width = color_width
-        self.chunk_size = chunk_size
-        self.alpha = 1.0
-        self.color = 1.0
-        # Initialize display lists
-        self._lines = []
-        self._rects = []
-        self._circles = []
-        self._triangles = []
-        self._ellipses = []
-        self._sprites = []
-        self._draw_strings = []
-
-    def render_immediate(self, handle: str, coord_width: int, coords: Coords, *args, **kwargs):
-        if not isinstance(coords, np.ndarray) and not coords:
+    def lines(self, image, coords, width=1.0, **kwargs):
+        if not coords:
             return
-        getattr(self.gp, handle)(self.a, coords, *args, **kwargs)
+        coords = self.coerce_coords(coords, 4)
+        colors = self.coerce_colors(coords, **kwargs)
+        self.kmgr.lines(image, coords, width, colors, global_size=image.size // self.CHANNELS)
 
-    # Add item to display list for batch rendering
-    def line(self, xyxy, distance=1.0, **kwargs):
-        self._lines.append((xyxy, distance, kwargs))
+    def rects(self, image, coords, **kwargs):
+        if not coords:
+            return
+        coords = self.coerce_coords(coords, 4)
+        colors = self.coerce_colors(coords, **kwargs)
+        self.kmgr.rects(image, coords, colors, global_size=image.size // self.CHANNELS)
 
-    def rect(self, rect, **kwargs):
-        self._rects.append((rect, kwargs))
+    def circles(self, image, coords, **kwargs):
+        if not coords:
+            return
+        coords = self.coerce_coords(coords, 3)
+        colors = self.coerce_colors(coords, **kwargs)
+        self.kmgr.circles(image, coords, colors, global_size=image.size // self.CHANNELS)
 
-    def circle(self, location, **kwargs):
-        self._circles.append((location, kwargs))
+    def triangles(self, image, coords, **kwargs):
+        if not coords:
+            return
+        coords = self.coerce_coords(coords, 6)
+        colors = self.coerce_colors(coords, **kwargs)
+        self.kmgr.triangles(image, coords, colors, global_size=image.size // self.CHANNELS)
 
-    def triangle(self, triangle, **kwargs):
-        self._triangles.append((triangle, kwargs))
+    def ellipses(self, image, coords, **kwargs):
+        coords = self.coerce_coords(coords, 4)
+        colors = self.coerce_colors(coords, **kwargs)
+        self.kmgr.ellipses(image, coords, colors, global_size=image.size // self.CHANNELS)
 
-    def ellipse(self, ellipse, **kwargs):
-        self._ellipses.append((ellipse, kwargs))
+    def composite(self, image, locations, blocks, **kwargs):
+        """
+        Composite blocks of pixels into target image
 
-    def sprite(self, xy, sprite, **kwargs):
-        self._sprites.append((xy, sprite, kwargs))
+        Args:
+            image: 2d array of pixels
+            coords: a tuple composed of a location (x,y)
+            blocks: list of pixel blocks
+            alpha: list of scalar or vector of opacity
 
-    def draw_string(self, xy, text, **kwargs):
-        self._draw_strings.append((xy, text, kwargs))
+        Returns: None
 
-    @staticmethod
-    def _render_list(handler, arglist, columns):
-        columns = {}
-        for kwargs in arglist[-1]:
-            for key, value in kwargs.items():
-                key = key + "s"
-                columns.setdefault(key, []).append(value)
-        handler(*arglist[:-1], **columns)
+        """
+        coords, buffer, ipixels = self.setup_composite(locations, blocks, **kwargs)
+        self.kmgr.composite(image, coords, buffer, ipixels, global_size=image.size // self.CHANNELS)
 
-    def render_display_list(self, handle):
-        display_list = getattr(self, f"_{handle}", None)
-        if display_list:
-            handler = getattr(self, f"{handle}", None)
-            assert display_list is not None and handler is not None, handler
-            if self.chunk_size:
-                for chunk in chunker(display_list, self.chunk_size):
-                    arglist = list(zip(*chunk))
-                    columns = {}
-                    for kwargs in arglist[-1]:
-                        for key, value in kwargs.items():
-                            key = key + "s"
-                            columns.setdefault(key, []).append(value)
-                    handler(*arglist[:-1], **columns)
-            else:
-                arglist = list(zip(*display_list))
-                columns = {}
-                for kwargs in arglist[-1]:
-                    for key, value in kwargs.items():
-                        key = key + "s"
-                        columns.setdefault(key, []).append(value)
-                handler(*arglist[:-1], **columns)
-            setattr(self, f"_{handle}", [])
+    def sprites(self, image, locations, sprites, alpha=None, alphas=None):
+        """
+        Composite sprites into target image
 
-    def render_lines(self):
-        self.render_display_list("lines")
+        Args:
+            image: 2d array of pixels
+            coords: a tuple composed of a location (sprite_index, x,y)
+            blocks: list of sprites blocks
+            alpha: optional list of scalar or vector of opacity
+        Returns: None
 
-    def render_rects(self):
-        self.render_display_list("rects")
+        """
+        coords, buffer, ipixels = self.setup_sprites(locations, sprites, alpha=alpha, alphas=alphas)
+        self.kmgr.composite(image, coords, buffer, ipixels, global_size=image.size // self.CHANNELS)
 
-    def render_circles(self):
-        self.render_display_list("circles")
-
-    def render_triangles(self):
-        self.render_display_list("triangles")
-
-    def render_ellipses(self):
-        self.render_display_list("ellipses")
-
-    def render_sprites(self):
-        self.render_display_list("sprites")
-
-    def render_draw_strings(self):
-        self.render_display_list("draw_strings")
-
-    def render(self):
-        self.render_rects()
-        self.render_circles()
-        self.render_ellipses()
-        self.render_triangles()
-        self.render_lines()
-        self.render_draw_strings()
-        self.render_sprites()
-
-    # Implement these to get things done.
-    def lines(self, coords, distance=1.0, **kwargs):
-        raise NotImplementedError()
-
-    def rects(self, coords, **kwargs):
-        raise NotImplementedError()
-
-    def circles(self, coords, **kwargs):
-        raise NotImplementedError()
-
-    def triangles(self, coords, **kwargs):
-        raise NotImplementedError()
-
-    def ellipses(self, coords, **kwargs):
-        raise NotImplementedError()
-
-    def composite(self, locations, blocks, **kwargs):
-        raise NotImplementedError()
-
-    def sprites(self, locations, sprites, **kwargs):
-        raise NotImplementedError()
-
-    def draw_strings(self, locations, texts, **kwargs):
-        raise NotImplementedError()
-
-    def read(self):
-        raise NotImplementedError()
-
-
-def to_list(scalar, vector, n, default=None):
-    if scalar is None and vector is None:
-        scalar = default
-    coerced = list(vector) if isinstance(vector, (tuple, list, np.ndarray)) else [scalar] * n
-    return coerced
-
-
-def to_vector(scalar, vector, n, dtype=np.float32, default=None):
-    if scalar is None and vector is None:
-        scalar = default
-    coerced = arrayify1d(scalar, n, dtype=dtype) if scalar else arrayify1d(vector, n, dtype=dtype)
-    return coerced
-
-
-def arrayify1d(scalar_or_vector, length, default=None, dtype=np.float32):
-    scalar_or_vector = default if scalar_or_vector is None else scalar_or_vector
-    if scalar_or_vector is None:
-        raise ValueError(f"Both value and default are None")
-    if isinstance(scalar_or_vector, np.ndarray):
-        vector = scalar_or_vector.astype(dtype)
-    elif isinstance(scalar_or_vector, (list, tuple)):
-        vector = np.array(scalar_or_vector, dtype=dtype)
-    else:
-        vector = [scalar_or_vector] * length
-        vector = np.asarray(vector)
-    if vector.shape[0] != length:
-        raise ValueError(f"value length {vector.shape[0]} does not match specified {length}")
-    return vector
+    def draw_strings(self, image, locations, texts, **kwargs):
+        locations, blocks, alphas = self.setup_texts(locations, texts, **kwargs)
+        self.composite(image, locations, blocks, alphas=alphas)

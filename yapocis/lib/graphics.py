@@ -5,22 +5,9 @@ Low level wrappers around the OpenCL graphics kernels.
 
 import numpy as np
 
-from yapocis.rpc.kernel_manager import import_program
 from yapocis.lib.typeset import render_text, compute_offset
 from yapocis.utils.basic import compute_360_to_180
-
-lines_cl = rects_cl = circles_cl = triangles_cl = ellipses_cl = composite_cl = None
-program, _ = import_program("graphics",
-                            lines="lines_cl", rects="rects_cl", circles="circles_cl",
-                            triangles="triangles_cl", ellipses="ellipses_cl",
-                            composite="composite_cl")
-
-
-def coerce_coords(coords, width, dtype=np.int32):
-    if not hasattr(coords, "dtype"):
-        coords = np.array(coords, dtype=dtype)
-    assert len(coords.shape) == 2 and coords.shape[1] == width
-    return coords
+from .abstract_graphics import AbstractGraphicsSetup, AbstractGraphics
 
 
 def arrayify1d(scalar_or_vector, length, default=None, dtype=np.float32):
@@ -71,202 +58,141 @@ def to_vector(scalar, vector, n, dtype=np.float32, default=None):
     return coerced
 
 
-def coerce_colors(coords, color=None, colors=None, alpha=None, alphas=None, **kwargs) -> np.ndarray:
-    n = coords.shape[0]
-    if color and colors:
-        raise RuntimeError(f"Only one of color {color} and {colors}")
-    if alpha and alphas:
-        raise RuntimeError(f"Only one of color {alpha} and {alphas}")
-    colors = to_vector(color, colors, n)
-    alphas = to_vector(alpha, alphas, n, default=1.0)
-    ca = np.column_stack([colors, alphas])
-    return ca
+class Graphics1Setup(AbstractGraphicsSetup):
+    CHANNELS=1
+    def coerce_coords(self, coords, width, dtype=np.int32, **kwargs):
+        if not hasattr(coords, "dtype"):
+            coords = np.array(coords, dtype=dtype)
+        assert len(coords.shape) == 2 and coords.shape[1] == width
+        return coords
 
 
-def composite_setup(locations, blocks, alpha=None, alphas=None):
-    """
-    Compute the information for compositing a set of distinct blocks
-
-    Args:
-        locations: list of tuples composed of a location (x,y)
-        blocks: list of pixel blocks, one per element of coords
-        alpha: list of scalar or vector of opacity
-
-    Returns:
-        coords: list of tuples (x,y,block_width,block_height)
-        buffer: float32 array of intensity and opacity per point (2xN)
-        ipixels: index of start of block in buffer
-
-    """
-    assert len(locations) == len(blocks)
-    if alpha is not None and alphas is not None:
-        raise RuntimeError(f"Only one of alpha {alpha} and {alphas}")
-    alphas = to_list(alpha, alphas, len(locations))
-    assert len(alphas) == len(locations)
-    pixel_buffer = []
-    alpha_buffer = []
-    ipixel = 0
-    coords = np.empty((len(locations), 4), dtype=np.int32)
-    ipixels = np.empty(len(locations), dtype=np.int32)
-    for i, (block, location, alpha) in enumerate(zip(blocks, locations, alphas)):
-        height, width = block.shape
-        x, y = location
-        coords[i, :] = [x, y, width, height]
-        ipixels[i] = ipixel
-        ipixel += block.size
-        pixel_buffer.append(block.ravel())
-        if not isinstance(alpha, np.ndarray):
-            alpha = arrayify1d(alpha, block.size, default=1.0, dtype=np.float32)
-        alpha_buffer.append(alpha.ravel())
-    pixel_buffer = np.concatenate(pixel_buffer)
-    alpha_buffer = np.concatenate(alpha_buffer)
-    buffer = np.column_stack([pixel_buffer, alpha_buffer])
-    return coords, buffer, ipixels
+    def coerce_colors(self, coords, color=None, colors=None, alpha=None, alphas=None, **kwargs) -> np.ndarray:
+        n = coords.shape[0]
+        if color and colors:
+            raise RuntimeError(f"Only one of color {color} and {colors}")
+        if alpha and alphas:
+            raise RuntimeError(f"Only one of color {alpha} and {alphas}")
+        colors = to_vector(color, colors, n)
+        alphas = to_vector(alpha, alphas, n, default=1.0)
+        ca = np.column_stack([colors, alphas])
+        return ca
 
 
-def sprites_setup(locations, sprites, alpha=None, alphas=None):
-    """
-    Compute the information for compositing a set of reusable blocks, for graphical or repeated elements.
+    def setup_composite(self, locations, blocks, alpha=None, alphas=None, **kwargs):
+        """
+        Compute the information for compositing a set of distinct blocks
 
-    Args:
-        coords: list of tuples composed of a location (isprite, x,y) where isprite is the index into sprites
-        sprites: list of pixel blocks, one per element of coords
-        alpha: list of scalar or vector of opacity
+        Args:
+            locations: list of tuples composed of a location (x,y)
+            blocks: list of pixel blocks, one per element of coords
+            alpha: list of scalar or vector of opacity
 
-    Returns:
-        coords: list of tuples (x,y,block_width,block_height)
-        buffer: float32 array of intensity and opacity per point (2xN)
-        ipixels: index of start of block in buffer
+        Returns:
+            coords: list of tuples (x,y,block_width,block_height)
+            buffer: float32 array of intensity and opacity per point (2xN)
+            ipixels: index of start of block in buffer
 
-    """
-    if alpha is not None and alphas is not None:
-        raise RuntimeError(f"Only one of color {alpha} and {alphas}")
-    alphas = to_list(alpha, alphas, len(sprites))
-    assert len(alphas) == len(sprites)
-    pixel_buffer = []
-    alpha_buffer = []
-    ipixel = 0
-    ipixels = []
-    for sprite, alpha in zip(sprites, alphas):
-        sprite = sprite.ravel()
-        ipixels.append(ipixel)
-        ipixel += len(sprite)
-        pixel_buffer.append(sprite)
-        alpha = arrayify1d(alpha, len(sprite), default=1.0)
-        alpha_buffer.append(alpha.ravel())
-    pixel_buffer = np.concatenate(pixel_buffer)
-    alpha_buffer = np.concatenate(alpha_buffer)
-    buffer = np.column_stack([pixel_buffer, alpha_buffer])
-
-    coords = []
-    for isprite, x, y in locations:
-        sprite = sprites[isprite]
-        height, width = sprite.shape
-        coords.append((x, y, width, height))
-        ipixels.append(ipixels[isprite])
-    coords = coerce_coords(coords, 4, np.int32)
-    ipixels = np.array(ipixels, dtype=np.int32)
-    return coords, buffer, ipixels
+        """
+        assert len(locations) == len(blocks)
+        if alpha is not None and alphas is not None:
+            raise RuntimeError(f"Only one of alpha {alpha} and {alphas}")
+        alphas = to_list(alpha, alphas, len(locations))
+        assert len(alphas) == len(locations)
+        pixel_buffer = []
+        alpha_buffer = []
+        ipixel = 0
+        coords = np.empty((len(locations), 4), dtype=np.int32)
+        ipixels = np.empty(len(locations), dtype=np.int32)
+        for i, (block, location, alpha) in enumerate(zip(blocks, locations, alphas)):
+            height, width = block.shape[0], block.shape[1]
+            x, y = location
+            coords[i, :] = [x, y, width, height]
+            ipixels[i] = ipixel
+            ipixel += block.size
+            pixel_buffer.append(block.ravel())
+            if not isinstance(alpha, np.ndarray):
+                alpha = arrayify1d(alpha, block.size, default=1.0, dtype=np.float32)
+            alpha_buffer.append(alpha.ravel())
+        pixel_buffer = np.concatenate(pixel_buffer)
+        alpha_buffer = np.concatenate(alpha_buffer)
+        buffer = np.column_stack([pixel_buffer, alpha_buffer])
+        return coords, buffer, ipixels
 
 
-def lines(image, coords, width=1.0, **kwargs):
-    if not coords:
-        return
-    coords = coerce_coords(coords, 4)
-    colors = coerce_colors(coords, **kwargs)
-    lines_cl(image, coords, width, colors)
+    def setup_sprites(self, locations, sprites, alpha=None, alphas=None, **kwargs):
+        """
+        Compute the information for compositing a set of reusable blocks, for graphical or repeated elements.
+
+        Args:
+            coords: list of tuples composed of a location (isprite, x,y) where isprite is the index into sprites
+            sprites: list of pixel blocks, one per element of coords
+            alpha: list of scalar or vector of opacity
+
+        Returns:
+            coords: list of tuples (x,y,block_width,block_height)
+            buffer: float32 array of intensity and opacity per point (2xN)
+            ipixels: index of start of block in buffer
+
+        """
+        if alpha is not None and alphas is not None:
+            raise RuntimeError(f"Only one of color {alpha} and {alphas}")
+        alphas = to_list(alpha, alphas, len(sprites))
+        assert len(alphas) == len(sprites)
+        pixel_buffer = []
+        alpha_buffer = []
+        ipixel = 0
+        ipixels = []
+        for sprite, alpha in zip(sprites, alphas):
+            sprite = sprite.ravel()
+            ipixels.append(ipixel)
+            ipixel += len(sprite)
+            pixel_buffer.append(sprite)
+            alpha = arrayify1d(alpha, len(sprite), default=1.0)
+            alpha_buffer.append(alpha.ravel())
+        pixel_buffer = np.concatenate(pixel_buffer)
+        alpha_buffer = np.concatenate(alpha_buffer)
+        buffer = np.column_stack([pixel_buffer, alpha_buffer])
+
+        coords = []
+        for isprite, x, y in locations:
+            sprite = sprites[isprite]
+            height, width = sprite.shape
+            coords.append((x, y, width, height))
+            ipixels.append(ipixels[isprite])
+        coords = self.coerce_coords(coords, 4, np.int32)
+        ipixels = np.array(ipixels, dtype=np.int32)
+        return coords, buffer, ipixels
+
+    def setup_texts(self, locations, texts, font=None, fonts=None, size=None, sizes=None, alpha=None, alphas=None, color=None,
+                    colors=None, rotation=None, rotations=None, **kwargs):
+        n = len(locations)
+        fonts = to_list(font, fonts, n, default="default")
+        sizes = to_list(size, sizes, n, default=32)
+        alphas = to_list(alpha, alphas, n, default=None)
+        rotations = to_list(rotation, rotations, n, default=0)
+        rotations = [compute_360_to_180(rotation) for rotation in rotations]
+
+        bbox_blocks = [render_text(text, font_name=font_name, size=size, rotation=rotation)
+                       for text, font_name, size, rotation in zip(texts, fonts, sizes, rotations)]
+        bboxes, blocks = zip(*bbox_blocks)
+        dxdy = [compute_offset(angle, h, w) for ((_, _, h, w), angle) in zip(bboxes, rotations)]
+        locations = [(x + dx, y + dy) for ((x, y), (dx, dy)) in zip(locations, dxdy)]
+
+        if isinstance(alphas, (list, tuple)):
+            new_alphas = []
+            for alpha_, block in zip(alphas, blocks):
+                if alpha_ == "mask":
+                    alpha_ = block
+                elif alpha_ == "bug":
+                    alpha_ = np.maximum(block, .33)
+                new_alphas.append(alpha_)
+            alphas = new_alphas
+        return locations, blocks, alphas
 
 
-def rects(image, coords, **kwargs):
-    if not coords:
-        return
-    coords = coerce_coords(coords, 4)
-    colors = coerce_colors(coords, **kwargs)
-    rects_cl(image, coords, colors)
 
+class Graphics1(AbstractGraphics, Graphics1Setup):
+    CHANNELS=1
+    INTERFACE="graphics"
 
-def circles(image, coords, **kwargs):
-    if not coords:
-        return
-    coords = coerce_coords(coords, 3)
-    colors = coerce_colors(coords, **kwargs)
-    circles_cl(image, coords, colors)
-
-
-def triangles(image, coords, **kwargs):
-    if not coords:
-        return
-    coords = coerce_coords(coords, 6)
-    colors = coerce_colors(coords, **kwargs)
-    triangles_cl(image, coords, colors)
-
-
-def ellipses(image, coords, **kwargs):
-    coords = coerce_coords(coords, 4)
-    colors = coerce_colors(coords, **kwargs)
-    ellipses_cl(image, coords, colors)
-
-
-def composite(image, locations, blocks, **kwargs):
-    """
-    Composite blocks of pixels into target image
-
-    Args:
-        image: 2d array of pixels
-        coords: a tuple composed of a location (x,y)
-        blocks: list of pixel blocks
-        alpha: list of scalar or vector of opacity
-
-    Returns: None
-
-    """
-    coords, buffer, ipixels = composite_setup(locations, blocks, **kwargs)
-    composite_cl(image, coords, buffer, ipixels)
-
-
-def sprites(image, locations, sprites, alpha=None, alphas=None):
-    """
-    Composite sprites into target image
-
-    Args:
-        image: 2d array of pixels
-        coords: a tuple composed of a location (sprite_index, x,y)
-        blocks: list of sprites blocks
-        alpha: optional list of scalar or vector of opacity
-    Returns: None
-
-    """
-    coords, buffer, ipixels = sprites_setup(locations, sprites, alpha=alpha, alphas=alphas)
-    composite_cl(image, coords, buffer, ipixels)
-
-
-def setup_texts(locations, texts, font=None, fonts=None, size=None, sizes=None, alpha=None, alphas=None, color=None,
-                colors=None, rotation=None, rotations=None):
-    n = len(locations)
-    fonts = to_list(font, fonts, n, default="default")
-    sizes = to_list(size, sizes, n, default=32)
-    alphas = to_list(alpha, alphas, n, default=None)
-    rotations = to_list(rotation, rotations, n, default=0)
-    rotations = [compute_360_to_180(rotation) for rotation in rotations]
-
-    bbox_blocks = [render_text(text, font_name=font_name, size=size, rotation=rotation)
-                   for text, font_name, size, rotation in zip(texts, fonts, sizes, rotations)]
-    bboxes, blocks = zip(*bbox_blocks)
-    dxdy = [compute_offset(angle, h, w) for ((_, _, h, w), angle) in zip(bboxes, rotations)]
-    locations = [(x + dx, y + dy) for ((x, y), (dx, dy)) in zip(locations, dxdy)]
-
-    if isinstance(alphas, (list, tuple)):
-        new_alphas = []
-        for alpha_, block in zip(alphas, blocks):
-            if alpha_ == "mask":
-                alpha_ = block
-            elif alpha_ == "bug":
-                alpha_ = np.maximum(block, .33)
-            new_alphas.append(alpha_)
-        alphas = new_alphas
-    return locations, blocks, alphas
-
-
-def draw_strings(image, locations, texts, **kwargs):
-    locations, blocks, alphas = setup_texts(locations, texts, **kwargs)
-    composite(image, locations, blocks, alphas=alphas)

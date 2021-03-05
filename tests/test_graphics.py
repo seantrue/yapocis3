@@ -1,20 +1,19 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-import numpy as np
 from random import randint
+
+import numpy as np
 
 from yapocis.utils.basic import show_array
 from yapocis.lib.channels import split_channels
 from yapocis.lib.hsi import rgb2hsi
-from yapocis.lib.graphics import lines, rects, circles, triangles, ellipses, composite, sprites, draw_strings
-from . import image_test, ASIZE, interesting_words, double_shuffle, cleanup
+from yapocis.lib.graphics import Graphics1
+
+from . import image_test, ASIZE, interesting_words, double_shuffle, show, snapshow, cleanup
 
 
 def setup():
-    return np.zeros((ASIZE, ASIZE)).astype(np.float32)
-
-def show(label, a):
-    show_array(f"graphics: {label}", a)
+    return np.zeros((ASIZE, ASIZE)).astype(np.float32), Graphics1()
 
 def image_source(align=5):
     image = image_test()
@@ -136,86 +135,86 @@ def random_texts(n=100):
 
 
 def test_lines():
-    canvas = setup()
+    canvas,grph = setup()
     random_coords = random_lines()
     coords = []
     for i in range(100, ASIZE, 100):
         for j in range(100, ASIZE, 100):
             coords.append([0, 0, i, j])
-    lines(canvas, coords, 1.5, color=1.0, alpha=1.0)
-    lines(canvas, random_coords, 1.5, color=1.0, alphas=random_alpha())
-    show(f"draw", canvas)
+    grph.lines(canvas, coords, 1.5, colors=random_colors(len(coords)), alpha=1.0)
+    grph.lines(canvas, random_coords, 1.5, colors=random_colors(), alphas=random_alpha())
+    snapshow(grph, canvas)
 
 
 def test_rects():
-    canvas = setup()
+    canvas,grph = setup()
     random_coords = random_lines()
     coords = []
     for i in range(100, ASIZE, 100):
         for j in range(100, ASIZE, 100):
             coords.append([i - 25, j - 25, i + 25, j + 25])
-    rects(canvas, coords, color=1.0, alpha=0.5)
-    rects(canvas, random_coords, colors=random_colors(), alphas=random_alpha())
-    show(f"rects", canvas)
-
+    grph.rects(canvas, coords, color=1.0, alpha=0.5)
+    grph.rects(canvas, random_coords, colors=random_colors(), alphas=random_alpha())
+    snapshow(grph, canvas)
 
 def test_circles():
-    canvas = setup()
+    canvas,grph = setup()
     random_coords = random_circles()
     coords = []
     for i in range(100, ASIZE, 100):
         for j in range(100, ASIZE, 100):
             coords.append([i, j, 100])
-    circles(canvas, coords, color=1.0, alpha=0.5)
-    circles(canvas, random_coords, colors=random_colors(), alphas=random_alpha())
-    show(f"circles", canvas)
+    grph.circles(canvas, coords, color=1.0, alpha=0.5)
+    grph.circles(canvas, random_coords, colors=random_colors(), alphas=random_alpha())
+    snapshow(grph, canvas)
 
 
 def test_triangles():
-    canvas = setup()
+    canvas,grph = setup()
     random_coords = random_triangles()
     coords = []
     for i in range(100, ASIZE, 100):
         for j in range(100, ASIZE, 100):
             coords.append([i, j, i + 50, j + 0, i + 50, j - 50])
-    triangles(canvas, coords, color=1.0, alpha=0.5)
-    triangles(canvas, random_coords, colors=random_colors(), alphas=random_alpha())
-    show(f"triangles", canvas)
+    grph.triangles(canvas, coords, color=1.0, alpha=0.5)
+    grph.triangles(canvas, random_coords, colors=random_colors(), alphas=random_alpha())
+    snapshow(grph, canvas)
 
 
 def test_ellipses():
-    canvas = setup()
+    canvas,grph = setup()
     random_coords = random_ellipses()
     coords = []
     for i in range(100, ASIZE, 100):
         for j in range(100, ASIZE, 100):
             coords.append([i, j, 50, 100])
-    ellipses(canvas, coords, color=1.0, alpha=0.5)
+    grph.ellipses(canvas, coords, color=1.0, alpha=0.5)
     coords = []
     for i in range(100, ASIZE, 100):
         coords.append([i, i, 100, 50])
     colors = np.linspace(0.0, 1.0, len(coords))
     alpha = 1.0
-    ellipses(canvas, coords, colors=colors, alpha=alpha)
-    ellipses(canvas, random_coords, colors=random_colors(), alphas=random_alpha())
-    show(f"ellipses", canvas)
+    grph.ellipses(canvas, coords, colors=colors, alpha=alpha)
+    grph.ellipses(canvas, random_coords, colors=random_colors(), alphas=random_alpha())
+    snapshow(grph, canvas)
 
 
 def test_composite():
-    canvas = setup()
+    canvas,grph = setup()
     random_coords, random_blocks = random_composites()
-    composite(canvas, random_coords, random_blocks)
-    show("composite", canvas)
+    grph.composite(canvas, random_coords, random_blocks)
+    snapshow(grph, canvas)
 
 
 def test_composite_sprites():
-    canvas = setup()
+    canvas,grph = setup()
     random_coords, random_sprites_ = random_sprites()
-    sprites(canvas, random_coords, random_sprites_)
-    show("sprites", canvas)
+    grph.sprites(canvas, random_coords, random_sprites_)
+    snapshow(grph, canvas)
 
 
 def test_composite_mosaic():
+    _, grph = setup()
     image = image_test()
     from random import shuffle
     r, g, b = split_channels(image)
@@ -224,7 +223,7 @@ def test_composite_mosaic():
     d = d - int(d % 5);
     i = i[:d, :d]
     show("i", i)
-    iout = np.zeros_like(i)
+    canvas = np.zeros_like(i)
     step = d // 5
     blocks = [i]
     coords = [(0, 0)]
@@ -234,54 +233,54 @@ def test_composite_mosaic():
             coords.append((x, y))
             blocks.append(block)
     shuffle(blocks)
-    composite(iout, coords, blocks)
-    show("mosaic", iout)
+    grph.composite(canvas, coords, blocks)
+    snapshow(grph, canvas)
 
 
 def test_simple_texts():
-    canvas = setup()
+    canvas,grph = setup()
     locations = []
     text = interesting_words(100)
     for x in range(100, ASIZE, 100):
         locations.append((x // 2, x))
     strings = double_shuffle(text, len(locations))
-    draw_strings(canvas, locations, strings, font="default", size=32, alpha="bug")
-    show("simple texts", canvas)
+    grph.draw_strings(canvas, locations, strings, font="default", size=32, alpha="bug")
+    snapshow(grph, canvas)
 
 def test_text_rotation_centered():
-    canvas = setup()
+    canvas, grph = setup()
     rotations = list(range(-180,180,30))
     center = canvas.shape[0]//2
     locations = [(center,center)] * len(rotations)
     strings = [f"-------- {r:03d}" for r in rotations]
-    draw_strings(canvas, locations, strings, rotations=rotations, color=1, alpha="mask")
-    circles(canvas, [(center,center,20)],color=.5)
-    show("rotated texts", canvas)
+    grph.draw_strings(canvas, locations, strings, rotations=rotations, color=1, alpha="mask")
+    grph.circles(canvas, [(center,center,20)],color=.5)
+    snapshow(grph, canvas)
 
 def test_text_rotation():
-    canvas = setup()
+    canvas,grph = setup()
     rotations = list(range(0,360,10))
     center = canvas.shape[0]//2
     locations = [[center,center] for y in range(100,1000,800//len(rotations))]
     locations = locations[:len(rotations)]
     strings = [f"-------------------- {r:03d}" for r in rotations]
-    draw_strings(canvas, locations, strings, size=32, rotations=rotations, color=1, alpha="mask")
+    grph.draw_strings(canvas, locations, strings, size=32, rotations=rotations, color=1, alpha="mask")
     for location in locations:
         location.append(10)
         location[0],location[1] = location[1],location[0]
-    circles(canvas, locations[:-1],color=.5)
-    show("rotated texts", canvas)
+    grph.circles(canvas, locations[:-1],color=.5)
+    snapshow(grph, canvas)
 
 
 def test_texts():
-    canvas = setup()
+    canvas,grph = setup()
     locations, strings, fonts, sizes, rotations, alphas = random_texts(300)
-    draw_strings(canvas, locations, strings, fonts=fonts, sizes=sizes, alphas=alphas)
-    show("texts", canvas)
+    grph.draw_strings(canvas, locations, strings, fonts=fonts, sizes=sizes, alphas=alphas)
+    snapshow(grph, canvas)
 
 def test_stressed_texts():
-    canvas = setup()
+    canvas,grph = setup()
     locations, strings, fonts, sizes, rotations, _ = random_texts(300)
-    draw_strings(canvas, locations, strings, fonts=fonts, sizes=sizes, rotations=rotations, alpha="mask")
-    show("texts", canvas)
+    grph.draw_strings(canvas, locations, strings, fonts=fonts, sizes=sizes, rotations=rotations, alpha="mask")
+    snapshow(grph, canvas)
 

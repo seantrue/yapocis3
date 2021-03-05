@@ -94,6 +94,7 @@ class GaussianWeights:
 
 
 class Gaussian(BoundKernels):
+    INTERFACE="convolvesep"
     def __init__(self, device_name: Optional[str]=None, gaussian_weights: Optional[List[np.ndarray]] = None):
         self.gaussian_weights = GaussianWeights() if gaussian_weights is None else gaussian_weights
         gws = self.gaussian_weights.gaussian_weights()
@@ -101,7 +102,7 @@ class Gaussian(BoundKernels):
         convsres = [("gauss%s_res" % len(a), a) for a in gws]
         convsh = [("gauss%s_h" % len(a), a) for a in gws]
         convsv = [("gauss%s_v" % len(a), a) for a in gws]
-        super(Gaussian, self).__init__("convolvesep",device_name=device_name, convs=convs)
+        super(Gaussian, self).__init__(device_name=device_name, convs=convs)
         kmgr = self.kmgr
         self.zcs = load_program("zcs", device_name=device_name)
         self.grad = Gradient(device_name=device_name)

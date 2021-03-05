@@ -1,12 +1,12 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
-
+import inspect
 import os
 import string
 from random import shuffle
 import pytest
 import numpy as np
 
-from yapocis.utils.basic import imread
+from yapocis.utils.basic import imread, show_array
 
 ASIZE=1200
 
@@ -51,3 +51,31 @@ def double_shuffle(lst, n):
 def cleanup(request):
     from yapocis.rpc.device_manager import display_snapshots
     request.addfinalizer(display_snapshots)
+
+def strip_test_prefix(s):
+    if s.startswith("test_"):
+        s = s[5:]
+    return s
+
+def name_of_test(depth=1):
+    current_frame = inspect.currentframe()
+    call_frames = inspect.getouterframes(current_frame, depth+1)
+    fi = call_frames[depth]
+    caller_name = fi.function
+    file_name = fi.filename
+    file_name = os.path.splitext(os.path.basename(os.path.split(file_name)[-1]))[0]
+    return strip_test_prefix(caller_name), strip_test_prefix(file_name)
+
+
+def show(*args):
+    tname, fname = name_of_test(2)
+    show_array(f"{fname}: {tname}", *args)
+
+def snapshot(snapper):
+    tname, fname = name_of_test(2)
+    snapper.snapshot(name=f"{fname}/{tname}")
+
+def snapshow(snapper, *args):
+    tname, fname = name_of_test(2)
+    snapper.snapshot(name=f"{fname}/{tname}")
+    show_array(f"{fname}: {tname}", *args)

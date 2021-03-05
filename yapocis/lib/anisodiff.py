@@ -14,10 +14,8 @@ from yapocis.utils.typing import *
 from .bound_kernels import BoundKernels
 
 class Anisodiff(BoundKernels):
-
-    def __init__(self, device_name: str = None):
-        super(Anisodiff, self).__init__("anisodiff", device_name=device_name)
-        self.filter_by_depth = ["filterImage", "filterImage2", "filterImage3", "filterImage4"]
+    INTERFACE = "anisodiff"
+    filter_by_depth = ["filterImage", "filterImage2", "filterImage3", "filterImage4"]
 
     def select_by_depth(self, image, suffix=""):
         depth = get_image_depth(image)

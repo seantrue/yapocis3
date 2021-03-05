@@ -10,8 +10,7 @@ from yapocis.rpc.kernel_manager import load_program
 from .bound_kernels import BoundKernels
 
 class Gradient(BoundKernels):
-    def __init__(self, device_name: Optional[str]=None):
-        super(Gradient, self).__init__("gradient", device_name=device_name)
+    INTERFACE = "gradient"
 
     def gradient(self, image:Image1, reach:int=1) -> Tuple[Image1,Image1]:
         """
