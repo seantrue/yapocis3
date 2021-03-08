@@ -5,8 +5,8 @@ from yapocis.rpc.kernel_manager import load_program
 
 from yapocis.utils.basic import set_margin, set_frame
 from yapocis.lib.gradient import Gradient
-
-from yapocis.lib.operators import sub_res
+from yapocis.lib.operators import Operators
+from yapocis.lib.zc import ZC
 from yapocis.utils.typing import *
 from .bound_kernels import BoundKernels
 
@@ -104,8 +104,9 @@ class Gaussian(BoundKernels):
         convsv = [("gauss%s_v" % len(a), a) for a in gws]
         super(Gaussian, self).__init__(device_name=device_name, convs=convs)
         kmgr = self.kmgr
-        self.zcs = load_program("zcs", device_name=device_name)
+        self.zc = ZC(device_name=device_name)
         self.grad = Gradient(device_name=device_name)
+        self.ops = Operators(device_name=device_name)
         self.gaussian_kernels: List[Kernel] = [getattr(kmgr, name) for (name, conv) in convs]
         for i, (name, conv) in enumerate(convs):
             self.gaussian_kernels[i].res = getattr(kmgr, convsres[i][0])
@@ -134,34 +135,10 @@ class Gaussian(BoundKernels):
         return a
 
     def zcs(self, image):
-        if len(image.shape) == 2:
-            handler = self.zcs.zcs1
-            global_size = image.size
-        elif image.shape[2] == 2:
-            handler = self.zcs.zcs2
-            global_size = image.size // 2
-        elif image.shape[2] == 3:
-            handler = self.zcs.zcs3
-            global_size = image.size // 3
-        elif image.shape[2] == 4:
-            handler = self.zcs.zcs4
-            global_size = image.size // 4
-        return handler(image, global_size=global_size)
+        return self.zc.zcs(image)
 
     def zcs_res(self, image, zcs):
-        if len(image.shape) == 2:
-            handler = self.zcs.zcs1_res
-            global_size = image.size
-        elif image.shape[2] == 2:
-            handler = self.zcs.zcs2_res
-            global_size = image.size // 2
-        elif image.shape[2] == 3:
-            handler = self.zcs.zcs3_res
-            global_size = image.size // 3
-        elif image.shape[2] == 4:
-            handler = self.zcs.zcs4_res
-            global_size = image.size // 4
-        handler(image, zcs, global_size=global_size)
+        return self.zc.zcs_res(image, zcs)
 
     def zcsdog(self, a: Image1, scale: int, clearmargin: bool = True, frame: bool = True, res: bool = True) -> \
             Tuple[Image1, Image1, Image1]:
@@ -181,15 +158,15 @@ class Gaussian(BoundKernels):
             g.res(1, tmp, smaller)
             g1.res(0, a, tmp)
             g1.res(1, tmp, larger)
-            self.zcs.sub_res(larger, smaller, tmp)
-            self.zcs.zcs1_res(tmp, zca)
+            self.ops.sub_res(larger, smaller, tmp)
+            self.zcs_res(tmp, zca)
             g.read(zca)
             g.read(smaller)
         else:
             smaller = self.gauss_image(a, scale)
             larger = self.gauss_image(a, scale + 1)
             dog = smaller - larger
-            zca = self.zcs.zcs(dog)
+            zca = self.zcs(dog)
         # Zero out of bounds and create a frame.
         grad, theta = self.grad.gradient(smaller)
         margin = self.gaussian_weights.get_gaussian_width(scale) + 1

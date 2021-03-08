@@ -3,15 +3,15 @@
 import numpy as np
 
 from yapocis.utils.basic import show_array, stage
-from yapocis.lib.hsi import rgb2hsi, rgb2hsi3, hsi2rgb3
 from yapocis.lib.channels import split_channels, join_channels
 
-from yapocis.lib.operators import add, add_res, program, sub, sub_res, mul, mul_res
+from yapocis.lib.operators import Operators
+from yapocis.lib.hsi import HSI
 from yapocis.lib.median import Median
-
-from . import image_path_test, ASIZE
+from . import image_path_test, ASIZE, show_snapshots, snapshow, show, snapshot
 
 def test_hsi():
+    hsis = HSI()
     r = np.empty((ASIZE, ASIZE), dtype=np.float32)
     g = np.empty_like(r)
     b = np.empty_like(r)
@@ -21,26 +21,25 @@ def test_hsi():
         b[i, :] = ASIZE - i
     rgb = join_channels(r, g, b)
     rgb /= ASIZE
-    show_array("Test data", rgb)
+    show("Test data", rgb)
     r, g, b = split_channels(rgb)
     rgb2 = join_channels(r, g, b)
     assert np.sum(rgb-rgb2) == 0.0
-    h, s, i = rgb2hsi(r, g, b)
-    hsi3 = rgb2hsi3(rgb)
+    h, s, i = hsis.rgb2hsi(r, g, b)
+    hsi3 = hsis.rgb2hsi3(rgb)
     h3,s3,i3 = split_channels(hsi3)
     assert np.sum(i-i3) == 0.0
     assert np.sum(s-s3) == 0.0
     assert np.sum(h-h3) == 0.0
-    rgb3 = hsi2rgb3(hsi3)
+    rgb3 = hsis.hsi2rgb3(hsi3)
     assert abs(np.sum(rgb.ravel()-rgb3.ravel()))/rgb.size < .00001
     rgb4 = np.zeros((ASIZE,ASIZE,4), dtype=np.float32)
     rgb4[:,:,:3] = rgb[:,:,:]
-    hsi4 = rgb2hsi3(rgb4)
-    rgb5 = hsi2rgb3(hsi4)
+    hsi4 = hsis.rgb2hsi3(rgb4)
+    rgb5 = hsis.hsi2rgb3(hsi4)
     rgb5 = rgb5[:,:,:3]
     assert abs(np.sum(rgb.ravel()-rgb5.ravel()))/rgb.size < .00001
-    show_array("from HSI4", rgb5)
-    print(program)
+    snapshow(hsis, rgb5)
 
 
 def test_median3():
@@ -55,34 +54,37 @@ def test_median3():
     stage()
     error = np.sum(np.abs(b1.ravel() - b2.ravel()))
     assert error == 0.0
+    snapshot(median)
 
 
 def test_operators():
     # 1+0 -> 1
+    ops = Operators()
     a = np.ones((ASIZE, ASIZE), dtype=np.float32)
     b = np.zeros_like(a)
-    c = add(a, b)
+    c = ops.add(a, b)
     d = np.empty_like(a)
-    add_res(a, b, d)
+    ops.add_res(a, b, d)
     assert c.sum() == c.size * 1.0
-    program.read(d)
+    ops.read(d)
     assert a.sum() == c.sum()
     assert a.sum() == d.sum()
     # 1-1 == 0
     b[:, :] = 1.0
-    c = sub(a, b)
+    c = ops.sub(a, b)
     d[:, :] = 10
-    sub_res(a, b, d)
-    program.read(d)
+    ops.sub_res(a, b, d)
+    ops.read(d)
     assert c.sum() == 0.0
     assert c.sum() == d.sum()
     # 1*1 = 1
-    c = mul(a, b)
+    c = ops.mul(a, b)
     d[:, :] = 10
-    mul_res(a, b, d)
-    program.read(d)
+    ops.mul_res(a, b, d)
+    ops.read(d)
     assert a.sum() == c.sum()
     assert a.sum() == d.sum()
+    snapshot(ops)
 
 
 

@@ -9,7 +9,7 @@ from yapocis.rpc.device import get_device, get_available_device_names, get_avail
 from yapocis.rpc.device_manager import DeviceManager
 from yapocis.rpc.buffer_manager import BufferManager
 from yapocis.rpc.kernel_manager import load_program, import_program
-from . import cleanup
+from . import show_snapshots
 
 
 

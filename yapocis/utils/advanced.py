@@ -4,7 +4,7 @@ DEBUG = False
 import os, sys
 import copy
 from yapocis.utils.basic import *
-from yapocis.lib.kerneldraw import KernelDraw
+from yapocis.lib.kerneldraw1 import KernelDraw1
 from yapocis.lib.kerneldraw3 import KernelDraw3
 BENCHMARKING = os.environ.get('BENCHMARKING',None)
 
@@ -20,7 +20,7 @@ def sign(title: str, img: np.ndarray) -> np.ndarray:
     else:
         fheight = 16
     if len(img.shape) == 2:
-        ad = KernelDraw(img)
+        ad = KernelDraw1(img)
     elif len(img.shape) == 3 and img.shape[2] == 3:
         ad = KernelDraw3(img)
     ad.draw_string((10,10), title, color=1.0, size=fheight, alpha="bug")

@@ -3,8 +3,15 @@ Wrappers for binary operations of the form c = a + b, in both resident and inout
 """
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-from yapocis.rpc.kernel_manager import import_program
+from yapocis.lib.bound_kernels import BoundKernels
+from yapocis.utils.typing import *
 
-add = add_res = sub = sub_res = mul = mul_res = div = div_res = None
-program, _ = import_program("operators", import_kernels="*",
-                                                 operators=[("add", "+"), ("sub", "-"), ("mul", "*"), ("div", "/")])
+class Operators(BoundKernels):
+    INTERFACE = "operators"
+    OPERATORS = [("add", "+"), ("sub", "-"), ("mul", "*"), ("div", "/")]
+
+    def __init__(self, *args, **kwargs):
+        super(Operators, self).__init__(*args, operators=self.OPERATORS, **kwargs)
+
+    def __getattr__(self, attr: str) -> Callable:
+        return getattr(self.kmgr, attr)

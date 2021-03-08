@@ -10,13 +10,16 @@ from yapocis.lib.channels import split_channels, join_channels, join_planes, spl
 from yapocis.lib.hsi import *
 from yapocis.utils.basic import get_image_depth
 from yapocis.utils.typing import *
+from .hsi import HSI
 
 from .bound_kernels import BoundKernels
 
 class Anisodiff(BoundKernels):
     INTERFACE = "anisodiff"
     filter_by_depth = ["filterImage", "filterImage2", "filterImage3", "filterImage4"]
-
+    def __init__(self, device_name:Optional[str]=None, **kwargs):
+        super(Anisodiff, self).__init__(device_name=device_name, **kwargs)
+        self.hsi = HSI(device_name=device_name)
     def select_by_depth(self, image, suffix=""):
         depth = get_image_depth(image)
         attr = self.filter_by_depth[depth - 1]
@@ -104,13 +107,13 @@ class Anisodiff(BoundKernels):
         Returns:
            iterator of Image3
         """
-        H, S, I = rgb2hsi(*split_channels(rgb))
+        H, S, I = self.hsi.rgb2hsi(*split_channels(rgb))
         filtered = self.anisodiff(I, scale=scale, step_size=step_size)
 
         frame = 0
         while 1:
             fI = next(filtered)
-            rgb = join_channels(*hsi2rgb(H, S, fI))
+            rgb = join_channels(*self.hsi.hsi2rgb(H, S, fI))
             frame += 1
             yield rgb
 
@@ -129,9 +132,9 @@ class Anisodiff(BoundKernels):
             Returns:
                RGB array containing filtered image
          """
-        H, S, I = rgb2hsi(*split_channels(rgb))
+        H, S, I = self.hsi.rgb2hsi(*split_channels(rgb))
         fI = self.anisodiff_n(I, n, scale=scale, step_size=step_size)
-        rgb = join_channels(*hsi2rgb(H, S, fI))
+        rgb = join_channels(*self.hsi.hsi2rgb(H, S, fI))
         return rgb
 
     def anisodiff_rgbIS(self, rgb: Image3, scale: float = 3.0, step_size: float = .2) -> Iterator[Image3]:
@@ -147,7 +150,7 @@ class Anisodiff(BoundKernels):
         Returns:
            sequence of 3D Arrays
         """
-        H, S, I = rgb2hsi(*split_channels(rgb))
+        H, S, I = self.hsi.rgb2hsi(*split_channels(rgb))
         SI = join_planes(S, I)
         filteredSI = self.anisodiff(SI, scale=scale, step_size=step_size)
 
@@ -155,7 +158,7 @@ class Anisodiff(BoundKernels):
         while 1:
             fSI = next(filteredSI)
             fS, fI = split_planes(fSI)
-            rgb = join_channels(*hsi2rgb(H, fS, fI))
+            rgb = join_channels(*self.hsi.hsi2rgb(H, fS, fI))
             frame += 1
             yield rgb
 
@@ -174,9 +177,9 @@ class Anisodiff(BoundKernels):
         Returns:
            RGB array containing filtered image
         """
-        H, S, I = rgb2hsi(*split_channels(rgb))
+        H, S, I = self.hsi.rgb2hsi(*split_channels(rgb))
         SI = join_planes(S, I)
         fSI = self.anisodiff_n(SI, n, scale=scale, step_size=step_size)
         fS, fI = split_planes(fSI)
-        rgb = join_channels(*hsi2rgb(H, fS, fI))
+        rgb = join_channels(*self.hsi.hsi2rgb(H, fS, fI))
         return rgb

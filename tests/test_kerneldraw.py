@@ -5,18 +5,19 @@ import pytest
 
 from tests.test_graphics import random_ellipses, random_circles, random_rects, random_lines, random_composites, \
     random_sprites, random_colors, random_alpha, random_texts
-from yapocis.lib.kerneldraw import KernelDraw
+from yapocis.lib.kerneldraw1 import KernelDraw1
 from yapocis.utils.basic import show_array
-from . import ASIZE
+from yapocis.utils.typing import *
+from . import ASIZE, show_snapshots, snapshow
 
 def just_canvas():
     canvas = np.zeros((ASIZE, ASIZE), dtype=np.float32)
     return canvas
 
 
-def setup():
+def setup(device_name:Optional[str]=None, chunk_size:Optional[int]=None):
     canvas = just_canvas()
-    return canvas, KernelDraw(canvas)
+    return canvas, KernelDraw1(canvas, device_name=device_name, chunk_size=chunk_size)
 
 
 def show(label, a):
@@ -35,7 +36,7 @@ def test_batch():
     ad.draw_strings(locations, strings, fonts=fonts, sizes=sizes, alphas=text_alphas)
     ad.render()
     a = ad.read()
-    show(f"batch", a)
+    snapshow(ad, a)
 
 
 def fill_displaylist(ad,n=1000):
@@ -65,19 +66,17 @@ def test_displaylist():
     fill_displaylist(ad,100)
     ad.render()
     a = ad.read()
-    show(f"displaylist", a)
+    snapshow(ad, a)
 
 
 def test_chunking():
     times = []
-    for chunk_size in (None, 10, 100, 500, 10000):
-        canvas = just_canvas()
+    for chunk_size in (10, 100, 500):
+        canvas, ad = setup(chunk_size=chunk_size)
         t = time.time()
-        ad = KernelDraw(canvas, chunk_size=chunk_size)
-        fill_displaylist(ad)
+        fill_displaylist(ad,1000)
         ad.render()
         canvas = ad.read()
         times.append(time.time() - t)
-        show(f"Chunked {chunk_size} {times[-1]:.1f}", canvas)
-        del ad
+        snapshow(ad, f"{chunk_size} {times[-1]:.1f}", canvas)
     print(times)

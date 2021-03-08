@@ -11,7 +11,7 @@ from yapocis.lib.kerneldraw4 import KernelDraw4
 
 from tests.test_graphics4 import random_composites, random_sprites
 
-from . import ASIZE
+from . import ASIZE, snapshow, snapshot
 
 
 def just_canvas():
@@ -21,11 +21,6 @@ def just_canvas():
 def setup():
     canvas = just_canvas()
     return canvas, KernelDraw4(canvas)
-
-
-def show(label, a):
-    show_array(f"kerneldraw4: {label}", a)
-
 
 def test_batch():
     canvas, ad = setup()
@@ -43,7 +38,7 @@ def test_batch():
     ad.lines(lines, colors=random_colors(), distance=1.5)
     ad.render()
     a = ad.read()
-    show(f"batch", canvas)
+    snapshow(ad,a)
 
 
 def test_displaylist():
@@ -57,8 +52,8 @@ def test_displaylist():
     for x in range(0, ASIZE, 100):
         ad.draw_string((x, x), "Hello world!", color=[1, 1, 1, .5])
     ad.render()
-    canvas = ad.read()
-    show(f"displaylist", canvas)
+    a = ad.read()
+    snapshow(ad,a)
 
 
 def test_chunking():
@@ -69,7 +64,7 @@ def test_chunking():
     alphas = random_alpha(ELEMENTS)
 
     times = []
-    for chunk_size in (None, 10, 100, 500, 10000):
+    for chunk_size in (None, 10, 100, 500):
         canvas = just_canvas()
         t = time.time()
         ad = KernelDraw4(canvas, chunk_size=chunk_size)
@@ -82,5 +77,5 @@ def test_chunking():
         ad.render()
         canvas = ad.read()
         times.append(time.time() - t)
-        show(f"chunked {chunk_size} in {times[-1]:.1f}sec", canvas)
+        snapshow(ad, f"chunked {chunk_size} in {times[-1]:.1f}sec", canvas)
     print(times)

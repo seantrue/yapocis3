@@ -2,13 +2,13 @@
 import numpy as np
 import time
 
-from yapocis.rpc.kernel_manager import load_program
-from yapocis.utils.basic import show_array
 from yapocis.rpc.device import get_available_device_names
 
 from yapocis.lib.gaussian import Gaussian, GaussianWeights, are_close
 from yapocis.lib.gradient import Gradient
-from . import cleanup
+from yapocis.lib.hsi import HSI
+from yapocis.lib.channels import split_planes
+from . import show_snapshots, snapshow, show, image_test
 
 def test_gaussian_1d():
     "Make sure that the kernel sums back to 1"
@@ -47,48 +47,43 @@ def test_gauss_image():
         for xy in range(400):
             a[xy, xy] = 1.0
         b = g.gauss_image(a, scale)
-        show_array(f"gauss scale {scale}", b)
-    g.snapshot(test="gauss_image")
+        snapshow(g, f"scale {scale}", b)
 
 
 def test_zcs():
     g = Gaussian()
     image = np.zeros((512, 512), dtype=np.float32)
     image[255, 255] = 1.0
-    smaller = g.gauss_image(image, 2)
-    larger = g.gauss_image(image, 3)
+    smaller = g.gauss_image(image, 4)
+    larger = g.gauss_image(image, 5)
     dog = smaller - larger
-    zca = g.zcs.zcs1(dog)
-    g.snapshot(test="zcs")
-    show_array("gauss 2", smaller)
-    show_array("gauss 3", larger)
-    show_array("dog", dog)
-    show_array("zca", zca)
+    zca = g.zcs(dog)
+    show("scale 4", smaller)
+    show("scale 5", larger)
+    show("dog", dog)
+    snapshow(g, zca)
 
-# def test_zcs_scales():
-#     g = Gaussian()
-#     for res in (False, True):
-#         subtotal = 0.0
-#         for scale in range(g.get_scales() - 1):
-#             a = np.zeros((400, 400), dtype=np.float32)
-#             a[200, :] = 1.0
-#             a[:, 200] = 1.0
-#             t = time.time()
-#             zca, grad, theta = g.zcsdog(a, scale)
-#             subtotal += (time.time() - t)
-#             show_array("org %s" % scale, a)
-#             show_array("zcs %s" % scale, zca)
-#             show_array("grad %s" % scale, grad)
-            # show_array("theta %s" % scale, theta)
-        # print("Res", res, "seconds", subtotal)
+def test_zcs_scales():
+    for device_name in get_available_device_names():
+        g = Gaussian(device_name=device_name)
+        subtotal = 0.0
+        for scale in range(g.get_scales() - 1):
+            a = np.zeros((400, 400), dtype=np.float32)
+            a[200, :] = 1.0
+            a[:, 200] = 1.0
+            t = time.time()
+            zca, grad, theta = g.zcsdog(a, scale, res=True)
+            subtotal += (time.time() - t)
+            snapshow(g, f"{subtotal:.03f}", zca)
+        print(f" {device_name} {subtotal:.03f} seconds")
 
 
 def test_gradient():
-    a = np.random.sample((1000, 1000)).astype(np.float32)
+    img = image_test()
     for device_name in get_available_device_names():
+        hsi = HSI(device_name=device_name)
         g = Gradient(device_name=device_name)
-        t = time.time()
-        gr,th = g.gradient(a, 3)
-        elapsed = time.time()-t
-        show_array(f"Gradient {device_name} {elapsed}", gr)
-        g.snapshot(name="gradient")
+        _,_,I = hsi.rgb2hsi(*split_planes(img))
+        gr,th = g.gradient(I, 3)
+        show(device_name, "theta",th)
+        snapshow(g, device_name, "grad", gr)

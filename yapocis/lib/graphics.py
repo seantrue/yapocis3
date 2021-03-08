@@ -7,55 +7,7 @@ import numpy as np
 
 from yapocis.lib.typeset import render_text, compute_offset
 from yapocis.utils.basic import compute_360_to_180
-from .abstract_graphics import AbstractGraphicsSetup, AbstractGraphics
-
-
-def arrayify1d(scalar_or_vector, length, default=None, dtype=np.float32):
-    scalar_or_vector = default if scalar_or_vector is None else scalar_or_vector
-    if scalar_or_vector is None:
-        raise ValueError(f"Both value and default are None")
-    if isinstance(scalar_or_vector, np.ndarray):
-        vector = scalar_or_vector.astype(dtype, copy=False)
-    elif isinstance(scalar_or_vector, (list, tuple)):
-        vector = np.array(scalar_or_vector, dtype=dtype)
-    else:
-        vector = np.empty(length, dtype=dtype)
-        vector[:] = scalar_or_vector
-    if vector.shape[0] != length:
-        raise ValueError(f"value length {vector.shape[0]} does not match specified {length}")
-    return vector
-
-
-def arrayify2d(scalar_or_vector, length, width, default=None, dtype=np.float32):
-    if scalar_or_vector is None and default is None:
-        raise ValueError(f"Both value and default are None")
-    scalar_or_vector = [default] * width if scalar_or_vector is None else scalar_or_vector
-    if isinstance(scalar_or_vector, (list, tuple, np.ndarray)):
-        vector = np.array(scalar_or_vector, dtype=dtype)
-    if len(vector.shape) == 2:
-        if vector.shape[2] != width:
-            raise ValueError(f"shape {scalar_or_vector.shape} should be {length},{width}")
-        return vector
-    else:
-        vector = np.empty((length, width), dtype=dtype)
-        vector[:] = scalar_or_vector
-    return vector
-
-
-def to_list(scalar, vector, n, default=None):
-    if scalar is None and vector is None:
-        scalar = default
-    coerced = list(vector) if isinstance(vector, (tuple, list, np.ndarray)) else [scalar] * n
-    coerced = [default if value is None else value for value in coerced]
-    assert len(coerced) == n
-    return coerced
-
-
-def to_vector(scalar, vector, n, dtype=np.float32, default=None):
-    if scalar is None and vector is None:
-        scalar = default
-    coerced = arrayify1d(scalar, n, dtype=dtype) if scalar else arrayify1d(vector, n, dtype=dtype)
-    return coerced
+from .abstract_graphics import AbstractGraphicsSetup, AbstractGraphics, arrayify1d, to_list, to_vector
 
 
 class Graphics1Setup(AbstractGraphicsSetup):
@@ -73,8 +25,8 @@ class Graphics1Setup(AbstractGraphicsSetup):
             raise RuntimeError(f"Only one of color {color} and {colors}")
         if alpha and alphas:
             raise RuntimeError(f"Only one of color {alpha} and {alphas}")
-        colors = to_vector(color, colors, n)
-        alphas = to_vector(alpha, alphas, n, default=1.0)
+        colors = to_vector(color, colors, n, default=1.0, dtype=np.float32)
+        alphas = to_vector(alpha, alphas, n, default=1.0, dtype=np.float32)
         ca = np.column_stack([colors, alphas])
         return ca
 

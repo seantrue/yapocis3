@@ -9,53 +9,57 @@ Created on Jul 21, 2011
 import numpy as np
 from yapocis.utils.basic import imread
 from yapocis.utils.basic import show_array, show_arraygrad
-from yapocis.lib.median import median3x3
-from yapocis.lib.gradient import gradient
-from yapocis.lib.hsi import rgb2hsi, hsi2rgb
+from yapocis.lib.median import Median
+from yapocis.lib.gradient import Gradient
+from yapocis.lib.hsi import HSI
+from yapocis.lib.gaussian import Gaussian
 from yapocis.lib.channels import split_channels, join_channels
-from yapocis.lib.gaussian import gauss_image
 
 
-def test():
+def main():
+    median = Median()
+    gradient = Gradient()
+    hsi = HSI()
+    gaussian = Gaussian()
     # Load the test image and reduce dimensions
     image = np.float32(imread("tests/test.jpg"))
     image /= 256.
-    image_fs = image
-    image = image_fs[::2,::2,:]
+    image = image[::2, ::2, :]
 
     show_array("Original", image)
     # Add noise to the image
-    image = image *.8 + np.random.uniform(0,.2,image.shape)
+    image = image * .8 + np.random.uniform(0, .2, image.shape)
     show_array("Noisy", image)
 
-    image = median3x3(image, 100)
+    image = median.median3x3(image, 100)
     show_array("Filtered", image)
-    
-    r,g,b = split_channels(image)
-    h,s,i = rgb2hsi(r,g,b)
+
+    r, g, b = split_channels(image)
+    h, s, i = hsi.rgb2hsi(r, g, b)
     show_array("I", i)
     show_array("S", s)
     show_array("H", h)
 
-    h,s,i = rgb2hsi(r,g,b)
-    blur = gauss_image(i, 3)
+    h, s, i = hsi.rgb2hsi(r, g, b)
+    blur = gaussian.gauss_image(i, 3)
     show_array("Blur", blur)
-    blurmore = gauss_image(i, 4)
-    dog = blur-blurmore
+    more_blurred = gaussian.gauss_image(i, 4)
+    dog = blur - blurmore
     show_array("DOG", dog)
-    
-    h,s,i = rgb2hsi(r,g,b)
-    g,a = gradient(i,5)
+
+    h, s, i = hsi.rgb2hsi(r, g, b)
+    g, a = gradient.gradient(i, 5)
     show_array("Gradient", g)
     show_array("Angle", a)
-    g,a = gradient(i,5)
+    g, a = gradient.gradient(i, 5)
     sat = np.ones_like(i)
-    gimg = join_channels(*hsi2rgb(a, sat, g))
+    gimg = join_channels(*hsi.hsi2rgb(a, sat, g))
     show_array("Color gradient with angle", gimg)
-    g,a = gradient(i,5)
+    g, a = gradient.gradient(i, 5)
     show_arraygrad("Grad angle", image, a)
-    g,a = gradient(i,5)
+    g, a = gradient.gradient(i, 5)
     show_arraygrad("Grad vectors", image, a, g * 10)
-   
+
+
 if __name__ == '__main__':
-    test()
+    main()

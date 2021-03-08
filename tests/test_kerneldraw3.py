@@ -1,21 +1,15 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
-import pytest
 import numpy as np
 
 from tests.test_graphics import random_ellipses, random_circles, random_rects, random_lines, random_triangles, \
-    random_colors, random_alpha, ASIZE, random_texts
-from yapocis.utils.basic import show_array
-from yapocis.lib.channels import join_channels
+    random_colors, random_alpha, random_texts
 from yapocis.lib.kerneldraw3 import KernelDraw3
 
-from . import ASIZE
+from . import ASIZE, snapshow, show_snapshots
 
 def setup():
     canvas = np.zeros((ASIZE, ASIZE,3),dtype=np.float32)
     return canvas, KernelDraw3(canvas)
-
-def show(label, a):
-    show_array(f"kerneldraw3: {label}", a)
 
 def test_batch():
     canvas, ad = setup()
@@ -44,8 +38,7 @@ def test_batch():
     ad.draw_strings(locations, strings, fonts=fonts, sizes=sizes, rotations=rotations, colors=colors, alpha="mask")
     ad.render()
     a = ad.read()
-    show(f"batch 3", a)
-
+    snapshow(ad, a)
 
 def test_displaylist():
     canvas, ad = setup()
@@ -64,4 +57,4 @@ def test_displaylist():
         ad.draw_string((x // 2, x), "Hello world!", alpha="bug")
     ad.render()
     a = ad.read()
-    show(f"displaylist", a)
+    snapshow(ad, a)

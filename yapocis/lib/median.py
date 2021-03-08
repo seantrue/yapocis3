@@ -11,8 +11,9 @@ from .bound_kernels import BoundKernels
 
 
 class Median(BoundKernels):
+    INTERFACE="median3x3"
     def __init__(self, device_name: Optional[str] = None):
-        super().__init__("median3x3", device_name=device_name, width=9, steps=[9])
+        super().__init__(device_name=device_name, width=9, steps=[9])
 
     def median3x3slow(self, image: Image1, iterations: int = 1) -> Image1:
         """

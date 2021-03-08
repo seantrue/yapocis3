@@ -2,11 +2,11 @@
 
 from yapocis.lib.anisodiff import Anisodiff
 from yapocis.lib.channels import split_planes, join_planes
-from yapocis.lib.hsi import rgb2hsi3, hsi2rgb3
+from yapocis.lib.hsi import HSI
 from yapocis.utils.basic import show_array
 from yapocis.utils.config import get_device_config
 from yapocis.utils.typing import *
-from . import image_test, cleanup
+from . import image_test, show_snapshots, snapshow
 
 import time
 class TS:
@@ -17,9 +17,9 @@ class TS:
     def __enter__(self):
         self.t = time.time()
         return self
-    def __call__(self, *args):
+    def __call__(self, snapper, *args):
         t = time.time()-self.t
-        show_array(f"{self.label}: {t:.03f}sec", *self.args, *args)
+        snapshow(snapper, f"{t:.03f}sec", *self.args, *args,depth=3)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         return
@@ -34,22 +34,21 @@ def setup(device_name:Optional[str]=None):
 
 def test_anisodiff_I():
     rgb, aniso = setup()
-    hsi = rgb2hsi3(rgb)
+    hsis = HSI()
+    hsi = hsis.rgb2hsi3(rgb)
     H,S,I = split_planes(hsi)
     with TS(f"[generator {N}]") as show:
         for i, fI in enumerate(aniso.anisodiff(I)):
             if i >= N:
                 break
         hsi = join_planes(H,S,fI)
-        rgb2 = hsi2rgb3(hsi)
-        show("I", rgb2)
-    aniso.snapshot(test="generator I")
+        rgb2 = hsis.hsi2rgb3(hsi)
+        show(aniso, rgb2)
     with TS(f"[{N}]") as show:
         fI = aniso.anisodiff_n(I, N)
         hsi = join_planes(H,S,fI)
-        rgb2 = hsi2rgb3(hsi)
-        show("I", rgb2)
-    aniso.snapshot(test="iterator I")
+        rgb2 = hsis.hsi2rgb3(hsi)
+        show(aniso, rgb2)
 
 def test_anisodiff_IS():
     from yapocis.rpc.device import get_available_device_names
@@ -59,25 +58,23 @@ def test_anisodiff_IS():
             for i, rgb2 in enumerate(aniso.anisodiff_rgbIS(rgb)):
                 if i >= N:
                     break
-            show(f"IS", rgb2)
-        aniso.snapshot(test="generator IS")
+            show(aniso, rgb2)
         with TS(f"[{N}] {device_name[:24]}") as show:
             rgb2 = aniso.anisodiff_rgbIS_n(rgb, N)
-            show(f"IS", rgb2)
-        aniso.snapshot(test="iterator IS")
+            show(aniso, rgb2)
 
 def test_anisodiff1():
     from yapocis.rpc.device import get_available_device_names
     for device_name in get_available_device_names():
         rgb, aniso = setup(device_name=device_name)
-        hsi = rgb2hsi3(rgb)
+        hsis = HSI(device_name=device_name)
+        hsi = hsis.rgb2hsi3(rgb)
         H,S,I = split_planes(hsi)
         with TS(f"[{N}] on {device_name[:24]}") as show:
             fI = aniso.anisodiff_n(I, N)
             hsi = join_planes(H,S,fI)
-            rgb2 = hsi2rgb3(hsi)
-            show("vector1", rgb2)
-            aniso.snapshot(test="aniso1")
+            rgb2 = hsis.hsi2rgb3(hsi)
+            show(aniso, rgb2)
 
 
 def test_anisodiff2():
@@ -95,8 +92,7 @@ def test_anisodiff2():
             rg2 = aniso.anisodiff_n(rg, N)
             r2,g2 = split_planes(rg2)
             rgb2 = join_planes(r2,g2, b)
-            show("vector2 RG", rgb2)
-            aniso.snapshot(test="aniso2")
+            show(aniso, rgb2)
 
 
 def test_anisodiff3():
@@ -110,8 +106,7 @@ def test_anisodiff3():
         rgb, aniso = setup(device_name=device_name)
         with TS(f"[{N}] on {device_name[:24]}") as show:
             rgb2 = aniso.anisodiff_n(rgb,N)
-            show("vector3", rgb2)
-            aniso.snapshot(test="aniso3")
+            show(aniso, rgb2)
 
 
 def test_anisodiff4():
@@ -124,5 +119,4 @@ def test_anisodiff4():
         rgba[:, :, :3] = rgb
         with TS(f"[{N}] on {device_name[:24]}") as show:
             rgba2 = aniso.anisodiff_n(rgba, N)
-            show(f"vector4", rgba2[:, :, :3])
-            aniso.snapshot(test="aniso4")
+            show(aniso,rgba2[:, :, :3])

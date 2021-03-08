@@ -69,6 +69,8 @@ class BufferManager:
                 self.purged += 1
 
     def make_buffer(self, a:Array) -> pyopencl.Buffer:
+        if not a.data.contiguous:
+            raise RuntimeError(f"Array {id(a)} {a.shape} is not contiguous")
         buf = pyopencl.Buffer(self.ctx, self.MEMFLAGS, hostbuf=a)
         buffer_id = id(a)
         self.arrays[buffer_id] = a

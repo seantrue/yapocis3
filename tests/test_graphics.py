@@ -6,11 +6,11 @@ import numpy as np
 
 from yapocis.utils.basic import show_array
 from yapocis.lib.channels import split_channels
-from yapocis.lib.hsi import rgb2hsi
+from yapocis.lib.hsi import HSI
 from yapocis.lib.graphics import Graphics1
 
-from . import image_test, ASIZE, interesting_words, double_shuffle, show, snapshow, cleanup
-
+from . import image_test, ASIZE, interesting_words, double_shuffle, show, snapshow, show_snapshots
+hsis = HSI()
 
 def setup():
     return np.zeros((ASIZE, ASIZE)).astype(np.float32), Graphics1()
@@ -18,7 +18,7 @@ def setup():
 def image_source(align=5):
     image = image_test()
     r, g, b = split_channels(image)
-    h, s, i = rgb2hsi(r, g, b)
+    h, s, i = hsis.rgb2hsi(r, g, b)
     d = min(*i.shape)
     d = d - int(d % align);
     i = i[:d, :d]
@@ -218,7 +218,7 @@ def test_composite_mosaic():
     image = image_test()
     from random import shuffle
     r, g, b = split_channels(image)
-    h, s, i = rgb2hsi(r, g, b)
+    h, s, i = hsis.rgb2hsi(r, g, b)
     d = min(*i.shape)
     d = d - int(d % 5);
     i = i[:d, :d]

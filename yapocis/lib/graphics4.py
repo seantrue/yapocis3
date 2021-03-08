@@ -7,22 +7,19 @@ import numpy as np
 
 from yapocis.lib.typeset import render_text, compute_offset
 from yapocis.utils.basic import compute_360_to_180
-from yapocis.lib.abstract_graphics import AbstractGraphics, AbstractGraphicsSetup
-from yapocis.lib.graphics import to_list, to_vector
+from yapocis.lib.abstract_graphics import AbstractGraphics, AbstractGraphicsSetup, to_list, to_vector
 
 
-
-
-def arrayify(scalar_or_vector, size):
-    scalar_or_vector = 1.0 if scalar_or_vector is None else scalar_or_vector
+def arrayify(scalar_or_vector, size, dtype=np.float32):
+    scalar_or_vector = dtype(1.0) if scalar_or_vector is None else scalar_or_vector
     if isinstance(scalar_or_vector, np.ndarray):
         if len(scalar_or_vector.shape) == 2:
             vector = scalar_or_vector
-        if len(scalar_or_vector) == 4:
-            vector = np.zeros((size), dtype=np.float32)
+        elif len(scalar_or_vector) == 4:
+            vector = np.empty(size, dtype=dtype)
             vector[:,:] = scalar_or_vector
     else:
-        vector = np.zeros((size), dtype=np.float32)
+        vector = np.empty(size, dtype=dtype)
         vector[:,:] = scalar_or_vector
     return vector
 
@@ -43,7 +40,7 @@ class GraphicsSetup4(AbstractGraphicsSetup):
         if color is None and colors is None:
             raise RuntimeError(f"Missing one of color or colors")
         if color:
-            color = to_vector(color, color, self.CHANNELS)
+            color = to_vector(color, color, self.CHANNELS, default=1.0, dtype=np.float32)
             colors = np.empty((n,self.CHANNELS), dtype=np.float32)
             colors[:] = color
         colors = arrayify(colors, (coords.shape[0],4))

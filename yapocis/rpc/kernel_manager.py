@@ -79,8 +79,9 @@ class KernelManager:
     def read(self, a):
         return self.dmgr.read(a)
 
-    def write(self, a):
-        return self.dmgr.write(a, wait=self.async_write)
+    def write(self, a, async_write=None):
+        async_write = self.async_write if async_write is None else async_write
+        return self.dmgr.write(a, wait=async_write)
 
     def purge(self):
         self.stats()

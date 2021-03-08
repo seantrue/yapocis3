@@ -1,13 +1,13 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-import numpy
+import numpy as np
 import numpy.linalg as la
 import time
 from yapocis.rpc.kernel_manager import load_program
 
 # We don't _need_ specify the dtype: that's done in the interface
-a = numpy.random.rand(50000)
-b = numpy.random.rand(50000)
+a = np.random.rand(50000)
+b = np.random.rand(50000).astype(np.float32)
 
 t = time.time()
 # We don't need to manage a compiler and linker, that can be done for us

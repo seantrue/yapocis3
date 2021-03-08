@@ -3,26 +3,33 @@
 import numpy as np
 
 from yapocis.lib.channels import split_planes
-from yapocis.lib.graphics import to_list, coerce_coords
-from yapocis.lib.kerneldraw import AbstractKernelDraw, KernelDraw
+from yapocis.lib.kerneldraw1 import KernelDraw1
+from yapocis.lib.abstract_graphics import AbstractKernelDraw, to_list
 
 
 class KernelDraw3(AbstractKernelDraw):
     COLOR_WIDTH = 3
-    def __init__(self, a: np.ndarray):
-        super(KernelDraw3, self).__init__()
+    def __init__(self, a: np.ndarray,**kwargs):
+        super(KernelDraw3, self).__init__(a, **kwargs)
         self.a = a
         self.color = (None, None, None)
         self.alpha = 1.0
-        self.channels = list(split_planes(a))
-        self.ads = [KernelDraw(a) for a in self.channels]
+        self.channels = [np.ascontiguousarray(pl) for pl in split_planes(a)]
+        self.ads = [KernelDraw1(a, **kwargs) for a in self.channels]
+
+    def coerce_coords(self, coords, width, dtype=np.int32, **kwargs):
+        if not hasattr(coords, "dtype"):
+            coords = np.array(coords, dtype=dtype)
+        assert len(coords.shape) == 2 and coords.shape[1] == width
+        return coords
+
 
     def set_color(self, color, alpha=None):
         self.color = color
         self.alpha = self.alpha if alpha is None else self.alpha
 
     def prepare_args(self, coords, width, **kwargs):
-        coords = coerce_coords(coords, width)
+        coords = self.coerce_coords(coords, width)
         colors = self.coerce_colors(len(coords), **kwargs)
         alphas = self.coerce_alphas(len(coords), **kwargs)
         return coords, colors, alphas
@@ -75,3 +82,7 @@ class KernelDraw3(AbstractKernelDraw):
         for i, channel in enumerate(self.channels):
             self.a[:, :, i] = channel
         return self.a
+
+    def snapshot(self, **kwargs):
+        for ad in self.ads:
+            ad.snapshot(**kwargs)

@@ -48,7 +48,7 @@ def double_shuffle(lst, n):
     return lst
 
 @pytest.fixture(scope="session", autouse=True)
-def cleanup(request):
+def show_snapshots(request):
     from yapocis.rpc.device_manager import display_snapshots
     request.addfinalizer(display_snapshots)
 
@@ -75,7 +75,7 @@ def snapshot(snapper):
     tname, fname = name_of_test(2)
     snapper.snapshot(name=f"{fname}/{tname}")
 
-def snapshow(snapper, *args):
-    tname, fname = name_of_test(2)
+def snapshow(snapper, *args, depth=2):
+    tname, fname = name_of_test(depth)
     snapper.snapshot(name=f"{fname}/{tname}")
     show_array(f"{fname}: {tname}", *args)
