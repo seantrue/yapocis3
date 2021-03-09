@@ -1,13 +1,12 @@
 # Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-import pytest
-
-import numpy as np
 from random import randint, shuffle
 
 from yapocis.lib.graphics4 import Graphics4
 from tests.test_graphics import random_texts
 from yapocis.icons import icons, icon
+from yapocis.utils.typing import *
+
 from . import image_test, text_test_lines, ASIZE, double_shuffle, snapshow, show_snapshots
 
 

@@ -10,7 +10,7 @@ from mako.template import Template
 from yapocis.rpc.device_manager import get_device_manager
 from yapocis.rpc.kernel import Kernel
 from yapocis.rpc.interface import Interface, get_interface, load_interface
-from yapocis.utils.internals import find_yapocis_file
+from yapocis.utils.internals import find_yapocis_file, get_yapocis_dir
 from yapocis.utils.typing import Context
 
 
@@ -26,8 +26,11 @@ def render_program(base_filename: str, **context: Context) -> str:
             break
     if not tfilename:
         raise Exception("Can't find template '%s'" % filename)
-    mylookup = TemplateLookup(directories=[os.path.dirname(tfilename)])
-    t = Template(filename=tfilename, lookup=mylookup)
+    template_directories = [os.path.dirname(tfilename)]
+    mako_modules = os.path.join(get_yapocis_dir(), "mako_modules")
+    mylookup = TemplateLookup(directories=template_directories, module_directory=mako_modules)
+    filename = os.path.split(tfilename)[-1]
+    t = mylookup.get_template(filename)
     source = str(t.render(**context))
     return source
 

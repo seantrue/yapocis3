@@ -2,6 +2,7 @@
 import inspect
 import os
 import string
+import time
 from random import shuffle
 import pytest
 import numpy as np
@@ -79,3 +80,19 @@ def snapshow(snapper, *args, depth=2):
     tname, fname = name_of_test(depth)
     snapper.snapshot(name=f"{fname}/{tname}")
     show_array(f"{fname}: {tname}", *args)
+
+
+class TS:
+    label = "anisodiff"
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+    def __enter__(self):
+        self.t = time.time()
+        return self
+    def __call__(self, snapper, *args):
+        t = time.time()-self.t
+        snapshow(snapper, f"{t:.03f}sec", *self.args, *args,depth=3)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return

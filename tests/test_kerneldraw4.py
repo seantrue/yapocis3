@@ -1,12 +1,12 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-import pytest
 import time
 import numpy as np
 
 from tests.test_graphics4 import random_ellipses, random_circles, random_rects, random_lines, random_triangles, \
     random_colors, random_alpha
-from yapocis.utils.basic import show_array
+from yapocis.utils.typing import Optional
+
 from yapocis.lib.kerneldraw4 import KernelDraw4
 
 from tests.test_graphics4 import random_composites, random_sprites
@@ -18,9 +18,9 @@ def just_canvas():
     return np.zeros((ASIZE, ASIZE, 4), dtype=np.float32)
 
 
-def setup():
+def setup(device_name:Optional[str]=None, chunk_size:Optional[int]=None):
     canvas = just_canvas()
-    return canvas, KernelDraw4(canvas)
+    return canvas, KernelDraw4(canvas, device_name=device_name,chunk_size=chunk_size)
 
 def test_batch():
     canvas, ad = setup()

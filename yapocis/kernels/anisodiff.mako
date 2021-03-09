@@ -1,22 +1,7 @@
 /* Perona-Malik filter */
 
-#define ZERO 0.0f
-#define ZERO2 (float2)(ZERO,ZERO)
-#define ZERO3 (float3)(ZERO,ZERO,ZERO)
-#define ZERO4 (float4)(ZERO,ZERO,ZERO,ZERO)
-#define ONE 1.0f
-#define ONE2 (float2)(ONE,ONE)
-#define ONE3 (float3)(ONE,ONE,ONE)
-#define ONE4 (float4)(ONE,ONE,ONE,ONE)
-#define FLOAT float
-#define FLOAT2 float2
-#define FLOAT3 float3
-#define FLOAT4 float4
-
+<%include file="constants.mako" />
 %for planes in ["",2,3,4]:
-#define ZEROS ZERO${planes}
-#define ONES ONE${planes}
-#define FLOAT float${planes}
 
 __kernel 
 void filterImage${planes}(int width, int height, __global FLOAT${planes} *input, float scale, float step_size, __global FLOAT${planes} *output)
@@ -35,19 +20,19 @@ void filterImage${planes}(int width, int height, __global FLOAT${planes} *input,
       FLOAT${planes} w = input[i+height];
       FLOAT${planes} di = n-central;
       CF = di*invscale;
-      CF = ONES/(ONES + (CF * CF));
+      CF = ONE${planes}/(ONE${planes} + (CF * CF));
       FLOAT${planes} accumulator = di * CF;
       di = s-central;
       CF = (di*invscale);
-      CF = ONES/(ONES + (CF * CF));
+      CF = ONE${planes}/(ONE${planes} + (CF * CF));
       accumulator += di * CF;
       di = e-central;
       CF = (di*invscale);
-      CF = ONES/(ONES + (CF * CF));
+      CF = ONE${planes}/(ONE${planes} + (CF * CF));
       accumulator += di * CF;
       di = w-central;
       CF = (di*invscale);
-      CF = ONES/(ONES + (CF * CF));
+      CF = ONE${planes}/(ONE${planes} + (CF * CF));
       accumulator += di * CF;
       accumulator *= step_size;
       central += accumulator;

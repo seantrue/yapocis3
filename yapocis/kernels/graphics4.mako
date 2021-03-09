@@ -2,16 +2,16 @@
 // array[,,3] is the "alpha" channel
 // The alpha channel is ignored (but must be present) for the input/output array (a)
 // Colors are [N,4] where color[,3] is the alpha and is _not_ ignored
-#define READONLY __global
-#define READWRITE __global
+
+<%include file="constants.mako" />
 
 __inline float dxdy2(float2 a, float2 b) {
     float2 dxdy =  (a-b)*(a-b);
     return dxdy.x + dxdy.y;
 }
 
-#define ONES (float4)(1.0f, 1.0f, 1.0f, 1.0f)
-#define ZEROS (float4)(0.0f, 0.0f, 0.0f, 0.0f)
+#define ONES ONE4
+#define ZEROS ZERO4
 
 __kernel void lines(int width, int height, READWRITE float4 *a, int nelements,
                     READONLY float2 *coords, float rdist,

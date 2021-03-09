@@ -5,6 +5,9 @@ from typing import Optional, List
 
 import yapocis
 
+def get_yapocis_dir():
+    yapocis_dir = os.path.dirname(yapocis.__file__)
+    return yapocis_dir
 
 def get_project_dir() -> Optional[str]:
     yapocis_project = os.environ.get("YAPOCIS_PROJECT",None)
@@ -13,9 +16,8 @@ def get_project_dir() -> Optional[str]:
     else:
         return None
 
-
 def get_yapocis_dirs() -> List[str]:
-    yapocis_dir = os.path.dirname(yapocis.__file__)
+    yapocis_dir = get_yapocis_dir()
     current_dir = os.getcwd()
     directories = [yapocis_dir, current_dir]
     project_dir = get_project_dir()

@@ -195,7 +195,7 @@ class AbstractKernelDraw:
 
 
     # Add item to display list for batch rendering
-    def line(self, xyxy, distance=1.0, **kwargs):
+    def line(self, xyxy, distance=1.5, **kwargs):
         self._lines.append((xyxy, distance, kwargs))
 
     def rect(self, rect, **kwargs):

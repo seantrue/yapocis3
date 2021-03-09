@@ -32,9 +32,11 @@ class DeviceManager(BufferManager):
         self.context_meta = {}
         self.autoflatten = autoflatten
 
-    def build(self, source: str) -> pyopencl.Program:
+    def build(self, source: str, options=None) -> pyopencl.Program:
         binary = pyopencl.Program(self.ctx, source)
-        program = binary.build(options=["-w"], cache_dir=YAPOCIS_CACHE)
+        options =  ["-w","-cl-fast-relaxed-math", "-cl-mad-enable","-cl-no-signed-zeros","-cl-finite-math-only"] if options is None else options
+
+        program = binary.build(options=options, cache_dir=YAPOCIS_CACHE)
         return program
 
     def purge(self):

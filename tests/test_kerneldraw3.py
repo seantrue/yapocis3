@@ -3,13 +3,14 @@ import numpy as np
 
 from tests.test_graphics import random_ellipses, random_circles, random_rects, random_lines, random_triangles, \
     random_colors, random_alpha, random_texts
+from yapocis.utils.typing import Optional
 from yapocis.lib.kerneldraw3 import KernelDraw3
 
 from . import ASIZE, snapshow, show_snapshots
 
-def setup():
+def setup(device_name:Optional[str]=None, chunk_size:Optional[int]=None):
     canvas = np.zeros((ASIZE, ASIZE,3),dtype=np.float32)
-    return canvas, KernelDraw3(canvas)
+    return canvas, KernelDraw3(canvas, chunk_size=chunk_size, device_name=device_name)
 
 def test_batch():
     canvas, ad = setup()

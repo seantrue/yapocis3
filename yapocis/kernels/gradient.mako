@@ -1,22 +1,5 @@
-#define ADDRESS(xx,yy) (((xx)*height)+(yy))
-#define X(addr) ((addr)/height)
-#define Y(addr) ((addr)%height)
 
-
-
-#define FLOAT float
-#define FLOAT2 float2
-#define FLOAT3 float3
-#define FLOAT4 float4
-
-#define ZERO 0.0f
-#define ZERO2 (FLOAT2)(ZERO,ZERO)
-#define ZERO3 (FLOAT3)(ZERO,ZERO,ZERO)
-#define ZERO4 (FLOAT4)(ZERO,ZERO,ZERO,ZERO)
-#define ONE 1.0f
-#define ONE2 (FLOAT2)(ONE,ONE)
-#define ONE3 (FLOAT3)(ONE,ONE,ONE)
-#define ONE4 (FLOAT4)(ONE,ONE,ONE,ONE)
+<%include file="constants.mako" />
 
 %for planes in ["",2,3,4]:
 __kernel

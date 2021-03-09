@@ -2,18 +2,16 @@
 
 from random import randint
 
-import numpy as np
-
-from yapocis.utils.basic import show_array
 from yapocis.lib.channels import split_channels
 from yapocis.lib.hsi import HSI
 from yapocis.lib.graphics import Graphics1
+from yapocis.utils.typing import *
 
 from . import image_test, ASIZE, interesting_words, double_shuffle, show, snapshow, show_snapshots
 hsis = HSI()
 
-def setup():
-    return np.zeros((ASIZE, ASIZE)).astype(np.float32), Graphics1()
+def setup(device_name:Optional[str]=None):
+    return np.zeros((ASIZE, ASIZE)).astype(np.float32), Graphics1(device_name=device_name)
 
 def image_source(align=5):
     image = image_test()

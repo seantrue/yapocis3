@@ -1,19 +1,18 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import pytest
-import time
-import numpy as np
+from yapocis.utils.typing import *
 
 from yapocis.rpc.interface import get_interface
-from yapocis.rpc.device import get_device, get_available_device_names, get_available_devices, get_platforms
+from yapocis.rpc.device import get_available_device_names
 from yapocis.rpc.device_manager import DeviceManager
-from yapocis.rpc.buffer_manager import BufferManager
 from yapocis.rpc.kernel_manager import load_program, import_program
 from . import show_snapshots
 
 
 
 def test_buffers():
+    # TODO: Test all available devices
     bmgr = DeviceManager()
     a = np.random.sample((100,)).astype(np.float32)
     b = a.copy()
@@ -52,7 +51,8 @@ def test_buffers():
     bmgr.snapshot(name="buffers")
 
 def test_buffers_async_write():
-    bmgr = DeviceManager(timed=True, device_name=2)
+    # TODO: Test all available devices
+    bmgr = DeviceManager(timed=True, device_name=0)
     a = np.random.sample((2000, 1000)).astype(np.float32)
     t = a.sum()
     for i in range(1000):
@@ -62,7 +62,7 @@ def test_buffers_async_write():
     assert a.sum() == t
     print(bmgr.snapshot(name="async_write"))
     del bmgr
-    bmgr = DeviceManager(timed=True, device_name=2)
+    bmgr = DeviceManager(timed=True, device_name=0)
     arrays = []
     a = np.random.sample((2000, 1000)).astype(np.float32)
     t = a.sum()
@@ -77,6 +77,7 @@ def test_buffers_async_write():
 
 
 def test_getinterface():
+    # TODO: replace with a more generic kernel
     interface = get_interface(
         """\
         interface boundedmedian {
@@ -125,6 +126,7 @@ def test_context():
 
 
 def test_demo_kernel():
+    # TODO: use load_program instead
     _, entrypoints = import_program("demo", import_kernels="*")
     print(sum,sum_res)
     assert sum == entrypoints[0]

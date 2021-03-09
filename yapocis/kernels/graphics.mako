@@ -1,5 +1,4 @@
-#define READONLY __constant
-#define READWRITE __global
+<%include file="constants.mako" />
 
 __inline float dxdy2(float2 a, float2 b) {
     float2 dxdy =  (a-b)*(a-b);

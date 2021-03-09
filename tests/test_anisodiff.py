@@ -3,31 +3,14 @@
 from yapocis.lib.anisodiff import Anisodiff
 from yapocis.lib.channels import split_planes, join_planes
 from yapocis.lib.hsi import HSI
-from yapocis.utils.basic import show_array
 from yapocis.utils.config import get_device_config
 from yapocis.utils.typing import *
-from . import image_test, show_snapshots, snapshow
+from . import image_test, TS, show_snapshots
 
-import time
-class TS:
-    label = "anisodiff"
-    def __init__(self, *args, **kwargs):
-        self.args = args
-        self.kwargs = kwargs
-    def __enter__(self):
-        self.t = time.time()
-        return self
-    def __call__(self, snapper, *args):
-        t = time.time()-self.t
-        snapshow(snapper, f"{t:.03f}sec", *self.args, *args,depth=3)
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        return
 
 N = 100
 
 
-# Note: Don't make this a fixture, we want a fresh one every time
 def setup(device_name:Optional[str]=None):
     image = image_test()
     return image, Anisodiff(device_name=device_name)

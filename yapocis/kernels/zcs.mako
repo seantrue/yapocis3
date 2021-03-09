@@ -5,7 +5,7 @@
 #define ONE 1.0f
 
 %for planes in [1,2,3,4]:
-#define ADDRESS(xx,yy) ((((yy)*height)+(xx))*${planes})
+#define ADDRESS${planes}(xx,yy) ((((yy)*height)+(xx))*${planes})
 
 __kernel
 void zcs${planes}(int width, int height, __global float* input, __global float* zcs )
@@ -17,8 +17,8 @@ void zcs${planes}(int width, int height, __global float* input, __global float* 
     float v, below, left;
     %for plane in range(planes):
     v = input[i];
-    below = input[ADDRESS(x,y-1)];
-    left = input[ADDRESS(x-1,y)];
+    below = input[ADDRESS${planes}(x,y-1)];
+    left = input[ADDRESS${planes}(x-1,y)];
     zclt = ((below < ZERO || left < ZERO) && v >= ZERO) ? ONE : ZERO;
     zcgt = ((below >= ZERO || left >= ZERO) && v < ZERO) ? ONE : ZERO;
     zcs[i] = max(zclt,zcgt);

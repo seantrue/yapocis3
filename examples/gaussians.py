@@ -44,7 +44,7 @@ def main():
     blur = gaussian.gauss_image(i, 3)
     show_array("Blur", blur)
     more_blurred = gaussian.gauss_image(i, 4)
-    dog = blur - blurmore
+    dog = blur - more_blurred
     show_array("DOG", dog)
 
     h, s, i = hsi.rgb2hsi(r, g, b)

@@ -4,10 +4,12 @@ import numpy as np
 
 from yapocis.utils.basic import show_array, stage
 from yapocis.lib.channels import split_channels, join_channels
+from yapocis.utils.typing import *
 
 from yapocis.lib.operators import Operators
 from yapocis.lib.hsi import HSI
 from yapocis.lib.median import Median
+
 from . import image_path_test, ASIZE, show_snapshots, snapshow, show, snapshot
 
 def test_hsi():
