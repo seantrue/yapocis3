@@ -84,7 +84,7 @@ def show_arraygrad(title, image, theta, grad = None) -> None:
     theta = theta[::10,::10]
     if grad is None:
         grad = np.zeros_like(theta)
-        grad[:, :] = 5
+        grad[:, :] = 20
     else:
         grad = grad[::10,::10]
         grad -= grad.min()

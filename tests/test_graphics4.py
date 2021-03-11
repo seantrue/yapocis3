@@ -9,7 +9,12 @@ from yapocis.utils.typing import *
 
 from . import image_test, text_test_lines, ASIZE, double_shuffle, snapshow, show_snapshots
 
-
+RED=[1,0,0,1]
+GREEN=[0,1,0,1]
+BLUE=[0,0,1,1]
+YELLOW=[.7,.7,0,1]
+WHITE=[1,1,1,1]
+PURPLE=[1,0,1,1]
 def setup(device_name=None):
     return np.zeros((ASIZE, ASIZE, 4)).astype(np.float32), Graphics4(device_name)
 
@@ -314,4 +319,14 @@ def test_typesetting():
         if "Tyger" in lines[i]:
             colors[i] = [1.0,.1,0,0.1]
     grph.draw_strings(canvas, locations, lines, sizes=sizes, colors=colors)
+    snapshow(grph, canvas)
+
+def test_one():
+    canvas, grph = setup()
+    grph.lines(canvas, [[0,0,ASIZE,ASIZE]], distance=1.5, color=RED, alpha=1.0)
+    grph.circles(canvas, [[ASIZE/2,ASIZE/2, 20]],color=GREEN, alpha=1.0)
+    grph.rects(canvas, [[ASIZE/4,ASIZE/4, ASIZE/4+40, ASIZE/4+40]],color=BLUE, alpha=1.0)
+    grph.ellipses(canvas, [[ASIZE/4,ASIZE/2, 80, 40]],color=YELLOW, alpha=1.0)
+    grph.triangles(canvas, [[ASIZE*3/4,ASIZE/2,40+ASIZE*3/4,20+ASIZE/2,40+ASIZE*3/4,-20+ASIZE/2 ]],color=WHITE, alpha=1.0)
+    grph.draw_strings(canvas, [[ASIZE*3/4,ASIZE*3/4]], ["Hello world"], font="bold", color=PURPLE, alpha="mask", size=32)
     snapshow(grph, canvas)

@@ -10,24 +10,24 @@ from yapocis.lib.hsi import HSI
 from yapocis.lib.channels import split_planes
 from . import show_snapshots, snapshow, show, image_test
 
-def test_gaussian_1d():
+def test_weight_sum():
     "Make sure that the kernel sums back to 1"
     g = GaussianWeights.compute_gaussian_weight()
     assert are_close(g.sum(), 1.0)
 
 
-def test_gaussians():
+def test_weights():
     mw = 100
     gws = GaussianWeights(max_width=mw)
     for g in gws.gws:
         assert len(g) < mw
 
 
-def test_gaussian_kernels():
+def test_kernels():
     g = Gaussian()
     for scale in range(g.get_scales()):
         gkernel = g.get_gaussian_kernel(scale)
-        a = np.zeros((256, 256), dtype=np.float32)
+        a = np.zeros((400,401), dtype=np.float32)
         a[127, 127] = 1.0
         b = gkernel(1, a)
         gsum = g.gaussian_weights.get_gaussian_weight(scale).sum()
@@ -38,10 +38,10 @@ def test_gaussian_kernels():
         assert are_close(a.sum(), 1.0)
 
 
-def test_gauss_image():
+def test_image():
     g = Gaussian()
     for scale in range(g.get_scales()):
-        a = np.zeros((400, 700), dtype=np.float32)
+        a = np.zeros((400, 401), dtype=np.float32)
         a[200, :] = 1.0
         a[:, 200] = 1.0
         for xy in range(400):
@@ -52,7 +52,7 @@ def test_gauss_image():
 
 def test_zcs():
     g = Gaussian()
-    image = np.zeros((512, 512), dtype=np.float32)
+    image = np.zeros((512, 513), dtype=np.float32)
     image[255, 255] = 1.0
     smaller = g.gauss_image(image, 4)
     larger = g.gauss_image(image, 5)
@@ -63,18 +63,18 @@ def test_zcs():
     show("dog", dog)
     snapshow(g, zca)
 
-def test_zcs_scales():
+def test_multiscale_zcs():
     for device_name in get_available_device_names():
         g = Gaussian(device_name=device_name)
         subtotal = 0.0
         for scale in range(g.get_scales() - 1):
-            a = np.zeros((400, 400), dtype=np.float32)
+            a = np.zeros((400, 401), dtype=np.float32)
             a[200, :] = 1.0
             a[:, 200] = 1.0
             t = time.time()
             zca, grad, theta = g.zcsdog(a, scale, res=True)
             subtotal += (time.time() - t)
-            snapshow(g, f"{subtotal:.03f}", zca)
+            snapshow(g, scale, f"{subtotal:.03f}", zca)
         print(f" {device_name} {subtotal:.03f} seconds")
 
 

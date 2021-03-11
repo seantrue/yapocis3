@@ -1,11 +1,9 @@
-#define Y(i) ((i)/height)
-#define X(i) ((i)-(Y(i)*height))
+<%include file="constants.mako" />
+<%include file="helpers.mako" />
 
-#define ZERO 0.0f
-#define ONE 1.0f
 
 %for planes in [1,2,3,4]:
-#define ADDRESS${planes}(xx,yy) ((((yy)*height)+(xx))*${planes})
+#define ADDRESS${planes}(xx,yy) (ADDRESS(xx,yy))*${planes}
 
 __kernel
 void zcs${planes}(int width, int height, __global float* input, __global float* zcs )

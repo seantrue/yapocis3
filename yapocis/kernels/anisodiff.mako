@@ -1,6 +1,8 @@
 /* Perona-Malik filter */
 
 <%include file="constants.mako" />
+<%include file="helpers.mako" />
+
 %for planes in ["",2,3,4]:
 
 __kernel 
@@ -8,8 +10,8 @@ void filterImage${planes}(int width, int height, __global FLOAT${planes} *input,
 {
     size_t i = get_global_id(0);
     size_t last = width*height;
-    int x = i / height;
-    int y = i%height;
+    int x = X(i);
+    int y = Y(i);
     FLOAT${planes} CF;
     FLOAT${planes} central = input[i];
     FLOAT${planes} invscale = 1.0f/scale;

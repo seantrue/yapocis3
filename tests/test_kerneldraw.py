@@ -39,7 +39,7 @@ def test_batch():
     snapshow(ad, a)
 
 
-def fill_displaylist(ad,n=1000):
+def fill_display_list(ad: KernelDraw1, n: int = 1000) -> None:
     ellipses = random_ellipses(n)
     rects = random_rects(n)
     lines = random_lines(n)
@@ -61,9 +61,9 @@ def fill_displaylist(ad,n=1000):
         ad.draw_string(location, s, font=font, alpha="mask",rotation=rotation,size=size)
 
 
-def test_displaylist():
+def test_display_list():
     canvas, ad = setup()
-    fill_displaylist(ad,100)
+    fill_display_list(ad,100)
     ad.render()
     a = ad.read()
     snapshow(ad, a)
@@ -74,7 +74,7 @@ def test_chunking():
     for chunk_size in (10, 100, 500):
         canvas, ad = setup(chunk_size=chunk_size)
         t = time.time()
-        fill_displaylist(ad,1000)
+        fill_display_list(ad,1000)
         ad.render()
         canvas = ad.read()
         times.append(time.time() - t)

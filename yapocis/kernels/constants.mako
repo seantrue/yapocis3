@@ -1,7 +1,3 @@
-// Address macros
-#define ADDRESS(xx,yy) (((xx)*height)+(yy))
-#define X(addr) ((addr)/height)
-#define Y(addr) ((addr)%height)
 
 
 // Define memory usage constants

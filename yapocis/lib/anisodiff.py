@@ -18,7 +18,7 @@ class Anisodiff(BoundKernels):
     INTERFACE = "anisodiff"
     filter_by_depth = ["filterImage", "filterImage2", "filterImage3", "filterImage4"]
     def __init__(self, device_name:Optional[str]=None, **kwargs):
-        super(Anisodiff, self).__init__(device_name=device_name, **kwargs)
+        super(Anisodiff, self).__init__(device_name=device_name,  **kwargs)
         self.hsi = HSI(device_name=device_name)
     def select_by_depth(self, image, suffix=""):
         depth = get_image_depth(image)

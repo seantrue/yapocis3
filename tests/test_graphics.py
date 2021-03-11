@@ -139,8 +139,8 @@ def test_lines():
     for i in range(100, ASIZE, 100):
         for j in range(100, ASIZE, 100):
             coords.append([0, 0, i, j])
-    grph.lines(canvas, coords, 1.5, colors=random_colors(len(coords)), alpha=1.0)
-    grph.lines(canvas, random_coords, 1.5, colors=random_colors(), alphas=random_alpha())
+    grph.lines(canvas, coords, distance=1.5, colors=random_colors(len(coords)), alpha=1.0)
+    grph.lines(canvas, random_coords, distance=1.5, colors=random_colors(), alphas=random_alpha())
     snapshow(grph, canvas)
 
 
@@ -281,4 +281,15 @@ def test_stressed_texts():
     locations, strings, fonts, sizes, rotations, _ = random_texts(300)
     grph.draw_strings(canvas, locations, strings, fonts=fonts, sizes=sizes, rotations=rotations, alpha="mask")
     snapshow(grph, canvas)
+
+def test_one():
+    canvas, grph = setup()
+    grph.lines(canvas, [[0,0,ASIZE,ASIZE]], distance=1.5, color=1.0, alpha=1.0)
+    grph.circles(canvas, [[ASIZE/2,ASIZE/2, 20]],color=1.0, alpha=1.0)
+    grph.rects(canvas, [[ASIZE/4,ASIZE/4, ASIZE/4+40, ASIZE/4+40]],color=1.0, alpha=1.0)
+    grph.ellipses(canvas, [[ASIZE/4,ASIZE/2, 80, 40]],color=1.0, alpha=1.0)
+    grph.triangles(canvas, [[ASIZE*3/4,ASIZE/2,40+ASIZE*3/4,20+ASIZE/2,40+ASIZE*3/4,-20+ASIZE/2 ]],color=1.0, alpha=1.0)
+    grph.draw_strings(canvas, [[ASIZE*3/4,ASIZE*3/4]], ["Hello world"], font="bold", color=1.0, alpha="mask", size=32)
+    snapshow(grph, canvas)
+
 

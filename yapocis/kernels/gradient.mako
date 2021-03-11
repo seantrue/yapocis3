@@ -1,5 +1,7 @@
 
 <%include file="constants.mako" />
+<%include file="helpers.mako" />
+
 
 %for planes in ["",2,3,4]:
 __kernel

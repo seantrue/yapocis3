@@ -13,9 +13,11 @@ N = 100
 
 def setup(device_name:Optional[str]=None):
     image = image_test()
+    # Ensure that we don't have fortunate addressing!
+    assert image.shape[0] != image.shape[1]
     return image, Anisodiff(device_name=device_name)
 
-def test_anisodiff_I():
+def test_I():
     rgb, aniso = setup()
     hsis = HSI()
     hsi = hsis.rgb2hsi3(rgb)
@@ -33,7 +35,7 @@ def test_anisodiff_I():
         rgb2 = hsis.hsi2rgb3(hsi)
         show(aniso, rgb2)
 
-def test_anisodiff_IS():
+def test_IS():
     from yapocis.rpc.device import get_available_device_names
     for device_name in get_available_device_names():
         rgb, aniso = setup(device_name=device_name)
@@ -46,7 +48,7 @@ def test_anisodiff_IS():
             rgb2 = aniso.anisodiff_rgbIS_n(rgb, N)
             show(aniso, rgb2)
 
-def test_anisodiff1():
+def test_1plane():
     from yapocis.rpc.device import get_available_device_names
     for device_name in get_available_device_names():
         rgb, aniso = setup(device_name=device_name)
@@ -60,7 +62,7 @@ def test_anisodiff1():
             show(aniso, rgb2)
 
 
-def test_anisodiff2():
+def test_2plane():
     from yapocis.rpc.device import get_available_device_names
     for device_name in get_available_device_names():
         config = get_device_config(device_name=device_name)
@@ -78,7 +80,7 @@ def test_anisodiff2():
             show(aniso, rgb2)
 
 
-def test_anisodiff3():
+def test_3plane():
     from yapocis.rpc.device import get_available_device_names
     for device_name in get_available_device_names():
         config = get_device_config(device_name=device_name)
@@ -92,7 +94,7 @@ def test_anisodiff3():
             show(aniso, rgb2)
 
 
-def test_anisodiff4():
+def test_4plane():
     from yapocis.rpc.device import get_available_device_names
     for device_name in get_available_device_names():
         rgb, aniso = setup(device_name=device_name)

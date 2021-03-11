@@ -24,6 +24,6 @@ class Gradient(BoundKernels):
 
         """
         grad, theta = self.kmgr.gradient(image, reach)
-        theta[np.where(np.isnan(theta))] = 0.0
-        grad[np.where(np.isnan(grad))] = 0.0
+        # theta[np.where(np.isnan(theta))] = 0.0
+        # grad[np.where(np.isnan(grad))] = 0.0
         return grad, theta

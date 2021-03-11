@@ -41,6 +41,8 @@ def render_interface(source: str, **context: Context) -> str:
     a parsable definition. Useful when the template can generate multiple parameterized
     routines.
     """
+    if not context:
+        return source
     t = Template(source)
     return str(t.render(**context))
 
@@ -53,6 +55,7 @@ class KernelManager:
     """
 
     def __init__(self, interface: Interface, device_name: str, debug: bool = False, async_write: bool = False,
+                 options = None,
                  **context: Context):
         self.interface = interface
         self.dmgr = get_device_manager(device_name=device_name)
@@ -123,6 +126,7 @@ class KernelManager:
 
     @classmethod
     def load_program(cls, interface_spec: str, device_name: Optional[str] = None, debug: bool = False,
+                     options=None,
                      **context: Context):
         """
         Factory returning runnable interface based on a interface specification.
@@ -132,12 +136,13 @@ class KernelManager:
         interface = get_interface(source)
         if debug:
             print("Interface", interface)
-        return KernelManager(interface, device_name, debug=debug, **context)
+        return KernelManager(interface, device_name, debug=debug, options=options, **context)
 
     @classmethod
     def import_program(cls, interface_spec: str, device_name: Optional[str] = None,
-                       namespace: bool = False, debug: bool = False, import_kernels=None, **context: Context):
-        program = cls.load_program(interface_spec, device_name=device_name, debug=debug, **context)
+                       namespace: bool = False, debug: bool = False, import_kernels=None,
+                       options=None, **context: Context):
+        program = cls.load_program(interface_spec, device_name=device_name, debug=debug, options=options, **context)
         import inspect
         caller = inspect.currentframe().f_back
         target = inspect.getmodule(caller.f_code)

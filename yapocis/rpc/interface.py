@@ -10,6 +10,7 @@ from pyparsing import Optional, ParseException, OneOrMore, Literal, Keyword, Wor
 from yapocis.utils.internals import find_yapocis_file
 from yapocis.utils.typing import List, Dict, Any
 
+
 # Map from OpenCL datatype to a numpy data type
 
 
@@ -112,10 +113,12 @@ def scan_kernel_parameters(kernel):
 
 
 KernelParamSpec = namedtuple("KernelParam", ["name", "hint", "dim", "pointer", "data_type", "np_dtype", "derived"])
-KernelSpec =      namedtuple("KernelSpec", ["name", "alias", "parameters", "definitions"])
-Interface =       namedtuple("InterfaceSpec", ["name", "kernels", "aliases"])
+KernelSpec = namedtuple("KernelSpec", ["name", "alias", "parameters", "definitions"])
+Interface = namedtuple("InterfaceSpec", ["name", "kernels", "aliases"])
 
-_interfaces: Dict[str,Any] = {}
+_interfaces: Dict[str, Any] = {}
+
+
 def get_interfaces(s: str) -> List[Interface]:
     """\
     Builds an InterfaceCL for the source interface definition.
@@ -126,11 +129,11 @@ def get_interfaces(s: str) -> List[Interface]:
     except KeyError:
         interfaces = []
     try:
-        parsed_interfaces =  bnf.parseString(s)
+        parsed_interfaces = bnf.parseString(s)
     except ParseException as e:
         print(e.args[0], e.args[2], e.line)
         source = e.args[0].splitlines()
-        cursor = " "*(e.col-1)
+        cursor = " " * (e.col - 1)
         cursor += "^"
         source.insert(e.lineno, cursor)
         source = "\n".join(source)
@@ -145,12 +148,12 @@ def get_interfaces(s: str) -> List[Interface]:
             for param in kernel.parameters:
                 if param.dim:
                     data_type = "int"
-                elif param.hint in ("outlike","out_like"):
+                elif param.hint in ("outlike", "out_like"):
                     data_type = param_definitions[param.name].data_type if param.data_type == '' else param.data_type
                 else:
                     data_type = param.data_type
                 np_dtype = ctype_to_nptype.get(data_type, data_type)
-                derived = True if param.dim or param.hint=="out_like" else False
+                derived = True if param.dim or param.hint == "out_like" else False
                 kernel_parameters.append(
                     KernelParamSpec(name=param.name,
                                     hint=param.hint,
@@ -173,10 +176,12 @@ def get_interfaces(s: str) -> List[Interface]:
     _interfaces[s] = interfaces
     return interfaces
 
+
 def get_interface(s: str) -> Interface:
     return get_interfaces(s)[0]
 
-def load_interface(interface_spec:str) -> str:
+
+def load_interface(interface_spec: str) -> str:
     """
     Find an interface, or return source if it is an interface spec.
     Args:
@@ -187,7 +192,8 @@ def load_interface(interface_spec:str) -> str:
     """
     if interface_spec.strip().startswith("interface "):
         return interface_spec
-    filename= f"{interface_spec}.interface"
+
+    filename = interface_spec if interface_spec.endswith("interface") else f"{interface_spec}.interface"
     path = find_yapocis_file(["interfaces", "."], filename)
     if path is None:
         raise RuntimeError(f"Can't find {filename}")
@@ -195,49 +201,64 @@ def load_interface(interface_spec:str) -> str:
         return inf.read()
 
 
-def dump_interface(interface):
+def explain_interface(interface, file=None):
     print("Interface:", interface.name)
     for kernel in interface.kernels:
-        print(f"Kernel: {kernel.name } alias for '{kernel.alias}'")
+        alias = "self" if not kernel.alias else kernel.alias
+        print(f"Kernel: {kernel.name} alias for '{alias}'", file=None)
         iparam = 0
-        for param in kernel.parameters:
+        ireturn = 0
+
+        def motion(param):
             to_gpu = param.hint in ("in", "inout")
             from_gpu = param.hint in ("out", "inout", "out_like")
-            on_gpu = param.hint in ("resident","working")
-            visible_param = not param.derived
-            if visible_param:
-                print(f"Param {iparam}:", param)
-                iparam += 1
-            else:
-                print(f"Param (derived):", param)
-            if param.hint:
-                if param.hint == "resident":
-                    print(f"  Buffer is resident on GPU")
-                elif param.hint == "out_like":
-                    print(f"  Allocate a buffer like '{param.name}' position={iparam}")
-                    print("Read back as return value of {param.np_dtype}")
-                elif param.hint == "out":
-                    print(f"  Allocate a buffer for {param.name}")
-                    print("   Read back as return value of {param.np_dtype}")
-                else:
-                    print(f"  Coerce '{param.name}' to {param.np_dtype}")
-                    print(f"  Allocate a buffer for {param.name}")
-            if param.dim:
-                print(f"  Pass in {param.dim} of `{param.name}` as {param.np_dtype}")
+            on_gpu = param.hint in ("resident", "working")
             if to_gpu:
-                print("  Copy to GPU")
+                print("  Before call, copy buffer from array to GPU", file=file)
             if from_gpu:
-                print("  Copy back from GPU")
+                print("  After call, copy buffer from GPU into array", file=file)
             if on_gpu:
-                print("  Already on GPU")
+                print("  Buffer already on GPU", file=file)
             if not from_gpu:
                 pointer = "*" if param.hint else ""
-                print(f"  Use as parameter of type {pointer}{param.np_dtype}")
-            print()
-        print()
+                print(f"  Use as parameter of type {pointer}{param.np_dtype}", file=file)
 
-def opencl_stubs(interface):
-    print("// kernels", interface.name)
+        def returned(param, ireturn):
+            print(f"  Return as {param.np_dtype} (tuple position {ireturn})", file=file)
+            return ireturn + 1
+
+        for param in kernel.parameters:
+            visible_param = not param.derived
+            if visible_param:
+                print(f"Param {iparam}:", param, file=file)
+                iparam += 1
+            else:
+                print(f"Param (derived):", param, file=file)
+            if param.hint:
+                if param.hint == "resident":
+                    print(f"  Buffer is resident on GPU", file=file)
+                    motion(param)
+                elif param.hint == "out_like":
+                    print(
+                        f"  Allocate an array like '{param.name}' (opencl arg position={iparam}, dtype={param.np_dtype})", file=file)
+                    motion(param)
+                    ireturn = returned(param, ireturn)
+                elif param.hint == "out":
+                    print(f"  Allocate an array for {param.name}", file=file)
+                    motion(param)
+                    ireturn = returned(param, ireturn)
+                else:
+                    print(f"  Coerce '{param.name}' to {param.np_dtype}", file=file)
+                    motion(param)
+            if param.dim:
+                print(f"  Pass in {param.dim} of `{param.name}`", file=file)
+                motion(param)
+            print(file=file)
+        print(file=file)
+
+
+def opencl_stubs(interface, file=None):
+    print("// kernels", interface.name, file=file)
     for kernel in interface.kernels:
         if kernel.alias:
             continue
@@ -252,13 +273,13 @@ def opencl_stubs(interface):
                 kernel_parameters.append(f"int {parameter.dim}_{parameter.name}")
             else:
                 kernel_parameters.append(f"{parameter.data_type} {parameter.name}")
-        print(f"__kernel void {kernel.name}({', '.join(kernel_parameters)}) {{")
-        print("}")
-    print()
+        print(f"__kernel void {kernel.name}({', '.join(kernel_parameters)}) {{", file=file)
+        print("}", file=file)
+    print(file=file)
 
 
-def python_stubs(interface):
-    print("## interface", interface.name)
+def python_stubs(interface, file=None):
+    print("## interface", interface.name, file=file)
     kernels = interface.kernels
     for kernel in kernels:
         python_parameters = []
@@ -276,6 +297,6 @@ def python_stubs(interface):
             python_returns = ", ".join(python_returns)
         else:
             python_returns = "None"
-        print(f"def {kernel.name}({', '.join(python_parameters)}) -> {python_returns}:")
-        print("    pass")
-    print()
+        print(f"def {kernel.name}({', '.join(python_parameters)}) -> {python_returns}:", file=file)
+        print("    pass", file=file)
+    print(file=file)
