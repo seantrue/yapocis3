@@ -1,4 +1,4 @@
-# Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 from random import randint, shuffle
 

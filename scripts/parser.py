@@ -1,10 +1,11 @@
+#!/usr/bin/env python
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 """
 Interpret interfaces in a readable way.
 """
 from argparse import ArgumentParser
 from io import StringIO
-from yapocis.interfaces import interfaces, interface
+from yapocis.interfaces import interfaces, find_interface
 from yapocis.rpc.interface import get_interface, get_interfaces, load_interface, python_stubs, opencl_stubs, \
     explain_interface
 from yapocis.rpc.kernel_manager import render_interface
@@ -35,11 +36,15 @@ if __name__ == '__main__':
     parser.add_argument('--explain', action="store_true")
     parser.add_argument('--source', action="store_true")
     parser.add_argument('--all', action="store_true")
+    parser.add_argument('--list', action="store_true")
     parser.add_argument("interfaces", nargs="*")
     args = parser.parse_args()
     requested_interfaces = [f"{name}.interface" for name in args.interfaces]
     for interface_name in interfaces():
         if requested_interfaces and interface_name not in requested_interfaces:
+            continue
+        if args.list:
+            print(interface_name)
             continue
         as_header(interface_name.split('.')[0])
         template = load_interface(interface_name)

@@ -8,9 +8,17 @@
 *~
 *.bak
 *.swp
+*.png
+*.svg
 .\#*
 .deps
 .libs
+
+#*
+/mako_modules
+/queue
+/opencl_cache
+/prof
 /external
 /.idea
 /build

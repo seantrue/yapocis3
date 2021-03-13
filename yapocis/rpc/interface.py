@@ -7,7 +7,7 @@ from collections import namedtuple
 
 from pyparsing import Optional, ParseException, OneOrMore, Literal, Keyword, Word, alphas, alphanums, \
     delimitedList, Group, ZeroOrMore, restOfLine, cStyleComment
-from yapocis.utils.internals import find_yapocis_file
+from yapocis.interfaces import find_interface
 from yapocis.utils.typing import List, Dict, Any
 
 
@@ -193,10 +193,9 @@ def load_interface(interface_spec: str) -> str:
     if interface_spec.strip().startswith("interface "):
         return interface_spec
 
-    filename = interface_spec if interface_spec.endswith("interface") else f"{interface_spec}.interface"
-    path = find_yapocis_file(["interfaces", "."], filename)
+    path = find_interface(interface_spec)
     if path is None:
-        raise RuntimeError(f"Can't find {filename}")
+        raise RuntimeError(f"Can't find {interface_name}")
     with open(path) as inf:
         return inf.read()
 

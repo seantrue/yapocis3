@@ -5,4 +5,6 @@ scipy
 sphinx
 sphinx-autoapi
 recommonmark
+pyopengl
+pygame
 

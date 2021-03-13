@@ -11,3 +11,4 @@ pyparsing
 pytest
 pytools
 sphinx
+freetype-py

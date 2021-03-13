@@ -12,20 +12,13 @@ from yapocis.rpc.kernel import Kernel
 from yapocis.rpc.interface import Interface, get_interface, load_interface
 from yapocis.utils.internals import find_yapocis_file, get_yapocis_dir
 from yapocis.utils.typing import Context
-
+from yapocis.kernels import find_kernel
 
 def render_program(base_filename: str, **context: Context) -> str:
     """
     Takes the basename of a mako template file, and uses context to generate an OpenCL program
     """
-    tfilename = None
-    for ext in [".cl", ".mako"]:
-        filename = base_filename + ext
-        tfilename = find_yapocis_file(["kernels", "."], filename)
-        if tfilename:
-            break
-    if not tfilename:
-        raise Exception("Can't find template '%s'" % filename)
+    tfilename = find_kernel(base_filename)
     template_directories = [os.path.dirname(tfilename)]
     mako_modules = os.path.join(get_yapocis_dir(), "mako_modules")
     mylookup = TemplateLookup(directories=template_directories, module_directory=mako_modules)

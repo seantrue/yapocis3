@@ -294,13 +294,15 @@ def _show_array(*args) -> Tuple[str, PILImage]:
     return title, img
 
 
-def show_array(*args) -> None:
+def show_array(*args, **kwargs) -> None:
     if BENCHMARKING:
         print(args[:-1], file=sys.stderr)
         return
-    title, img = _show_array(*args)
-    img.show()
-
+    title, img = _show_array(*args, **kwargs)
+    # img.show()
+    if img.mode == "L":
+        img = img.convert("RGB")
+    img.save(f"/Users/seant/workspace/yapocis/queue/{title}.png")
 
 def show_arraygrad(title: str, image: Image1, theta: Image1, grad: Optional[Image1] = None) -> None:
     """

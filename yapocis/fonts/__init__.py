@@ -1,75 +1,25 @@
-"""Tiny registry for fonts for demo purposes."""
+"""Tiny registry for fonts"""
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import os
-from yapocis.utils.typing import *
-from yapocis.utils.internals import get_yapocis_dirs
+from yapocis.utils.internals import AssetManager
+from yapocis.utils.typing import Optional
 
 try:
     from PIL.ImageFont import truetype
 except ImportError:
     truetype = None
 
+am = AssetManager(os.path.dirname(__file__), ".ttf",match="lower")
 
-def get_font_dirs():
-    dirname = os.path.dirname(__file__)
-    dirnames = [dirname]
-    for dirname in get_yapocis_dirs():
-        font_path = os.path.join(dirname, "fonts")
-        if os.path.isdir(font_path):
-            if font_path not in dirnames:
-                dirnames.append(font_path)
-    return dirnames
-
-def fonts() -> List[str]:
-    """
-    List available TrueType fonts in the package directory
-    Returns:
-
-    """
-    font_dirs = get_font_dirs()
-    fonts = []
-    for font_dir in font_dirs:
-        fonts += [font_name for font_name in os.listdir(font_dir) if font_name.endswith(".ttf")]
-    return fonts
-
-def font_path(font_name:str) -> str:
-    """
-    Return absolute path to a font in this directoru
-    Args:
-        font_name: as returned by fonts
-
-    Returns:
-
-    """
-    font_dirs = get_font_dirs()
-    for font_dir in font_dirs:
-        font_path = os.path.join(font_dir, font_name)
-        if  os.path.exists(font_path):
-            return font_path
-    raise ValueError(f"{font_name} not found, use one of: {' '.join(fonts())}")
-
-def font(font_suggestion:str) ->str:
-    """
-    Return absolute path to font that's a full or partial match
-    Args:
-        font_suggestion: first try exact match, then substring
-
-    Returns: path to a font, with a default
-
-    """
+fonts = am.assets
+def font(font_suggestion:str):
     try:
-        return font_path(font_suggestion)
-    except ValueError:
-        font_names = fonts()
-        for font_name in font_names:
-            if font_suggestion in font_name:
-                return font_path(font_name)
-        for font_name in font_names:
-            if font_suggestion.lower() in font_name.lower():
-                return font_path(font_name)
-    return font_path("Ubuntu-Regular.ttf")
-
+        fp = am.asset(font_suggestion)
+    except:
+        fp = None
+    fp = am.asset_path("Ubuntu-Regular.ttf") if fp is None else fp
+    return fp
 
 _fontcache = {}
 def image_font(font_name: Optional[str]="default", size=14, index=0, encoding="", layout_engine=None) -> "FreeTypeFont":

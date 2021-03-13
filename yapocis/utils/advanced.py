@@ -58,12 +58,14 @@ def _show_array(*args, normalize=True):
     return title, img
 
 
-def show_array(*args, **kwargs):
+def show_array(*args, **kwargs) -> None:
     if BENCHMARKING:
         print(args[:-1], file=sys.stderr)
         return
     title, img = _show_array(*args, **kwargs)
-    img.show()
+    if img.mode == "L":
+        img = img.convert("RGB")
+    img.save(f"/Users/seant/workspace/yapocis/queue/{title}.png")
 
 
 def show_arraygrad(title, image, theta, grad = None) -> None:

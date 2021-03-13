@@ -9,7 +9,7 @@ import numpy as np
 
 from yapocis.utils.basic import imread, show_array
 
-ASIZE=1200
+ASIZE=980
 
 def image_path_test(image_name="test.jpg"):
     dirname = os.path.dirname(__file__)

@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+s
+#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+
 # Adapted from wordle.py from freetype-py and used under the following terms:
 # -----------------------------------------------------------------------------
 #
-#  FreeType high-level python API - Copyright 2011-2015 Nicolas P. Rougier
-#  Distributed under the terms of the new BSD license.
 #
 # -----------------------------------------------------------------------------
 import math
