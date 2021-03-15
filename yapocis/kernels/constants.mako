@@ -18,3 +18,5 @@
 #define FLOAT2 float2
 #define FLOAT3 float3
 #define FLOAT4 float4
+
+#define eps 1.0e-10

@@ -153,7 +153,7 @@ def get_interfaces(s: str) -> List[Interface]:
                 else:
                     data_type = param.data_type
                 np_dtype = ctype_to_nptype.get(data_type, data_type)
-                derived = True if param.dim or param.hint == "out_like" else False
+                derived = True if param.dim or param.hint in ("out_like","outlike") else False
                 kernel_parameters.append(
                     KernelParamSpec(name=param.name,
                                     hint=param.hint,
@@ -195,22 +195,22 @@ def load_interface(interface_spec: str) -> str:
 
     path = find_interface(interface_spec)
     if path is None:
-        raise RuntimeError(f"Can't find {interface_name}")
+        raise RuntimeError(f"Can't find {interface_spec}")
     with open(path) as inf:
         return inf.read()
 
 
 def explain_interface(interface, file=None):
-    print("Interface:", interface.name)
+    print("Interface:", interface.name, file=file)
     for kernel in interface.kernels:
         alias = "self" if not kernel.alias else kernel.alias
-        print(f"Kernel: {kernel.name} alias for '{alias}'", file=None)
+        print(f"Kernel: {kernel.name} alias for '{alias}'", file=file)
         iparam = 0
         ireturn = 0
 
         def motion(param):
-            to_gpu = param.hint in ("in", "inout")
-            from_gpu = param.hint in ("out", "inout", "out_like")
+            to_gpu = param.hint in ("in", "inout", "in_out")
+            from_gpu = param.hint in ("out", "inout", "out_like", "outlike")
             on_gpu = param.hint in ("resident", "working")
             if to_gpu:
                 print("  Before call, copy buffer from array to GPU", file=file)
@@ -237,9 +237,10 @@ def explain_interface(interface, file=None):
                 if param.hint == "resident":
                     print(f"  Buffer is resident on GPU", file=file)
                     motion(param)
-                elif param.hint == "out_like":
+                elif param.hint in ("out_like", "outlike"):
                     print(
-                        f"  Allocate an array like '{param.name}' (opencl arg position={iparam}, dtype={param.np_dtype})", file=file)
+                        f"  Allocate an array like '{param.name}' (opencl arg position={iparam}, dtype={param.np_dtype})",
+                        file=file)
                     motion(param)
                     ireturn = returned(param, ireturn)
                 elif param.hint == "out":
@@ -250,7 +251,7 @@ def explain_interface(interface, file=None):
                     print(f"  Coerce '{param.name}' to {param.np_dtype}", file=file)
                     motion(param)
             if param.dim:
-                print(f"  Pass in {param.dim} of `{param.name}`", file=file)
+                print(f"  Pass in as {param.dim} `{param.name}`", file=file)
                 motion(param)
             print(file=file)
         print(file=file)
@@ -278,13 +279,13 @@ def opencl_stubs(interface, file=None):
 
 
 def python_stubs(interface, file=None):
-    print("## interface", interface.name, file=file)
+    print("# interface", interface.name, file=file)
     kernels = interface.kernels
     for kernel in kernels:
         python_parameters = []
         python_returns = []
         for parameter in kernel.parameters:
-            if parameter.hint in ("out_like", "out"):
+            if parameter.hint in ("out_like", "out", "outlike"):
                 data_type = f"Array[{parameter.np_dtype}]"
                 python_returns.append(data_type)
             elif parameter.hint:

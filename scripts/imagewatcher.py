@@ -55,28 +55,29 @@ def fetch_image(i):
     except pygame.error:
         return None, None
     if max(image.get_size()) > WIDTH:
-        image = pygame.transform.smoothscale(image, (WIDTH, HEIGHT))
+        image = pygame.transform.smoothscale(image, (WIDTH-50, HEIGHT-50))
     image_name,_ = os.path.splitext(os.path.basename(images[image_index]))
     image_index = i
     most_recent = images[image_index]
     return image, f"{i:3d} {image_name}"
 
 def main():
+    global WIDTH, HEIGHT
     pygame.init()
     font_path = find_font("default")
-    font = pygame.font.Font(font_path, 32)
+    font = pygame.font.Font(font_path, 24)
 
-    dark = (0, 0, 0)
-    display_surface = pygame.display.set_mode((WIDTH, HEIGHT))
+    background_color = (100, 100, 100)
+    display_surface = pygame.display.set_mode((WIDTH, HEIGHT),pygame.RESIZABLE)
 
     pygame.display.set_caption('Image Watcher')
 
     image, label_text = next_image()
     while True:
         if image is not None:
-            display_surface.fill(dark)
+            display_surface.fill(background_color)
             w,h = image.get_size()
-            display_surface.blit(image, (WIDTH//2-w//2, HEIGHT//2-h//2))
+            display_surface.blit(image, (25+WIDTH//2-w//2, 25+HEIGHT//2-h//2))
             if label_text is not None:
                 label = font.render(label_text, True, (255, 255, 255))
                 display_surface.blit(label, (0,0))
@@ -84,6 +85,11 @@ def main():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
+            if event.type == pygame.VIDEORESIZE:
+                dim = min(event.w,event.h)
+                WIDTH = HEIGHT = dim
+                display_surface = pygame.display.set_mode((dim+50, dim+50),pygame.RESIZABLE)
+                image, label_text = fetch_image(image_index)
             if event.type == pygame.USEREVENT:
                 image, label_text = step_image()
             if event.type == pygame.KEYDOWN:

@@ -25,8 +25,8 @@ def as_header(s, level=0):
 
 
 def as_bullet(s, level=0):
-    indent = " " * level if level else ""
-    print(f"{level}* {s}")
+    indent = (" " * level) if level else ""
+    print(f"{indent}* {s}")
 
 
 if __name__ == '__main__':
@@ -40,28 +40,35 @@ if __name__ == '__main__':
     parser.add_argument("interfaces", nargs="*")
     args = parser.parse_args()
     requested_interfaces = [f"{name}.interface" for name in args.interfaces]
+    if not args.list:
+        print("# Kernels")
     for interface_name in interfaces():
         if requested_interfaces and interface_name not in requested_interfaces:
             continue
         if args.list:
             print(interface_name)
             continue
-        as_header(interface_name.split('.')[0])
+        as_header(interface_name.split('.')[0].upper())
         template = load_interface(interface_name)
         source = render_interface(template)
         if "%" in source or "${" in source:
             as_bullet(f"{interface_name} has unprocessed template markup.")
             as_code(template)
             continue
-        interface = get_interface(source)
+        try:
+            interface = get_interface(source)
+        except RuntimeError as e:
+            print(e)
+            print(source)
+            continue
         acted = 0
         if args.source or args.all:
-            as_header("Interface specification",1)
+            as_header("Specification",1)
             as_code(source)
         if args.python or args.all:
             acted += 1
             with StringIO() as outf:
-                as_header("Python signatures",1)
+                as_header("Signatures",1)
                 python_stubs(interface, file=outf)
                 as_code(outf.getvalue())
         if args.explain or args.all:
@@ -72,7 +79,7 @@ if __name__ == '__main__':
                 as_code(outf.getvalue())
         if args.opencl or args.all:
             acted += 1
-            as_header("OpenCL stubs", 1)
+            as_header("Stubs", 1)
             with StringIO() as outf:
                 opencl_stubs(interface, file = outf)
                 as_code(outf.getvalue())

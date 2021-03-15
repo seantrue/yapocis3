@@ -1,0 +1,6 @@
+interface imageops {
+    kernel clip(in float input, float low, float high, out_like input);
+    kernel stretch(in float input, float input_min, float input_max, float low, float high, out_like input);
+    kernel binarize(in float input, float threshold, out_like input);
+    kernel histogram(in float input, size_of input, int n_bins, float low, float high, int n_workers, in int partials, out int histogram);
+};

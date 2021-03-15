@@ -8,12 +8,12 @@ import pytest
 import numpy as np
 
 from yapocis.utils.basic import imread, show_array
+from yapocis.images import find_image
 
 ASIZE=980
 
 def image_path_test(image_name="test.jpg"):
-    dirname = os.path.dirname(__file__)
-    return os.path.join(dirname, image_name)
+    return find_image(image_name)
 
 def image_test():
     test_image = image_path_test()

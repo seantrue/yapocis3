@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-s
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 # Adapted from wordle.py from freetype-py and used under the following terms:

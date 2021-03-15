@@ -30,7 +30,8 @@ Contents:
    intro
    architecture
    examples
-
+   kernels
+   
 Indices and tables
 ==================
 

@@ -4,11 +4,7 @@
 // Colors are [N,4] where color[,3] is the alpha and is _not_ ignored
 
 <%include file="constants.mako" />
-
-__inline float dxdy2(float2 a, float2 b) {
-    float2 dxdy =  (a-b)*(a-b);
-    return dxdy.x + dxdy.y;
-}
+<%include file="helpers.mako" />
 
 #define ONES ONE4
 #define ZEROS ZERO4
@@ -17,8 +13,8 @@ __kernel void lines(int width, int height, READWRITE float4 *a, int nelements,
                     READONLY float2 *coords, float rdist,
                     READONLY float4 *colors) {
   size_t i = get_global_id(0);
-  int x = i / height;
-  int y = i - (x * height);
+  int x = X(i);
+  int y = Y(i);
   float4 color = a[i];
 
   float threshold2 = ((rdist * .5) + .5);
@@ -47,8 +43,8 @@ __kernel void rects(int width, int height, READWRITE float4 *a, int nelements,
                     READONLY float4 *coords, READONLY float4 *colors) {
   size_t i = get_global_id(0);
   float4 pixel = a[i];
-  float x = i / height;
-  float y = i - (x * height);
+  int x = X(i);
+  int y = Y(i);
 
   for (int ielement = 0; ielement < nelements; ielement++) {
     float4 rgba = *colors++;
@@ -71,23 +67,23 @@ __kernel void circles(int width, int height, READWRITE float4 *a, int nelements,
                       READONLY float *coords, READONLY float4 *colors) {
   size_t i = get_global_id(0);
   float4 pixel = a[i];
-  int x = i / height;
-  int y = i - (x * height);
+    int x = X(i);
+    int y = Y(i);
 
-  float2 point = (float2)((float)x, (float)y);
-  for (int ielement = 0; ielement < nelements; ielement++) {
-    float4 rgba = *colors++;
-    float4 alpha = (float4)(rgba.s3, rgba.s3, rgba.s3, 0.0f);
-    float4 clr = (rgba * alpha) + (pixel * (ONES - alpha));
+    float2 point = (float2)((float)x, (float)y);
+      for (int ielement = 0; ielement < nelements; ielement++) {
+        float4 rgba = *colors++;
+        float4 alpha = (float4)(rgba.s3, rgba.s3, rgba.s3, 0.0f);
+        float4 clr = (rgba * alpha) + (pixel * (ONES - alpha));
 
-    float x = *coords++;
-    float y = *coords++;
-    float radius = *coords++;
-    radius *= radius;
+        float x = *coords++;
+        float y = *coords++;
+        float radius = *coords++;
+        radius *= radius;
 
-    float2 center = (float2)(x, y);
-    pixel = dxdy2(center, point) <= radius ? clr : pixel;
-  }
+        float2 center = (float2)(x, y);
+        pixel = dxdy2(center, point) <= radius ? clr : pixel;
+      }
   a[i] = pixel;
   barrier(CLK_GLOBAL_MEM_FENCE);
 }
@@ -99,8 +95,8 @@ __kernel void triangles(int width, int height, READWRITE float4 *a, int nelement
                         READONLY float2 *coords, READONLY float4 *colors) {
   size_t i = get_global_id(0);
   float4 pixel = a[i];
-  int x = i / height;
-  int y = i - (x * height);
+  int x = X(i);
+  int y = Y(i);
   float2 point = (float2)((float)x, (float)y);
   for (int ielement = 0; ielement < nelements; ielement++) {
     float4 rgba = *colors++;
@@ -128,8 +124,8 @@ __kernel void ellipses(int width, int height, READWRITE float4 *a, int nelements
                        READONLY float4 *coords, READONLY float4 *colors) {
   size_t i = get_global_id(0);
   float4 pixel = a[i];
-  int x = i / height;
-  int y = i - (x * height);
+  int x = X(i);
+  int y = Y(i);
   float2 point = (float2)((float)x, (float)y);
   for (int ielement = 0; ielement < nelements; ielement++) {
     float4 rgba = *colors++;
@@ -152,7 +148,10 @@ __kernel void composite(int width, int height, READWRITE float4 *a, int nelement
                         READONLY int *ipixels, int npixels) {
   size_t i = get_global_id(0);
   float4 pixel = a[i];
-  int2 xy = (int2)(i / height, (i - ((i / height) * height)));
+  int x = X(i);
+  int y = Y(i);
+
+  int2 xy = (int2)(x,y);
   for (int ielement = 0; ielement < nelements; ielement++) {
     // Get the x,y,w,h of the destination
     int4 coord = *coords++;
