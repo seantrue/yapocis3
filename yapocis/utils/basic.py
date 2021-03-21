@@ -416,7 +416,7 @@ def histeq_large(im: Image1, nbr_bins=2 ** 16) -> Array:
     return np.array(im2, np.float32).reshape(im.shape)
 
 
-def histeq(im: Image1, nbr_bins: int = 256) -> Tuple[Array, Array]:
+def histeq(im: Image1, nbr_bins: int = 256, max_value=255) -> Tuple[Array, Array]:
     """
     Histogram equalization quantized to 8 bits. Appropriate for 8 bit images.
     Args:
@@ -428,7 +428,7 @@ def histeq(im: Image1, nbr_bins: int = 256) -> Tuple[Array, Array]:
     """
     imhist, bins = np.histogram(im.ravel(), nbr_bins, normed=True)
     cdf = imhist.cumsum()  # cumulative distribution function
-    cdf = 255 * cdf / cdf[-1]  # normalize
+    cdf = max_value * cdf / cdf[-1]  # normalize
     im2 = np.interp(im.ravel(), bins[:-1], cdf)
     return im2.reshape(im.shape), cdf
 

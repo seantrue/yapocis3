@@ -36,7 +36,7 @@ def test_I():
         show(aniso, rgb2)
 
 def test_IS():
-    from yapocis.rpc.device import get_available_device_names
+    from yapocis.ocl.device import get_available_device_names
     for device_name in get_available_device_names():
         rgb, aniso = setup(device_name=device_name)
         with TS(f"[generator {N} {device_name[:24]}]") as show:
@@ -49,7 +49,7 @@ def test_IS():
             show(aniso, rgb2)
 
 def test_1plane():
-    from yapocis.rpc.device import get_available_device_names
+    from yapocis.ocl.device import get_available_device_names
     for device_name in get_available_device_names():
         rgb, aniso = setup(device_name=device_name)
         hsis = HSI(device_name=device_name)
@@ -63,7 +63,7 @@ def test_1plane():
 
 
 def test_2plane():
-    from yapocis.rpc.device import get_available_device_names
+    from yapocis.ocl.device import get_available_device_names
     for device_name in get_available_device_names():
         config = get_device_config(device_name=device_name)
         if config["preferred_vector_width_float"] > 3:
@@ -81,7 +81,7 @@ def test_2plane():
 
 
 def test_3plane():
-    from yapocis.rpc.device import get_available_device_names
+    from yapocis.ocl.device import get_available_device_names
     for device_name in get_available_device_names():
         config = get_device_config(device_name=device_name)
         if config["preferred_vector_width_float"] > 3:
@@ -95,7 +95,7 @@ def test_3plane():
 
 
 def test_4plane():
-    from yapocis.rpc.device import get_available_device_names
+    from yapocis.ocl.device import get_available_device_names
     for device_name in get_available_device_names():
         rgb, aniso = setup(device_name=device_name)
         shape4 = list(rgb.shape)

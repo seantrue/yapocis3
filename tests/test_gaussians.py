@@ -2,7 +2,7 @@
 import numpy as np
 import time
 
-from yapocis.rpc.device import get_available_device_names
+from yapocis.ocl.device import get_available_device_names
 
 from yapocis.lib.gaussian import Gaussian, GaussianWeights, are_close
 from yapocis.lib.gradient import Gradient
@@ -53,9 +53,9 @@ def test_image():
 def test_zcs():
     g = Gaussian()
     image = np.zeros((512, 513), dtype=np.float32)
-    image[255, 255] = 1.0
-    smaller = g.gauss_image(image, 4)
-    larger = g.gauss_image(image, 5)
+    image[255, 240:280] = 1.0
+    smaller = g.gauss_image(image, 0)
+    larger = g.gauss_image(image, 1)
     dog = smaller - larger
     zca = g.zcs(dog)
     show("scale 4", smaller)
@@ -77,6 +77,17 @@ def test_multiscale_zcs():
             snapshow(g, scale, f"{subtotal:.03f}", zca)
         print(f" {device_name} {subtotal:.03f} seconds")
 
+def test_thresholds():
+    g = Gaussian()
+    subtotal = 0.0
+    for threshold in np.linspace(7.4e-06,7.6e-06,5):
+        for scale in range(g.get_scales() - 1):
+            a = np.zeros((400, 401), dtype=np.float32)
+            a[200, :] = 1.0
+            a[:, 200] = 1.0
+            zca, grad, theta = g.zcsdog(a, scale, threshold=threshold)
+            snapshow(g,  f"{scale} {threshold}", zca)
+
 
 def test_gradient():
     img = image_test()
@@ -87,3 +98,16 @@ def test_gradient():
         gr,th = g.gradient(I, 3)
         show(device_name, "theta",th)
         snapshow(g, device_name, "grad", gr)
+
+def test_multiscale_zcs_test():
+    hsis = HSI()
+    img = image_test()
+    h,s,i = split_planes(hsis.hsi2rgb3(img))
+    g = Gaussian(device_name=0)
+    subtotal = 0.0
+    for scale in range(g.get_scales() - 1):
+        t = time.time()
+        zca, grad, theta = g.zcsdog(i, scale, res=True)
+        subtotal += (time.time() - t)
+        snapshow(g, scale, f"{subtotal:.03f}", zca)
+    print(f"{subtotal:.03f} seconds")

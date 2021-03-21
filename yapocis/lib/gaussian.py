@@ -1,7 +1,7 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-from yapocis.rpc.kernel import Kernel
-from yapocis.rpc.kernel_manager import load_program
+from yapocis.ocl.kernel import Kernel
+from yapocis.ocl.kernel_manager import load_program
 
 from yapocis.utils.basic import set_margin, set_frame
 from yapocis.lib.gradient import Gradient
@@ -113,6 +113,7 @@ class Gaussian(BoundKernels):
             self.gaussian_kernels[i].h = getattr(kmgr, convsh[i][0])
             self.gaussian_kernels[i].v = getattr(kmgr, convsv[i][0])
             self.gaussian_kernels[i].width = len(conv)
+        self.threshold = 7.5e-06
 
     def get_scales(self):
         return len(self.gaussian_kernels)
@@ -134,14 +135,17 @@ class Gaussian(BoundKernels):
         g.read(a)
         return a
 
-    def zcs(self, image):
-        return self.zc.zcs(image)
+    def zcs(self, image, threshold=None):
+        threshold = self.threshold if threshold is None else threshold
+        return self.zc.zcs(image, threshold=threshold)
 
-    def zcs_res(self, image, zcs):
-        return self.zc.zcs_res(image, zcs)
+    def zcs_res(self, image, zcs, threshold=None):
+        threshold = self.threshold if threshold is None else threshold
+        return self.zc.zcs_res(image, zcs, threshold=threshold)
 
-    def zcsdog(self, a: Image1, scale: int, clearmargin: bool = True, frame: bool = True, res: bool = True) -> \
+    def zcsdog(self, a: Image1, scale: int, threshold=None, clearmargin: bool = True, frame: bool = True, res: bool = True) -> \
             Tuple[Image1, Image1, Image1]:
+        threshold = self.threshold if threshold is None else threshold
         if res:
             g = self.get_gaussian_kernel(scale)
             g1 = self.get_gaussian_kernel(scale + 1)
@@ -159,16 +163,16 @@ class Gaussian(BoundKernels):
             g1.res(0, a, tmp)
             g1.res(1, tmp, larger)
             self.ops.sub_res(larger, smaller, tmp)
-            self.zcs_res(tmp, zca)
+            self.zcs_res(tmp, zca, threshold=threshold)
             g.read(zca)
             g.read(smaller)
         else:
             smaller = self.gauss_image(a, scale)
             larger = self.gauss_image(a, scale + 1)
             dog = smaller - larger
-            zca = self.zcs(dog)
+            zca = self.zcs(dog, threshold=threshold)
         # Zero out of bounds and create a frame.
-        grad, theta = self.grad.gradient(smaller)
+        grad, theta = self.grad.gradient(smaller,3)
         margin = self.gaussian_weights.get_gaussian_width(scale) + 1
         if clearmargin:
             set_margin(zca, margin)

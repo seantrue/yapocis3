@@ -12,6 +12,3 @@ class Operators(BoundKernels):
 
     def __init__(self, *args, **kwargs):
         super(Operators, self).__init__(*args, operators=self.OPERATORS, **kwargs)
-
-    def __getattr__(self, attr: str) -> Callable:
-        return getattr(self.kmgr, attr)

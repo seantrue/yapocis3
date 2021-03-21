@@ -112,7 +112,7 @@ def scan_kernel_parameters(kernel):
     return definitions
 
 
-KernelParamSpec = namedtuple("KernelParam", ["name", "hint", "dim", "pointer", "data_type", "np_dtype", "derived"])
+KernelParamSpec = namedtuple("KernelParam", ["name", "hint", "dim", "pointer", "data_type", "np_dtype", "derived","derived_from"])
 KernelSpec = namedtuple("KernelSpec", ["name", "alias", "parameters", "definitions"])
 Interface = namedtuple("InterfaceSpec", ["name", "kernels", "aliases"])
 
@@ -146,22 +146,27 @@ def get_interfaces(s: str) -> List[Interface]:
             param_definitions = scan_kernel_parameters(kernel)
             kernel_parameters = []
             for param in kernel.parameters:
+                param_name = derived_from = param.name
+                derived = False
                 if param.dim:
+                    derived = True
                     data_type = "int"
                 elif param.hint in ("outlike", "out_like"):
+                    derived = True
+                    param_name = f"out_like_{param_name}"
                     data_type = param_definitions[param.name].data_type if param.data_type == '' else param.data_type
                 else:
                     data_type = param.data_type
                 np_dtype = ctype_to_nptype.get(data_type, data_type)
-                derived = True if param.dim or param.hint in ("out_like","outlike") else False
                 kernel_parameters.append(
-                    KernelParamSpec(name=param.name,
+                    KernelParamSpec(name=param_name,
                                     hint=param.hint,
                                     dim=param.dim,
                                     pointer=param.pointer,
                                     data_type=data_type,
                                     np_dtype=np_dtype,
-                                    derived=derived))
+                                    derived=derived,
+                                    derived_from=derived_from))
             kernel_name = f"{aliasof}_{kernel.name}" if kernel.kernel_type == "extension" else kernel.name
             kernel_spec = KernelSpec(name=kernel_name,
                                      alias=aliasof,

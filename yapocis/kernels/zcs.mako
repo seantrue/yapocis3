@@ -6,20 +6,29 @@
 #define ADDRESS${planes}(xx,yy) (ADDRESS(xx,yy))*${planes}
 
 __kernel
-void zcs${planes}(int width, int height, __global float* input, __global float* zcs )
+void zcs${planes}(int width, int height, float threshold, __global float* input, __global float* zcs )
 {
-    size_t i = get_global_id(0);
+    size_t i = get_global_id(0)*${planes};
     int x = max((size_t)1,X(i));
+    x = min(x,width-2);
     int y = max((size_t)1,Y(i));
+    y = min(y, height-2);
     float zclt, zcgt;
-    float v, below, left;
+    float v, below, left, above, right;
+    float delta;
     %for plane in range(planes):
     v = input[i];
+    above = input[ADDRESS${planes}(x,y+1)];
     below = input[ADDRESS${planes}(x,y-1)];
     left = input[ADDRESS${planes}(x-1,y)];
-    zclt = ((below < ZERO || left < ZERO) && v >= ZERO) ? ONE : ZERO;
-    zcgt = ((below >= ZERO || left >= ZERO) && v < ZERO) ? ONE : ZERO;
-    zcs[i] = max(zclt,zcgt);
+    right = input[ADDRESS${planes}(x+1,y)];
+    delta = ((above-below)*(above-below)+(right-left)*(right-left));
+    above = sign(above);
+    below = sign(below);
+    left = sign(left);
+    right = sign(right);
+    zclt = (delta > threshold) && ((below != above) || (left != right)) ? ONE : ZERO;
+    zcs[i] = zclt;
     i += 1;
     %endfor
 }

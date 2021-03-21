@@ -3,10 +3,10 @@
 import pytest
 from yapocis.utils.typing import *
 
-from yapocis.rpc.interface import get_interface
-from yapocis.rpc.device import get_available_device_names
-from yapocis.rpc.device_manager import DeviceManager
-from yapocis.rpc.kernel_manager import load_program, import_program
+from yapocis.ocl.interface import get_interface
+from yapocis.ocl.device import get_available_device_names
+from yapocis.ocl.device_manager import DeviceManager
+from yapocis.ocl.kernel_manager import load_program, import_program
 from . import show_snapshots
 
 

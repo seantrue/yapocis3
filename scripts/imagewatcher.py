@@ -6,8 +6,10 @@ Not efficient.
 """
 
 import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame
 from yapocis.fonts import font as find_font
+from datetime import datetime
 
 WIDTH, HEIGHT = 1024, 1024
 
@@ -16,7 +18,7 @@ def get_images():
     images = [os.path.join(queue,name) for name in os.listdir(queue) if name.endswith(".png")]
     images = [(os.stat(path).st_ctime, path) for path in images]
     images.sort()
-    return [path for (_, path) in images]
+    return images
 
 most_recent = None
 image_index = -1
@@ -51,21 +53,23 @@ def fetch_image(i):
     i = i + len(images) if i < 0 else i
     i = i % len(images)
     try:
-        image = pygame.image.load(images[i])
+        created, path = images[i]
+        created = str(datetime.fromtimestamp(created)).split(".")[0]
+        image = pygame.image.load(path)
     except pygame.error:
         return None, None
     if max(image.get_size()) > WIDTH:
         image = pygame.transform.smoothscale(image, (WIDTH-50, HEIGHT-50))
-    image_name,_ = os.path.splitext(os.path.basename(images[image_index]))
+    image_name,_ = os.path.splitext(os.path.basename(path))
     image_index = i
-    most_recent = images[image_index]
-    return image, f"{i:3d} {image_name}"
+    most_recent = path
+    return image, f"{i+1}/{len(images)}@{created}  {image_name}"
 
 def main():
     global WIDTH, HEIGHT
     pygame.init()
     font_path = find_font("default")
-    font = pygame.font.Font(font_path, 24)
+    font = pygame.font.Font(font_path, 22)
 
     background_color = (100, 100, 100)
     display_surface = pygame.display.set_mode((WIDTH, HEIGHT),pygame.RESIZABLE)
@@ -79,13 +83,14 @@ def main():
             w,h = image.get_size()
             display_surface.blit(image, (25+WIDTH//2-w//2, 25+HEIGHT//2-h//2))
             if label_text is not None:
-                label = font.render(label_text, True, (255, 255, 255))
+                label = font.render(label_text, True, (255, 255, 255),(0,0,0))
                 display_surface.blit(label, (0,0))
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
             if event.type == pygame.VIDEORESIZE:
+                # Resize window and image to match
                 dim = min(event.w,event.h)
                 WIDTH = HEIGHT = dim
                 display_surface = pygame.display.set_mode((dim+50, dim+50),pygame.RESIZABLE)
@@ -93,16 +98,22 @@ def main():
             if event.type == pygame.USEREVENT:
                 image, label_text = step_image()
             if event.type == pygame.KEYDOWN:
+                # Stop tailing the directory
                 pygame.time.set_timer(pygame.USEREVENT, 0)
                 if event.key == pygame.K_a:
+                    # Backup
                     image, label_text = previous_image()
                 elif event.key == pygame.K_d:
+                    # Forward
                     image, label_text = next_image()
                 elif event.key == pygame.K_e:
+                    # End
                     image, label_text = last_image()
                 elif event.key == pygame.K_w:
+                    # Beginning
                     image, label_text = first_image()
                 elif event.key == pygame.K_s:
+                    # Start tailing the directory
                     pygame.time.set_timer(pygame.USEREVENT, 100)
         pygame.display.update()
 

@@ -51,7 +51,7 @@ def double_shuffle(lst, n):
 
 @pytest.fixture(scope="session", autouse=True)
 def show_snapshots(request):
-    from yapocis.rpc.device_manager import display_snapshots
+    from yapocis.ocl.device_manager import display_snapshots
     request.addfinalizer(display_snapshots)
 
 def strip_test_prefix(s):

@@ -6,9 +6,9 @@ Interpret interfaces in a readable way.
 from argparse import ArgumentParser
 from io import StringIO
 from yapocis.interfaces import interfaces, find_interface
-from yapocis.rpc.interface import get_interface, get_interfaces, load_interface, python_stubs, opencl_stubs, \
+from yapocis.ocl.interface import get_interface, get_interfaces, load_interface, python_stubs, opencl_stubs, \
     explain_interface
-from yapocis.rpc.kernel_manager import render_interface
+from yapocis.ocl.kernel_manager import render_interface
 
 
 def as_code(s):

@@ -16,7 +16,7 @@ setup(
     author_email = "sean.true@gmail.com",
     description = "Yet another PyOpenCL interface specifier",
     license = "PSF",
-    keywords = "opencl pyopencl thunk rpc image",
+    keywords = "opencl pyopencl thunk ocl image",
     url = "https://github.com/seantrue/Yapocis/",
     classifiers = ["Development Status :: 3 - Alpha",
                    "Intended Audience :: Developers",

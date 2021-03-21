@@ -58,7 +58,7 @@ class Kernel:
             if not param.np_dtype:
                 print(param)
             dtype = getattr(np, param.np_dtype)
-            iarg = self.posbyname[param.name]
+            iarg = self.posbyname[param.derived_from]
             if not param.hint and not param.dim:
                 arg = args[iarg]
                 real_arg = dtype(arg)

@@ -1,0 +1,8 @@
+interface colormath {
+    kernel transform(in float input, int transform_id, out_like float input);
+    alias  transform_res as transform(resident float input, int transform_id, resident float output);
+    kernel xyz2xyY(in float input, out_like float input);
+    alias  xyz2xyY_res as xyz2xyY(resident float input, resident float output);
+    kernel xyY2xyz(in float input, out_like float input);
+    alias  xyY2xyz_res as xyY2xyz(resident float input, resident float output);
+};

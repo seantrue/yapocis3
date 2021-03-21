@@ -7,9 +7,9 @@ import pyopencl
 from mako.lookup import TemplateLookup
 from mako.template import Template
 
-from yapocis.rpc.device_manager import get_device_manager
-from yapocis.rpc.kernel import Kernel
-from yapocis.rpc.interface import Interface, get_interface, load_interface
+from yapocis.ocl.device_manager import get_device_manager
+from yapocis.ocl.kernel import Kernel
+from yapocis.ocl.interface import Interface, get_interface, load_interface
 from yapocis.utils.internals import find_yapocis_file, get_yapocis_dir
 from yapocis.utils.typing import Context
 from yapocis.kernels import find_kernel

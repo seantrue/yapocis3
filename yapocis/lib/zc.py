@@ -8,7 +8,7 @@ from .bound_kernels import BoundKernels
 class ZC(BoundKernels):
     INTERFACE="zcs"
 
-    def zcs(self, image):
+    def zcs(self, image, threshold=0.00001):
         if len(image.shape) == 2:
             handler = self.kmgr.zcs1
             global_size = image.size
@@ -21,10 +21,10 @@ class ZC(BoundKernels):
         elif image.shape[2] == 4:
             handler = self.kmgr.zcs4
             global_size = image.size // 4
-        return handler(image, global_size=global_size)
+        return handler(threshold, image, global_size=global_size)
 
 
-    def zcs_res(self, image, zcs):
+    def zcs_res(self, image, zcs, threshold=0.00001):
         if len(image.shape) == 2:
             handler = self.kmgr.zcs1_res
             global_size = image.size
@@ -37,4 +37,4 @@ class ZC(BoundKernels):
         elif image.shape[2] == 4:
             handler = self.kmgr.zcs4_res
             global_size = image.size // 4
-        handler(image, zcs, global_size=global_size)
+        handler(threshold, image, zcs, global_size=global_size)

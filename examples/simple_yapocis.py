@@ -3,7 +3,7 @@
 import numpy as np
 import numpy.linalg as la
 import time
-from yapocis.rpc.kernel_manager import load_program
+from yapocis.ocl.kernel_manager import load_program
 
 # We don't _need_ specify the dtype: that's done in the interface
 a = np.random.rand(50000)

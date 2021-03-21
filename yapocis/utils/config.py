@@ -1,7 +1,7 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 from yaml import safe_dump as dump
-from yapocis.rpc.device import get_available_device_names, get_device
+from yapocis.ocl.device import get_available_device_names, get_device
 from yapocis.utils.typing import *
 
 DEPRECATED_OPENCL_ATTRIBUTES = {"persistent_unique_id"}

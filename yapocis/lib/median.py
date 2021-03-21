@@ -6,7 +6,7 @@ Provides 2d median filter for 2d arrays
 from yapocis.utils.typing import *
 
 # Provision this program with just one median filter, fixed length of 9
-from yapocis.rpc.kernel_manager import load_program
+from yapocis.ocl.kernel_manager import load_program
 from .bound_kernels import BoundKernels
 
 
