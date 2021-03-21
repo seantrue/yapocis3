@@ -3,6 +3,7 @@ import os, sys
 from PIL import Image, ImageFont, ImageDraw
 
 from yapocis.utils.typing import *
+from yapocis.fonts import font as find_font
 
 DEBUG = False
 BENCHMARKING = os.environ.get('BENCHMARKING',None)
@@ -227,10 +228,7 @@ def sign(title: str, img: Union[Image1, PILImage]) -> PILImage:
             fheight += 5
     else:
         fheight = 16
-    try:
-        font = ImageFont.truetype("zapfino.ttf", fheight)
-    except:
-        font = ImageFont.truetype("/Library/Fonts/AppleGothic.ttf", fheight)
+    font = ImageFont.truetype(find_font("default"))
     draw = ImageDraw.Draw(img)
     try:
         pixels = [img.getpixel((x, height - 15)) for x in range(10, 30)]
@@ -275,7 +273,7 @@ def _show_array(*args) -> Tuple[str, PILImage]:
             array = array.astype(np.uint8)
     img = Image.fromarray(array)
     shape = array.shape
-    font = ImageFont.truetype("/Library/Fonts/AppleGothic.ttf", 25)
+    font = ImageFont.truetype(find_font("default"))
     draw = ImageDraw.Draw(img)
     try:
         pixels = [img.getpixel((x, 15)) for x in range(10, 30)]
