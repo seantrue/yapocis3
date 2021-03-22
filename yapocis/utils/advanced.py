@@ -3,11 +3,16 @@ DEBUG = False
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 import os, sys
 import copy
+import yapocis
 from yapocis.utils.basic import *
 from yapocis.lib.kerneldraw1 import KernelDraw1
 from yapocis.lib.kerneldraw3 import KernelDraw3
 BENCHMARKING = os.environ.get('BENCHMARKING',None)
 
+VIEWING_QUEUE = os.environ.get("YAPOCIS_VIEW")
+VIEWING_QUEUE = os.path.join(os.path.dirname(os.path.abspath(yapocis.__file__)),"../queue") if VIEWING_QUEUE is None else VIEWING_QUEUE
+if not os.path.isdir(VIEWING_QUEUE):
+    raise RuntimeError(f"Can't find viewing queue '{VIEWING_QUEUE}'")
 
 def sign(title: str, img: np.ndarray) -> np.ndarray:
     img = img.astype(np.float32)
@@ -65,7 +70,7 @@ def show_array(*args, **kwargs) -> None:
     title, img = _show_array(*args, **kwargs)
     if img.mode == "L":
         img = img.convert("RGB")
-    img.save(f"/Users/seant/workspace/yapocis/queue/{title}.png")
+    img.save(os.path.join(VIEWING_QUEUE,f"{title}.png"))
 
 
 def show_arraygrad(title, image, theta, grad = None) -> None:

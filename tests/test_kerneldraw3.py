@@ -3,7 +3,7 @@ import numpy as np
 
 from tests.test_graphics import random_ellipses, random_circles, random_rects, random_lines, random_triangles, \
     random_colors, random_alpha, random_texts
-from yapocis.utils.typing import Optional
+from yapocis.utils.stereo_typing import Optional
 from yapocis.lib.kerneldraw3 import KernelDraw3
 
 from . import ASIZE, snapshow, show_snapshots

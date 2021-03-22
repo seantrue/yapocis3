@@ -16,6 +16,9 @@ class AbstractGraphicsSetup:
     def coerce_colors(self, coords, color=None, colors=None, alpha=None, alphas=None, **kwargs) -> np.ndarray:
         raise NotImplementedError
 
+    def coerce_widths(self, coords, width=None, widths=None,  **kwargs) -> np.ndarray:
+        raise NotImplementedError
+
 
     def setup_composite(self, locations, blocks, alpha=None, alphas=None, **kwargs):
         """
@@ -59,12 +62,13 @@ class AbstractGraphicsSetup:
 
 class AbstractGraphics(BoundKernels):
 
-    def lines(self, image, coords, width=1.0, **kwargs):
+    def lines(self, image, coords, **kwargs):
         if not coords:
             return
         coords = self.coerce_coords(coords, 4)
         colors = self.coerce_colors(coords, **kwargs)
-        self.kmgr.lines(image, coords, width, colors, global_size=image.size // self.CHANNELS)
+        widths = self.coerce_widths(coords, **kwargs)
+        self.kmgr.lines(image, coords, widths, colors, global_size=image.size // self.CHANNELS)
 
     def rects(self, image, coords, **kwargs):
         if not coords:
@@ -163,7 +167,8 @@ class AbstractKernelDraw:
     def prepare_args(self, coords, width, **kwargs):
         coords = self.graphics.coerce_coords(coords, width)
         colors = self.coerce_colors(len(coords), **kwargs)
-        return coords, colors
+        widths = self.coerce_widths(len(coords), **kwargs)
+        return coords, colors, widths
 
 
     def coerce_colors(self, n:int, color:Optional[float]=None, colors=None, **kwargs):
@@ -195,10 +200,18 @@ class AbstractKernelDraw:
         alphas = to_vector(alpha, alphas, n, default=self.alpha, dtype=np.float32)
         return alphas
 
+    def coerce_widths(self, n, width=None, widths=None, distance=None, **kwargs) -> np.ndarray:
+        if width and widths:
+            raise RuntimeError(f"Only one of width {width} and {widths}")
+        if width and distance:
+            raise RuntimeError(f"Only one of width/distance {width} and {distance}")
+        width = distance if width is None else width
+        widths = to_vector(width, widths, n, default=1.0, dtype=np.float32)
+        return widths
 
     # Add item to display list for batch rendering
-    def line(self, xyxy, distance=1.5, **kwargs):
-        self._lines.append((xyxy, distance, kwargs))
+    def line(self, xyxy,  **kwargs):
+        self._lines.append((xyxy, kwargs))
 
     def rect(self, rect, **kwargs):
         self._rects.append((rect, kwargs))
@@ -280,24 +293,24 @@ class AbstractKernelDraw:
         self.render_draw_strings()
         self.render_sprites()
 
-    def lines(self, coords, distance=1.0, **kwargs):
-        coords, colors = self.prepare_args(coords, 4, **kwargs)
-        self.graphics.kmgr.lines_res(self.a, coords, distance, colors,global_size=self.global_size)
+    def lines(self, coords,  **kwargs):
+        coords, colors, widths = self.prepare_args(coords, 4, **kwargs)
+        self.graphics.kmgr.lines_res(self.a, coords, widths, colors,global_size=self.global_size)
 
     def rects(self, coords, **kwargs):
-        coords, colors = self.prepare_args(coords, 4, **kwargs)
+        coords, colors, _ = self.prepare_args(coords, 4, **kwargs)
         self.graphics.kmgr.rects_res(self.a, coords, colors,global_size=self.global_size)
 
     def circles(self, coords, **kwargs):
-        coords, colors = self.prepare_args(coords, 3, **kwargs)
+        coords, colors, _ = self.prepare_args(coords, 3, **kwargs)
         self.graphics.kmgr.circles_res(self.a, coords, colors,global_size=self.global_size)
 
     def triangles(self, coords, **kwargs):
-        coords, colors = self.prepare_args(coords, 6, **kwargs)
+        coords, colors, _ = self.prepare_args(coords, 6, **kwargs)
         self.graphics.kmgr.triangles_res(self.a, coords, colors,global_size=self.global_size)
 
     def ellipses(self, coords, **kwargs):
-        coords, colors = self.prepare_args(coords, 4, **kwargs)
+        coords, colors, _ = self.prepare_args(coords, 4, **kwargs)
         self.graphics.kmgr.ellipses_res(self.a, coords, colors,global_size=self.global_size)
 
     def composite(self, locations, blocks, **kwargs):

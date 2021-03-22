@@ -2,7 +2,7 @@
 import os, sys
 from PIL import Image, ImageFont, ImageDraw
 
-from yapocis.utils.typing import *
+from yapocis.utils.stereo_typing import *
 from yapocis.fonts import font as find_font
 
 DEBUG = False
@@ -300,7 +300,7 @@ def show_array(*args, **kwargs) -> None:
     # img.show()
     if img.mode == "L":
         img = img.convert("RGB")
-    img.save(f"/Users/seant/workspace/yapocis/queue/{title}.png")
+    img.save(f"/home/seant/workspace/Yapocis/queue/{title}.png")
 
 def show_arraygrad(title: str, image: Image1, theta: Image1, grad: Optional[Image1] = None) -> None:
     """

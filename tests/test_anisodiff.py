@@ -4,7 +4,7 @@ from yapocis.lib.anisodiff import Anisodiff
 from yapocis.lib.channels import split_planes, join_planes
 from yapocis.lib.hsi import HSI
 from yapocis.utils.config import get_device_config
-from yapocis.utils.typing import *
+from yapocis.utils.stereo_typing import *
 from . import image_test, TS, show_snapshots
 
 
@@ -66,9 +66,9 @@ def test_2plane():
     from yapocis.ocl.device import get_available_device_names
     for device_name in get_available_device_names():
         config = get_device_config(device_name=device_name)
-        if config["preferred_vector_width_float"] > 3:
+        if config["preferred_vector_width_float"] > 2:
             print("preferred_vector_width_float", config["preferred_vector_width_float"])
-            print(f"The {config['__name__']} OpenCL engine does not support float3")
+            print(f"The {config['__name__']} OpenCL engine does not support float2")
             continue
         rgb, aniso = setup(device_name=device_name)
         r,g,b = split_planes(rgb)
@@ -87,6 +87,9 @@ def test_3plane():
         if config["preferred_vector_width_float"] > 3:
             print("preferred_vector_width_float", config["preferred_vector_width_float"])
             print(f"The {config['__name__']} OpenCL engine does not support float3")
+            continue
+        if config.get("compute_capability_major_nv",""):
+            print("Nvidia drivers don't handle float3 well")
             continue
         rgb, aniso = setup(device_name=device_name)
         with TS(f"[{N}] on {device_name[:24]}") as show:

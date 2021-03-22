@@ -5,7 +5,7 @@ from random import randint, shuffle
 from yapocis.lib.graphics4 import Graphics4
 from tests.test_graphics import random_texts
 from yapocis.icons import icons, icon
-from yapocis.utils.typing import *
+from yapocis.utils.stereo_typing import *
 
 from . import image_test, text_test_lines, ASIZE, double_shuffle, snapshow, show_snapshots
 
@@ -149,8 +149,8 @@ def test_lines():
     for i in range(100, ASIZE, 100):
         for j in range(100, ASIZE, 100):
             coords.append([0, 0, i, j])
-    grph.lines(canvas, coords, 1.5, colors=random_colors(len(coords)), alpha=1.0)
-    grph.lines(canvas, random_coords, 1.5, colors=random_colors(), alphas=random_alpha())
+    grph.lines(canvas, coords, width=1.5, colors=random_colors(len(coords)), alpha=1.0)
+    grph.lines(canvas, random_coords, distance=1.5, colors=random_colors(), alphas=random_alpha())
     snapshow(grph, canvas)
 
 

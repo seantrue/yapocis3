@@ -1,5 +1,5 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
-from yapocis.utils.typing import *
+from yapocis.utils.stereo_typing import *
 from yapocis.ocl.kernel_manager import load_program
 class BoundKernels:
     INTERFACE = None

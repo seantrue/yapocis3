@@ -30,3 +30,6 @@ __inline void p3(__constant char *s, float3 v) {
 __inline void p4(__constant char *s, float4 v) {
     printf("%s %.5f %.5f %.5f %.5f\n", s, v.x, v.y, v.z, v.w);
 }
+
+#define ANYISLESS(a,b) (a.x < b.x || a.y < b.y)
+#define ANYISGTE(a,b) (a.x >= b.x || a.y >= b.y)

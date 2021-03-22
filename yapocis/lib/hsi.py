@@ -1,7 +1,7 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 from yapocis.lib.bound_kernels import BoundKernels
-from yapocis.utils.typing import *
+from yapocis.utils.stereo_typing import *
 
 
 class HSI(BoundKernels):

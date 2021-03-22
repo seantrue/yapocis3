@@ -8,7 +8,7 @@ from collections import namedtuple
 from pyparsing import Optional, ParseException, OneOrMore, Literal, Keyword, Word, alphas, alphanums, \
     delimitedList, Group, ZeroOrMore, restOfLine, cStyleComment
 from yapocis.interfaces import find_interface
-from yapocis.utils.typing import List, Dict, Any
+from yapocis.utils.stereo_typing import List, Dict, Any
 
 
 # Map from OpenCL datatype to a numpy data type

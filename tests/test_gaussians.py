@@ -69,8 +69,7 @@ def test_multiscale_zcs():
         subtotal = 0.0
         for scale in range(g.get_scales() - 1):
             a = np.zeros((400, 401), dtype=np.float32)
-            a[200, :] = 1.0
-            a[:, 200] = 1.0
+            a[150:250, 150:250] = 1.0
             t = time.time()
             zca, grad, theta = g.zcsdog(a, scale, res=True)
             subtotal += (time.time() - t)

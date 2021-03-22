@@ -4,7 +4,7 @@ Wrappers for binary operations of the form c = a + b, in both resident and inout
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 from yapocis.lib.bound_kernels import BoundKernels
-from yapocis.utils.typing import *
+from yapocis.utils.stereo_typing import *
 
 class Operators(BoundKernels):
     INTERFACE = "operators"

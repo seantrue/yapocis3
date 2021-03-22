@@ -9,7 +9,7 @@ Higher level wrapper for anisotropic filter (Perona/Malik).
 from yapocis.lib.channels import split_channels, join_channels, join_planes, split_planes
 from yapocis.lib.hsi import *
 from yapocis.utils.basic import get_image_depth
-from yapocis.utils.typing import *
+from yapocis.utils.stereo_typing import *
 from .hsi import HSI
 
 from .bound_kernels import BoundKernels

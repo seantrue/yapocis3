@@ -1,7 +1,7 @@
 interface graphics {
     # Kernels have aliases for running on resident buffers
-    kernel lines(width_of a, height_of a, inout float a, width_of lines, in float lines, float distance, in float rcolor);
-    extension res of lines(width_of a, height_of a, resident float a, width_of lines, in float lines, float distance, in float rcolor);
+    kernel lines(width_of a, height_of a, inout float a, width_of lines, in float lines, in float distance, in float rcolor);
+    extension res of lines(width_of a, height_of a, resident float a, width_of lines, in float lines, in float distance, in float rcolor);
     kernel rects(width_of a, height_of a, inout float a, width_of lines, in float lines, in float rcolor);
     extension res of rects(width_of a, height_of a, resident float a, width_of lines, in float lines, in float rcolor);
     kernel circles(width_of a, height_of a, inout float a, width_of lines, in float lines, in float rcolor);

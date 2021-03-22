@@ -11,7 +11,7 @@ import pyopencl
 from pyopencl import mem_flags as mf  # @UnusedImport
 from yapocis.ocl.buffer_manager import BufferManager
 from yapocis.ocl.device import get_device
-from yapocis.utils.typing import *
+from yapocis.utils.stereo_typing import *
 
 MEMFLAGS = mf.READ_WRITE | mf.COPY_HOST_PTR
 
@@ -28,7 +28,12 @@ class DeviceManager(BufferManager):
 
     def __init__(self, device_name: Optional[str] = None, autoflatten: bool = True, timed: bool = False, **kwargs):
         self.device_name, self.device = get_device(device_name=device_name)
-        super(DeviceManager, self).__init__(pyopencl.Context([self.device]), None, timed=timed, **kwargs)
+        try:
+            super(DeviceManager, self).__init__(pyopencl.Context([self.device]), None, timed=timed, **kwargs)
+        except RuntimeError as e:
+            print(f"Failed to initialize `{self.device_name}', trying default")
+            self.device_name, self.device = get_device()
+            super(DeviceManager, self).__init__(pyopencl.Context([self.device]), None, timed=timed, **kwargs)
         self.context_meta = {}
         self.autoflatten = autoflatten
 

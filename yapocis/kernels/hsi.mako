@@ -43,9 +43,9 @@ __inline float adjustrgb(float v) {
 
 __inline float3 _rgb2xyz(float3 rgb) {
    float3 rgb3 = ZERO3;
-   rgb3[0] = adjustrgb(rgb.x);
-   rgb3[1] = adjustrgb(rgb.y);
-   rgb3[2] = adjustrgb(rgb.z);
+   rgb3.x = adjustrgb(rgb.x);
+   rgb3.y = adjustrgb(rgb.y);
+   rgb3.z = adjustrgb(rgb.z);
    float X = dot3(rgb3,XK);
    float Y = dot3(rgb3,YK);
    float Z = dot3(rgb3,ZK);
@@ -61,9 +61,9 @@ __inline float adjustxyz(float v) {
 
 __inline float3 _xyz2lab(float3 xyz) {
    float3 xyz3 = ZERO3;
-   xyz3[0] = adjustxyz(xyz.x);
-   xyz3[1] = adjustxyz(xyz.y);
-   xyz3[2] = adjustxyz(xyz.z);
+   xyz3.x = adjustxyz(xyz.x);
+   xyz3.y = adjustxyz(xyz.y);
+   xyz3.z = adjustxyz(xyz.z);
    float3 lab = ZERO3;
    lab.x = (116*xyz3.y) -16;
    lab.y = 500 * (xyz3.x - xyz3.y);

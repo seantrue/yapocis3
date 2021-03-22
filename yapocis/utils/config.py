@@ -2,7 +2,7 @@
 
 from yaml import safe_dump as dump
 from yapocis.ocl.device import get_available_device_names, get_device
-from yapocis.utils.typing import *
+from yapocis.utils.stereo_typing import *
 
 DEPRECATED_OPENCL_ATTRIBUTES = {"persistent_unique_id"}
 def get_device_config(device_name:Optional[str]=None) -> Config:

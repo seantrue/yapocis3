@@ -7,7 +7,7 @@ HWC <-> CHW ordering, conceptually.
 
 import numpy as np
 
-from yapocis.utils.typing import *
+from yapocis.utils.stereo_typing import *
 
 def histeq(im:Image1, nbr_bins:int =2 ** 16) -> Image1:
     """

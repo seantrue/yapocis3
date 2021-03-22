@@ -5,7 +5,7 @@ import numpy as np
 
 from tests.test_graphics4 import random_ellipses, random_circles, random_rects, random_lines, random_triangles, \
     random_colors, random_alpha
-from yapocis.utils.typing import Optional
+from yapocis.utils.stereo_typing import Optional
 
 from yapocis.lib.kerneldraw4 import KernelDraw4
 

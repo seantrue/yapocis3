@@ -32,15 +32,16 @@ class KernelDraw3(AbstractKernelDraw):
         coords = self.coerce_coords(coords, width)
         colors = self.coerce_colors(len(coords), **kwargs)
         alphas = self.coerce_alphas(len(coords), **kwargs)
-        return coords, colors, alphas
+        widths = self.coerce_widths(len(coords), **kwargs)
+        return coords, colors, alphas, widths
 
     def render_immediate(self, handle, width, coords, **kwargs):
         if not coords:
             return
-        coords, colors, alphas = self.prepare_args(coords, width, **kwargs)
+        coords, colors, alphas, widths = self.prepare_args(coords, width,  **kwargs)
         for dimension, ad in enumerate(self.ads):
             color_vector = colors[:, dimension]
-            getattr(ad, handle)(coords, colors=color_vector, alphas=alphas, distance=kwargs.get("distance", None))
+            getattr(ad, handle)(coords, colors=color_vector, alphas=alphas, widths=widths)
 
     def lines(self, coords, distance=1.0, **kwargs):
         self.render_immediate("lines", 4, coords, distance=distance, **kwargs)

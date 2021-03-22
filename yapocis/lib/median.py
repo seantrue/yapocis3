@@ -3,7 +3,7 @@ Provides 2d median filter for 2d arrays
 '''
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-from yapocis.utils.typing import *
+from yapocis.utils.stereo_typing import *
 
 # Provision this program with just one median filter, fixed length of 9
 from yapocis.ocl.kernel_manager import load_program

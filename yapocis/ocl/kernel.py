@@ -6,7 +6,7 @@ from typing import Callable, List, Tuple, Any, Union, Optional
 import numpy as np
 import pyopencl
 
-from yapocis.utils.typing import Array
+from yapocis.utils.stereo_typing import Array
 
 
 class Kernel:

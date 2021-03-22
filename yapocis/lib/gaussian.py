@@ -7,7 +7,7 @@ from yapocis.utils.basic import set_margin, set_frame
 from yapocis.lib.gradient import Gradient
 from yapocis.lib.operators import Operators
 from yapocis.lib.zc import ZC
-from yapocis.utils.typing import *
+from yapocis.utils.stereo_typing import *
 from .bound_kernels import BoundKernels
 
 def are_close(a: Array, b: Array) -> bool:

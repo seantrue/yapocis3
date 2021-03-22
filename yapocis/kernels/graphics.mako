@@ -2,16 +2,16 @@
 <%include file="helpers.mako" />
 
 __kernel
-void lines(int width, int height,  READWRITE float *a, int nelements, READONLY float2 *coords, float rdist, READONLY float2 *colors)
+void lines(int width, int height,  READWRITE float *a, int nelements, READONLY float2 *coords, READONLY float *rdist, READONLY float2 *colors)
 {
     size_t i =  get_global_id(0);
     float color = a[i];
     int x = X(i);
     int y = Y(i);
-    float threshold2 = ((rdist * .5) + .5);
-    threshold2 = threshold2*threshold2;
     float2 point = (float2)((float)x, (float)y);
     for (int ielement = 0; ielement < nelements; ielement++) {
+        float threshold2 = ((*rdist++ * .5) + .5);
+        threshold2 = threshold2*threshold2;
         float2 linestart = *coords++;
         float2 lineend = *coords++;
         float2 value_alpha = *colors++;
@@ -127,6 +127,7 @@ void ellipses(int width, int height,  READWRITE float *a, int nlines, READONLY f
     barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
+
 //#define DEBUG
 __kernel
 void composite(int width, int height,  READWRITE float *a, int n, READONLY int4 *coords,
@@ -145,7 +146,7 @@ void composite(int width, int height,  READWRITE float *a, int n, READONLY int4 
         int2 lb = coord.s10;
         int2 yt = coord.s10 + coord.s32;
         // Is the current xy inside the destination area?
-        int outside = any(isless(xy,lb)) + any(isgreaterequal(xy,yt));
+        int outside = ANYISLESS(xy,lb) + ANYISGTE(xy,yt);
         int2 source_location = xy-lb;
         int source_offset = (source_location.x*coord.s2)+source_location.y;
         int ipixel_source = ipixel + source_offset;

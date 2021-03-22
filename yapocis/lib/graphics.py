@@ -30,6 +30,15 @@ class Graphics1Setup(AbstractGraphicsSetup):
         ca = np.column_stack([colors, alphas])
         return ca
 
+    def coerce_widths(self, coords, width=None, widths=None, distance=None, **kwargs) -> np.ndarray:
+        n = coords.shape[0]
+        if width and widths:
+            raise RuntimeError(f"Only one of width {width} and {widths}")
+        if width and distance:
+            raise RuntimeError(f"Only one of width/distance {width} and {distance}")
+        width = distance if width is None else width
+        widths = to_vector(width, widths, n, default=1.0, dtype=np.float32)
+        return widths
 
     def setup_composite(self, locations, blocks, alpha=None, alphas=None, **kwargs):
         """

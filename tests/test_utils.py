@@ -1,6 +1,6 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 import numpy as np
-from yapocis.utils.typing import *
+from yapocis.utils.stereo_typing import *
 
 from yapocis.utils.basic import chunker
 from yapocis.lib.channels import join_channels, join_planes, split_channels, split_planes

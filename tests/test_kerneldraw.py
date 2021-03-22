@@ -7,7 +7,7 @@ from tests.test_graphics import random_ellipses, random_circles, random_rects, r
     random_sprites, random_colors, random_alpha, random_texts
 from yapocis.lib.kerneldraw1 import KernelDraw1
 from yapocis.utils.basic import show_array
-from yapocis.utils.typing import *
+from yapocis.utils.stereo_typing import *
 from . import ASIZE, show_snapshots, snapshow
 
 def just_canvas():
@@ -48,7 +48,7 @@ def fill_display_list(ad: KernelDraw1, n: int = 1000) -> None:
     alphas = random_alpha(n)
     locations, strings, fonts, sizes, rotations, text_alphas = random_texts()
     for xyxy, color, alpha in zip(lines, colors, alphas):
-        ad.line(xyxy, distance=1.5, color=color, alpha=alpha)
+        ad.line(xyxy, width=1.5, color=color, alpha=alpha)
     for rect, color, alpha in zip(rects, colors, alphas):
         ad.rect(rect, color=color, alpha=alpha)
     for x in range(0, ASIZE, 100):

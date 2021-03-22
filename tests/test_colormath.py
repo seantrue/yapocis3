@@ -1,7 +1,7 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 from yapocis.lib.channels import split_channels, join_channels
-from yapocis.utils.typing import *
+from yapocis.utils.stereo_typing import *
 
 from yapocis.lib.hsi import HSI
 from yapocis.lib.colormath import Colormath, transform_names

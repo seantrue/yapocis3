@@ -6,7 +6,7 @@ decorator
 numpy
 pyyaml
 py
-pyopencl
+pyopencl[pocl,oclgrind]
 pyparsing
 pytest
 pytools

@@ -10,17 +10,17 @@
 #define ZEROS ZERO4
 
 __kernel void lines(int width, int height, READWRITE float4 *a, int nelements,
-                    READONLY float2 *coords, float rdist,
+                    READONLY float2 *coords, READONLY float *rdist,
                     READONLY float4 *colors) {
   size_t i = get_global_id(0);
   int x = X(i);
   int y = Y(i);
   float4 color = a[i];
 
-  float threshold2 = ((rdist * .5) + .5);
-  threshold2 *= threshold2;
   float2 point = (float2)((float)x, (float)y);
   for (int ielement = 0; ielement < nelements; ielement++) {
+    float threshold2 = ((*rdist++ * .5) + .5);
+    threshold2 *= threshold2;
     float2 linestart = *coords++;
     float2 lineend = *coords++;
     float4 rgba = *colors++;
@@ -160,7 +160,7 @@ __kernel void composite(int width, int height, READWRITE float4 *a, int nelement
     int2 lb = coord.s10;
     int2 yt = lb + coord.s32;
     // Is the current xy inside the destination area?
-    int outside = any(isless(xy, lb)) + any(isgreaterequal(xy, yt));
+    int outside = ANYISLESS(xy,lb) + ANYISGTE(xy,yt);
     int2 source_location = xy - lb;
     int source_offset = (source_location.x * coord.s2) + source_location.y;
     int ipixel_source = ipixel + source_offset;

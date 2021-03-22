@@ -1,14 +1,15 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import pytest
-from yapocis.utils.typing import *
+import pyopencl
+
+from yapocis.utils.stereo_typing import *
 
 from yapocis.ocl.interface import get_interface
-from yapocis.ocl.device import get_available_device_names
+from yapocis.ocl.device import get_available_device_names, get_device
 from yapocis.ocl.device_manager import DeviceManager
 from yapocis.ocl.kernel_manager import load_program, import_program
 from . import show_snapshots
-
 
 
 def test_buffers():
@@ -50,6 +51,7 @@ def test_buffers():
     # assert len(bmgr.arrays.keys())==0
     bmgr.snapshot(name="buffers")
 
+
 def test_buffers_async_write():
     # TODO: Test all available devices
     bmgr = DeviceManager(timed=True, device_name=0)
@@ -57,7 +59,7 @@ def test_buffers_async_write():
     t = a.sum()
     for i in range(1000):
         bmgr.write(a, wait=False)
-    a[:,:] = 0.0
+    a[:, :] = 0.0
     bmgr.read(a)
     assert a.sum() == t
     print(bmgr.snapshot(name="async_write"))
@@ -68,12 +70,11 @@ def test_buffers_async_write():
     t = a.sum()
     for i in range(1000):
         bmgr.write(a, wait=True)
-    a[:,:] = 0.0
+    a[:, :] = 0.0
     bmgr.read(a)
     assert a.sum() == t
     print(bmgr.snapshot(name="sync_write"))
     del bmgr
-
 
 
 def test_getinterface():
@@ -100,7 +101,7 @@ def test_compiling():
         ("mandelbrot", {}),
         ("demo", {}),
         ("hsi", {}),
-        ("operators",dict(operators=[("add", "+"), ("sub", "-"), ("mul", "*"), ("div", "/")]))
+        ("operators", dict(operators=[("add", "+"), ("sub", "-"), ("mul", "*"), ("div", "/")]))
     ]
 
     for device_name in get_available_device_names():
@@ -128,31 +129,43 @@ def test_context():
 def test_demo_kernel():
     # TODO: use load_program instead
     _, entrypoints = import_program("demo", import_kernels="*")
-    print(sum,sum_res)
+    print(sum, sum_res)
     assert sum == entrypoints[0]
     assert sum_res == entrypoints[1]
     a = np.array([0, 1, 2, 3]).astype(np.float32)
     b = np.ones_like(a)
     c = np.zeros_like(a)
-    ids = (id(a),id(b),id(c))
+    ids = (id(a), id(b), id(c))
     # Send two arrays in, allocate and retrieve results
     d = sum(a, b)
     assert id(d) not in ids
     assert d.sum() == 10
-    d1 =  sum_res(a,b,c,resident=(a,b))
+    d1 = sum_res(a, b, c, resident=(a, b))
     assert id(d1) == id(c)
     assert id(d) != id(d1)
     assert d.sum() == 10
-    c1 = sum_res(a,b, c)
+    c1 = sum_res(a, b, c)
     assert id(c) == id(c1)
     assert c1.sum() == 10
     c[:] = 0
     a[:] = 0
-    sum_res(c,c, a, resident=(c,a))
+    sum_res(c, c, a, resident=(c, a))
     assert a.sum() == 0
     sum_res.read(a)
     assert a.sum() == 20
 
+
 def test_import():
     import_program("demo", sum="frabjous_day")
     assert callable(frabjous_day)
+
+
+def test_devices():
+    print()
+    for device_name in get_available_device_names():
+        device_name_found, device = get_device(device_name)
+        try:
+            ctx = pyopencl.Context([device])
+            print(device_name, "loaded", device)
+        except RuntimeError:
+            print(device_name, "failed to load", device)

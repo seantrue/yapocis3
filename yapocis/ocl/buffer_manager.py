@@ -5,7 +5,7 @@ import time
 import pyopencl
 from pyopencl import mem_flags as mf
 
-from yapocis.utils.typing import *
+from yapocis.utils.stereo_typing import *
 
 
 # Numpy makes a big deal out of .copy() being a deepcopy. Hah!

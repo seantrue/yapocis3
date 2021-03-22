@@ -3,7 +3,7 @@
 
 import os
 from yapocis.utils.internals import AssetManager
-from yapocis.utils.typing import Optional
+from yapocis.utils.stereo_typing import Optional
 
 try:
     from PIL.ImageFont import truetype

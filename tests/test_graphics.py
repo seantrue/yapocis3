@@ -5,7 +5,7 @@ from random import randint
 from yapocis.lib.channels import split_channels
 from yapocis.lib.hsi import HSI
 from yapocis.lib.graphics import Graphics1
-from yapocis.utils.typing import *
+from yapocis.utils.stereo_typing import *
 
 from . import image_test, ASIZE, interesting_words, double_shuffle, show, snapshow, show_snapshots
 hsis = HSI()

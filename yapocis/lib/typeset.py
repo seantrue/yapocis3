@@ -10,7 +10,7 @@ import math
 import numpy as np
 from freetype import FT_Matrix, FT_LOAD_RENDER, FT_Vector, FT_Set_Transform, byref, Face
 from yapocis.fonts import font
-from yapocis.utils.typing import Optional, Image1, Tuple
+from yapocis.utils.stereo_typing import Optional, Image1, Tuple
 from yapocis.utils.basic import set_margin
 
 # These are performance boosts excepwhen size, font, or rotation are changing randomly
