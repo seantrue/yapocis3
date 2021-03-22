@@ -5,6 +5,12 @@ from PIL import Image, ImageFont, ImageDraw
 from yapocis.utils.stereo_typing import *
 from yapocis.fonts import font as find_font
 
+import yapocis
+VIEWING_QUEUE = os.environ.get("YAPOCIS_VIEW")
+VIEWING_QUEUE = os.path.join(os.path.dirname(os.path.abspath(yapocis.__file__)),"../queue") if VIEWING_QUEUE is None else VIEWING_QUEUE
+if not os.path.isdir(VIEWING_QUEUE):
+    raise RuntimeError(f"Can't find viewing queue '{VIEWING_QUEUE}'")
+
 DEBUG = False
 BENCHMARKING = os.environ.get('BENCHMARKING',None)
 
@@ -300,7 +306,8 @@ def show_array(*args, **kwargs) -> None:
     # img.show()
     if img.mode == "L":
         img = img.convert("RGB")
-    img.save(f"/home/seant/workspace/Yapocis/queue/{title}.png")
+    name = f"{title}.png"
+    img.save(os.path.join(VIEWING_QUEUE,name))
 
 def show_arraygrad(title: str, image: Image1, theta: Image1, grad: Optional[Image1] = None) -> None:
     """

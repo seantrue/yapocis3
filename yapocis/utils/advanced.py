@@ -8,11 +8,7 @@ from yapocis.utils.basic import *
 from yapocis.lib.kerneldraw1 import KernelDraw1
 from yapocis.lib.kerneldraw3 import KernelDraw3
 BENCHMARKING = os.environ.get('BENCHMARKING',None)
-
-VIEWING_QUEUE = os.environ.get("YAPOCIS_VIEW")
-VIEWING_QUEUE = os.path.join(os.path.dirname(os.path.abspath(yapocis.__file__)),"../queue") if VIEWING_QUEUE is None else VIEWING_QUEUE
-if not os.path.isdir(VIEWING_QUEUE):
-    raise RuntimeError(f"Can't find viewing queue '{VIEWING_QUEUE}'")
+from basic import VIEWING_QUEUE
 
 def sign(title: str, img: np.ndarray) -> np.ndarray:
     img = img.astype(np.float32)
