@@ -8,7 +8,7 @@ from yapocis.utils.basic import *
 from yapocis.lib.kerneldraw1 import KernelDraw1
 from yapocis.lib.kerneldraw3 import KernelDraw3
 BENCHMARKING = os.environ.get('BENCHMARKING',None)
-from basic import VIEWING_QUEUE
+from .basic import VIEWING_QUEUE
 
 def sign(title: str, img: np.ndarray) -> np.ndarray:
     img = img.astype(np.float32)
