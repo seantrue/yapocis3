@@ -69,22 +69,21 @@ def name_of_test(depth=1):
     return strip_test_prefix(caller_name), strip_test_prefix(file_name)
 
 
-def show(*args):
+def show(*args, **kwargs):
     tname, fname = name_of_test(2)
-    show_array(f"{fname}: {tname}", *args)
+    show_array(f"{fname}: {tname}", *args, **kwargs)
 
 def snapshot(snapper):
     tname, fname = name_of_test(2)
     snapper.snapshot(name=f"{fname}/{tname}")
 
-def snapshow(snapper, *args, depth=2):
+def snapshow(snapper, *args, depth=2, **kwargs):
     tname, fname = name_of_test(depth)
     snapper.snapshot(name=f"{fname}/{tname}")
-    show_array(f"{fname}: {tname}", *args)
+    show_array(f"{fname}: {tname}", *args, **kwargs)
 
 
-class TS:
-    label = "anisodiff"
+class StopWatcher:
     def __init__(self, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
@@ -93,7 +92,6 @@ class TS:
         return self
     def __call__(self, snapper, *args):
         t = time.time()-self.t
-        snapshow(snapper, f"{t:.03f}sec", *self.args, *args,depth=3)
-
+        snapshow(snapper, *self.args, *args, depth=3, t=f"{t:.03f}",)
     def __exit__(self, exc_type, exc_val, exc_tb):
         return

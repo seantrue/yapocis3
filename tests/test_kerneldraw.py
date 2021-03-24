@@ -8,7 +8,7 @@ from tests.test_graphics import random_ellipses, random_circles, random_rects, r
 from yapocis.lib.kerneldraw1 import KernelDraw1
 from yapocis.utils.basic import show_array
 from yapocis.utils.stereo_typing import *
-from . import ASIZE, show_snapshots, snapshow
+from . import ASIZE, show_snapshots, snapshow, StopWatcher, show
 
 def just_canvas():
     canvas = np.zeros((ASIZE, ASIZE), dtype=np.float32)
@@ -20,23 +20,20 @@ def setup(device_name:Optional[str]=None, chunk_size:Optional[int]=None):
     return canvas, KernelDraw1(canvas, device_name=device_name, chunk_size=chunk_size)
 
 
-def show(label, a):
-    show_array(f"kerneldraw: {label}", a)
-
-
 def test_batch():
     canvas, ad = setup()
     locations, strings, fonts, sizes, _, text_alphas = random_texts()
-    ad.composite(*random_composites(), alpha=1.0)
-    ad.sprites(*random_sprites(), alpha=1.0)
-    ad.ellipses(random_ellipses(), colors=random_colors(), alphas=random_alpha())
-    ad.circles(random_circles(), colors=random_colors(), alphas=random_alpha())
-    ad.rects(random_rects(), colors=random_colors(), alphas=random_alpha())
-    ad.lines(random_lines(), colors=random_colors(), alphas=random_alpha())
-    ad.draw_strings(locations, strings, fonts=fonts, sizes=sizes, alphas=text_alphas)
-    ad.render()
-    a = ad.read()
-    snapshow(ad, a)
+    with StopWatcher() as show:
+        ad.composite(*random_composites(), alpha=1.0)
+        ad.sprites(*random_sprites(), alpha=1.0)
+        ad.ellipses(random_ellipses(), colors=random_colors(), alphas=random_alpha())
+        ad.circles(random_circles(), colors=random_colors(), alphas=random_alpha())
+        ad.rects(random_rects(), colors=random_colors(), alphas=random_alpha())
+        ad.lines(random_lines(), colors=random_colors(), alphas=random_alpha())
+        ad.draw_strings(locations, strings, fonts=fonts, sizes=sizes, alphas=text_alphas)
+        ad.render()
+        a = ad.read()
+        show(ad, a)
 
 
 def fill_display_list(ad: KernelDraw1, n: int = 1000) -> None:
@@ -64,19 +61,21 @@ def fill_display_list(ad: KernelDraw1, n: int = 1000) -> None:
 def test_display_list():
     canvas, ad = setup()
     fill_display_list(ad,100)
-    ad.render()
-    a = ad.read()
-    snapshow(ad, a)
+    with StopWatcher() as show:
+        ad.render()
+        a = ad.read()
+        show(ad, a)
 
 
 def test_chunking():
     times = []
     for chunk_size in (10, 100, 500):
         canvas, ad = setup(chunk_size=chunk_size)
-        t = time.time()
-        fill_display_list(ad,1000)
-        ad.render()
-        canvas = ad.read()
-        times.append(time.time() - t)
-        snapshow(ad, f"{chunk_size} {times[-1]:.1f}", canvas)
+        with StopWatcher() as show:
+            t = time.time()
+            fill_display_list(ad,1000)
+            ad.render()
+            canvas = ad.read()
+            times.append(time.time() - t)
+            show(ad, f"{chunk_size}", canvas)
     print(times)

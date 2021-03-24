@@ -9,11 +9,11 @@ import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame
 from yapocis.fonts import font as find_font
+from yapocis.utils.basic import VIEWING_QUEUE as queue
 from datetime import datetime
 
 WIDTH, HEIGHT = 1024, 1024
 
-queue = "/Users/seant/workspace/yapocis/queue"
 def get_images():
     images = [os.path.join(queue,name) for name in os.listdir(queue) if name.endswith(".png")]
     images = [(os.stat(path).st_ctime, path) for path in images]
@@ -75,7 +75,7 @@ def main():
     display_surface = pygame.display.set_mode((WIDTH, HEIGHT),pygame.RESIZABLE)
 
     pygame.display.set_caption('Image Watcher')
-
+    pygame.key.set_repeat(150)
     image, label_text = next_image()
     while True:
         if image is not None:

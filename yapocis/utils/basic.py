@@ -198,6 +198,7 @@ def imread(filename: str, longest: Optional[int] = None, keep_alpha:bool=False) 
     return a
 
 
+
 import time
 
 
@@ -259,7 +260,7 @@ def sign(title: str, img: Union[Image1, PILImage]) -> PILImage:
 _showArrayCounter = 0
 
 
-def _show_array(*args) -> Tuple[str, PILImage]:
+def _show_array(*args, **kwargs) -> Tuple[str, PILImage]:
     global _showArrayCounter
     _showArrayCounter += 1
     array = args[-1]
@@ -279,7 +280,7 @@ def _show_array(*args) -> Tuple[str, PILImage]:
             array = array.astype(np.uint8)
     img = Image.fromarray(array)
     shape = array.shape
-    font = ImageFont.truetype(find_font("default"))
+    font = ImageFont.truetype(find_font("default"),size=22)
     draw = ImageDraw.Draw(img)
     try:
         pixels = [img.getpixel((x, 15)) for x in range(10, 30)]
@@ -291,10 +292,11 @@ def _show_array(*args) -> Tuple[str, PILImage]:
             ink = 0
     except IndexError:
         ink = 0
+    caption = "" if not kwargs else " " + " ".join([f"{key}:{value}" for (key,value) in kwargs.items()])
     if len(shape) > 2:
         ink = [ink] * shape[-1]
         ink = tuple(ink)
-    draw.text((10, 10), title, ink, font=font)
+    draw.text((10, 10), title+caption, ink, font=font)
     return title, img
 
 

@@ -11,7 +11,7 @@ from yapocis.lib.kerneldraw4 import KernelDraw4
 
 from tests.test_graphics4 import random_composites, random_sprites
 
-from . import ASIZE, snapshow, snapshot
+from . import ASIZE, snapshow, snapshot, StopWatcher
 
 
 def just_canvas():
@@ -30,30 +30,32 @@ def test_batch():
     lines = random_lines()
     locations, blocks = random_composites()
     sprite_locations, sprites = random_sprites()
-    ad.composite(locations, blocks)
-    ad.sprites(sprite_locations, sprites)
-    ad.ellipses(random_coords, colors=random_colors())
-    ad.circles(circles, colors=random_colors())
-    ad.rects(rects, colors=random_colors())
-    ad.lines(lines, colors=random_colors(), distance=1.5)
-    ad.render()
-    a = ad.read()
-    snapshow(ad,a)
+    with StopWatcher() as show:
+        ad.composite(locations, blocks)
+        ad.sprites(sprite_locations, sprites)
+        ad.ellipses(random_coords, colors=random_colors())
+        ad.circles(circles, colors=random_colors())
+        ad.rects(rects, colors=random_colors())
+        ad.lines(lines, colors=random_colors(), distance=1.5)
+        ad.render()
+        a = ad.read()
+        show(ad,a)
 
 
 def test_displaylist():
     canvas, ad = setup()
     rects = random_rects()
     lines = random_lines()
-    for xyxy, color in zip(lines, random_colors()):
-        ad.line(xyxy, color=color, distance=1.5)
-    for rect, color in zip(rects, random_colors()):
-        ad.rect(rect, color=color)
-    for x in range(0, ASIZE, 100):
-        ad.draw_string((x, x), "Hello world!", color=[1, 1, 1, .5])
-    ad.render()
-    a = ad.read()
-    snapshow(ad,a)
+    with StopWatcher() as show:
+        for xyxy, color in zip(lines, random_colors()):
+            ad.line(xyxy, color=color, distance=1.5)
+        for rect, color in zip(rects, random_colors()):
+            ad.rect(rect, color=color)
+        for x in range(0, ASIZE, 100):
+            ad.draw_string((x, x), "Hello world!", color=[1, 1, 1, .5])
+        ad.render()
+        a = ad.read()
+        show(ad, a)
 
 
 def test_chunking():
@@ -68,14 +70,15 @@ def test_chunking():
         canvas = just_canvas()
         t = time.time()
         ad = KernelDraw4(canvas, chunk_size=chunk_size)
-        for xyxy, color, alpha in zip(lines, colors, alphas):
-            ad.line(xyxy, distance=1.5, color=color, alpha=alpha)
-        for rect, color, alpha in zip(rects, colors, alphas):
-            ad.rect(rect, color=color, alpha=alpha)
-        for x in range(0, ASIZE, 100):
-            ad.draw_string((x, x), "Hello world!")
-        ad.render()
-        canvas = ad.read()
-        times.append(time.time() - t)
-        snapshow(ad, f"chunked {chunk_size} in {times[-1]:.1f}sec", canvas)
+        with StopWatcher() as show:
+            for xyxy, color, alpha in zip(lines, colors, alphas):
+                ad.line(xyxy, distance=1.5, color=color, alpha=alpha)
+            for rect, color, alpha in zip(rects, colors, alphas):
+                ad.rect(rect, color=color, alpha=alpha)
+            for x in range(0, ASIZE, 100):
+                ad.draw_string((x, x), "Hello world!")
+            ad.render()
+            canvas = ad.read()
+            times.append(time.time() - t)
+            show(ad, f"chunked {chunk_size}", canvas)
     print(times)

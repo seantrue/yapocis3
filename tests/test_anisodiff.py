@@ -5,7 +5,7 @@ from yapocis.lib.channels import split_planes, join_planes
 from yapocis.lib.hsi import HSI
 from yapocis.utils.config import get_device_config
 from yapocis.utils.stereo_typing import *
-from . import image_test, TS, show_snapshots
+from . import image_test, StopWatcher, show_snapshots
 
 
 N = 100
@@ -22,14 +22,14 @@ def test_I():
     hsis = HSI()
     hsi = hsis.rgb2hsi3(rgb)
     H,S,I = split_planes(hsi)
-    with TS(f"[generator {N}]") as show:
+    with StopWatcher(f"[generator {N}]") as show:
         for i, fI in enumerate(aniso.anisodiff(I)):
             if i >= N:
                 break
         hsi = join_planes(H,S,fI)
         rgb2 = hsis.hsi2rgb3(hsi)
         show(aniso, rgb2)
-    with TS(f"[{N}]") as show:
+    with StopWatcher(f"[{N}]") as show:
         fI = aniso.anisodiff_n(I, N)
         hsi = join_planes(H,S,fI)
         rgb2 = hsis.hsi2rgb3(hsi)
@@ -39,12 +39,12 @@ def test_IS():
     from yapocis.ocl.device import get_available_device_names
     for device_name in get_available_device_names():
         rgb, aniso = setup(device_name=device_name)
-        with TS(f"[generator {N} {device_name[:24]}]") as show:
+        with StopWatcher(f"[generator {N} {device_name[:24]}]") as show:
             for i, rgb2 in enumerate(aniso.anisodiff_rgbIS(rgb)):
                 if i >= N:
                     break
             show(aniso, rgb2)
-        with TS(f"[{N}] {device_name[:24]}") as show:
+        with StopWatcher(f"[{N}] {device_name[:24]}") as show:
             rgb2 = aniso.anisodiff_rgbIS_n(rgb, N)
             show(aniso, rgb2)
 
@@ -55,7 +55,7 @@ def test_1plane():
         hsis = HSI(device_name=device_name)
         hsi = hsis.rgb2hsi3(rgb)
         H,S,I = split_planes(hsi)
-        with TS(f"[{N}] on {device_name[:24]}") as show:
+        with StopWatcher(f"[{N}] on {device_name[:24]}") as show:
             fI = aniso.anisodiff_n(I, N)
             hsi = join_planes(H,S,fI)
             rgb2 = hsis.hsi2rgb3(hsi)
@@ -73,7 +73,7 @@ def test_2plane():
         rgb, aniso = setup(device_name=device_name)
         r,g,b = split_planes(rgb)
         rg = join_planes(r,g)
-        with TS(f"[{N}] on {device_name[:24]}") as show:
+        with StopWatcher(f"[{N}] on {device_name[:24]}") as show:
             rg2 = aniso.anisodiff_n(rg, N)
             r2,g2 = split_planes(rg2)
             rgb2 = join_planes(r2,g2, b)
@@ -92,7 +92,7 @@ def test_3plane():
             print("Nvidia drivers don't handle float3 well")
             continue
         rgb, aniso = setup(device_name=device_name)
-        with TS(f"[{N}] on {device_name[:24]}") as show:
+        with StopWatcher(f"[{N}] on {device_name[:24]}") as show:
             rgb2 = aniso.anisodiff_n(rgb,N)
             show(aniso, rgb2)
 
@@ -105,6 +105,6 @@ def test_4plane():
         shape4[2] = 4
         rgba = np.zeros((shape4), dtype=np.float32)
         rgba[:, :, :3] = rgb
-        with TS(f"[{N}] on {device_name[:24]}") as show:
+        with StopWatcher(f"[{N}] on {device_name[:24]}") as show:
             rgba2 = aniso.anisodiff_n(rgba, N)
             show(aniso,rgba2[:, :, :3])

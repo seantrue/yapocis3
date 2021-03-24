@@ -7,7 +7,7 @@ from yapocis.lib.hsi import HSI
 from yapocis.lib.graphics import Graphics1
 from yapocis.utils.stereo_typing import *
 
-from . import image_test, ASIZE, interesting_words, double_shuffle, show, snapshow, show_snapshots
+from . import image_test, ASIZE, interesting_words, double_shuffle, show, show_snapshots, StopWatcher
 hsis = HSI()
 
 def setup(device_name:Optional[str]=None):
@@ -65,6 +65,8 @@ def random_lines(n=100):
         line += [x1, y1]
     return lines
 
+def random_widths(n=100):
+    return np.random.uniform(1.0,10.0, n).astype(np.float32)
 
 random_rects = random_lines
 
@@ -135,13 +137,15 @@ def random_texts(n=100):
 def test_lines():
     canvas,grph = setup()
     random_coords = random_lines()
+    widths = random_widths()
     coords = []
     for i in range(100, ASIZE, 100):
         for j in range(100, ASIZE, 100):
             coords.append([0, 0, i, j])
-    grph.lines(canvas, coords, distance=1.5, colors=random_colors(len(coords)), alpha=1.0)
-    grph.lines(canvas, random_coords, distance=1.5, colors=random_colors(), alphas=random_alpha())
-    snapshow(grph, canvas)
+    with StopWatcher() as show:
+        grph.lines(canvas, coords, width=1.0, colors=random_colors(len(coords)), alpha=1.0)
+        grph.lines(canvas, random_coords, widths=widths, colors=random_colors(), alphas=random_alpha())
+        show(grph, canvas)
 
 
 def test_rects():
@@ -151,9 +155,10 @@ def test_rects():
     for i in range(100, ASIZE, 100):
         for j in range(100, ASIZE, 100):
             coords.append([i - 25, j - 25, i + 25, j + 25])
-    grph.rects(canvas, coords, color=1.0, alpha=0.5)
-    grph.rects(canvas, random_coords, colors=random_colors(), alphas=random_alpha())
-    snapshow(grph, canvas)
+    with StopWatcher() as show:
+        grph.rects(canvas, coords, color=1.0, alpha=0.5)
+        grph.rects(canvas, random_coords, colors=random_colors(), alphas=random_alpha())
+        show(grph, canvas)
 
 def test_circles():
     canvas,grph = setup()
@@ -162,9 +167,10 @@ def test_circles():
     for i in range(100, ASIZE, 100):
         for j in range(100, ASIZE, 100):
             coords.append([i, j, 100])
-    grph.circles(canvas, coords, color=1.0, alpha=0.5)
-    grph.circles(canvas, random_coords, colors=random_colors(), alphas=random_alpha())
-    snapshow(grph, canvas)
+    with StopWatcher() as show:
+        grph.circles(canvas, coords, color=1.0, alpha=0.5)
+        grph.circles(canvas, random_coords, colors=random_colors(), alphas=random_alpha())
+        show(grph, canvas)
 
 
 def test_triangles():
@@ -174,9 +180,10 @@ def test_triangles():
     for i in range(100, ASIZE, 100):
         for j in range(100, ASIZE, 100):
             coords.append([i, j, i + 50, j + 0, i + 50, j - 50])
-    grph.triangles(canvas, coords, color=1.0, alpha=0.5)
-    grph.triangles(canvas, random_coords, colors=random_colors(), alphas=random_alpha())
-    snapshow(grph, canvas)
+    with StopWatcher() as show:
+        grph.triangles(canvas, coords, color=1.0, alpha=0.5)
+        grph.triangles(canvas, random_coords, colors=random_colors(), alphas=random_alpha())
+        show(grph, canvas)
 
 
 def test_ellipses():
@@ -192,23 +199,26 @@ def test_ellipses():
         coords.append([i, i, 100, 50])
     colors = np.linspace(0.0, 1.0, len(coords))
     alpha = 1.0
-    grph.ellipses(canvas, coords, colors=colors, alpha=alpha)
-    grph.ellipses(canvas, random_coords, colors=random_colors(), alphas=random_alpha())
-    snapshow(grph, canvas)
+    with StopWatcher() as show:
+        grph.ellipses(canvas, coords, colors=colors, alpha=alpha)
+        grph.ellipses(canvas, random_coords, colors=random_colors(), alphas=random_alpha())
+        show(grph, canvas)
 
 
 def test_composite():
     canvas,grph = setup()
     random_coords, random_blocks = random_composites()
-    grph.composite(canvas, random_coords, random_blocks)
-    snapshow(grph, canvas)
+    with StopWatcher() as show:
+        grph.composite(canvas, random_coords, random_blocks)
+        show(grph, canvas)
 
 
 def test_composite_sprites():
     canvas,grph = setup()
     random_coords, random_sprites_ = random_sprites()
-    grph.sprites(canvas, random_coords, random_sprites_)
-    snapshow(grph, canvas)
+    with StopWatcher() as show:
+        grph.sprites(canvas, random_coords, random_sprites_)
+        show(grph, canvas)
 
 
 def test_composite_mosaic():
@@ -231,8 +241,9 @@ def test_composite_mosaic():
             coords.append((x, y))
             blocks.append(block)
     shuffle(blocks)
-    grph.composite(canvas, coords, blocks)
-    snapshow(grph, canvas)
+    with StopWatcher() as shower:
+        grph.composite(canvas, coords, blocks)
+        shower(grph, canvas)
 
 
 def test_simple_texts():
@@ -242,8 +253,9 @@ def test_simple_texts():
     for x in range(100, ASIZE, 100):
         locations.append((x // 2, x))
     strings = double_shuffle(text, len(locations))
-    grph.draw_strings(canvas, locations, strings, font="default", size=32, alpha="bug")
-    snapshow(grph, canvas)
+    with StopWatcher() as show:
+        grph.draw_strings(canvas, locations, strings, font="default", size=32, alpha="bug")
+        show(grph, canvas)
 
 def test_text_rotation_centered():
     canvas, grph = setup()
@@ -251,9 +263,10 @@ def test_text_rotation_centered():
     center = canvas.shape[0]//2
     locations = [(center,center)] * len(rotations)
     strings = [f"-------- {r:03d}" for r in rotations]
-    grph.draw_strings(canvas, locations, strings, rotations=rotations, color=1, alpha="mask")
-    grph.circles(canvas, [(center,center,20)],color=.5)
-    snapshow(grph, canvas)
+    with StopWatcher() as show:
+        grph.draw_strings(canvas, locations, strings, rotations=rotations, color=1, alpha="mask")
+        grph.circles(canvas, [(center,center,20)],color=.5)
+        show(grph, canvas)
 
 def test_text_rotation():
     canvas,grph = setup()
@@ -262,34 +275,38 @@ def test_text_rotation():
     locations = [[center,center] for y in range(100,1000,800//len(rotations))]
     locations = locations[:len(rotations)]
     strings = [f"-------------------- {r:03d}" for r in rotations]
-    grph.draw_strings(canvas, locations, strings, size=32, rotations=rotations, color=1, alpha="mask")
-    for location in locations:
-        location.append(10)
-        location[0],location[1] = location[1],location[0]
-    grph.circles(canvas, locations[:-1],color=.5)
-    snapshow(grph, canvas)
+    with StopWatcher() as show:
+        grph.draw_strings(canvas, locations, strings, size=32, rotations=rotations, color=1, alpha="mask")
+        for location in locations:
+            location.append(10)
+            location[0],location[1] = location[1],location[0]
+        grph.circles(canvas, locations[:-1],color=.5)
+        show(grph, canvas)
 
 
 def test_texts():
     canvas,grph = setup()
     locations, strings, fonts, sizes, rotations, alphas = random_texts(300)
-    grph.draw_strings(canvas, locations, strings, fonts=fonts, sizes=sizes, alphas=alphas)
-    snapshow(grph, canvas)
+    with StopWatcher() as show:
+        grph.draw_strings(canvas, locations, strings, fonts=fonts, sizes=sizes, alphas=alphas)
+        show(grph, canvas)
 
 def test_stressed_texts():
     canvas,grph = setup()
     locations, strings, fonts, sizes, rotations, _ = random_texts(300)
-    grph.draw_strings(canvas, locations, strings, fonts=fonts, sizes=sizes, rotations=rotations, alpha="mask")
-    snapshow(grph, canvas)
+    with StopWatcher() as show:
+        grph.draw_strings(canvas, locations, strings, fonts=fonts, sizes=sizes, rotations=rotations, alpha="mask")
+        show(grph, canvas)
 
 def test_one():
     canvas, grph = setup()
-    grph.lines(canvas, [[0,0,ASIZE,ASIZE]], distance=1.5, color=1.0, alpha=1.0)
-    grph.circles(canvas, [[ASIZE/2,ASIZE/2, 20]],color=1.0, alpha=1.0)
-    grph.rects(canvas, [[ASIZE/4,ASIZE/4, ASIZE/4+40, ASIZE/4+40]],color=1.0, alpha=1.0)
-    grph.ellipses(canvas, [[ASIZE/4,ASIZE/2, 80, 40]],color=1.0, alpha=1.0)
-    grph.triangles(canvas, [[ASIZE*3/4,ASIZE/2,40+ASIZE*3/4,20+ASIZE/2,40+ASIZE*3/4,-20+ASIZE/2 ]],color=1.0, alpha=1.0)
-    grph.draw_strings(canvas, [[ASIZE*3/4,ASIZE*3/4]], ["Hello world"], font="bold", color=1.0, alpha="mask", size=32)
-    snapshow(grph, canvas)
+    with StopWatcher() as show:
+        grph.lines(canvas, [[0,0,ASIZE,ASIZE]], distance=1.5, color=1.0, alpha=1.0)
+        grph.circles(canvas, [[ASIZE/2,ASIZE/2, 20]],color=1.0, alpha=1.0)
+        grph.rects(canvas, [[ASIZE/4,ASIZE/4, ASIZE/4+40, ASIZE/4+40]],color=1.0, alpha=1.0)
+        grph.ellipses(canvas, [[ASIZE/4,ASIZE/2, 80, 40]],color=1.0, alpha=1.0)
+        grph.triangles(canvas, [[ASIZE*3/4,ASIZE/2,40+ASIZE*3/4,20+ASIZE/2,40+ASIZE*3/4,-20+ASIZE/2 ]],color=1.0, alpha=1.0)
+        grph.draw_strings(canvas, [[ASIZE*3/4,ASIZE*3/4]], ["Hello world"], font="bold", color=1.0, alpha="mask", size=32)
+        show(grph, canvas)
 
 
