@@ -17,7 +17,7 @@ def image_path_test(image_name="test.jpg"):
 
 def image_test():
     test_image = image_path_test()
-    img = imread(test_image).astype(np.float32) / 256
+    img = imread(test_image)
     assert img.shape[0] != img.shape[1], "Test image must not be square"
     return img
 

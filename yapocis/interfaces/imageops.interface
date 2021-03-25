@@ -1,6 +1,7 @@
 interface imageops {
-    kernel clip(in float input, float low, float high, out_like input);
+    kernel clamp_pixels(in float input, float low, float high, out_like input);
     kernel stretch(in float input, float input_min, float input_max, float low, float high, out_like input);
     kernel binarize(in float input, float threshold, out_like input);
-    kernel histogram(in float input, size_of input, int n_bins, float low, float high, int n_workers, in int partials, out int histogram);
+    kernel histogram(in float input, size_of input, float low, float high, inout int partials, int local_size, height_of partials);
+    alias histogram_res as histogram(resident float input, size_of input, float low, float high, resident int partials, int local_size, height_of partials);
 };

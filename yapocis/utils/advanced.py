@@ -3,12 +3,11 @@ DEBUG = False
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 import os, sys
 import copy
-import yapocis
-from yapocis.utils.basic import *
+import numpy as np
 from yapocis.lib.kerneldraw1 import KernelDraw1
 from yapocis.lib.kerneldraw3 import KernelDraw3
 BENCHMARKING = os.environ.get('BENCHMARKING',None)
-from .basic import VIEWING_QUEUE
+from .basic import VIEWING_QUEUE, imwrite
 
 def sign(title: str, img: np.ndarray) -> np.ndarray:
     img = img.astype(np.float32)
@@ -26,14 +25,14 @@ def sign(title: str, img: np.ndarray) -> np.ndarray:
         ad = KernelDraw3(img)
     ad.draw_string((10,10), title, color=1.0, size=fheight, alpha="bug")
     ad.render()
-    ad.read()
+    img = ad.read()
     return img
 
 
 _showArrayCounter = 0
 
 
-def _show_array(*args, normalize=True):
+def sign_array(*args, normalize=True):
     global _showArrayCounter
     _showArrayCounter += 1
     array = args[-1]
@@ -55,18 +54,15 @@ def _show_array(*args, normalize=True):
         array -= array.min()
         array /= array.max()
     array = sign(title, array)
-    img = Image.fromarray((array*255).astype(np.uint8))
-    return title, img
+    return title, array
 
 
 def show_array(*args, **kwargs) -> None:
     if BENCHMARKING:
         print(args[:-1], file=sys.stderr)
         return
-    title, img = _show_array(*args, **kwargs)
-    if img.mode == "L":
-        img = img.convert("RGB")
-    img.save(os.path.join(VIEWING_QUEUE,f"{title}.png"))
+    title, img = sign_array(*args, **kwargs)
+    imwrite(os.path.join(VIEWING_QUEUE,f"{title}.png"), img)
 
 
 def show_arraygrad(title, image, theta, grad = None) -> None:
@@ -108,7 +104,7 @@ def show_arraygrad(title, image, theta, grad = None) -> None:
             color = grd/10.
             ad.line((x1,y1,x2,y2), distance=1.1, color=color, alpha=1)
     ad.render()
-    ad.read()
-    show_array(title, image, normalize=False)
+    a = ad.read()
+    show_array(title, a, normalize=False)
 
 

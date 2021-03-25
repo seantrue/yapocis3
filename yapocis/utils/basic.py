@@ -1,20 +1,27 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 import os, sys
+import time
+
 from PIL import Image, ImageFont, ImageDraw
+import skimage.io
+import skimage.transform
 
 from yapocis.utils.stereo_typing import *
 from yapocis.fonts import font as find_font
 
 import yapocis
+
 VIEWING_QUEUE = os.environ.get("YAPOCIS_VIEW")
-VIEWING_QUEUE = os.path.join(os.path.dirname(os.path.abspath(yapocis.__file__)),"../queue") if VIEWING_QUEUE is None else VIEWING_QUEUE
+VIEWING_QUEUE = os.path.join(os.path.dirname(os.path.abspath(yapocis.__file__)),
+                             "../queue") if VIEWING_QUEUE is None else VIEWING_QUEUE
 if not os.path.isdir(VIEWING_QUEUE):
     raise RuntimeError(f"Can't find viewing queue '{VIEWING_QUEUE}'")
 
 DEBUG = False
-BENCHMARKING = os.environ.get('BENCHMARKING',None)
+BENCHMARKING = os.environ.get('BENCHMARKING', None)
 
-# bytescale, fromimage, toimage borrowed from scipy.misc
+
+# bytescale, toimage borrowed from scipy.misc
 # Used under the liberal BSD license
 # Returns a byte-scaled image
 def byte_scale(data: Array, cmin: Optional[float] = None, cmax: Optional[float] = None, high: int = 255,
@@ -27,32 +34,6 @@ def byte_scale(data: Array, cmin: Optional[float] = None, cmax: Optional[float] 
     scale = high * 1.0 / (cmax - cmin or 1)
     bytedata = ((data * 1.0 - cmin) * scale + 0.4999).astype(np.uint8)
     return bytedata + np.cast[np.uint8](low)
-
-
-def from_image(im: PILImage, flatten: bool = False) -> Array:
-    """
-    Return a copy of a PIL image as a numpy array.
-
-    Parameters
-    ----------
-    im : PIL image
-        Input image.
-    flatten : bool
-        If true, convert the output to grey-scale.
-
-    Returns
-    -------
-    fromimage : ndarray
-        The different colour bands/channels are stored in the
-        third dimension, such that a grey-image is MxN, an
-        RGB-image MxNx3 and an RGBA-image MxNx4.
-
-    """
-    if not Image.isImageType(im):
-        raise TypeError("Input is not a PIL image.")
-    if flatten:
-        im = im.convert('F')
-    return np.array(im)
 
 
 _errstr = "Mode is unknown or incompatible with input array shape."
@@ -167,9 +148,8 @@ def to_image(arr: Array, high: int = 255, low: int = 0, cmin: Optional[float] = 
     return image
 
 
-def newsize(img: PILImage, width: int, height: int, longest: int) -> Tuple[bool, int, int]:
+def newsize(width: int, height: int, longest: int) -> Tuple[bool, int, int]:
     if longest is not None:
-        width, height = img.size[0], img.size[1]
         resize = False
         if width > height and width > longest:
             height = int(float(height / width) * longest)
@@ -183,23 +163,20 @@ def newsize(img: PILImage, width: int, height: int, longest: int) -> Tuple[bool,
     return False, width, height
 
 
-def imread(filename: str, longest: Optional[int] = None, keep_alpha:bool=False) -> Union[Image1,Image3]:
-    img = Image.open(filename)
-    mode = img.mode
-    if mode == "P":
-        img = img.convert("RGBA")
-    width, height = img.size
-    resize,w,h = newsize(img, width, height, longest)
+def imread(filename: str, longest: Optional[int] = None, keep_alpha: bool = False) -> Union[
+    Image1, Image3]:
+    img = skimage.io.imread(filename)
+    resize, w, h = newsize(img.shape[1], img.shape[0], longest)
     if resize:
-        img = img.resize((w, h))
-    a = from_image(img).astype(np.float32)
+        img = skimage.transform.resize(img, (h, w), preserve_range=True, anti_aliasing=True)
+    a = img.astype(np.float32) / np.iinfo(img.dtype).max
     if not keep_alpha and len(a.shape) == 3 and a.shape[2] == 4:
         a = a[:, :, 0:3]
     return a
 
 
-
-import time
+def imwrite(filename: str, img: Union[Image1, Image3, Image4]):
+    skimage.io.imsave(filename, img)
 
 
 class Stage:
@@ -235,7 +212,7 @@ def sign(title: str, img: Union[Image1, PILImage]) -> PILImage:
             fheight += 5
     else:
         fheight = 16
-    font = ImageFont.truetype(find_font("default"))
+    font = ImageFont.truetype(find_font("default"), size=fheight)
     draw = ImageDraw.Draw(img)
     try:
         pixels = [img.getpixel((x, height - 15)) for x in range(10, 30)]
@@ -260,7 +237,7 @@ def sign(title: str, img: Union[Image1, PILImage]) -> PILImage:
 _showArrayCounter = 0
 
 
-def _show_array(*args, **kwargs) -> Tuple[str, PILImage]:
+def sign_array(*args, **kwargs) -> Tuple[str, PILImage]:
     global _showArrayCounter
     _showArrayCounter += 1
     array = args[-1]
@@ -269,7 +246,7 @@ def _show_array(*args, **kwargs) -> Tuple[str, PILImage]:
     if not title:
         title = f"Array {_showArrayCounter}"
     if len(array.shape) == 3 and array.shape[2] == 4:
-        array = array[:,:,:3]
+        array = array[:, :, :3]
     if array.dtype != np.uint8:
         array = array.copy()
         if array.dtype in (np.float32, np.float64, float):
@@ -280,7 +257,7 @@ def _show_array(*args, **kwargs) -> Tuple[str, PILImage]:
             array = array.astype(np.uint8)
     img = Image.fromarray(array)
     shape = array.shape
-    font = ImageFont.truetype(find_font("default"),size=22)
+    font = ImageFont.truetype(find_font("default"), size=22)
     draw = ImageDraw.Draw(img)
     try:
         pixels = [img.getpixel((x, 15)) for x in range(10, 30)]
@@ -292,11 +269,11 @@ def _show_array(*args, **kwargs) -> Tuple[str, PILImage]:
             ink = 0
     except IndexError:
         ink = 0
-    caption = "" if not kwargs else " " + " ".join([f"{key}:{value}" for (key,value) in kwargs.items()])
+    caption = "" if not kwargs else " " + " ".join([f"{key}:{value}" for (key, value) in kwargs.items()])
     if len(shape) > 2:
         ink = [ink] * shape[-1]
         ink = tuple(ink)
-    draw.text((10, 10), title+caption, ink, font=font)
+    draw.text((10, 10), title + caption, ink, font=font)
     return title, img
 
 
@@ -304,12 +281,13 @@ def show_array(*args, **kwargs) -> None:
     if BENCHMARKING:
         print(args[:-1], file=sys.stderr)
         return
-    title, img = _show_array(*args, **kwargs)
+    title, img = sign_array(*args, **kwargs)
     # img.show()
-    if img.mode == "L":
-        img = img.convert("RGB")
+    # if img.mode == "L":
+    #     img = img.convert("RGB")
     name = f"{title}.png"
-    img.save(os.path.join(VIEWING_QUEUE,name))
+    img.save(os.path.join(VIEWING_QUEUE, name))
+
 
 def show_arraygrad(title: str, image: Image1, theta: Image1, grad: Optional[Image1] = None) -> None:
     """
@@ -324,7 +302,7 @@ def show_arraygrad(title: str, image: Image1, theta: Image1, grad: Optional[Imag
 
     """
     from PIL import ImageDraw  # @UnresolvedImport
-    title, img = _show_array(title, image)
+    title, img = sign_array(title, image)
     img = img.convert("RGB")
     draw = ImageDraw.Draw(img)
     width, height = img.size
@@ -357,11 +335,12 @@ def show_arraygrad(title: str, image: Image1, theta: Image1, grad: Optional[Imag
             else:
                 color = "white"
             draw.line([(x1, y1), (x2, y2)], fill=color)
-    img.show()
+    name = f"{title}.png"
+    img.save(os.path.join(VIEWING_QUEUE, name))
 
 
 class Shaper:
-    def __init__(self, data:Array):
+    def __init__(self, data: Array):
         assert len(data.shape) == 2, "Shaper requires 2-d data"
         self.shape = data.shape
         self.order = None
@@ -416,7 +395,7 @@ def histeq_large(im: Image1, nbr_bins=2 ** 16) -> Array:
     # TODO: And here we have a non-linear something or other
     # cdf ** .5
     # TODO: This normalization looks wrong for a different number of bins.
-    cdf = (nbr_bins- 1) * cdf / cdf[-1]  # normalize
+    cdf = (nbr_bins - 1) * cdf / cdf[-1]  # normalize
 
     # use linear interpolation of cdf to find new pixel values
     im2 = np.interp(im.ravel(), bins[:-1], cdf)
@@ -445,7 +424,7 @@ ALIGNMENT = 4
 
 def align_image(image: Image1, alignment: int = ALIGNMENT) -> Image1:
     """
-    OpenCL really seems to prefer data that is aligned on quadfloat boundaries.
+    Some drivers really seems to prefer data that is aligned on quadfloat boundaries.
     Args:
         image: 2d or 3d arrau
         alignment: defaults to 4
@@ -479,7 +458,7 @@ def normalize(a: Array) -> Array:
 
     """
     a = a - a.min()
-    a = a / (a.max() * (1.0-np.epsilon))
+    a = a / (a.max() * (1.0 - np.epsilon))
     return a
 
 
@@ -519,13 +498,15 @@ def set_frame(a: Image1, width: int, frame: Optional[float] = 1.0, margin: Optio
     a[-1, :] = frame
     a[:, -1] = frame
 
-def compute_360_to_180(rotation:float) -> float:
+
+def compute_360_to_180(rotation: float) -> float:
     rotation = rotation % 360
     if rotation > 180:
         rotation = -180 + (rotation - 180)
     return rotation
 
-def chunker(data: Iterable, chunk_size:int=100) -> Iterator[List]:
+
+def chunker(data: Iterable, chunk_size: int = 100) -> Iterator[List]:
     """
     Chop an iterable into a digestable chunks
     Args:
@@ -536,7 +517,7 @@ def chunker(data: Iterable, chunk_size:int=100) -> Iterator[List]:
 
     """
     for i in range(0, len(data), chunk_size):
-        yield data[i:i+chunk_size]
+        yield data[i:i + chunk_size]
 
 
 def get_image_depth(image):

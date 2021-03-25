@@ -5,7 +5,6 @@ from yapocis.utils.stereo_typing import *
 
 from yapocis.lib.hsi import HSI
 from yapocis.lib.colormath import Colormath, transform_names
-from yapocis.utils.basic import histeq
 
 from . import ASIZE, show_snapshots, snapshow, show, image_test, StopWatcher
 
