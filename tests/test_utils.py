@@ -3,6 +3,7 @@ import numpy as np
 from yapocis.utils.stereo_typing import *
 
 from yapocis.utils.basic import chunker
+from yapocis.utils.internals import get_project_dir
 from yapocis.lib.channels import join_channels, join_planes, split_channels, split_planes
 
 
@@ -29,3 +30,6 @@ def test_split_join():
   assert np.sum(a-a1) == 0.0
   assert np.sum(b-b1) == 0.0
   assert np.sum(c-c1) == 0.0
+
+def test_project_dir():
+    assert get_project_dir()

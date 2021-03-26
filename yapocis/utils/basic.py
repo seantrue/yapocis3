@@ -166,16 +166,18 @@ def newsize(width: int, height: int, longest: int) -> Tuple[bool, int, int]:
 def imread(filename: str, longest: Optional[int] = None, keep_alpha: bool = False) -> Union[
     Image1, Image3]:
     img = skimage.io.imread(filename)
+    img_dtype = img.dtype
     resize, w, h = newsize(img.shape[1], img.shape[0], longest)
     if resize:
         img = skimage.transform.resize(img, (h, w), preserve_range=True, anti_aliasing=True)
-    a = img.astype(np.float32) / np.iinfo(img.dtype).max
+    a = img.astype(np.float32) / np.iinfo(img_dtype).max
     if not keep_alpha and len(a.shape) == 3 and a.shape[2] == 4:
         a = a[:, :, 0:3]
     return a
 
 
 def imwrite(filename: str, img: Union[Image1, Image3, Image4]):
+    img = np.nan_to_num(img, neginf=0,posinf=1.0)
     skimage.io.imsave(filename, img)
 
 

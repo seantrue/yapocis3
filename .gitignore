@@ -15,11 +15,10 @@
 .libs
 
 #*
-/mako_modules
+/yapocis/mako_modules
 /queue
 /opencl_cache
 /prof
-/external
 /.idea
 /build
 /dist

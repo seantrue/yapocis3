@@ -58,7 +58,7 @@ def test_xyz():
     with StopWatcher() as shower:
         xyz = cm.transform(rgb, 0, global_size=rgb.size // 3)
         rgb2 = cm.transform_named("adobe1998_d65.xyz2rgb", xyz)
-        shower("RGB out", rgb2)
+        shower(cm, "RGB out", rgb2)
 
 def test_xyz_view():
     cm = Colormath()
@@ -77,7 +77,7 @@ def test_xyz_view():
         rgb4 = cm.transform_named("srgb_d50.xyz2rgb", xyz)
         xyz = join_channels(x, y, ones)
         rgb5 = cm.transform_named("srgb_d50.xyz2rgb", xyz)
-        shower("RGB out", rgb2)
+        shower(cm, "RGB out", rgb2)
     show("x=1", rgb3)
     show("y=1", rgb4)
     show("z=1", rgb5)

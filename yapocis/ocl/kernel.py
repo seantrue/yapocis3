@@ -157,6 +157,8 @@ class Kernel:
                 print(f"Argument: {iarg+1}: {type(arg)} {str(arg)[:64]}")
         if not isinstance(self.global_size, (tuple, list)):
             self.global_size = (self.global_size,)
+        if self.local_size and not isinstance(self.local_size, (tuple, list)):
+            self.local_size = (self.local_size,)
         try:
             self.evt = self.kernel(self.kernel_manager.dmgr.queue, self.global_size, self.local_size, *prepared_args)
         except pyopencl.LogicError:
