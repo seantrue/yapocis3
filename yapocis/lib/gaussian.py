@@ -126,7 +126,7 @@ class Gaussian(BoundKernels):
 
     def gauss_image(self, a: Image1, scale: int) -> Image1:
         g = self.get_gaussian_kernel(scale)
-        a = a.copy()
+        #a = a.copy()
         b = np.empty_like(a)
         g.write(a)
         g.write(b)
