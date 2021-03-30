@@ -21,7 +21,7 @@ class Kernel:
         self.kernel = kernel
         self.params = params
         self.autoflatten = kernel_manager.dmgr.autoflatten
-        self.argspecs = self.posbyname = self.returns = self.global_size = None
+        self.argspecs = self.posbyname = self.returns = self.local_size = self.global_size = None
         self.async_write = async_write
         self.map_arguments()
 
@@ -144,8 +144,9 @@ class Kernel:
         """Call a kernel, prepare arguments, and track performance"""
         self.kernel_manager.calls += 1
         t = time.time()
-        self.global_size = kwargs.pop("global_size", None)
-        self.local_size = kwargs.pop("local_size", None)
+        self.global_size = kwargs.pop("global_size", self.global_size)
+        self.local_size = kwargs.pop("local_size", self.local_size)
+        self.local_size = 1 if self.local_size is None else self.local_size
         resident_arrays = kwargs.pop("resident", None)
         prepared_args = self.prepare_arguments(args, resident_arrays=resident_arrays)
         def show_args():
