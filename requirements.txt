@@ -5,7 +5,7 @@ Pillow
 decorator
 numpy
 pyyaml
-xpyopencl[pocl,oclgrind]
+pyopencl[pocl,oclgrind]
 pyparsing
 pytest
 pytools
