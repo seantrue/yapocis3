@@ -47,8 +47,9 @@ def test_ops():
     h = imageops.histogram(a, n_bins=NBINS)
     plt.plot(x,h,label="stretch")
     plt.legend()
-    plt.show()
+    #plt.show()
 
+import sys
 
 def test_histogram_performance():
     ITERATIONS=10
@@ -58,12 +59,18 @@ def test_histogram_performance():
         if "GeForce" in device_name:
             FASTBINS=1024
             local_size = (1,)
+        elif "Radeon" in device_name:
+            FASTBINS=1024
+            local_size = (1,)
+        elif "HD Graphics" in device_name:
+            FASTBINS=1024
+            local_size = (1,)
         else:
             FASTBINS=False
             local_size = None
         compute_units = cfg["max_compute_units"]
         print()
-        print(device_name, compute_units)
+        print(device_name, compute_units,file=sys.stderr)
         FBS = [FASTBINS]
         if FASTBINS:
             FBS.insert(0,0)
@@ -79,7 +86,8 @@ def test_histogram_performance():
                 imageops.write(a)
                 imageops.write(partials)
                 statement = f"histogram_res(a,partials)"
-                print(f"{nw:03d} {FB}", min(*timeit.repeat(statement,number=ITERATIONS, globals=locals(),repeat=3)))
+                print(f"{nw:03d} {FB}", min(*timeit.repeat(statement,number=ITERATIONS, globals=locals(),repeat=3)), file=sys.stderr)
+                sys.stderr.flush()
             print()
 
 
