@@ -11,3 +11,5 @@ from .bound_kernels import BoundKernels
 
 class Gradient(BoundKernels):
     INTERFACE = "gradient"
+    def gradient(self, a, stride=3):
+        return self.kmgr.gradient(a, stride)

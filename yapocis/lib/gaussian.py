@@ -16,13 +16,13 @@ def are_close(a: Array, b: Array) -> bool:
 
 
 class GaussianWeights:
-    def __init__(self, max_width=100, **kwargs):
+    def __init__(self, max_width=150, **kwargs):
         self.gws = self.compute_gaussian_weights(max_width, **kwargs)
 
     def gaussian_weights(self):
         return self.gws
     
-    def compute_gaussian_weights(self, max_width: int = 100, scale: float = 1.6, limit: float = .001,
+    def compute_gaussian_weights(self, max_width: int = 150, scale: float = 1.6, limit: float = .001,
                          sigmas: Optional[List[float]] = None) -> List[Array]:
         """
         Generate a list of gaussian kernels with size less than max_width
@@ -180,4 +180,9 @@ class Gaussian(BoundKernels):
             set_margin(theta, margin)
         if frame:
             set_frame(zca, margin)
-        return zca.copy(), grad.copy(), theta.copy()
+        del smaller
+        del larger
+        del dog
+        zca, grad, theta =  zca.copy(), grad.copy(), theta.copy()
+        self.purge()
+        return zca, grad, theta
