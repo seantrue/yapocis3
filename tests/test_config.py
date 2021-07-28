@@ -1,7 +1,8 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-from yapocis.utils.config import print_config
 from yapocis.ocl.device import get_device
+from yapocis.utils.config import print_config
+
 
 def test_print_device_config():
     name,_ = get_device()

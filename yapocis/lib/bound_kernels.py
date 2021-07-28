@@ -1,6 +1,8 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
-from yapocis.utils.stereo_typing import *
 from yapocis.ocl.kernel_manager import load_program
+from yapocis.utils.stereo_typing import *
+
+
 class BoundKernels:
     INTERFACE = None
     def __init__(self, device_name:Optional[str]=None, **kwargs):

@@ -1,9 +1,10 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import os
-from typing import Optional, List
+from typing import List, Optional
 
 import yapocis
+
 
 def get_yapocis_dir():
     yapocis_dir = os.path.dirname(yapocis.__file__)

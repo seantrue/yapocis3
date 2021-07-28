@@ -1,14 +1,15 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import os
+
+import numpy as np
 import py.test
 from PIL import Image, ImageDraw
-import numpy as np
-from yapocis.fonts import fonts, font, image_font
-from yapocis.interfaces import interfaces, find_interface
-from yapocis.icons import icons, find_icon, icon
-from yapocis.kernels import kernels, find_kernel
 
+from yapocis.fonts import font, fonts, image_font
+from yapocis.icons import find_icon, icon, icons
+from yapocis.interfaces import find_interface, interfaces
+from yapocis.kernels import find_kernel, kernels
 
 DEFAULT_FONT = "Ubuntu-Regular.ttf"
 def test_fonts():

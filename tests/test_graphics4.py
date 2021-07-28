@@ -2,12 +2,13 @@
 
 from random import randint, shuffle
 
-from yapocis.lib.graphics4 import Graphics4
 from tests.test_graphics import random_texts
-from yapocis.icons import icons, icon
+from yapocis.icons import icon, icons
+from yapocis.lib.graphics4 import Graphics4
 from yapocis.utils.stereo_typing import *
 
-from . import image_test, text_test_lines, ASIZE, double_shuffle, snapshow, show_snapshots
+from . import (ASIZE, double_shuffle, image_test, show_snapshots, snapshow,
+               text_test_lines)
 
 RED=[1,0,0,1]
 GREEN=[0,1,0,1]

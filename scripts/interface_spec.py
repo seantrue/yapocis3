@@ -5,9 +5,11 @@ Interpret interfaces in a readable way.
 """
 from argparse import ArgumentParser
 from io import StringIO
-from yapocis.interfaces import interfaces, find_interface
-from yapocis.ocl.interface import get_interface, get_interfaces, load_interface, python_stubs, opencl_stubs, \
-    explain_interface
+
+from yapocis.interfaces import find_interface, interfaces
+from yapocis.ocl.interface import (explain_interface, get_interface,
+                                   get_interfaces, load_interface,
+                                   opencl_stubs, python_stubs)
 from yapocis.ocl.kernel_manager import render_interface
 
 

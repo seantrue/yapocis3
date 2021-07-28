@@ -2,10 +2,12 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import os
-from yapocis.utils.internals import AssetManager
-from PIL import Image as PILImage
+
 import numpy as np
+from PIL import Image as PILImage
+
 from yapocis.utils.basic import imread
+from yapocis.utils.internals import AssetManager
 
 am = AssetManager(os.path.dirname(__file__), ".png", extensions=[".gif"], match="partial", recursive=True, default="default.png")
 icons = am.assets

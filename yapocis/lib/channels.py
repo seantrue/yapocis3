@@ -9,6 +9,7 @@ import numpy as np
 
 from yapocis.utils.stereo_typing import *
 
+
 def histeq(im:Image1, nbr_bins:int =2 ** 16) -> Image1:
     """
     Histogram equalization of a 2D array

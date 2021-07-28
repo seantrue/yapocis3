@@ -22,16 +22,18 @@
 # http://www.daniweb.com/code/snippet216851.html#
 # with minor changes to move to numpy from the obsolete Numeric
 
-import numpy as np
 import time
 from functools import reduce
+
+import numpy as np
+
+# set width and height of window, more pixels take longer to calculate
+from yapocis.ocl.kernel_manager import import_program
 
 # You can choose a calculation routine below (calc_fractal), uncomment
 # one of the three lines to test the three variations
 # Speed notes are listed in the same place
 
-# set width and height of window, more pixels take longer to calculate
-from yapocis.ocl.kernel_manager import import_program
 w = 1024
 h = 1024
 
@@ -77,8 +79,9 @@ calc_fractal = calc_fractal_opencl
 
 if __name__ == '__main__':
     import tkinter as tk
-    from PIL import Image #@UnresolvedImport
-    from PIL import ImageTk #@UnresolvedImport
+
+    from PIL import Image  # @UnresolvedImport
+    from PIL import ImageTk  # @UnresolvedImport
 
 
     class Mandelbrot(object):

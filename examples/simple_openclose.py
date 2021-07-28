@@ -1,9 +1,10 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-import pyopencl as cl
+import time
+
 import numpy
 import numpy.linalg as la
-import time
+import pyopencl as cl
 
 # Make sure we allocate arrays of the type expected
 a = numpy.random.rand(50000).astype(numpy.float32)

@@ -1,11 +1,13 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
-import os, sys
-from PIL import Image, ImageFont, ImageDraw
+import os
+import sys
 
-from yapocis.utils.stereo_typing import *
-from yapocis.fonts import font as find_font
+from PIL import Image, ImageDraw, ImageFont
 
 import yapocis
+from yapocis.fonts import font as find_font
+from yapocis.utils.stereo_typing import *
+
 VIEWING_QUEUE = os.environ.get("YAPOCIS_VIEW")
 VIEWING_QUEUE = os.path.join(os.path.dirname(os.path.abspath(yapocis.__file__)),"../queue") if VIEWING_QUEUE is None else VIEWING_QUEUE
 if not os.path.isdir(VIEWING_QUEUE):

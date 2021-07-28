@@ -1,7 +1,7 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import time
-from typing import Callable, List, Tuple, Any, Union, Optional
+from typing import Any, Callable, List, Optional, Tuple, Union
 
 import numpy as np
 import pyopencl

@@ -3,11 +3,13 @@
 from random import randint
 
 from yapocis.lib.channels import split_channels
-from yapocis.lib.hsi import HSI
 from yapocis.lib.graphics import Graphics1
+from yapocis.lib.hsi import HSI
 from yapocis.utils.stereo_typing import *
 
-from . import image_test, ASIZE, interesting_words, double_shuffle, show, show_snapshots, StopWatcher
+from . import (ASIZE, StopWatcher, double_shuffle, image_test,
+               interesting_words, show, show_snapshots)
+
 hsis = HSI()
 
 def setup(device_name:Optional[str]=None):

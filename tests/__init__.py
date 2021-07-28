@@ -4,11 +4,12 @@ import os
 import string
 import time
 from random import shuffle
-import pytest
-import numpy as np
 
-from yapocis.utils.basic import imread, show_array
+import numpy as np
+import pytest
+
 from yapocis.images import find_image
+from yapocis.utils.basic import imread, show_array
 
 ASIZE=980
 

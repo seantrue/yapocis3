@@ -5,6 +5,7 @@ Low level wrapper for zero crossing detector kernel
 
 from .bound_kernels import BoundKernels
 
+
 class ZC(BoundKernels):
     INTERFACE="zcs"
 

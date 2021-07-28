@@ -5,9 +5,11 @@ Low level wrappers around the OpenCL graphics kernels.
 
 import numpy as np
 
-from yapocis.lib.typeset import render_text, compute_offset
+from yapocis.lib.abstract_graphics import (AbstractGraphics,
+                                           AbstractGraphicsSetup, to_list,
+                                           to_vector)
+from yapocis.lib.typeset import compute_offset, render_text
 from yapocis.utils.basic import compute_360_to_180
-from yapocis.lib.abstract_graphics import AbstractGraphics, AbstractGraphicsSetup, to_list, to_vector
 
 
 def arrayify(scalar_or_vector, size, dtype=np.float32):

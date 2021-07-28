@@ -5,6 +5,7 @@ from typing import Dict, Optional
 
 from pyopencl._cl import get_platforms
 
+
 def get_available_device_names():
     platforms = get_platforms()
     device_names = []

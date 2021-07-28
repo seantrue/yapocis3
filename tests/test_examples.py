@@ -1,13 +1,14 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
+from yapocis.lib.channels import split_channels
 from yapocis.lib.gradient import Gradient
 from yapocis.lib.hsi import HSI
-from yapocis.lib.channels import split_channels
+from yapocis.utils.advanced import show_array
+from yapocis.utils.advanced import show_array as show_arrayb
+from yapocis.utils.advanced import show_arraygrad
+from yapocis.utils.advanced import show_arraygrad as show_arraygradb
 
-from yapocis.utils.advanced import show_array, show_arraygrad
-from yapocis.utils.advanced import show_array as show_arrayb, show_arraygrad as show_arraygradb
-
-from . import image_test, snapshot, show_snapshots
+from . import image_test, show_snapshots, snapshot
 
 
 def test_advanced_showarraygrad():

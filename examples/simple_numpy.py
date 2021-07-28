@@ -1,8 +1,9 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
+import time
+
 import numpy
 import numpy.linalg as la
-import time
 
 a = numpy.random.rand(50000)
 b = numpy.random.rand(50000)

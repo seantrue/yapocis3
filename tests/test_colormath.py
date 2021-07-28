@@ -1,13 +1,12 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-from yapocis.lib.channels import split_channels, join_channels
+from yapocis.lib.channels import join_channels, split_channels
+from yapocis.lib.colormath import Colormath, transform_names
+from yapocis.lib.hsi import HSI
+from yapocis.utils.basic import histeq
 from yapocis.utils.stereo_typing import *
 
-from yapocis.lib.hsi import HSI
-from yapocis.lib.colormath import Colormath, transform_names
-from yapocis.utils.basic import histeq
-
-from . import ASIZE, show_snapshots, snapshow, show, image_test, StopWatcher
+from . import ASIZE, StopWatcher, image_test, show, show_snapshots, snapshow
 
 
 def test_hsi():

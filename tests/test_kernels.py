@@ -2,15 +2,15 @@
 
 import numpy as np
 
-from yapocis.utils.basic import show_array, stage
-from yapocis.lib.channels import split_channels, join_channels
-from yapocis.utils.stereo_typing import *
-
-from yapocis.lib.operators import Operators
+from yapocis.lib.channels import join_channels, split_channels
 from yapocis.lib.hsi import HSI
 from yapocis.lib.median import Median
+from yapocis.lib.operators import Operators
+from yapocis.utils.basic import show_array, stage
+from yapocis.utils.stereo_typing import *
 
-from . import image_path_test, ASIZE, show_snapshots, snapshow, show, snapshot, StopWatcher
+from . import (ASIZE, StopWatcher, image_path_test, show, show_snapshots,
+               snapshot, snapshow)
 
 
 def test_median3():

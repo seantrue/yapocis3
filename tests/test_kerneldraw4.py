@@ -1,17 +1,17 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import time
+
 import numpy as np
 
-from tests.test_graphics4 import random_ellipses, random_circles, random_rects, random_lines, random_triangles, \
-    random_colors, random_alpha
+from tests.test_graphics4 import (random_alpha, random_circles, random_colors,
+                                  random_composites, random_ellipses,
+                                  random_lines, random_rects, random_sprites,
+                                  random_triangles)
+from yapocis.lib.kerneldraw4 import KernelDraw4
 from yapocis.utils.stereo_typing import Optional
 
-from yapocis.lib.kerneldraw4 import KernelDraw4
-
-from tests.test_graphics4 import random_composites, random_sprites
-
-from . import ASIZE, snapshow, snapshot, StopWatcher
+from . import ASIZE, StopWatcher, snapshot, snapshow
 
 
 def just_canvas():

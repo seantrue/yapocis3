@@ -4,8 +4,9 @@ from typing import Optional
 
 import numpy
 import numpy as np
-from .bound_kernels import BoundKernels
+
 from ..utils.basic import chunker
+from .bound_kernels import BoundKernels
 
 
 class AbstractGraphicsSetup:

@@ -5,10 +5,11 @@ Helpers around the PyOpenCL wrappers for OpenCL
 
 import os
 import sys
-import yaml
 
 import pyopencl
+import yaml
 from pyopencl import mem_flags as mf  # @UnusedImport
+
 from yapocis.ocl.buffer_manager import BufferManager
 from yapocis.ocl.device import get_device
 from yapocis.utils.stereo_typing import *

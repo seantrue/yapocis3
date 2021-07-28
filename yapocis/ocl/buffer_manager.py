@@ -1,12 +1,12 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-from weakref import WeakValueDictionary as Weak
 import time
+from weakref import WeakValueDictionary as Weak
+
 import pyopencl
 from pyopencl import mem_flags as mf
 
 from yapocis.utils.stereo_typing import *
-
 
 # Numpy makes a big deal out of .copy() being a deepcopy. Hah!
 # At the time of this writing (2011)

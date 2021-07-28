@@ -1,14 +1,18 @@
 DEBUG = False
 
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
-import os, sys
 import copy
+import os
+import sys
+
 import yapocis
-from yapocis.utils.basic import *
 from yapocis.lib.kerneldraw1 import KernelDraw1
 from yapocis.lib.kerneldraw3 import KernelDraw3
+from yapocis.utils.basic import *
+
 BENCHMARKING = os.environ.get('BENCHMARKING',None)
 from .basic import VIEWING_QUEUE
+
 
 def sign(title: str, img: np.ndarray) -> np.ndarray:
     img = img.astype(np.float32)

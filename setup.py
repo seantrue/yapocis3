@@ -1,6 +1,7 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
+
 setup(
     name = "yapocis",
     version = "0.3.0",

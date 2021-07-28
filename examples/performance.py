@@ -2,19 +2,21 @@
 
 import sys
 import time
+
 import numpy as np
 
-
 try:
-    from scipy.ndimage.filters import median_filter
     from matplotlib import pyplot as plot
+    from scipy.ndimage.filters import median_filter
 except ImportError:
     print("Please install scipy and matplotlib to compare median filter performance")
     sys.exit(1)
 
-from yapocis.ocl.device import get_available_device_names
 from yapocis.lib.median import Median
-from yapocis.ocl.device_manager import display_stats, display_snapshots
+from yapocis.ocl.device import get_available_device_names
+from yapocis.ocl.device_manager import display_snapshots, display_stats
+
+
 def median3x3_scipy(input, iterations=1):
     for i in range(iterations):
         input = median_filter(input, 3)

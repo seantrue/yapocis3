@@ -3,6 +3,7 @@
 from yapocis.images import find_image, images
 from yapocis.utils.basic import imread
 
+
 def test_images():
     tifs = [name for name in images() if name.endswith(".tif")]
     for tif in tifs:

@@ -1,18 +1,19 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import os
-from typing import Optional, Callable
+from typing import Callable, Optional
 
 import pyopencl
 from mako.lookup import TemplateLookup
 from mako.template import Template
 
+from yapocis.kernels import find_kernel
 from yapocis.ocl.device_manager import get_device_manager
-from yapocis.ocl.kernel import Kernel
 from yapocis.ocl.interface import Interface, get_interface, load_interface
+from yapocis.ocl.kernel import Kernel
 from yapocis.utils.internals import find_yapocis_file, get_yapocis_dir
 from yapocis.utils.stereo_typing import Context
-from yapocis.kernels import find_kernel
+
 
 def render_program(base_filename: str, **context: Context) -> str:
     """

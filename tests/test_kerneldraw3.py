@@ -1,12 +1,14 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 import numpy as np
 
-from tests.test_graphics import random_ellipses, random_circles, random_rects, random_lines, random_triangles, \
-    random_colors, random_alpha, random_texts
-from yapocis.utils.stereo_typing import Optional
+from tests.test_graphics import (random_alpha, random_circles, random_colors,
+                                 random_ellipses, random_lines, random_rects,
+                                 random_texts, random_triangles)
 from yapocis.lib.kerneldraw3 import KernelDraw3
+from yapocis.utils.stereo_typing import Optional
 
-from . import ASIZE, snapshow, show_snapshots, StopWatcher
+from . import ASIZE, StopWatcher, show_snapshots, snapshow
+
 
 def setup(device_name:Optional[str]=None, chunk_size:Optional[int]=None):
     canvas = np.zeros((ASIZE, ASIZE,3),dtype=np.float32)

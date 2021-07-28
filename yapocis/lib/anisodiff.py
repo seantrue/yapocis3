@@ -6,13 +6,15 @@ Higher level wrapper for anisotropic filter (Perona/Malik).
 # http://mail.scipy.org/pipermail/scipy-user/2009-February/020125.html
 # Anisotropic Diffusion, as per Perona and Malik's paper (see section V).
 
-from yapocis.lib.channels import split_channels, join_channels, join_planes, split_planes
+from yapocis.lib.channels import (join_channels, join_planes, split_channels,
+                                  split_planes)
 from yapocis.lib.hsi import *
 from yapocis.utils.basic import get_image_depth
 from yapocis.utils.stereo_typing import *
-from .hsi import HSI
 
 from .bound_kernels import BoundKernels
+from .hsi import HSI
+
 
 class Anisodiff(BoundKernels):
     INTERFACE = "anisodiff"

@@ -1,14 +1,15 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
-from yapocis.ocl.kernel import Kernel
-from yapocis.ocl.kernel_manager import load_program
-
-from yapocis.utils.basic import set_margin, set_frame
 from yapocis.lib.gradient import Gradient
 from yapocis.lib.operators import Operators
 from yapocis.lib.zc import ZC
+from yapocis.ocl.kernel import Kernel
+from yapocis.ocl.kernel_manager import load_program
+from yapocis.utils.basic import set_frame, set_margin
 from yapocis.utils.stereo_typing import *
+
 from .bound_kernels import BoundKernels
+
 
 def are_close(a: Array, b: Array) -> bool:
     eps = .00001

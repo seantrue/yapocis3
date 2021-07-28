@@ -3,8 +3,10 @@ Python typing
 """
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
+from typing import (Any, Callable, Dict, Iterable, Iterator, List, Optional,
+                    Set, Tuple, Union)
+
 import numpy as np
-from typing import Dict, Any, List, Union, Optional, Callable, Set, Tuple, Iterable, Iterator
 import PIL.Image
 
 PILImage = PIL.Image.Image

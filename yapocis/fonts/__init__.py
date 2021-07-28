@@ -2,6 +2,7 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import os
+
 from yapocis.utils.internals import AssetManager
 from yapocis.utils.stereo_typing import Optional
 

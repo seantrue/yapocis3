@@ -6,11 +6,14 @@ Not efficient.
 """
 
 import os
+
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+from datetime import datetime
+
 import pygame
+
 from yapocis.fonts import font as find_font
 from yapocis.utils.basic import VIEWING_QUEUE as queue
-from datetime import datetime
 
 WIDTH, HEIGHT = 1024, 1024
 

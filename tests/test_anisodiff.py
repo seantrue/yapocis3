@@ -1,12 +1,12 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 from yapocis.lib.anisodiff import Anisodiff
-from yapocis.lib.channels import split_planes, join_planes
+from yapocis.lib.channels import join_planes, split_planes
 from yapocis.lib.hsi import HSI
 from yapocis.utils.config import get_device_config
 from yapocis.utils.stereo_typing import *
-from . import image_test, StopWatcher, show_snapshots
 
+from . import StopWatcher, image_test, show_snapshots
 
 N = 100
 

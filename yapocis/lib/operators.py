@@ -6,6 +6,7 @@ Wrappers for binary operations of the form c = a + b, in both resident and inout
 from yapocis.lib.bound_kernels import BoundKernels
 from yapocis.utils.stereo_typing import *
 
+
 class Operators(BoundKernels):
     INTERFACE = "operators"
     OPERATORS = [("add", "+"), ("sub", "-"), ("mul", "*"), ("div", "/")]

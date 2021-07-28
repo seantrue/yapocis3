@@ -7,13 +7,13 @@ Created on Jul 21, 2011
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import numpy as np
-from yapocis.utils.basic import imread
-from yapocis.utils.basic import show_array, show_arraygrad
-from yapocis.lib.median import Median
+
+from yapocis.lib.channels import join_channels, split_channels
+from yapocis.lib.gaussian import Gaussian
 from yapocis.lib.gradient import Gradient
 from yapocis.lib.hsi import HSI
-from yapocis.lib.gaussian import Gaussian
-from yapocis.lib.channels import split_channels, join_channels
+from yapocis.lib.median import Median
+from yapocis.utils.basic import imread, show_array, show_arraygrad
 
 
 def main():

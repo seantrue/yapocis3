@@ -2,8 +2,8 @@
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
 
 import os
-from yapocis.utils.internals import AssetManager
 
+from yapocis.utils.internals import AssetManager
 
 am = AssetManager(os.path.dirname(__file__),".interface",match="name")
 

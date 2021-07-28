@@ -5,11 +5,12 @@
 #
 from collections import namedtuple
 
-from pyparsing import Optional, ParseException, OneOrMore, Literal, Keyword, Word, alphas, alphanums, \
-    delimitedList, Group, ZeroOrMore, restOfLine, cStyleComment
-from yapocis.interfaces import find_interface
-from yapocis.utils.stereo_typing import List, Dict, Any
+from pyparsing import (Group, Keyword, Literal, OneOrMore, Optional,
+                       ParseException, Word, ZeroOrMore, alphanums, alphas,
+                       cStyleComment, delimitedList, restOfLine)
 
+from yapocis.interfaces import find_interface
+from yapocis.utils.stereo_typing import Any, Dict, List
 
 # Map from OpenCL datatype to a numpy data type
 
