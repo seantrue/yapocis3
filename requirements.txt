@@ -5,7 +5,7 @@ Pillow
 decorator
 numpy
 pyyaml
-pyopencl[pocl,oclgrind]
+pyopencl
 pyparsing
 pytest
 pytools
@@ -13,4 +13,5 @@ sphinx
 freetype-py
 scikit-image
 imagecodecs
+
 

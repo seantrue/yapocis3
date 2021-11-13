@@ -12,8 +12,8 @@ from yapocis.fonts import font as find_font
 import yapocis
 
 VIEWING_QUEUE = os.environ.get("YAPOCIS_VIEW")
-VIEWING_QUEUE = os.path.join(os.path.dirname(os.path.abspath(yapocis.__file__)),
-                             "../queue") if VIEWING_QUEUE is None else VIEWING_QUEUE
+VIEWING_QUEUE = os.path.join(os.path.dirname(os.path.abspath(yapocis.__file__)),"..",
+                             "queue") if VIEWING_QUEUE is None else VIEWING_QUEUE
 if not os.path.isdir(VIEWING_QUEUE):
     raise RuntimeError(f"Can't find viewing queue '{VIEWING_QUEUE}'")
 
@@ -287,7 +287,9 @@ def show_array(*args, **kwargs) -> None:
     # img.show()
     # if img.mode == "L":
     #     img = img.convert("RGB")
+    title = title.replace(":","#")
     name = f"{title}.png"
+
     img.save(os.path.join(VIEWING_QUEUE, name))
 
 

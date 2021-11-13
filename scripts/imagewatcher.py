@@ -6,6 +6,7 @@ Not efficient.
 """
 
 import os
+import sys
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame
 from yapocis.fonts import font as find_font
@@ -65,6 +66,13 @@ def fetch_image(i):
     most_recent = path
     return image, f"{i+1}/{len(images)}@{created}  {image_name}"
 
+
+def pygame_quit():
+    pygame.quit()
+    pygame.display.quit()
+    sys.exit(0)
+
+
 def main():
     global WIDTH, HEIGHT
     pygame.init()
@@ -87,8 +95,7 @@ def main():
                 display_surface.blit(label, (0,0))
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
-                quit()
+                pygame_quit()
             if event.type == pygame.VIDEORESIZE:
                 # Resize window and image to match
                 dim = min(event.w,event.h)
@@ -98,6 +105,8 @@ def main():
             if event.type == pygame.USEREVENT:
                 image, label_text = step_image()
             if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pygame_quit()
                 # Stop tailing the directory
                 pygame.time.set_timer(pygame.USEREVENT, 0)
                 if event.key == pygame.K_a:

@@ -80,7 +80,7 @@ def snapshot(snapper):
 def snapshow(snapper, *args, depth=2, **kwargs):
     tname, fname = name_of_test(depth)
     snapper.snapshot(name=f"{fname}/{tname}")
-    show_array(f"{fname}: {tname}", *args, **kwargs)
+    show_array(f"{fname} {tname}", *args, **kwargs)
 
 
 class StopWatcher:
