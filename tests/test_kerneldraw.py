@@ -66,7 +66,7 @@ def test_display_list():
         a = ad.read()
         show(ad, a)
 
-
+@pytest.mark.skip("Too slow for now")
 def test_chunking():
     times = []
     for chunk_size in (10, 100, 500):

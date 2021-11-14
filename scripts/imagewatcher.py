@@ -10,61 +10,83 @@ import sys
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame
 from yapocis.fonts import font as find_font
-from yapocis.utils.basic import VIEWING_QUEUE as queue
-from datetime import datetime
+from yapocis.utils.basic import VIEWING_QUEUE
 
-WIDTH, HEIGHT = 1024, 1024
+WIDTH, HEIGHT = 800, 800
+
 
 def get_images():
-    images = [os.path.join(queue,name) for name in os.listdir(queue) if name.endswith(".png")]
-    images = [(os.stat(path).st_ctime, path) for path in images]
-    images.sort()
-    return images
+    images_ = [os.path.join(VIEWING_QUEUE, name) for name in os.listdir(VIEWING_QUEUE) if name.endswith(".png")]
+    images_ = [(os.stat(path).st_ctime, path) for path in images_]
+    images_.sort()
+    return images_
+
 
 most_recent = None
 image_index = -1
 images = []
 
+
 def next_image():
-    return fetch_image(image_index+1)
+    return fetch_image(image_index + 1)
+
 
 def previous_image():
-    return fetch_image(image_index-1)
+    return fetch_image(image_index - 1)
+
 
 def last_image():
     return fetch_image(-1)
 
+
 def first_image():
     return fetch_image(0)
 
+
 def step_image():
-    if image_index < len(images)-1:
+    if image_index < len(images) - 1:
         return next_image()
     if images and last_image and images[-1] != last_image:
         return fetch_image(-1)
     return None, None
 
 
+def fetch_image_path(i):
+    global image_index
+    images[:] = get_images()
+    if len(images) == 0:
+        return 0, None, None
+    i = i + len(images) if i < 0 else i
+    i = i % len(images)
+    created, path = images[i]
+    return i, created, path
+
+
 def fetch_image(i):
     global image_index
     global most_recent
-    images[:] = get_images()
-    if len(images) == 0:
+    i, created, path = fetch_image_path(i)
+    if created is None or path is None:
         return None, None
-    i = i + len(images) if i < 0 else i
-    i = i % len(images)
     try:
-        created, path = images[i]
-        created = str(datetime.fromtimestamp(created)).split(".")[0]
         image = pygame.image.load(path)
-    except pygame.error:
+    except (FileNotFoundError, pygame.error):
         return None, None
+    image = image.convert()
     if max(image.get_size()) > WIDTH:
-        image = pygame.transform.smoothscale(image, (WIDTH-50, HEIGHT-50))
-    image_name,_ = os.path.splitext(os.path.basename(path))
+        image = pygame.transform.smoothscale(image, (WIDTH - 50, HEIGHT - 50))
+    image_name, _ = os.path.splitext(os.path.basename(path))
     image_index = i
     most_recent = path
-    return image, f"{i+1}/{len(images)}@{created}  {image_name}"
+    return image, f"{i + 1}/{len(images)}@{created}  {image_name}"
+
+
+def delete_image():
+    global image_index
+    i, created, path = fetch_image_path(image_index)
+    if created and path:
+        os.unlink(path)
+    return fetch_image(i)
 
 
 def pygame_quit():
@@ -80,7 +102,7 @@ def main():
     font = pygame.font.Font(font_path, 22)
 
     background_color = (100, 100, 100)
-    display_surface = pygame.display.set_mode((WIDTH, HEIGHT),pygame.RESIZABLE)
+    display_surface = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
 
     pygame.display.set_caption('Image Watcher')
     pygame.key.set_repeat(150)
@@ -88,24 +110,24 @@ def main():
     while True:
         if image is not None:
             display_surface.fill(background_color)
-            w,h = image.get_size()
-            display_surface.blit(image, (25+WIDTH//2-w//2, 25+HEIGHT//2-h//2))
+            w, h = image.get_size()
+            display_surface.blit(image, (25 + WIDTH // 2 - w // 2, 25 + HEIGHT // 2 - h // 2))
             if label_text is not None:
-                label = font.render(label_text, True, (255, 255, 255),(0,0,0))
-                display_surface.blit(label, (0,0))
+                label = font.render(label_text, True, (255, 255, 255), (0, 0, 0))
+                display_surface.blit(label, (0, 0))
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame_quit()
             if event.type == pygame.VIDEORESIZE:
                 # Resize window and image to match
-                dim = min(event.w,event.h)
+                dim = min(event.w, event.h)
                 WIDTH = HEIGHT = dim
-                display_surface = pygame.display.set_mode((dim+50, dim+50),pygame.RESIZABLE)
+                display_surface = pygame.display.set_mode((dim + 50, dim + 50), pygame.RESIZABLE)
                 image, label_text = fetch_image(image_index)
             if event.type == pygame.USEREVENT:
                 image, label_text = step_image()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
+                if event.key in (pygame.K_ESCAPE, pygame.K_q):
                     pygame_quit()
                 # Stop tailing the directory
                 pygame.time.set_timer(pygame.USEREVENT, 0)
@@ -124,6 +146,9 @@ def main():
                 elif event.key == pygame.K_s:
                     # Start tailing the directory
                     pygame.time.set_timer(pygame.USEREVENT, 100)
+                elif event.key == pygame.K_BACKSPACE:
+                    # Delete the current image
+                    image, label_text = delete_image()
         pygame.display.update()
 
 

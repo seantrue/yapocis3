@@ -32,4 +32,5 @@ def test_split_join():
   assert np.sum(c-c1) == 0.0
 
 def test_project_dir():
-    assert get_project_dir()
+    project_dir = get_project_dir()
+    assert project_dir is None or os.path.exists(project_dir)

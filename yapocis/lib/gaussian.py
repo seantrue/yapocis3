@@ -171,8 +171,11 @@ class Gaussian(BoundKernels):
             larger = self.gauss_image(a, scale + 1)
             dog = smaller - larger
             zca = self.zcs(dog, threshold=threshold)
+            del larger
+            del dog
         # Zero out of bounds and create a frame.
         grad, theta = self.grad.gradient(smaller,3)
+        del smaller
         margin = self.gaussian_weights.get_gaussian_width(scale) + 1
         if clearmargin:
             set_margin(zca, margin)
@@ -180,9 +183,6 @@ class Gaussian(BoundKernels):
             set_margin(theta, margin)
         if frame:
             set_frame(zca, margin)
-        del smaller
-        del larger
-        del dog
         zca, grad, theta =  zca.copy(), grad.copy(), theta.copy()
         self.purge()
         return zca, grad, theta
