@@ -13,12 +13,13 @@ from datetime import datetime
 import pygame
 
 from yapocis.fonts import font as find_font
-from yapocis.utils.basic import VIEWING_QUEUE as queue
+from yapocis.utils.basic import VIEWING_QUEUE
+queue = VIEWING_QUEUE
 
 WIDTH, HEIGHT = 1024, 1024
 
 def get_images():
-    images = [os.path.join(queue,name) for name in os.listdir(queue) if name.endswith(".png")]
+    images = [os.path.join(queue,name) for name in os.listdir(queue) if name.endswith(".png") or name.endswith(".pgm")]
     images = [(os.stat(path).st_ctime, path) for path in images]
     images.sort()
     return images
@@ -26,6 +27,35 @@ def get_images():
 most_recent = None
 image_index = -1
 images = []
+
+def image_path(i=None):
+    global image_index
+    i = image_index if i is None else i
+    images[:] = get_images()
+    if len(images) == 0:
+        return None, None
+    i = i + len(images) if i < 0 else i
+    i = i % len(images)
+    created, path = images[i]
+    return created, path
+
+def fetch_image(i):
+    global image_index
+    global most_recent
+    created, path = image_path(i)
+    if created is None or path is None:
+        return None,None
+    try:
+        created = str(datetime.fromtimestamp(created)).split(".")[0]
+        image = pygame.image.load(path)
+    except pygame.error:
+        return None, None
+    if max(image.get_size()) > WIDTH:
+        image = pygame.transform.smoothscale(image, (WIDTH-50, HEIGHT-50))
+    image_name,_ = os.path.splitext(os.path.basename(path))
+    image_index = i
+    most_recent = path
+    return image, f"{i+1}/{len(images)}@{created}  {image_name}"
 
 def next_image():
     return fetch_image(image_index+1)
@@ -46,27 +76,17 @@ def step_image():
         return fetch_image(-1)
     return None, None
 
-
-def fetch_image(i):
-    global image_index
+def delete_image(i=None):
     global most_recent
-    images[:] = get_images()
-    if len(images) == 0:
-        return None, None
-    i = i + len(images) if i < 0 else i
-    i = i % len(images)
-    try:
-        created, path = images[i]
-        created = str(datetime.fromtimestamp(created)).split(".")[0]
-        image = pygame.image.load(path)
-    except pygame.error:
-        return None, None
-    if max(image.get_size()) > WIDTH:
-        image = pygame.transform.smoothscale(image, (WIDTH-50, HEIGHT-50))
-    image_name,_ = os.path.splitext(os.path.basename(path))
-    image_index = i
-    most_recent = path
-    return image, f"{i+1}/{len(images)}@{created}  {image_name}"
+    if i is None:
+        path = most_recent
+    else:
+        _, path = image_path(i)
+        most_recent = path
+    if path and os.path.exists(path):
+        os.unlink(path)
+    get_images()
+
 
 def main():
     global WIDTH, HEIGHT
@@ -118,8 +138,24 @@ def main():
                 elif event.key == pygame.K_s:
                     # Start tailing the directory
                     pygame.time.set_timer(pygame.USEREVENT, 100)
+                elif event.key == pygame.K_BACKSPACE:
+                    # Delete the current image
+                    if event.mod & 1:
+                        while True:
+                            delete_image()
+                            image, label_text = next_image()
+                            if image is None:
+                                display_surface.fill(background_color)
+                                break
+                    else:
+                        delete_image()
+                    image, label_text = next_image()
+                    break
         pygame.display.update()
 
 
 if __name__ == '__main__':
+    import sys
+    if len(sys.argv) > 1:
+        queue = sys.argv[1]
     main()

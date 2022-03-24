@@ -9,7 +9,6 @@ __kernel
 void filterImage${planes}(int width, int height, __global FLOAT${planes} *input, float scale, float step_size, __global FLOAT${planes} *output)
 {
     size_t i = get_global_id(0);
-    size_t last = width*height;
     int x = X(i);
     int y = Y(i);
     FLOAT${planes} CF;

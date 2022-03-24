@@ -146,6 +146,7 @@ class Kernel:
         t = time.time()
         self.global_size = kwargs.pop("global_size", None)
         self.local_size = kwargs.pop("local_size", None)
+        assert not isinstance(self.global_size, float) and not isinstance(self.local_size,float), f"{self.global_size},{self.local_size}"
         resident_arrays = kwargs.pop("resident", None)
         prepared_args = self.prepare_arguments(args, resident_arrays=resident_arrays)
         def show_args():

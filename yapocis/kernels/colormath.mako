@@ -1,4 +1,6 @@
 <%include file="constants.mako" />
+#define VXM3
+#define DOT3
 <%include file="helpers.mako" />
 
 __constant float transforms[] =
@@ -210,7 +212,7 @@ __kernel void transform(__global float *input, int transform_id, __global  float
     float3 a = (float3)(transforms[tid+0],transforms[tid+1],transforms[tid+2]);
     float3 b = (float3)(transforms[tid+3],transforms[tid+4],transforms[tid+5]);
     float3 c = (float3)(transforms[tid+6],transforms[tid+7],transforms[tid+8]);
-#else TRANSPOSE
+#else
     float3 a = (float3)(transforms[tid+0],transforms[tid+3],transforms[tid+6]);
     float3 b = (float3)(transforms[tid+1],transforms[tid+4],transforms[tid+7]);
     float3 c = (float3)(transforms[tid+2],transforms[tid+5],transforms[tid+8]);

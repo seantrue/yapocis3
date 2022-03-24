@@ -3,6 +3,7 @@
 // For white points, see: https://en.wikipedia.org/wiki/Standard_illuminant
 
 <%include file="constants.mako" />
+#define DOT3
 <%include file="helpers.mako" />
 
 #define eps 1.0e-10
@@ -36,12 +37,12 @@ __inline float3 _hsi2rgb(float3 hsi) {
 #define ZK (float3)(.0193,.1192,.9505)
 #define REFERENCE_WHITE (float3)(95.047,100.0,108.883)
 
-__inline float adjustrgb(float v) {
+static __inline float adjustrgb(float v) {
     v = v <= .04045f ? v/12.92f : native_powr((v + 0.055f) / 1.055f, 2.4f);
     return v*100.0;
 }
 
-__inline float3 _rgb2xyz(float3 rgb) {
+static __inline float3 _rgb2xyz(float3 rgb) {
    float3 rgb3 = ZERO3;
    rgb3.x = adjustrgb(rgb.x);
    rgb3.y = adjustrgb(rgb.y);
@@ -54,12 +55,12 @@ __inline float3 _rgb2xyz(float3 rgb) {
    return XYZ;
 }
 
-__inline float adjustxyz(float v) {
+static __inline float adjustxyz(float v) {
     v = v <= .008856f ? (7.787f * v) + (16.f / 116.f) : native_powr(v, 0.3333333333333333f);
     return v;
 }
 
-__inline float3 _xyz2lab(float3 xyz) {
+static __inline float3 _xyz2lab(float3 xyz) {
    float3 xyz3 = ZERO3;
    xyz3.x = adjustxyz(xyz.x);
    xyz3.y = adjustxyz(xyz.y);

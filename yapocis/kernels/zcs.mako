@@ -13,7 +13,7 @@ void zcs${planes}(int width, int height, float threshold, __global float* input,
     x = min(x,width-2);
     int y = max((size_t)1,Y(i));
     y = min(y, height-2);
-    float zclt, zcgt;
+    float zclt;
     float v, below, left, above, right;
     float delta;
     %for plane in range(planes):

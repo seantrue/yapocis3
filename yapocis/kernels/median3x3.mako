@@ -1,4 +1,4 @@
-inline float median9(float *a, int n) {
+static inline float median9(float *a, int n) {
     float l,h;
     bool lt;
     % for i in range(9//2+1):

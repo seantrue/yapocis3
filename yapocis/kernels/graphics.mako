@@ -1,4 +1,5 @@
 <%include file="constants.mako" />
+#define DXDY2
 <%include file="helpers.mako" />
 
 __kernel

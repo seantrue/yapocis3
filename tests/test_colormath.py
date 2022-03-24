@@ -28,12 +28,13 @@ def test_hsi():
         hsi3 = hsis.rgb2hsi3(rgb)
         h3,s3,i3 = split_channels(hsi3)
         rgb3 = hsis.hsi2rgb3(hsi3)
+        shower(hsis, "RGB3 out", rgb3)
         rgb4 = np.zeros((ASIZE,ASIZE,4), dtype=np.float32)
         rgb4[:,:,:3] = rgb[:,:,:]
         hsi4 = hsis.rgb2hsi3(rgb4)
         rgb5 = hsis.hsi2rgb3(hsi4)
         rgb5 = rgb5[:,:,:3]
-        shower(hsis, "RGB out", rgb5)
+        shower(hsis, "RGB5 out", rgb5)
     assert np.sum(rgb-rgb2) == 0.0
     assert abs(np.sum(rgb.ravel()-rgb3.ravel()))/rgb.size < .00001
     assert abs(np.sum(rgb.ravel()-rgb5.ravel()))/rgb.size < .00001

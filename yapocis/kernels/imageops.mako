@@ -27,12 +27,12 @@ __kernel void histogram(__global float *input, int size_of_input, int n_bins, fl
     size_t i = get_global_id(0);
     size_t partial_base = i * n_bins;
     size_t first_pixel = i*(size_of_input/n_workers);
-    size_t last_pixel = first_pixel + n_bins <= size_of_input ? first_pixel + n_bins: size_of_input;
-    for (int ipixel=first_pixel;  ipixel < last_pixel; ipixel++) {
+    size_t last_pixel = first_pixel + n_bins <= (size_t)size_of_input ? first_pixel + n_bins: (size_t)size_of_input;
+    for (size_t ipixel=first_pixel;  ipixel < last_pixel; ipixel++) {
         float value = input[ipixel];
         value = value < low ? low : value;
         value = value > high ? high : value;
-        int bucket = (int)((n_bins*value)/(high-low));
+        size_t bucket = (size_t)((n_bins*value)/(high-low));
         partials[partial_base+bucket] += 1;
     }
 }

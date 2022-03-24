@@ -137,4 +137,5 @@ class AssetManager:
                         return self.asset_path(asset_name)
             if self.default:
                 return self.asset_path(self.default)
-            raise ValueError(f"{asset_suggestion} not found, use one of: {' '.join(self.assets())}")
+            asset_names = [an.rsplit(".",1)[0] for an in self.assets()]
+            raise ValueError(f"{asset_suggestion} not found, use one of: {' '.join(asset_names)}")

@@ -473,7 +473,7 @@ def align_image(image: Image1, alignment: int = ALIGNMENT) -> Image1:
 
 def normalize(a: Array) -> Array:
     """
-    Ensures that array contents are in range 0 <= elem < 1.0
+    Ensures that array contents are in range 0 <= elem <= 1.0
     Args:
         a: an array to be normalized
 
@@ -481,7 +481,7 @@ def normalize(a: Array) -> Array:
 
     """
     a = a - a.min()
-    a = a / (a.max() * (1.0-np.epsilon))
+    a = a / a.max()
     return a
 
 
