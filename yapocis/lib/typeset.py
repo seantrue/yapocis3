@@ -16,10 +16,77 @@ from yapocis.fonts import font
 from yapocis.utils.basic import set_margin
 from yapocis.utils.stereo_typing import Image1, Optional, Tuple
 
-# These are performance boosts excepwhen size, font, or rotation are changing randomly
+# These are performance boosts except when size, font, or rotation are changing randomly
 _glyph_cache = {}
 _kerning_cache = {}
+_extent_cache = {}
 
+def extent_freetype(text, filename: str, size: float = 12, angle: float = 0) -> Tuple:
+    """
+    Parameters:
+    -----------
+    text : string
+        Text to be displayed
+    filename : string
+        Path to a font
+    size : int
+        Font size in points
+    angle : float
+        Text angle in degrees
+    """
+    angle = angle % 360
+    if angle > 180:
+        angle = -180 + (angle - 180)
+    font_path = font(filename)
+    size = 32 if size is None else size
+    key = (text,filename,size,angle)
+    value = _extent_cache.get(key)
+    if value is not None:
+        return value
+    angle = round(angle, 4)
+
+    face = Face(font_path)
+    face.set_char_size(int(size * 64))
+    angle = (angle / 180.0) * math.pi
+    matrix = FT_Matrix((int)(math.cos(angle) * 0x10000),
+                       (int)(-math.sin(angle) * 0x10000),
+                       (int)(math.sin(angle) * 0x10000),
+                       (int)(math.cos(angle) * 0x10000))
+    flags = FT_LOAD_RENDER
+    pen = FT_Vector(0, 0)
+    FT_Set_Transform(face._FT_Face, byref(matrix), byref(pen))
+    previous = 0
+    xmin, xmax = 0, 0
+    ymin, ymax = 0, 0
+    for c in text:
+        try:
+            kerning_x, left, rows, top, width, advance_x, advance_y = _kerning_cache[
+                (filename, size, angle, previous, c)]
+        except KeyError:
+            face.load_char(c, flags)
+            kerning_x = face.get_kerning(previous, c).x
+            previous = c
+            glyph = face.glyph
+            advance_x = glyph.advance.x
+            advance_y = glyph.advance.y
+            width = glyph.bitmap.width
+            rows = glyph.bitmap.rows
+            top = glyph.bitmap_top
+            left = glyph.bitmap_left
+            _kerning_cache[
+                (filename, size, angle, previous, c)] = kerning_x, left, rows, top, width, advance_x, advance_y
+        previous = c
+        pen.x += kerning_x
+        x0 = (pen.x >> 6) + left
+        x1 = x0 + width
+        y0 = (pen.y >> 6) - (rows - top)
+        y1 = y0 + rows
+        xmin, xmax = min(xmin, x0), max(xmax, x1)
+        ymin, ymax = min(ymin, y0), max(ymax, y1)
+        pen.x += advance_x
+        pen.y += advance_y
+    _extent_cache[key] = xmin,ymin,xmax,ymax
+    return xmin,ymin,xmax,ymax
 
 def render_freetype(text, filename: str, size: float = 12, angle: float = 0):
     """
