@@ -29,24 +29,45 @@ class RendererTemplate(RendererBase):
         # log.debug(f"draw_path {path} {rgbFace}")
         color = gc._rgb
         polygons = path.to_polygons(transform=transform, closed_only=False)
+        # Build a buffer of flipped points, and a separate list of closed polygons
+        polygon_points = []
+        closed_polygon_points = []
         for polygon in polygons:
             points = np.empty_like(polygon)
             points[:, 1] = polygon[:, 0]
             points[:, 0] = self.height - polygon[:, 1]
+            polygon_points.append(points)
+            if (points[0, :] - points[-1, :]).sum() == 0.0:
+                # Closed polys have start,end point identical
+                closed_polygon_points.append(points)
+        for points in polygon_points:
             flat_points = points.ravel()
             for i in range(points.shape[0] - 1):
                 line = flat_points[i * 2:i * 2 + 4]
                 self.kd.line(line, color=color)
-            if (points[0, :] - points[-1, :]).sum() == 0.0:
-                simplices = earcut.triangulate_float32(points, np.array([len(points)]))
-                vertices = points[simplices]
-                for i in range(0, len(vertices), 3):
+        if closed_polygon_points:
+            earcut_points = np.concatenate(closed_polygon_points)
+            earcut_lengths  = [len(points) for points in closed_polygon_points]
+            earcut_lengths = np.cumsum(earcut_lengths)
+            simplices = earcut.triangulate_float32(earcut_points, earcut_lengths)
+            vertices = earcut_points[simplices]
+            first = 0
+            for last in earcut_lengths:
+                triangles = vertices[first:last]
+                for i in range(0, len(triangles), 3):
                     triangle = vertices[i:i + 3].ravel()
-                    self.kd.triangle(triangle, color=rgbFace)
+                    if first == 0:
+                        color = rgbFace
+                    else:
+                        color = [0,0,0,0]
+                    self.kd.triangle(triangle, color=color)
+                first = last
+
         self.kd.render()
 
     def draw_image(self, gc, x, y, im):
-        log.warning(f"draw_image {gc}, {x}, {y}, {im}")
+        y = self.height-y-im.shape[0]
+        self.kd.composite([(x,y)],[im])
 
     def get_text_width_height_descent(self, s, prop, ismath):
         size = self.points_to_pixels(prop.get_size_in_points())
