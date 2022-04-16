@@ -125,6 +125,7 @@ class KernelManager:
         """
         Factory returning runnable interface based on a interface specification.
         """
+        assert device_name is None or isinstance(device_name,(str,int,bytes)), device_name
         source = load_interface(interface_spec)
         source = render_interface(source, **context)
         interface = get_interface(source)

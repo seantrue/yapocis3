@@ -28,6 +28,7 @@ class DeviceManager(BufferManager):
     """
 
     def __init__(self, device_name: Optional[str] = None, autoflatten: bool = True, timed: bool = False, **kwargs):
+        assert device_name is None or isinstance(device_name, (str, int, bytes)), device_name
         self.device_name, self.device = get_device(device_name=device_name)
         try:
             super(DeviceManager, self).__init__(pyopencl.Context([self.device]), None, timed=timed, **kwargs)

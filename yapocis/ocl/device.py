@@ -77,6 +77,8 @@ def get_device(device_name: Optional[str] = None) -> "Device":
         try:
             engine_index = int(device_name)
         except ValueError:
-            raise RuntimeError(f"{device_name} not an available device {device_names}")
+            raise RuntimeError(f"{device_name} not an available device or device index  {device_names}")
+        except TypeError:
+            raise RuntimeError(f"{device_name} not a string or integer")
         return get_device(device_names[engine_index])
     return device_name, devices[device_name]

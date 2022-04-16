@@ -8,7 +8,7 @@ pyyaml
 py
 pyopencl[pocl,oclgrind]
 pyparsing
-pytest
+pytest=6.2.2
 pytools
 sphinx
 freetype-py
