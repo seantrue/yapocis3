@@ -25,4 +25,4 @@ def test_stretch():
     a += .1
     assert a.min() >= .1 and a.max() <= .6
     b = imageops.stretch(a, a.min(), a.max(), 0., 1.0)
-    assert b.min() == 0.0 and b.max() == 1.0
+    assert b.min() == 0.0 and b.max() >= 0.999999

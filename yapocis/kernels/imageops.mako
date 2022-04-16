@@ -16,6 +16,7 @@ __kernel void stretch(__global float *input, float input_min, float input_max, f
     value = low + value * (high-low);
     output[i] = value;
 }
+
 __kernel void binarize(__global float *input, float threshold, __global float *output) {
     size_t i = get_global_id(0);
     float value = input[i];

@@ -307,7 +307,6 @@ def show_array(*args, **kwargs) -> None:
         print(args[:-1], file=sys.stderr)
         return
     title, img = _show_array(*args, **kwargs)
-    # img.show()
     if img.mode == "L":
         img = img.convert("RGB")
     name = f"{title}.png"
@@ -359,7 +358,7 @@ def show_arraygrad(title: str, image: Image1, theta: Image1, grad: Optional[Imag
             else:
                 color = "white"
             draw.line([(x1, y1), (x2, y2)], fill=color)
-    img.show()
+    show_array(title, np.array(img))
 
 
 class Shaper:
