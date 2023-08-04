@@ -4,7 +4,7 @@ Created on Jul 21, 2011
 @author: seant
 '''
 
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 import numpy as np
 

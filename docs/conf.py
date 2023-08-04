@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 #
 # Yapocis documentation build configuration file, created by

@@ -1,4 +1,4 @@
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 import os
 import sys
 
@@ -8,6 +8,7 @@ import yapocis
 from yapocis.fonts import font as find_font
 from yapocis.utils.stereo_typing import *
 
+VIEWER = os.environ.get("YAPOCIS_VIEWER")
 VIEWING_QUEUE = os.environ.get("YAPOCIS_VIEW")
 VIEWING_QUEUE = os.path.join(os.path.dirname(os.path.abspath(yapocis.__file__)),"../queue") if VIEWING_QUEUE is None else VIEWING_QUEUE
 if not os.path.isdir(VIEWING_QUEUE):
@@ -199,7 +200,11 @@ def imread(filename: str, longest: Optional[int] = None, keep_alpha:bool=False) 
         a = a[:, :, 0:3]
     return a
 
-
+def imwrite(filename: str, img: Union[Image1, Image3, Image4]):
+    img = np.nan_to_num(img, neginf=0,posinf=1.0)
+    img *= 255.0
+    img = img.to_image()
+    img.save(filename)
 
 import time
 
@@ -310,8 +315,10 @@ def show_array(*args, **kwargs) -> None:
     if img.mode == "L":
         img = img.convert("RGB")
     name = f"{title}.png"
-    img.save(os.path.join(VIEWING_QUEUE,name))
-
+    path = os.path.join(VIEWING_QUEUE, name)
+    img.save(path)
+    if VIEWER:
+        os.system(f'{VIEWER} "{os.path.abspath(path)}"&')
 def show_arraygrad(title: str, image: Image1, theta: Image1, grad: Optional[Image1] = None) -> None:
     """
     Show an array with gradient orientation and optional magnitude
@@ -410,7 +417,7 @@ def histeq_large(im: Image1, nbr_bins=2 ** 16) -> Array:
     Returns:
         2d Array, dtype=np.float32
     """
-    imhist, bins = np.histogram(im.ravel(), nbr_bins, normed=True)
+    imhist, bins = np.histogram(im.ravel(), nbr_bins, density=True)
     imhist[0] = 0
 
     cdf = imhist.cumsum()  # cumulative distribution function

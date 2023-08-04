@@ -1,26 +1,27 @@
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 import time
 
 import numpy as np
 
-from tests.test_graphics4 import (random_alpha, random_circles, random_colors,
-                                  random_composites, random_ellipses,
-                                  random_lines, random_rects, random_sprites,
-                                  random_triangles)
+from .test_graphics4 import (random_alpha, random_circles, random_colors,
+                             random_composites, random_ellipses,
+                             random_lines, random_rects, random_sprites,
+                             random_triangles)
 from yapocis.lib.kerneldraw4 import KernelDraw4
-from yapocis.utils.stereo_typing import Optional
+from yapocis.utils.stereo_typing import Optional, Image4
 
 from . import ASIZE, StopWatcher, snapshot, snapshow
 
 
-def just_canvas():
+def just_canvas() -> Image4:
     return np.zeros((ASIZE, ASIZE, 4), dtype=np.float32)
 
 
-def setup(device_name:Optional[str]=None, chunk_size:Optional[int]=None):
+def setup(device_name: Optional[str] = None, chunk_size: Optional[int] = None) -> tuple[Image4, KernelDraw4]:
     canvas = just_canvas()
-    return canvas, KernelDraw4(canvas, device_name=device_name,chunk_size=chunk_size)
+    return canvas, KernelDraw4(canvas, device_name=device_name, chunk_size=chunk_size)
+
 
 def test_batch():
     canvas, ad = setup()
@@ -39,7 +40,7 @@ def test_batch():
         ad.lines(lines, colors=random_colors(), distance=1.5)
         ad.render()
         a = ad.read()
-        show(ad,a)
+        show(ad, a)
 
 
 def test_displaylist():

@@ -3,6 +3,7 @@ Example of drawing matplot areas using kerneldraw
 """
 import matplotlib
 import numpy as np
+import datetime
 
 matplotlib.use("module://yapocis.lib.mplbackend")
 import matplotlib.pyplot as plt
@@ -77,5 +78,5 @@ if __name__ == '__main__':
     plt.plot(x,y)
     spatch = patches.PathPatch(spath,facecolor='blue',alpha=.5)
     ax.add_patch(spatch)
-
+    plt.title(str(datetime.date.today()))
     plt.savefig("matplot_filled_paths.png")

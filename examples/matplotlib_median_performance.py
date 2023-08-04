@@ -1,6 +1,6 @@
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 import sys
-
+import datetime
 import matplotlib
 import seaborn
 
@@ -115,6 +115,7 @@ for iengine, device_name in enumerate(device_names):
         ax1.legend(bbox_to_anchor=(1.2, 1.3), loc='upper left')
         ax2.legend(bbox_to_anchor=(1.2, .5), loc='upper left')
 plot.tight_layout()
+plot.title(f"{datetime.date.today()}: median performance")
 fig.savefig("matplotlib_median_performance.png")
 
 display_snapshots()

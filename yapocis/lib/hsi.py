@@ -1,11 +1,11 @@
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 from yapocis.lib.bound_kernels import BoundKernels
 from yapocis.utils.stereo_typing import *
 
 
 class HSI(BoundKernels):
-    INTERFACE="hsi"
+    INTERFACE = "hsi"
 
     def rgb2hsi3(self, rgb: Image3) -> Image3:
         """
@@ -19,7 +19,7 @@ class HSI(BoundKernels):
         """
         hsi = self.kmgr.rgb2hsi3(rgb, global_size=rgb.size // rgb.shape[-1])
         return hsi
-    
+
     def hsi2rgb3(self, hsi: Image3) -> Image3:
         """
         Reverse rgb2hsi3
@@ -31,4 +31,3 @@ class HSI(BoundKernels):
         """
         rgb = self.kmgr.hsi2rgb3(hsi, global_size=hsi.size // hsi.shape[-1])
         return rgb
-    

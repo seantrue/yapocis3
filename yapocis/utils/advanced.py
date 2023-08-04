@@ -1,6 +1,6 @@
 DEBUG = False
 
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 import copy
 import os
 import sys
@@ -10,7 +10,9 @@ from yapocis.lib.kerneldraw1 import KernelDraw1
 from yapocis.lib.kerneldraw3 import KernelDraw3
 from yapocis.utils.basic import *
 
+VIEWER = os.environ.get("YAPOCIS_VIEWER")
 BENCHMARKING = os.environ.get('BENCHMARKING',None)
+
 from .basic import VIEWING_QUEUE
 
 
@@ -70,7 +72,11 @@ def show_array(*args, **kwargs) -> None:
     title, img = _show_array(*args, **kwargs)
     if img.mode == "L":
         img = img.convert("RGB")
-    img.save(os.path.join(VIEWING_QUEUE,f"{title}.png"))
+    name = f"{title}.png"
+    path = os.path.join(VIEWING_QUEUE, name)
+    img.save(path)
+    if VIEWER:
+        os.system(f"{VIEWER} {path}&")
 
 
 def show_arraygrad(title, image, theta, grad = None) -> None:

@@ -1,4 +1,5 @@
 import numpy as np
+import datetime
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use("module://yapocis.lib.mplbackend")
@@ -42,4 +43,5 @@ if __name__ == '__main__':
 
     plt.tight_layout()
     plt.show()
+    plt.title(f"{datetime.date.today()}: markers")
     plt.savefig("matplotlib_markers.png")

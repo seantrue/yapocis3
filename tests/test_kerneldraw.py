@@ -1,26 +1,24 @@
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 import time
 
 import numpy as np
-import pytest
 
-from tests.test_graphics import (random_alpha, random_circles, random_colors,
-                                 random_composites, random_ellipses,
-                                 random_lines, random_rects, random_sprites,
-                                 random_texts)
+from .test_graphics import (random_alpha, random_circles, random_colors,
+                            random_composites, random_ellipses,
+                            random_lines, random_rects, random_sprites,
+                            random_texts)
 from yapocis.lib.kerneldraw1 import KernelDraw1
-from yapocis.utils.basic import show_array
-from yapocis.utils.stereo_typing import *
+from yapocis.utils.stereo_typing import Optional, Image1
 
-from . import ASIZE, StopWatcher, show, show_snapshots, snapshow
+from . import ASIZE, StopWatcher
 
 
-def just_canvas():
+def just_canvas() -> Image1:
     canvas = np.zeros((ASIZE, ASIZE), dtype=np.float32)
     return canvas
 
 
-def setup(device_name:Optional[str]=None, chunk_size:Optional[int]=None):
+def setup(device_name: Optional[str] = None, chunk_size: Optional[int] = None):
     canvas = just_canvas()
     return canvas, KernelDraw1(canvas, device_name=device_name, chunk_size=chunk_size)
 
@@ -60,12 +58,12 @@ def fill_display_list(ad: KernelDraw1, n: int = 1000) -> None:
     for ellipse, color, alpha in zip(ellipses, colors, alphas):
         ad.ellipse(ellipse, color=color, alpha=alpha)
     for location, s, font, size, rotation, alpha in zip(locations, strings, fonts, sizes, rotations, text_alphas):
-        ad.draw_string(location, s, font=font, alpha="mask",rotation=rotation,size=size)
+        ad.draw_string(location, s, font=font, alpha="mask", rotation=rotation, size=size)
 
 
 def test_display_list():
     canvas, ad = setup()
-    fill_display_list(ad,100)
+    fill_display_list(ad, 100)
     with StopWatcher() as show:
         ad.render()
         a = ad.read()
@@ -78,7 +76,7 @@ def test_chunking():
         canvas, ad = setup(chunk_size=chunk_size)
         with StopWatcher() as show:
             t = time.time()
-            fill_display_list(ad,1000)
+            fill_display_list(ad, 1000)
             ad.render()
             canvas = ad.read()
             times.append(time.time() - t)

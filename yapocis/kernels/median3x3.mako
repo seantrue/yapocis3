@@ -15,13 +15,13 @@ static inline float median9(float *a, int n) {
 
 
 __kernel
-void median3x3(int awidth, int height, __global float* a, __global float* ret )
+void median3x3(int width, int height, __global float* a, __global float* ret )
 {
     float aa[9];
     size_t i;
     float m;
     size_t left = height + 1;
-    size_t right = awidth - left;
+    size_t right = width - left;
     int h = height;
     i = get_global_id(0);
     m = a[i];

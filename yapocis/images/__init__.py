@@ -1,6 +1,6 @@
 """Tiny registry for images """
 
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 import os
 

@@ -1,5 +1,11 @@
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
+import yaml
+from yaml.dumper import SafeDumper
+import pyopencl
+def nameversion_representer(dumper, data):
+   return dumper.represent_scalar('!nameversion', f'{data.name}@v:{data.version}')
+yaml.add_representer(pyopencl._cl.NameVersion, nameversion_representer,SafeDumper)
 from yaml import safe_dump as dump
 
 from yapocis.ocl.device import get_available_device_names, get_device
