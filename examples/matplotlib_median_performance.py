@@ -2,9 +2,9 @@
 import sys
 import datetime
 import matplotlib
-import seaborn
+# import seaborn
 
-seaborn.set_style("dark")
+# seaborn.set_style("dark")
 matplotlib.use("module://yapocis.lib.mplbackend")
 try:
     from scipy.ndimage.filters import median_filter
@@ -86,7 +86,7 @@ fig.suptitle(f"Yapocis Performance Comparison:\nmedian 3x3 filter, {ITERATIONS} 
 for iengine, device_name in enumerate(device_names):
     # Fetch the stats, and compute the performance ratios
     areas, slow_deltas, fast_deltas = by_device[device_name]
-    ax1 = axs[iengine]
+    ax1 = axs[iengine] if isinstance(axs, list) else axs
     areas = np.array(areas) / 1000.
     scipy_deltas = np.array(scipy_deltas)
     slow_deltas = np.array(slow_deltas)
