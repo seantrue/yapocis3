@@ -11,14 +11,14 @@ from . import StopWatcher, image_test, show_snapshots
 N = 100
 
 
-def setup(device_name:Optional[str]=None):
+def setup_test(device_name:Optional[str]=None):
     image = image_test()
     # Ensure that we don't have fortunate addressing!
     assert image.shape[0] != image.shape[1]
     return image, Anisodiff(device_name=device_name)
 
 def test_I():
-    rgb, aniso = setup()
+    rgb, aniso = setup_test()
     hsis = HSI()
     hsi = hsis.rgb2hsi3(rgb)
     H,S,I = split_planes(hsi)
@@ -38,7 +38,7 @@ def test_I():
 def test_IS():
     from yapocis.ocl.device import get_available_device_names
     for device_name in get_available_device_names():
-        rgb, aniso = setup(device_name=device_name)
+        rgb, aniso = setup_test(device_name=device_name)
         with StopWatcher(f"[generator {N} {device_name[:24]}]") as show:
             for i, rgb2 in enumerate(aniso.anisodiff_rgbIS(rgb)):
                 if i >= N:
@@ -51,7 +51,7 @@ def test_IS():
 def test_1plane():
     from yapocis.ocl.device import get_available_device_names
     for device_name in get_available_device_names():
-        rgb, aniso = setup(device_name=device_name)
+        rgb, aniso = setup_test(device_name=device_name)
         hsis = HSI(device_name=device_name)
         hsi = hsis.rgb2hsi3(rgb)
         H,S,I = split_planes(hsi)
@@ -70,7 +70,7 @@ def test_2plane():
             print("preferred_vector_width_float", config["preferred_vector_width_float"])
             print(f"The {config['__name__']} OpenCL engine does not support float2")
             continue
-        rgb, aniso = setup(device_name=device_name)
+        rgb, aniso = setup_test(device_name=device_name)
         r,g,b = split_planes(rgb)
         rg = join_planes(r,g)
         with StopWatcher(f"[{N}] on {device_name[:24]}") as show:
@@ -91,7 +91,7 @@ def test_3plane():
         if config.get("compute_capability_major_nv",""):
             print("Nvidia drivers don't handle float3 well")
             continue
-        rgb, aniso = setup(device_name=device_name)
+        rgb, aniso = setup_test(device_name=device_name)
         with StopWatcher(f"[{N}] on {device_name[:24]}") as show:
             rgb2 = aniso.anisodiff_n(rgb,N)
             show(aniso, rgb2)
@@ -100,7 +100,7 @@ def test_3plane():
 def test_4plane():
     from yapocis.ocl.device import get_available_device_names
     for device_name in get_available_device_names():
-        rgb, aniso = setup(device_name=device_name)
+        rgb, aniso = setup_test(device_name=device_name)
         shape4 = list(rgb.shape)
         shape4[2] = 4
         rgba = np.zeros((shape4), dtype=np.float32)

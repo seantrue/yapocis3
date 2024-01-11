@@ -18,13 +18,13 @@ def just_canvas() -> Image1:
     return canvas
 
 
-def setup(device_name: Optional[str] = None, chunk_size: Optional[int] = None):
+def setup_test(device_name: Optional[str] = None, chunk_size: Optional[int] = None):
     canvas = just_canvas()
     return canvas, KernelDraw1(canvas, device_name=device_name, chunk_size=chunk_size)
 
 
 def test_batch():
-    canvas, ad = setup()
+    canvas, ad = setup_test()
     locations, strings, fonts, sizes, _, text_alphas = random_texts()
     with StopWatcher() as show:
         ad.composite(*random_composites(), alpha=1.0)
@@ -62,7 +62,7 @@ def fill_display_list(ad: KernelDraw1, n: int = 1000) -> None:
 
 
 def test_display_list():
-    canvas, ad = setup()
+    canvas, ad = setup_test()
     fill_display_list(ad, 100)
     with StopWatcher() as show:
         ad.render()
@@ -73,7 +73,7 @@ def test_display_list():
 def test_chunking():
     times = []
     for chunk_size in (10, 100, 500):
-        canvas, ad = setup(chunk_size=chunk_size)
+        canvas, ad = setup_test(chunk_size=chunk_size)
         with StopWatcher() as show:
             t = time.time()
             fill_display_list(ad, 1000)

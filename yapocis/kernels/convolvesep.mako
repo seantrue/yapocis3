@@ -1,3 +1,4 @@
+/* Separable convolution kernels for OpenCL, with kernel names and constants determined at compile time */
 % for name, conv in convs:
 <% margin = len(conv)//2 %>
 __kernel

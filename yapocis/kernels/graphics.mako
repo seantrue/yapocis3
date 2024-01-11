@@ -1,3 +1,21 @@
+/* Kernels that implement graphics primitives against a float array.
+ * The float array is assumed to be a 2D array of floats, with the
+ * first dimension being the width of the image, and the second
+ * dimension being the height of the image.
+ *
+ * The kernels are:
+ *   lines: draw lines
+ *   rects: draw rectangles
+ *   circles: draw circles
+ *   triangles: draw triangles
+ *   ellipses: draw ellipses
+ *   composite: composite multiple sprites
+ *
+ * Each kernel takes a float array, and a list of primitives to draw.
+ * The list of primitives is a list of coordinates, and a list of
+ * colors.  The coordinates are in the same coordinate system as the
+ * float array, and the colors are in the range [0,1].
+ */
 <%include file="constants.mako" />
 #define DXDY2
 <%include file="helpers.mako" />

@@ -1,3 +1,5 @@
+/* Kernel to compute 3x3 median filter on a 2D image */
+
 static inline float median9(float *a, int n) {
     float l,h;
     bool lt;

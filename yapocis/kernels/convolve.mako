@@ -1,3 +1,5 @@
+/* One dimensional convolution with a kernel conv that is determined at compile time */
+
 <% left = len(conv)//2 %>
 __kernel
 void ${name}(int width,  __global float* a, __global float* ret )

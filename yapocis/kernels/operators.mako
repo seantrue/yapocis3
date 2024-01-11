@@ -1,3 +1,5 @@
+/* Kernels to implement pixel-wise operations on images */
+
 %for name, operator in operators:
 __kernel
 void ${name}(__global float* input1, __global float* input2, __global float *output)

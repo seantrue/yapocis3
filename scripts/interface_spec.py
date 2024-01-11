@@ -50,7 +50,8 @@ if __name__ == '__main__':
         if args.list:
             print(interface_name)
             continue
-        as_header(interface_name.split('.')[0].upper())
+        s = interface_name.split('.')[0]
+        as_header(f"`{s}`")
         template = load_interface(interface_name)
         source = render_interface(template)
         if "%" in source or "${" in source:
@@ -64,15 +65,15 @@ if __name__ == '__main__':
             print(source)
             continue
         acted = 0
-        if args.source or args.all:
-            as_header("Specification",1)
-            as_code(source)
         if args.python or args.all:
             acted += 1
             with StringIO() as outf:
                 as_header("Signatures",1)
                 python_stubs(interface, file=outf)
                 as_code(outf.getvalue())
+        if args.source or args.all:
+            as_header("Specification",1)
+            as_code(source)
         if args.explain or args.all:
             acted += 1
             as_header("Explanation", 1)

@@ -18,13 +18,13 @@ def just_canvas() -> Image4:
     return np.zeros((ASIZE, ASIZE, 4), dtype=np.float32)
 
 
-def setup(device_name: Optional[str] = None, chunk_size: Optional[int] = None) -> tuple[Image4, KernelDraw4]:
+def setup_test(device_name: Optional[str] = None, chunk_size: Optional[int] = None) -> tuple[Image4, KernelDraw4]:
     canvas = just_canvas()
     return canvas, KernelDraw4(canvas, device_name=device_name, chunk_size=chunk_size)
 
 
 def test_batch():
-    canvas, ad = setup()
+    canvas, ad = setup_test()
     random_coords = random_ellipses()
     circles = random_circles()
     rects = random_rects()
@@ -44,7 +44,7 @@ def test_batch():
 
 
 def test_displaylist():
-    canvas, ad = setup()
+    canvas, ad = setup_test()
     rects = random_rects()
     lines = random_lines()
     with StopWatcher() as show:

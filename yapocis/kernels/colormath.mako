@@ -1,3 +1,5 @@
+/* A variety of colorspace transforms */
+
 <%include file="constants.mako" />
 #define VXM3
 #define DOT3

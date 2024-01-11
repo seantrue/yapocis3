@@ -1,3 +1,5 @@
+/* Helpful macros and in-line functions */
+
 // Address macros
 #define ADDRESS(xx,yy) (((xx)*height)+(yy))
 

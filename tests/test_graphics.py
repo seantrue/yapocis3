@@ -13,7 +13,7 @@ from tests import (ASIZE, StopWatcher, double_shuffle, image_test,
 hsis = HSI()
 
 
-def setup(device_name: Optional[str] = None) -> Tuple[Image1, Graphics1]:
+def setup_test(device_name: Optional[str] = None) -> Tuple[Image1, Graphics1]:
     return np.zeros((ASIZE, ASIZE)).astype(np.float32), Graphics1(device_name=device_name)
 
 
@@ -141,7 +141,7 @@ def random_texts(n=100):
 
 
 def test_lines():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     random_coords = random_lines()
     widths = random_widths()
     coords = []
@@ -155,7 +155,7 @@ def test_lines():
 
 
 def test_rects():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     random_coords = random_lines()
     coords = []
     for i in range(100, ASIZE, 100):
@@ -168,7 +168,7 @@ def test_rects():
 
 
 def test_circles():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     random_coords = random_circles()
     coords = []
     for i in range(100, ASIZE, 100):
@@ -181,7 +181,7 @@ def test_circles():
 
 
 def test_triangles():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     random_coords = random_triangles()
     coords = []
     for i in range(100, ASIZE, 100):
@@ -194,7 +194,7 @@ def test_triangles():
 
 
 def test_ellipses():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     random_coords = random_ellipses()
     coords = []
     for i in range(100, ASIZE, 100):
@@ -213,7 +213,7 @@ def test_ellipses():
 
 
 def test_composite():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     random_coords, random_blocks = random_composites()
     with StopWatcher() as show:
         grph.composite(canvas, random_coords, random_blocks)
@@ -221,7 +221,7 @@ def test_composite():
 
 
 def test_composite_sprites():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     random_coords, random_sprites_ = random_sprites()
     with StopWatcher() as show:
         grph.sprites(canvas, random_coords, random_sprites_)
@@ -229,7 +229,7 @@ def test_composite_sprites():
 
 
 def test_composite_mosaic():
-    _, grph = setup()
+    _, grph = setup_test()
     image = image_test()
     from random import shuffle
     r, g, b = split_channels(image)
@@ -254,7 +254,7 @@ def test_composite_mosaic():
 
 
 def test_simple_texts():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     locations = []
     text = interesting_words(100)
     for x in range(100, ASIZE, 100):
@@ -266,7 +266,7 @@ def test_simple_texts():
 
 
 def test_text_rotation_centered():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     rotations = list(range(-180, 180, 30))
     center = canvas.shape[0] // 2
     locations = [(center, center)] * len(rotations)
@@ -278,7 +278,7 @@ def test_text_rotation_centered():
 
 
 def test_text_rotation():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     rotations = list(range(0, 360, 10))
     center = canvas.shape[0] // 2
     locations = [[center, center] for y in range(100, 1000, 800 // len(rotations))]
@@ -294,7 +294,7 @@ def test_text_rotation():
 
 
 def test_texts():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     locations, strings, fonts, sizes, rotations, alphas = random_texts(300)
     with StopWatcher() as show:
         grph.draw_strings(canvas, locations, strings, fonts=fonts, sizes=sizes, alphas=alphas)
@@ -302,7 +302,7 @@ def test_texts():
 
 
 def test_stressed_texts():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     locations, strings, fonts, sizes, rotations, _ = random_texts(300)
     with StopWatcher() as show:
         grph.draw_strings(canvas, locations, strings, fonts=fonts, sizes=sizes, rotations=rotations, alpha="mask")
@@ -310,7 +310,7 @@ def test_stressed_texts():
 
 
 def test_one():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     with StopWatcher() as show:
         grph.lines(canvas, [[0, 0, ASIZE, ASIZE]], distance=1.5, color=1.0, alpha=1.0)
         grph.circles(canvas, [[ASIZE / 2, ASIZE / 2, 20]], color=1.0, alpha=1.0)

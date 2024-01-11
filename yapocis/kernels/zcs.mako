@@ -1,7 +1,9 @@
+/* Kernels to find zero-crossings in an image. */
+
 <%include file="constants.mako" />
 <%include file="helpers.mako" />
 
-
+/* Find zero-crossings for pixels of 1-4 channels. */
 %for planes in [1,2,3,4]:
 #define ADDRESS${planes}(xx,yy) (ADDRESS(xx,yy))*${planes}
 

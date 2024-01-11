@@ -1,3 +1,5 @@
+/* Multiple one-dimensional convolutions given names and kernels at compile time */
+
 % for name, conv in convs:
 <% left = len(conv)//2 %>
 __kernel

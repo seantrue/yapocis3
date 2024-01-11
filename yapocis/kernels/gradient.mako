@@ -1,7 +1,9 @@
+/* Kernels to compute direction and magnitude of gradient of an image. */
 
 <%include file="constants.mako" />
 <%include file="helpers.mako" />
 
+/* Compute gradient for images with 1,2,3,4 channels per pixel. */
 
 %for planes in ["",2,3,4]:
 __kernel
