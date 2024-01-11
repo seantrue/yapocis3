@@ -1,10 +1,10 @@
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 import numpy as np
 
+from yapocis.lib.abstract_graphics import AbstractKernelDraw, to_list
 from yapocis.lib.channels import split_planes
 from yapocis.lib.kerneldraw1 import KernelDraw1
-from yapocis.lib.abstract_graphics import AbstractKernelDraw, to_list
 
 
 class KernelDraw3(AbstractKernelDraw):

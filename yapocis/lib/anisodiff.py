@@ -1,24 +1,28 @@
 """
 Higher level wrapper for anisotropic filter (Perona/Malik).
 """
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+import numpy as np
+
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 # http://mail.scipy.org/pipermail/scipy-user/2009-February/020125.html
 # Anisotropic Diffusion, as per Perona and Malik's paper (see section V).
 
-from yapocis.lib.channels import split_channels, join_channels, join_planes, split_planes
+from yapocis.lib.channels import (join_channels, join_planes, split_channels,
+                                  split_planes)
 from yapocis.lib.hsi import *
 from yapocis.utils.basic import get_image_depth
 from yapocis.utils.stereo_typing import *
-from .hsi import HSI
 
 from .bound_kernels import BoundKernels
+from .hsi import HSI
+
 
 class Anisodiff(BoundKernels):
     INTERFACE = "anisodiff"
     filter_by_depth = ["filterImage", "filterImage2", "filterImage3", "filterImage4"]
     def __init__(self, device_name:Optional[str]=None, **kwargs):
-        super(Anisodiff, self).__init__(device_name=device_name,  **kwargs)
+        super().__init__(device_name=device_name,  **kwargs)
         self.hsi = HSI(device_name=device_name)
     def select_by_depth(self, image, suffix=""):
         depth = get_image_depth(image)
@@ -50,11 +54,14 @@ class Anisodiff(BoundKernels):
             raise ValueError('step_size parameter must be <= 0.25 for numerical stability.')
         filter_res = self.select_by_depth(image, suffix="_res")
         global_size = self.global_size_by_depth(image)
-        image = image.copy()
-        if image.max() <= 1.0:
-            print("Rescaling")
-            image *= 256.
-        input = image
+        image = image.copy() if image.max() > 1.0 else image * 256.
+        # Pad to make Cuda happy
+        padding_required = len(image.shape) == 3 and image.shape[2] == 3
+        if padding_required:
+            zeros = np.zeros(image.shape[:2],dtype=image.dtype)
+            input = np.dstack((image,zeros))
+        else:
+            input = image
         output = np.empty_like(input)
         filter_res.write(input)
         filter_res.write(output)
@@ -62,6 +69,8 @@ class Anisodiff(BoundKernels):
             filter_res(input, scale, step_size, output, global_size=global_size, resident=(input, output))
             input, output = output, input
         filter_res.read(output)
+        if padding_required:
+            output = output[:,:,:3]
         return output / 256.
 
     def anisodiff(self, image: Image1234, scale: float = 3.0, step_size: float = 0.2) -> Iterator[Image1234]:

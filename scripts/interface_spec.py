@@ -1,13 +1,15 @@
 #!/usr/bin/env python
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 """
 Interpret interfaces in a readable way.
 """
 from argparse import ArgumentParser
 from io import StringIO
-from yapocis.interfaces import interfaces, find_interface
-from yapocis.ocl.interface import get_interface, get_interfaces, load_interface, python_stubs, opencl_stubs, \
-    explain_interface
+
+from yapocis.interfaces import find_interface, interfaces
+from yapocis.ocl.interface import (explain_interface, get_interface,
+                                   get_interfaces, load_interface,
+                                   opencl_stubs, python_stubs)
 from yapocis.ocl.kernel_manager import render_interface
 
 
@@ -48,7 +50,8 @@ if __name__ == '__main__':
         if args.list:
             print(interface_name)
             continue
-        as_header(interface_name.split('.')[0].upper())
+        s = interface_name.split('.')[0]
+        as_header(f"`{s}`")
         template = load_interface(interface_name)
         source = render_interface(template)
         if "%" in source or "${" in source:
@@ -62,15 +65,15 @@ if __name__ == '__main__':
             print(source)
             continue
         acted = 0
-        if args.source or args.all:
-            as_header("Specification",1)
-            as_code(source)
         if args.python or args.all:
             acted += 1
             with StringIO() as outf:
                 as_header("Signatures",1)
                 python_stubs(interface, file=outf)
                 as_code(outf.getvalue())
+        if args.source or args.all:
+            as_header("Specification",1)
+            as_code(source)
         if args.explain or args.all:
             acted += 1
             as_header("Explanation", 1)

@@ -3,11 +3,12 @@ Accommodate the differences between PIL, Numpy, and convenient programming model
 HWC <-> CHW ordering, conceptually.
 """
 
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 import numpy as np
 
 from yapocis.utils.stereo_typing import *
+
 
 def histeq(im:Image1, nbr_bins:int =2 ** 16) -> Image1:
     """

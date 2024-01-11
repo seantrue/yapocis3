@@ -1,6 +1,7 @@
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 import numpy as np
+
 from yapocis.lib.imageops import Imageops
 from yapocis.ocl.device import get_available_device_names
 from yapocis.utils.config import get_device_config
@@ -26,7 +27,7 @@ def test_stretch():
     a = np.random.uniform(.1, .9, (2000,2000), ).astype(np.float32)
     assert a.min() >= .1 and a.max() <= .9
     b = imageops.stretch(a, a.min(), a.max(), 0., 1.0)
-    assert b.min() <=1e-06 and b.max() >= 1.0-1e-06
+    assert b.min() == 0.0 and b.max() >= 0.999999
 
 def test_histogram():
     imageops = Imageops(FASTBINS=0)
@@ -89,5 +90,3 @@ def test_histogram_performance():
                 print(f"{nw:03d} {FB}", min(*timeit.repeat(statement,number=ITERATIONS, globals=locals(),repeat=3)), file=sys.stderr)
                 sys.stderr.flush()
             print()
-
-

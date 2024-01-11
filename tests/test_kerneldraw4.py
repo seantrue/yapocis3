@@ -1,29 +1,30 @@
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 import time
+
 import numpy as np
 
-from tests.test_graphics4 import random_ellipses, random_circles, random_rects, random_lines, random_triangles, \
-    random_colors, random_alpha
-from yapocis.utils.stereo_typing import Optional
-
+from .test_graphics4 import (random_alpha, random_circles, random_colors,
+                             random_composites, random_ellipses,
+                             random_lines, random_rects, random_sprites,
+                             random_triangles)
 from yapocis.lib.kerneldraw4 import KernelDraw4
+from yapocis.utils.stereo_typing import Optional, Image4
 
-from tests.test_graphics4 import random_composites, random_sprites
-
-from . import ASIZE, snapshow, snapshot, StopWatcher
+from . import ASIZE, StopWatcher, snapshot, snapshow
 
 
-def just_canvas():
+def just_canvas() -> Image4:
     return np.zeros((ASIZE, ASIZE, 4), dtype=np.float32)
 
 
-def setup(device_name:Optional[str]=None, chunk_size:Optional[int]=None):
+def setup_test(device_name: Optional[str] = None, chunk_size: Optional[int] = None) -> tuple[Image4, KernelDraw4]:
     canvas = just_canvas()
-    return canvas, KernelDraw4(canvas, device_name=device_name,chunk_size=chunk_size)
+    return canvas, KernelDraw4(canvas, device_name=device_name, chunk_size=chunk_size)
+
 
 def test_batch():
-    canvas, ad = setup()
+    canvas, ad = setup_test()
     random_coords = random_ellipses()
     circles = random_circles()
     rects = random_rects()
@@ -39,11 +40,11 @@ def test_batch():
         ad.lines(lines, colors=random_colors(), distance=1.5)
         ad.render()
         a = ad.read()
-        show(ad,a)
+        show(ad, a)
 
 
 def test_displaylist():
-    canvas, ad = setup()
+    canvas, ad = setup_test()
     rects = random_rects()
     lines = random_lines()
     with StopWatcher() as show:

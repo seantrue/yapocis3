@@ -1,3 +1,5 @@
+/* Kernel to compute mandelbrot set values for a given set of points */
+
 __kernel void mandelbrot(__global float2 *q, __global short *output, int const maxiter)
 {
     size_t gid = get_global_id(0);

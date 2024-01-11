@@ -1,17 +1,17 @@
 #!/usr/bin/env python
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 """
 Asset management
 """
 import sys
 from argparse import ArgumentParser
 
-from yapocis.interfaces import interfaces, find_interface
-from yapocis.images import images, find_image
-from yapocis.kernels import kernels, find_kernel
-from yapocis.fonts import fonts, font as find_font
-from yapocis.icons import icons, find_icon
-
+from yapocis.fonts import font as find_font
+from yapocis.fonts import fonts
+from yapocis.icons import find_icon, icons
+from yapocis.images import find_image, images
+from yapocis.interfaces import find_interface, interfaces
+from yapocis.kernels import find_kernel, kernels
 
 if __name__ == '__main__':
     parser = ArgumentParser()

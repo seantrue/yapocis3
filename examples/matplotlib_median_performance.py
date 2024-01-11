@@ -1,10 +1,11 @@
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
-
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 import sys
-import time
-import numpy as np
+import datetime
+import matplotlib
+# import seaborn
 
-
+# seaborn.set_style("dark")
+matplotlib.use("module://yapocis.lib.mplbackend")
 try:
     from scipy.ndimage.filters import median_filter
     from matplotlib import pyplot as plot
@@ -12,9 +13,15 @@ except ImportError:
     print("Please install scipy and matplotlib to compare median filter performance")
     sys.exit(1)
 
+import time
+import numpy as np
+
+
+
 from yapocis.ocl.device import get_available_device_names
+from yapocis.ocl.device_manager import display_snapshots
+
 from yapocis.lib.median import Median
-from yapocis.ocl.device_manager import display_stats, display_snapshots
 def median3x3_scipy(input, iterations=1):
     for i in range(iterations):
         input = median_filter(input, 3)
@@ -72,14 +79,14 @@ for device_name in device_names:
     print()
     by_device[device_name] = (areas, slow_deltas, fast_deltas)
 
-# Graphic is a set of verticallu stacked plots, with a common X axis
+# Graphic is a set of vertically stacked plots, with a common X axis
 fig, axs = plot.subplots(len(device_names), 1, sharex=True)
 fig.suptitle(f"Yapocis Performance Comparison:\nmedian 3x3 filter, {ITERATIONS} iterations", fontsize="large")
 
 for iengine, device_name in enumerate(device_names):
     # Fetch the stats, and compute the performance ratios
     areas, slow_deltas, fast_deltas = by_device[device_name]
-    ax1 = axs[iengine]
+    ax1 = axs[iengine] if isinstance(axs, list) else axs
     areas = np.array(areas) / 1000.
     scipy_deltas = np.array(scipy_deltas)
     slow_deltas = np.array(slow_deltas)
@@ -87,6 +94,8 @@ for iengine, device_name in enumerate(device_names):
     ratio = 1.0 / (slow_deltas / scipy_deltas)
     ratio2 = 1.0 / (fast_deltas / scipy_deltas)
 
+    # Lines show performance improvement over scipy
+    # Filled areas show total seconds per engine
     # Lines show performance improvement over scipy
     # Filled areas show total seconds per engine
     ax1.set_title(device_name, loc="left")
@@ -106,10 +115,7 @@ for iengine, device_name in enumerate(device_names):
         ax1.legend(bbox_to_anchor=(1.2, 1.3), loc='upper left')
         ax2.legend(bbox_to_anchor=(1.2, .5), loc='upper left')
 plot.tight_layout()
-plot.savefig("docs/images/median3x3-performance.png")
-plot.show()
-print("^C to continue")
+plot.title(f"{datetime.date.today()}: median performance")
+fig.savefig("matplotlib_median_performance.png")
+
 display_snapshots()
-while True:
-    time.sleep(1)
-    

@@ -1,14 +1,14 @@
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
-import pytest
 import pyopencl
+import pytest
 
-from yapocis.utils.stereo_typing import *
-
-from yapocis.ocl.interface import get_interface
 from yapocis.ocl.device import get_available_device_names, get_device
 from yapocis.ocl.device_manager import DeviceManager
-from yapocis.ocl.kernel_manager import load_program, import_program
+from yapocis.ocl.interface import get_interface
+from yapocis.ocl.kernel_manager import import_program, load_program
+from yapocis.utils.stereo_typing import *
+
 from . import show_snapshots
 
 

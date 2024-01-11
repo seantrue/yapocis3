@@ -1,5 +1,5 @@
 -r requirements.txt
-py
+pip-tools
 pytest
 matplotlib
 scipy

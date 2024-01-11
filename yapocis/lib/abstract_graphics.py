@@ -1,11 +1,11 @@
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 from typing import Optional
 
-import numpy
 import numpy as np
-from .bound_kernels import BoundKernels
+
 from ..utils.basic import chunker
+from .bound_kernels import BoundKernels
 
 
 class AbstractGraphicsSetup:

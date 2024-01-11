@@ -4,6 +4,7 @@
 // Colors are [N,4] where color[,3] is the alpha and is _not_ ignored
 
 <%include file="constants.mako" />
+#define DXDY2
 <%include file="helpers.mako" />
 
 #define ONES ONE4

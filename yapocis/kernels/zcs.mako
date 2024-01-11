@@ -1,7 +1,9 @@
+/* Kernels to find zero-crossings in an image. */
+
 <%include file="constants.mako" />
 <%include file="helpers.mako" />
 
-
+/* Find zero-crossings for pixels of 1-4 channels. */
 %for planes in [1,2,3,4]:
 #define ADDRESS${planes}(xx,yy) (ADDRESS(xx,yy))*${planes}
 
@@ -13,7 +15,7 @@ void zcs${planes}(int width, int height, float threshold, __global float* input,
     x = min(x,width-2);
     int y = max((size_t)1,Y(i));
     y = min(y, height-2);
-    float zclt, zcgt;
+    float zclt;
     float v, below, left, above, right;
     float delta;
     %for plane in range(planes):

@@ -1,19 +1,23 @@
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 import numpy as np
 
-from tests.test_graphics import random_ellipses, random_circles, random_rects, random_lines, random_triangles, \
-    random_colors, random_alpha, random_texts
-from yapocis.utils.stereo_typing import Optional
+from .test_graphics import (random_alpha, random_circles, random_colors,
+                            random_ellipses, random_lines, random_rects,
+                            random_texts, random_triangles)
 from yapocis.lib.kerneldraw3 import KernelDraw3
+from yapocis.utils.stereo_typing import Optional, Image3
 
-from . import ASIZE, snapshow, show_snapshots, StopWatcher
+from . import ASIZE, StopWatcher, show_snapshots, snapshow
 
-def setup(device_name:Optional[str]=None, chunk_size:Optional[int]=None):
-    canvas = np.zeros((ASIZE, ASIZE,3),dtype=np.float32)
+
+def setup_test(device_name: Optional[str] = None, chunk_size: Optional[int] = None) -> tuple[Image3, KernelDraw3]:
+    device_name = device_name if isinstance(device_name,str) else None
+    canvas = np.zeros((ASIZE, ASIZE, 3), dtype=np.float32)
     return canvas, KernelDraw3(canvas, chunk_size=chunk_size, device_name=device_name)
 
+
 def test_batch():
-    canvas, ad = setup()
+    canvas, ad = setup_test()
     locations, strings, fonts, sizes, rotations, text_alphas = random_texts()
     random_coords = random_ellipses()
     circles = random_circles()
@@ -42,8 +46,9 @@ def test_batch():
         a = ad.read()
         show(ad, a)
 
+
 def test_displaylist():
-    canvas, ad = setup()
+    canvas, ad = setup_test()
     circles = random_circles()
     rects = random_rects()
     lines = random_lines()
@@ -51,7 +56,7 @@ def test_displaylist():
     alphas = random_alpha()
     with StopWatcher() as show:
         for circle, color, alpha in zip(circles, colors, alphas):
-            ad.circle(circle,color=color,alpha=alpha)
+            ad.circle(circle, color=color, alpha=alpha)
         for xyxy, color, alpha in zip(lines, colors, alphas):
             ad.line(xyxy, distance=1.5, color=color, alpha=alpha)
         for rect, color, alpha in zip(rects, colors, alphas):

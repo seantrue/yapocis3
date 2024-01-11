@@ -1,4 +1,6 @@
-inline float median9(float *a, int n) {
+/* Kernel to compute 3x3 median filter on a 2D image */
+
+static inline float median9(float *a, int n) {
     float l,h;
     bool lt;
     % for i in range(9//2+1):
@@ -15,13 +17,13 @@ inline float median9(float *a, int n) {
 
 
 __kernel
-void median3x3(int awidth, int height, __global float* a, __global float* ret )
+void median3x3(int width, int height, __global float* a, __global float* ret )
 {
     float aa[9];
     size_t i;
     float m;
     size_t left = height + 1;
-    size_t right = awidth - left;
+    size_t right = width - left;
     int h = height;
     i = get_global_id(0);
     m = a[i];

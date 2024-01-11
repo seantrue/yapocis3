@@ -1,16 +1,16 @@
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
-from yapocis.ocl.kernel import Kernel
-from yapocis.ocl.kernel_manager import load_program
-
-from yapocis.utils.basic import set_margin, set_frame
 from yapocis.lib.gradient import Gradient
 from yapocis.lib.operators import Operators
 from yapocis.lib.zc import ZC
+from yapocis.ocl.kernel import Kernel
+from yapocis.utils.basic import set_frame, set_margin
 from yapocis.utils.stereo_typing import *
+
 from .bound_kernels import BoundKernels
 
-def are_close(a: Array, b: Array) -> bool:
+
+def are_close(a: float, b: float) -> bool:
     eps = .00001
     return abs(a - b) <= eps
 
@@ -21,14 +21,13 @@ class GaussianWeights:
 
     def gaussian_weights(self):
         return self.gws
-    
-    def compute_gaussian_weights(self, max_width: int = 150, scale: float = 1.6, limit: float = .001,
-                         sigmas: Optional[List[float]] = None) -> List[Array]:
+
+    def compute_gaussian_weights(self, max_width: int = 100, scale: float = 1.6, limit: float = .001,
+                                 sigmas: Optional[List[float]] = None) -> List[Array]:
         """
         Generate a list of gaussian kernels with size less than max_width
         Args:
             max_width:
-            sigma:
             scale:
             limit:
             sigmas:
@@ -89,13 +88,15 @@ class GaussianWeights:
     def get_scales(self) -> int:
         return len(self.gws)
 
-    def get_gaussian_width(self, scale:int) -> int:
+    def get_gaussian_width(self, scale: int) -> int:
         return len(self.get_gaussian_weight(scale))
 
 
+# noinspection PyUnresolvedReferences
 class Gaussian(BoundKernels):
-    INTERFACE="convolvesep"
-    def __init__(self, device_name: Optional[str]=None, gaussian_weights: Optional[List[np.ndarray]] = None):
+    INTERFACE = "convolvesep"
+
+    def __init__(self, device_name: Optional[str] = None, gaussian_weights: Optional[List[np.ndarray]] = None):
         self.gaussian_weights = GaussianWeights() if gaussian_weights is None else gaussian_weights
         gws = self.gaussian_weights.gaussian_weights()
         convs = [("gauss%s" % len(a), a) for a in gws]
@@ -143,7 +144,8 @@ class Gaussian(BoundKernels):
         threshold = self.threshold if threshold is None else threshold
         return self.zc.zcs_res(image, zcs, threshold=threshold)
 
-    def zcsdog(self, a: Image1, scale: int, threshold=None, clearmargin: bool = True, frame: bool = True, res: bool = True) -> \
+    def zcsdog(self, a: Image1, scale: int, threshold=None, clear_margin: bool = True, frame: bool = True,
+               res: bool = True) -> \
             Tuple[Image1, Image1, Image1]:
         threshold = self.threshold if threshold is None else threshold
         if res:
@@ -174,10 +176,9 @@ class Gaussian(BoundKernels):
             del larger
             del dog
         # Zero out of bounds and create a frame.
-        grad, theta = self.grad.gradient(smaller,3)
-        del smaller
+        grad, theta = self.grad.gradient(smaller, 3)
         margin = self.gaussian_weights.get_gaussian_width(scale) + 1
-        if clearmargin:
+        if clear_margin:
             set_margin(zca, margin)
             set_margin(grad, margin)
             set_margin(theta, margin)

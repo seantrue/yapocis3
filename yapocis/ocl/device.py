@@ -1,9 +1,10 @@
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 import os
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 from pyopencl._cl import get_platforms
+
 
 def get_available_device_names():
     platforms = get_platforms()
@@ -39,6 +40,19 @@ def get_available_devices(aliases:bool=True) -> Dict[str, "Device"]:
             i += 1
     return devices
 
+def pick_default_device(device_names:List[str]) -> str:
+    dns = {dn.lower():dn for dn in device_names if isinstance(dn,str)}
+    preferences = ('nvidia','amd','intel')
+    for preference in preferences:
+        for dn in dns.keys():
+            if preference in dn and "cpu" not in dn:
+                return dns[dn]
+    for preference in preferences:
+        for dn in dns.keys():
+            if preference in dn and "cpu" in dn:
+               return dns[dn]
+    return device_names[-1]
+
 
 def get_device(device_name: Optional[str] = None) -> "Device":
     """
@@ -57,12 +71,14 @@ def get_device(device_name: Optional[str] = None) -> "Device":
         raise RuntimeError("No OpenCL devices found")
     device_names = list(devices.keys())
     if device_name is None:
-        device_name = device_names[0]
+        device_name = pick_default_device(device_names)
         print(f"Defaulting to {device_name}")
     if device_name not in devices:
         try:
             engine_index = int(device_name)
         except ValueError:
-            raise RuntimeError(f"{device_name} not an available device {device_names}")
+            raise RuntimeError(f"{device_name} not an available device or device index  {device_names}")
+        except TypeError:
+            raise RuntimeError(f"{device_name} not a string or integer")
         return get_device(device_names[engine_index])
     return device_name, devices[device_name]

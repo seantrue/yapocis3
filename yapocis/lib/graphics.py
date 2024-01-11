@@ -1,13 +1,15 @@
 """
 Low level wrappers around the OpenCL graphics kernels.
 """
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 import numpy as np
 
-from yapocis.lib.typeset import render_text, compute_offset
+from yapocis.lib.typeset import compute_offset, render_text
 from yapocis.utils.basic import compute_360_to_180
-from .abstract_graphics import AbstractGraphicsSetup, AbstractGraphics, arrayify1d, to_list, to_vector
+
+from .abstract_graphics import (AbstractGraphics, AbstractGraphicsSetup,
+                                arrayify1d, to_list, to_vector)
 
 
 class Graphics1Setup(AbstractGraphicsSetup):

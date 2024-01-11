@@ -1,13 +1,14 @@
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 from random import randint, shuffle
 
-from yapocis.lib.graphics4 import Graphics4
 from tests.test_graphics import random_texts
-from yapocis.icons import icons, icon
+from yapocis.icons import icon, icons
+from yapocis.lib.graphics4 import Graphics4
 from yapocis.utils.stereo_typing import *
 
-from . import image_test, text_test_lines, ASIZE, double_shuffle, snapshow, show_snapshots
+from . import (ASIZE, double_shuffle, image_test, show_snapshots, snapshow,
+               text_test_lines)
 
 RED=[1,0,0,1]
 GREEN=[0,1,0,1]
@@ -15,7 +16,7 @@ BLUE=[0,0,1,1]
 YELLOW=[.7,.7,0,1]
 WHITE=[1,1,1,1]
 PURPLE=[1,0,1,1]
-def setup(device_name=None):
+def setup_test(device_name=None):
     return np.zeros((ASIZE, ASIZE, 4)).astype(np.float32), Graphics4(device_name)
 
 def image_source(align=5):
@@ -75,7 +76,7 @@ def random_vector(n=100):
 
 def components_to_colors(*components):
     colors = list(zip(*components))
-    colors = np.array(colors)
+    colors = np.array(colors)                                                                                                                                                                           
     return colors
 
 def random_colors(n=100):
@@ -143,7 +144,7 @@ def random_sprites(n=100):
     return random_coords, random_sprites
 
 def test_lines():
-    canvas,grph = setup()
+    canvas,grph = setup_test()
     random_coords = random_lines()
     coords = []
     for i in range(100, ASIZE, 100):
@@ -155,7 +156,7 @@ def test_lines():
 
 
 def test_rects():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     coords = []
     for i in range(100, ASIZE, 100):
         for j in range(100, ASIZE, 100):
@@ -167,7 +168,7 @@ def test_rects():
 
 
 def test_circles():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     random_coords = random_circles()
     coords = []
     for i in range(100, ASIZE, 100):
@@ -180,7 +181,7 @@ def test_circles():
 
 
 def test_triangles():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     random_coords = random_triangles()
     coords = []
     for i in range(100, ASIZE, 100):
@@ -193,7 +194,7 @@ def test_triangles():
 
 
 def test_ellipses():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     random_coords = random_ellipses()
     coords = []
     for i in range(100, ASIZE, 100):
@@ -212,21 +213,21 @@ def test_ellipses():
 
 
 def test_composite():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     random_coords, random_blocks = random_composites()
     grph.composite(canvas, random_coords, random_blocks)
     snapshow(grph, canvas)
 
 
 def test_composite_sprites():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     random_coords, random_sprites_ = random_sprites()
     grph.sprites(canvas, random_coords, random_sprites_)
     snapshow(grph, canvas)
 
 
 def test_composite_mosaic():
-    _, grph = setup()
+    _, grph = setup_test()
     from random import shuffle
     sprites = image_sprites(5)
     coords, blocks = zip(*sprites)
@@ -240,7 +241,7 @@ def test_composite_mosaic():
     snapshow(grph, canvas)
 
 def test_simple_icons():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     locations = []
     # canvas[:,:,:] = .5
     for x in range(100, ASIZE, 100):
@@ -254,7 +255,7 @@ def test_simple_icons():
     snapshow(grph, canvas)
 
 def test_random_icons():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     locations = random_points()
     blocks = random_icons(len(locations))
     colors = random_colors(len(locations))
@@ -265,7 +266,7 @@ def test_random_icons():
 
 
 def test_simple_texts():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     locations = []
     s = "Hello world"
     for x in range(100, ASIZE, 100):
@@ -276,7 +277,7 @@ def test_simple_texts():
     snapshow(grph, canvas)
 
 def test_text_rotation():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     rotations = list(range(0,360,30))
     center = canvas.shape[0]//2
     locations = [(center,center)] * len(rotations)
@@ -287,7 +288,7 @@ def test_text_rotation():
     snapshow(grph, canvas)
 
 def test_texts_stressed():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     locations, strings, fonts, sizes, rotations, alphas = random_texts(300)
     grph.draw_strings(canvas, locations, strings, colors=random_colors(300), fonts=fonts, sizes=sizes, rotations=rotations, alphas=alphas)
     snapshow(grph, canvas)
@@ -295,7 +296,7 @@ def test_texts_stressed():
 def test_texts_stressed_rotation():
     N = 300
     ANGLE_STEP=30
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     locations = random_points(N)
     strings = double_shuffle(["Hello", "sympathy", "goodbye", "Aqua"], N)
     fonts = double_shuffle(["bold","italic","light","regular"], N)
@@ -306,7 +307,7 @@ def test_texts_stressed_rotation():
     snapshow(grph, canvas)
 
 def test_typesetting():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     lines = text_test_lines()
     x,y = 60,60
     locations = [(x,y+i*30) for i in range(len(lines)) if lines[i]]
@@ -322,7 +323,7 @@ def test_typesetting():
     snapshow(grph, canvas)
 
 def test_one():
-    canvas, grph = setup()
+    canvas, grph = setup_test()
     grph.lines(canvas, [[0,0,ASIZE,ASIZE]], distance=1.5, color=RED, alpha=1.0)
     grph.circles(canvas, [[ASIZE/2,ASIZE/2, 20]],color=GREEN, alpha=1.0)
     grph.rects(canvas, [[ASIZE/4,ASIZE/4, ASIZE/4+40, ASIZE/4+40]],color=BLUE, alpha=1.0)

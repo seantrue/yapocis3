@@ -1,25 +1,29 @@
 """
 Python typing
 """
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
+
+from typing import (Any, Callable, Dict, Iterable, Iterator, List, Optional,
+                    Set, Tuple, Union)
 
 import numpy as np
-from typing import Dict, Any, List, Union, Optional, Callable, Set, Tuple, Iterable, Iterator
+import numpy.typing as npt
 import PIL.Image
-
 PILImage = PIL.Image.Image
 
-Array = np.ndarray
+Array = npt.NDArray
 Context = Dict[str, Any]
 EngineID = Union[str, int]
 
-Coords = np.ndarray
+Coords = npt.NDArray
 SimpleType = Union[str, int, float, bool, List, Tuple, Dict]
 Config = Dict[str, SimpleType]
+PixelType = Union[np.uint8,np.float32]
 
-Image1 = np.ndarray
-Image2 = np.ndarray
-Image3 = np.ndarray
-Image4 = np.ndarray
+
+Image1 = npt.NDArray[PixelType]
+Image2 = npt.NDArray[PixelType]
+Image3 = npt.NDArray[PixelType]
+Image4 = npt.NDArray[PixelType]
 Image14 = Union[Image1, Image4]
 Image1234 = Union[Image1, Image2, Image3, Image4]

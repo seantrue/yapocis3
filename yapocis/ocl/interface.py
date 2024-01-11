@@ -1,15 +1,16 @@
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 # Process an improper subset of the CORBA IDL grammar to facilitate calling opencl from a python Numpy framework
 # Inspired by an IDL parser by Paul McGuire, shipped as a demo with pyparser
 #
 from collections import namedtuple
 
-from pyparsing import Optional, ParseException, OneOrMore, Literal, Keyword, Word, alphas, alphanums, \
-    delimitedList, Group, ZeroOrMore, restOfLine, cStyleComment
-from yapocis.interfaces import find_interface
-from yapocis.utils.stereo_typing import List, Dict, Any
+from pyparsing import (Group, Keyword, Literal, OneOrMore, Optional,
+                       ParseException, Word, ZeroOrMore, alphanums, alphas,
+                       cStyleComment, delimitedList, restOfLine)
 
+from yapocis.interfaces import find_interface
+from yapocis.utils.stereo_typing import Any, Dict, List
 
 # Map from OpenCL datatype to a numpy data type
 
@@ -208,8 +209,10 @@ def load_interface(interface_spec: str) -> str:
 def explain_interface(interface, file=None):
     print("Interface:", interface.name, file=file)
     for kernel in interface.kernels:
-        alias = "self" if not kernel.alias else kernel.alias
-        print(f"Kernel: {kernel.name} alias for '{alias}'", file=file)
+        if kernel.alias:
+            print(f"Kernel: {kernel.name} alias for '{kernel.alias}'", file=file)
+        else:
+            print(f"Kernel: {kernel.name}", file=file)
         iparam = 0
         ireturn = 0
 
@@ -225,26 +228,29 @@ def explain_interface(interface, file=None):
                 print("  Buffer already on GPU", file=file)
             if not from_gpu:
                 pointer = "*" if param.hint else ""
-                print(f"  Use as parameter of type {pointer}{param.np_dtype}", file=file)
+                print(f"  Pass as parameter of type {pointer}{param.np_dtype}", file=file)
 
         def returned(param, ireturn):
             print(f"  Return as {param.np_dtype} (tuple position {ireturn})", file=file)
             return ireturn + 1
-
+        def format_param(param):
+            return f"{param.data_type} {param.pointer+' ' if param.pointer else ''}{param.name}"
         for param in kernel.parameters:
             visible_param = not param.derived
             if visible_param:
-                print(f"Param {iparam}:", param, file=file)
+                print(f"  Param {iparam}: {format_param(param)}", file=file)
                 iparam += 1
             else:
-                print(f"Param (derived):", param, file=file)
+                print(f"  Param derived: {format_param(param)}", file=file)
             if param.hint:
                 if param.hint == "resident":
                     print(f"  Buffer is resident on GPU", file=file)
                     motion(param)
                 elif param.hint in ("out_like", "outlike"):
+                    param_name = param.name.removeprefix("out_like_")
+                    param_name = param_name.removeprefix("outlike_")
                     print(
-                        f"  Allocate an array like '{param.name}' (opencl arg position={iparam}, dtype={param.np_dtype})",
+                        f"  Allocate an array like '{param_name}' (opencl arg position={iparam}, dtype={param.np_dtype})",
                         file=file)
                     motion(param)
                     ireturn = returned(param, ireturn)

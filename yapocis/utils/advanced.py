@@ -1,13 +1,20 @@
 DEBUG = False
 
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
-import os, sys
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 import copy
-import numpy as np
+import os
+import sys
+
+import yapocis
 from yapocis.lib.kerneldraw1 import KernelDraw1
 from yapocis.lib.kerneldraw3 import KernelDraw3
+from yapocis.utils.basic import *
+
+VIEWER = os.environ.get("YAPOCIS_VIEWER")
 BENCHMARKING = os.environ.get('BENCHMARKING',None)
-from .basic import VIEWING_QUEUE, imwrite
+
+from .basic import VIEWING_QUEUE
+
 
 def sign(title: str, img: np.ndarray) -> np.ndarray:
     img = img.astype(np.float32)
@@ -61,8 +68,14 @@ def show_array(*args, **kwargs) -> None:
     if BENCHMARKING:
         print(args[:-1], file=sys.stderr)
         return
-    title, img = sign_array(*args, **kwargs)
-    imwrite(os.path.join(VIEWING_QUEUE,f"{title}.png"), img)
+    title, img = _show_array(*args, **kwargs)
+    if img.mode == "L":
+        img = img.convert("RGB")
+    name = f"{title}.png"
+    path = os.path.join(VIEWING_QUEUE, name)
+    img.save(path)
+    if VIEWER:
+        os.system(f"{VIEWER} {path}&")
 
 
 def show_arraygrad(title, image, theta, grad = None) -> None:

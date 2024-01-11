@@ -1,14 +1,15 @@
 """
 Helpers around the PyOpenCL wrappers for OpenCL
 """
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 import os
 import sys
-import yaml
 
 import pyopencl
+import yaml
 from pyopencl import mem_flags as mf  # @UnusedImport
+
 from yapocis.ocl.buffer_manager import BufferManager
 from yapocis.ocl.device import get_device
 from yapocis.utils.stereo_typing import *
@@ -27,6 +28,7 @@ class DeviceManager(BufferManager):
     """
 
     def __init__(self, device_name: Optional[str] = None, autoflatten: bool = True, timed: bool = False, **kwargs):
+        assert device_name is None or isinstance(device_name, (str, int, bytes)), device_name
         self.device_name, self.device = get_device(device_name=device_name)
         try:
             super(DeviceManager, self).__init__(pyopencl.Context([self.device]), None, timed=timed, **kwargs)

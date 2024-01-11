@@ -1,8 +1,10 @@
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
+
+import time
 
 import numpy as np
 import numpy.linalg as la
-import time
+
 from yapocis.ocl.kernel_manager import load_program
 
 # We don't _need_ specify the dtype: that's done in the interface

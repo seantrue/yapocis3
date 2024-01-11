@@ -1,14 +1,16 @@
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
-import numpy as np
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 import time
 
-from yapocis.ocl.device import get_available_device_names
+import numpy as np
 
+from yapocis.lib.channels import split_planes
 from yapocis.lib.gaussian import Gaussian, GaussianWeights, are_close
 from yapocis.lib.gradient import Gradient
 from yapocis.lib.hsi import HSI
-from yapocis.lib.channels import split_planes
-from . import show_snapshots, snapshow, show, image_test, StopWatcher
+from yapocis.ocl.device import get_available_device_names
+
+from . import StopWatcher, image_test, show, show_snapshots, snapshow
+
 
 def test_weight_sum():
     "Make sure that the kernel sums back to 1"

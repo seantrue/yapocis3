@@ -1,7 +1,7 @@
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 import time
-from typing import Callable, List, Tuple, Any, Union, Optional
+from typing import Any, Callable, List, Optional, Tuple, Union
 
 import numpy as np
 import pyopencl
@@ -144,9 +144,9 @@ class Kernel:
         """Call a kernel, prepare arguments, and track performance"""
         self.kernel_manager.calls += 1
         t = time.time()
-        self.global_size = kwargs.pop("global_size", self.global_size)
-        self.local_size = kwargs.pop("local_size", self.local_size)
-        self.local_size = 1 if self.local_size is None else self.local_size
+        self.global_size = kwargs.pop("global_size", None)
+        self.local_size = kwargs.pop("local_size", None)
+        assert not isinstance(self.global_size, float) and not isinstance(self.local_size,float), f"{self.global_size},{self.local_size}"
         resident_arrays = kwargs.pop("resident", None)
         prepared_args = self.prepare_arguments(args, resident_arrays=resident_arrays)
         def show_args():

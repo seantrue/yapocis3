@@ -1,3 +1,5 @@
+/* One dimensional convolution with a kernel conv that is determined at compile time */
+
 <% left = len(conv)//2 %>
 #define FAST 1000
 __kernel
