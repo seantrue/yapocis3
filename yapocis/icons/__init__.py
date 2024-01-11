@@ -28,8 +28,7 @@ def icon(icon_name="default", size=64, ) -> PILImage:
     try:
         return _iconcache[(icon_path,size)]
     except KeyError:
-        icn = np.float32(imread(icon_path, longest=size, keep_alpha=True))
-        icn /= 256.
+        icn = imread(icon_path, longest=size, keep_alpha=True)
         _iconcache[(icon_path,size)]  = icn
         return icn
 

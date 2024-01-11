@@ -18,6 +18,8 @@ class HSI(BoundKernels):
     
         """
         hsi = self.kmgr.rgb2hsi3(rgb, global_size=rgb.size // rgb.shape[-1])
+        hsi = hsi.copy()
+        self.purge()
         return hsi
 
     def hsi2rgb3(self, hsi: Image3) -> Image3:
@@ -30,4 +32,6 @@ class HSI(BoundKernels):
     
         """
         rgb = self.kmgr.hsi2rgb3(hsi, global_size=hsi.size // hsi.shape[-1])
+        rgb = rgb.copy()
+        self.purge()
         return rgb

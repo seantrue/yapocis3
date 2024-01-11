@@ -32,14 +32,14 @@ def sign(title: str, img: np.ndarray) -> np.ndarray:
         ad = KernelDraw3(img)
     ad.draw_string((10,10), title, color=1.0, size=fheight, alpha="bug")
     ad.render()
-    ad.read()
+    img = ad.read()
     return img
 
 
 _showArrayCounter = 0
 
 
-def _show_array(*args, normalize=True):
+def sign_array(*args, normalize=True):
     global _showArrayCounter
     _showArrayCounter += 1
     array = args[-1]
@@ -61,8 +61,7 @@ def _show_array(*args, normalize=True):
         array -= array.min()
         array /= array.max()
     array = sign(title, array)
-    img = Image.fromarray((array*255).astype(np.uint8))
-    return title, img
+    return title, array
 
 
 def show_array(*args, **kwargs) -> None:
@@ -118,7 +117,7 @@ def show_arraygrad(title, image, theta, grad = None) -> None:
             color = grd/10.
             ad.line((x1,y1,x2,y2), distance=1.1, color=color, alpha=1)
     ad.render()
-    ad.read()
-    show_array(title, image, normalize=False)
+    a = ad.read()
+    show_array(title, a, normalize=False)
 
 

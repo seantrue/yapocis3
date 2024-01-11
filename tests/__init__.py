@@ -18,7 +18,7 @@ def image_path_test(image_name="test.jpg"):
 
 def image_test():
     test_image = image_path_test()
-    img = imread(test_image).astype(np.float32) / 256
+    img = imread(test_image)
     assert img.shape[0] != img.shape[1], "Test image must not be square"
     return img
 
@@ -81,7 +81,7 @@ def snapshot(snapper):
 def snapshow(snapper, *args, depth=2, **kwargs):
     tname, fname = name_of_test(depth)
     snapper.snapshot(name=f"{fname}/{tname}")
-    show_array(f"{fname}: {tname}", *args, **kwargs)
+    show_array(f"{fname} {tname}", *args, **kwargs)
 
 
 class StopWatcher:

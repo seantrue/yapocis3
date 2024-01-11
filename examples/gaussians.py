@@ -55,8 +55,7 @@ def main():
     hsi = HSI()
     gaussian = Gaussian()
     # Load the test image and reduce dimensions
-    image = np.float32(imread("tests/test.jpg"))
-    image /= 256.
+    image = imread("tests/test.jpg")
     image = image[::2, ::2, :]
 
     show_array("Original", image)

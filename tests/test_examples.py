@@ -10,31 +10,22 @@ from yapocis.utils.advanced import show_arraygrad as show_arraygradb
 
 from . import image_test, show_snapshots, snapshot
 
+def example_test(module, label):
+    hsi = HSI()
+    grad = Gradient(options=["-w"])
+    image = image_test()[::2,::2,:]
+
+    r, g, b = split_channels(image)
+    h, s, i = hsi.rgb2hsi(r, g, b)
+    g, a = grad.gradient(i, 7)
+    module.show_array(f"Gradient ({label})", g)
+    module.show_arraygrad(f"Grad angle ({label})", image, a)
+    module.show_arraygrad(f"Grad vectors ({label})", image, a, g)
+    snapshot(hsi)
+    snapshot(grad)
 
 def test_advanced_showarraygrad():
-    hsi = HSI()
-    grad = Gradient(options=["-w"])
-    image = image_test()[::2,::2,:]
-
-    r, g, b = split_channels(image)
-    h, s, i = hsi.rgb2hsi(r, g, b)
-    g, a = grad.gradient(i, 7)
-    show_array("Gradient (advanced)", g)
-    show_arraygrad("Grad angle (advanced)", image, a)
-    show_arraygrad("Grad vectors (advanced)", image, a, g)
-    snapshot(hsi)
-    snapshot(grad)
+    example_test(advanced, "advanced")
 
 def test_basic_showarraygrad():
-    hsi = HSI()
-    grad = Gradient(options=["-w"])
-    image = image_test()[::2,::2,:]
-
-    r, g, b = split_channels(image)
-    h, s, i = hsi.rgb2hsi(r, g, b)
-    g, a = grad.gradient(i, 7)
-    show_arrayb("Gradient (advanced)", g)
-    show_arraygradb("Grad angle (advanced)", image, a)
-    show_arraygradb("Grad vectors (advanced)", image, a, g)
-    snapshot(hsi)
-    snapshot(grad)
+    example_test(basic, "basic")

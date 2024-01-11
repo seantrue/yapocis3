@@ -16,7 +16,7 @@ from yapocis.fonts import font as find_font
 from yapocis.utils.basic import VIEWING_QUEUE
 queue = VIEWING_QUEUE
 
-WIDTH, HEIGHT = 1024, 1024
+
 
 def get_images():
     images = [os.path.join(queue,name) for name in os.listdir(queue) if name.endswith(".png") or name.endswith(".pgm")]
@@ -58,19 +58,23 @@ def fetch_image(i):
     return image, f"{i+1}/{len(images)}@{created}  {image_name}"
 
 def next_image():
-    return fetch_image(image_index+1)
+    return fetch_image(image_index + 1)
+
 
 def previous_image():
-    return fetch_image(image_index-1)
+    return fetch_image(image_index - 1)
+
 
 def last_image():
     return fetch_image(-1)
 
+
 def first_image():
     return fetch_image(0)
 
+
 def step_image():
-    if image_index < len(images)-1:
+    if image_index < len(images) - 1:
         return next_image()
     if images and last_image and images[-1] != last_image:
         return fetch_image(-1)
@@ -87,15 +91,15 @@ def delete_image(i=None):
         os.unlink(path)
     get_images()
 
-
-def main():
+    
+  def main():
     global WIDTH, HEIGHT
     pygame.init()
     font_path = find_font("default")
     font = pygame.font.Font(font_path, 22)
 
     background_color = (100, 100, 100)
-    display_surface = pygame.display.set_mode((WIDTH, HEIGHT),pygame.RESIZABLE)
+    display_surface = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
 
     pygame.display.set_caption('Image Watcher')
     pygame.key.set_repeat(150)
@@ -103,24 +107,25 @@ def main():
     while True:
         if image is not None:
             display_surface.fill(background_color)
-            w,h = image.get_size()
-            display_surface.blit(image, (25+WIDTH//2-w//2, 25+HEIGHT//2-h//2))
+            w, h = image.get_size()
+            display_surface.blit(image, (25 + WIDTH // 2 - w // 2, 25 + HEIGHT // 2 - h // 2))
             if label_text is not None:
-                label = font.render(label_text, True, (255, 255, 255),(0,0,0))
-                display_surface.blit(label, (0,0))
+                label = font.render(label_text, True, (255, 255, 255), (0, 0, 0))
+                display_surface.blit(label, (0, 0))
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
-                quit()
+                pygame_quit()
             if event.type == pygame.VIDEORESIZE:
                 # Resize window and image to match
-                dim = min(event.w,event.h)
+                dim = min(event.w, event.h)
                 WIDTH = HEIGHT = dim
-                display_surface = pygame.display.set_mode((dim+50, dim+50),pygame.RESIZABLE)
+                display_surface = pygame.display.set_mode((dim + 50, dim + 50), pygame.RESIZABLE)
                 image, label_text = fetch_image(image_index)
             if event.type == pygame.USEREVENT:
                 image, label_text = step_image()
             if event.type == pygame.KEYDOWN:
+                if event.key in (pygame.K_ESCAPE, pygame.K_q):
+                    pygame_quit()
                 # Stop tailing the directory
                 pygame.time.set_timer(pygame.USEREVENT, 0)
                 if event.key == pygame.K_a:

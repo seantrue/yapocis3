@@ -1,5 +1,5 @@
 // kernels imageops
-__kernel void clip(__global float *input, float low, float high, __global float *output) {
+__kernel void clamp_pixels(__global float *input, float low, float high, __global float *output) {
     size_t i = get_global_id(0);
     float value = input[i];
     value = value < low ? low:  value;
@@ -23,8 +23,12 @@ __kernel void binarize(__global float *input, float threshold, __global float *o
     value = value >= threshold ? 1.0 : 0.0;
     output[i] = value;
 }
-
-__kernel void histogram(__global float *input, int size_of_input, int n_bins, float low, float high, int n_workers, __global int *partials, __global int *histogram) {
+% if FASTBINS:
+#define FASTBINS ${FASTBINS}
+% endif
+__kernel void histogram(__global float *input, int size_of_input, float low, float high, __global int *partials, int local_size, int height_of_partials, int width_of_partials) {
+    int n_bins = height_of_partials;
+    int n_workers = width_of_partials;
     size_t i = get_global_id(0);
     size_t partial_base = i * n_bins;
     size_t first_pixel = i*(size_of_input/n_workers);
@@ -36,6 +40,9 @@ __kernel void histogram(__global float *input, int size_of_input, int n_bins, fl
         size_t bucket = (size_t)((n_bins*value)/(high-low));
         partials[partial_base+bucket] += 1;
     }
+#endif
+    barrier(CLK_GLOBAL_MEM_FENCE);
+
 }
 
 

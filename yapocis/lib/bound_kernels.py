@@ -28,3 +28,6 @@ class BoundKernels:
         self.kmgr.snapshot(**kwargs)
         self.kmgr.reset()
 
+    def purge(self):
+        self.kmgr.purge()
+

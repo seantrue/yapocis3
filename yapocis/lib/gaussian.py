@@ -16,7 +16,7 @@ def are_close(a: float, b: float) -> bool:
 
 
 class GaussianWeights:
-    def __init__(self, max_width=100, **kwargs):
+    def __init__(self, max_width=150, **kwargs):
         self.gws = self.compute_gaussian_weights(max_width, **kwargs)
 
     def gaussian_weights(self):
@@ -127,7 +127,7 @@ class Gaussian(BoundKernels):
 
     def gauss_image(self, a: Image1, scale: int) -> Image1:
         g = self.get_gaussian_kernel(scale)
-        a = a.copy()
+        #a = a.copy()
         b = np.empty_like(a)
         g.write(a)
         g.write(b)
@@ -173,6 +173,8 @@ class Gaussian(BoundKernels):
             larger = self.gauss_image(a, scale + 1)
             dog = smaller - larger
             zca = self.zcs(dog, threshold=threshold)
+            del larger
+            del dog
         # Zero out of bounds and create a frame.
         grad, theta = self.grad.gradient(smaller, 3)
         margin = self.gaussian_weights.get_gaussian_width(scale) + 1
@@ -182,4 +184,6 @@ class Gaussian(BoundKernels):
             set_margin(theta, margin)
         if frame:
             set_frame(zca, margin)
-        return zca.copy(), grad.copy(), theta.copy()
+        zca, grad, theta =  zca.copy(), grad.copy(), theta.copy()
+        self.purge()
+        return zca, grad, theta

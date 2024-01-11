@@ -1,0 +1,3 @@
+[submodule "external"]
+	path = external
+	url = git@github.com:seantrue/yapocis-external.git
