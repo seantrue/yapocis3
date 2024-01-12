@@ -3,10 +3,7 @@
 from yapocis.lib.channels import split_channels
 from yapocis.lib.gradient import Gradient
 from yapocis.lib.hsi import HSI
-from yapocis.utils.advanced import show_array
-from yapocis.utils.advanced import show_array as show_arrayb
-from yapocis.utils.advanced import show_arraygrad
-from yapocis.utils.advanced import show_arraygrad as show_arraygradb
+from yapocis.utils import basic, advanced
 
 from . import image_test, show_snapshots, snapshot
 

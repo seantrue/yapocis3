@@ -34,7 +34,18 @@ def test_histogram():
     a = np.random.uniform(.1, .9, (2000,2000), ).astype(np.float32)
     h = imageops.histogram(a, n_bins=256)
     h1 = imageops.histogram(a, n_bins=1500)
+    assert h.sum() == a.shape[0]*a.shape[1]
     assert h.sum() == h1.sum()
+def test_histogram_res():
+    imageops = Imageops()
+    a = np.random.uniform(.1, .9, (2000, 2000), ).astype(np.float32)
+    h = imageops.histogram(a, n_bins=256)
+    assert h.sum() == a.shape[0] * a.shape[1]
+    imageops.histogram_res(a, h)
+    imageops.read(h)
+    assert h.sum() == a.shape[0] * a.shape[1] * 2
+
+
 
 def test_ops():
     NBINS=1000
@@ -48,45 +59,7 @@ def test_ops():
     h = imageops.histogram(a, n_bins=NBINS)
     plt.plot(x,h,label="stretch")
     plt.legend()
-    #plt.show()
+    plt.show()
 
 import sys
 
-def test_histogram_performance():
-    ITERATIONS=10
-    nbins=256
-    for device_name in get_available_device_names():
-        cfg = get_device_config(device_name)
-        if "GeForce" in device_name:
-            FASTBINS=1024
-            local_size = (1,)
-        elif "Radeon" in device_name:
-            FASTBINS=1024
-            local_size = (1,)
-        elif "HD Graphics" in device_name:
-            FASTBINS=1024
-            local_size = (1,)
-        else:
-            FASTBINS=False
-            local_size = None
-        compute_units = cfg["max_compute_units"]
-        print()
-        print(device_name, compute_units,file=sys.stderr)
-        FBS = [FASTBINS]
-        if FASTBINS:
-            FBS.insert(0,0)
-        for FB in FBS:
-            imageops = Imageops(device_name=device_name,FASTBINS=FB)
-            histogram_res = imageops.histogram_res
-            a = np.random.uniform(.1, .9, (2000, 2000)).astype(np.float32)
-            n_workers = [compute_units, compute_units*4, compute_units*16, compute_units*32]
-            if FASTBINS:
-                n_workers += [compute_units*64, compute_units*96, compute_units*128,compute_units*192]
-            for nw in reversed(n_workers):
-                partials = np.zeros((nw, 256), dtype=np.int32)
-                imageops.write(a)
-                imageops.write(partials)
-                statement = f"histogram_res(a,partials)"
-                print(f"{nw:03d} {FB}", min(*timeit.repeat(statement,number=ITERATIONS, globals=locals(),repeat=3)), file=sys.stderr)
-                sys.stderr.flush()
-            print()

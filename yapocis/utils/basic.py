@@ -3,6 +3,7 @@ import os
 import sys
 
 from PIL import Image, ImageDraw, ImageFont
+import skimage
 
 import yapocis
 from yapocis.fonts import font as find_font
@@ -67,11 +68,11 @@ def to_image(arr: Array, high: int = 255, low: int = 0, cmin: Optional[float] = 
         shape = (shape[1], shape[0])  # columns show up first
         if mode == 'F':
             data32 = data.astype(np.float32)
-            image = Image.fromstring(mode, shape, data32.tostring())
+            image = Image.frombytes(mode, shape, data32.tobytes())
             return image
         if mode in [None, 'L', 'P']:
             bytedata = byte_scale(data, high=high, low=low, cmin=cmin, cmax=cmax)
-            image = Image.fromstring('L', shape, bytedata.tostring())
+            image = Image.frombytes('L', shape, bytedata.tobytes())
             if pal is not None:
                 image.putpalette(np.asarray(pal, dtype=np.uint8).tostring())
                 # Becomes a mode='P' automagically.
@@ -82,7 +83,7 @@ def to_image(arr: Array, high: int = 255, low: int = 0, cmin: Optional[float] = 
             return image
         if mode == '1':  # high input gives threshold for 1
             bytedata = (data > high)
-            image = Image.fromstring('1', shape, bytedata.tostring())
+            image = Image.frombytes('1', shape, bytedata.tobytes())
             return image
         if cmin is None:
             cmin = np.amin(np.ravel(data))
@@ -91,7 +92,7 @@ def to_image(arr: Array, high: int = 255, low: int = 0, cmin: Optional[float] = 
         data = (data * 1.0 - cmin) * (high - low) / (cmax - cmin) + low
         if mode == 'I':
             data32 = data.astype(np.uint32)
-            image = Image.fromstring(mode, shape, data32.tostring())
+            image = Image.frombytes(mode, shape, data32.tobytes())
         else:
             raise ValueError(_errstr)
         return image
@@ -117,13 +118,13 @@ def to_image(arr: Array, high: int = 255, low: int = 0, cmin: Optional[float] = 
     strdata = None
     bytedata = byte_scale(data, high=high, low=low, cmin=cmin, cmax=cmax)
     if ca == 2:
-        strdata = bytedata.tostring()
+        strdata = bytedata.tobytes()
         shape = (shape[1], shape[0])
     elif ca == 1:
-        strdata = np.transpose(bytedata, (0, 2, 1)).tostring()
+        strdata = np.transpose(bytedata, (0, 2, 1)).tobytes()
         shape = (shape[2], shape[0])
     elif ca == 0:
-        strdata = np.transpose(bytedata, (1, 2, 0)).tostring()
+        strdata = np.transpose(bytedata, (1, 2, 0)).tobytes()
         shape = (shape[2], shape[1])
     if mode is None:
         if numch == 3:
@@ -142,7 +143,7 @@ def to_image(arr: Array, high: int = 255, low: int = 0, cmin: Optional[float] = 
             raise ValueError("Invalid array shape for mode.")
 
     # Here we know data and mode is correct
-    image = Image.fromstring(mode, shape, strdata)
+    image = Image.frombytes(mode, shape, strdata)
     return image
 
 
@@ -284,7 +285,7 @@ def show_array(*args, **kwargs) -> None:
     if BENCHMARKING:
         print(args[:-1], file=sys.stderr)
         return
-    title, img = _show_array(*args, **kwargs)
+    title, img = sign_array(*args, **kwargs)
     if img.mode == "L":
         img = img.convert("RGB")
     name = f"{title}.png"

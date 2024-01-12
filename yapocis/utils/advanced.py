@@ -68,7 +68,8 @@ def show_array(*args, **kwargs) -> None:
     if BENCHMARKING:
         print(args[:-1], file=sys.stderr)
         return
-    title, img = _show_array(*args, **kwargs)
+    title, img = sign_array(*args, **kwargs)
+    img = to_image(img)
     if img.mode == "L":
         img = img.convert("RGB")
     name = f"{title}.png"
