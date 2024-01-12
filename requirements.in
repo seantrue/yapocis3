@@ -1,0 +1,18 @@
+Mako
+pybind11
+MarkupSafe
+Pillow
+decorator
+numpy
+pyyaml
+py
+# Uncomment for Linux
+#pyopencl[pocl,oclgrind]
+pyopencl
+mapbox-earcut
+pyparsing
+pytest==6.2.2
+pytools
+skimage
+sphinx
+freetype-py
