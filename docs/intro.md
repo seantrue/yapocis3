@@ -2,14 +2,14 @@
 
 ## Problem
 
-Image processing is inherently computationally challenging. Lots of data
+Images are inherently computationally challenging. Lots of data
 leads to lots of approximations, shortcuts, and undone experiments. We
 need code that runs fast, and is easy to develop.
 
 ## Distant past
 
 I\'ve tried a fair number of hardware and software configurations for
-doing these experiments. Some, like CADDR-1, are were not readily
+doing these experiments. Some, like CADDR-1, were not readily
 available. Some, like the dedicated array processors, were
 overwhelmingly expensive. Some, like Python, come both included as
 batteries (pre-installed) and come with batteries included (Python
