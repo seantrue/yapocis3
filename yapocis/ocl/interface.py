@@ -47,6 +47,7 @@ def INTERFACECL_BNF() -> OneOrMore:
     int16_ = Keyword("int16")
     int32_ = Keyword("int32")
     kernel_ = Keyword("kernel")
+    tiled_ = Keyword("tiled")
     of_ = Keyword("of")
     out_ = Keyword("out")
     out_like_ = Keyword("out_like") | Keyword("outlike")
@@ -71,6 +72,7 @@ def INTERFACECL_BNF() -> OneOrMore:
                                     Optional(typeName("data_type")) +
                                     identifier("name")))
     interfaceItem = Group((Optional(kernel_ ^ void_ ^ alias_ ^ typeName ^ extension_)("kernel_type") +
+                           Optional(tiled_)("tiled") +
                            identifier("name") +
                            Optional(as_identifier ^ extension_identifier) +
                            lparen +
@@ -78,6 +80,7 @@ def INTERFACECL_BNF() -> OneOrMore:
                           )
 
     interfaceDef = Group(interface_ +
+                         Optional(tiled_)("tiled") +
                          identifier("name") +
                          lbrace +
                          ZeroOrMore(interfaceItem("kernel"))("kernels") +
@@ -114,8 +117,8 @@ def scan_kernel_parameters(kernel):
 
 
 KernelParamSpec = namedtuple("KernelParam", ["name", "hint", "dim", "pointer", "data_type", "np_dtype", "derived","derived_from"])
-KernelSpec = namedtuple("KernelSpec", ["name", "alias", "parameters", "definitions"])
-Interface = namedtuple("InterfaceSpec", ["name", "kernels", "aliases"])
+KernelSpec = namedtuple("KernelSpec", ["name", "alias", "parameters", "definitions", "tiled"])
+Interface = namedtuple("InterfaceSpec", ["name", "tiled", "kernels", "aliases"])
 
 _interfaces: Dict[str, Any] = {}
 
@@ -142,6 +145,7 @@ def get_interfaces(s: str) -> List[Interface]:
     for interface in parsed_interfaces:
         kernel_definitions = []
         kernel_aliases = {}
+        interface_tiled = bool(getattr(interface, "tiled", ""))
         for kernel in interface.kernels:
             aliasof = kernel.aliasof
             param_definitions = scan_kernel_parameters(kernel)
@@ -169,14 +173,17 @@ def get_interfaces(s: str) -> List[Interface]:
                                     derived=derived,
                                     derived_from=derived_from))
             kernel_name = f"{aliasof}_{kernel.name}" if kernel.kernel_type == "extension" else kernel.name
+            kernel_tiled = bool(getattr(kernel, "tiled", "")) or interface_tiled
             kernel_spec = KernelSpec(name=kernel_name,
                                      alias=aliasof,
                                      parameters=kernel_parameters,
-                                     definitions=param_definitions)
+                                     definitions=param_definitions,
+                                     tiled=kernel_tiled)
             kernel_definitions.append(kernel_spec)
             if kernel.aliasof:
                 kernel_aliases[kernel_name] = kernel.aliasof
         interfaces.append(Interface(name=interface.name,
+                                    tiled=interface_tiled,
                                     kernels=kernel_definitions,
                                     aliases=kernel_aliases))
     _interfaces[s] = interfaces
@@ -209,10 +216,11 @@ def load_interface(interface_spec: str) -> str:
 def explain_interface(interface, file=None):
     print("Interface:", interface.name, file=file)
     for kernel in interface.kernels:
+        tiling = "tiled" if kernel.tiled else "untiled"
         if kernel.alias:
-            print(f"Kernel: {kernel.name} alias for '{kernel.alias}'", file=file)
+            print(f"Kernel: {kernel.name} {tiling} alias for '{kernel.alias}'", file=file)
         else:
-            print(f"Kernel: {kernel.name}", file=file)
+            print(f"Kernel: {kernel.name} {tiling}", file=file)
         iparam = 0
         ireturn = 0
 

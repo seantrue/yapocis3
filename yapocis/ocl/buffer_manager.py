@@ -93,7 +93,7 @@ class BufferManager:
         pyopencl.enqueue_copy(self.queue, a, buf).wait()
         a.shape = shape
         a.strides = strides
-        return buf
+        return a
 
     def write_buffer(self, a:Array, wait=True) -> pyopencl.Buffer:
         buf = self.ensure_buffer(a)

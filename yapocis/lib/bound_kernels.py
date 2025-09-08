@@ -5,9 +5,10 @@ from yapocis.utils.stereo_typing import *
 
 class BoundKernels:
     INTERFACE = None
+    load_program_config = {}
     def __init__(self, device_name:Optional[str]=None, **kwargs):
         assert device_name is None or isinstance(device_name,(int,str,bytes)), device_name
-        self.kmgr = load_program(self.INTERFACE, device_name=device_name, **kwargs)
+        self.kmgr = load_program(self.INTERFACE, device_name=device_name, **self.load_program_config, **kwargs)
 
     def __getattr__(self, attr: str) -> Callable:
         "Any unbound attribute is checked to see if it is a kernel"

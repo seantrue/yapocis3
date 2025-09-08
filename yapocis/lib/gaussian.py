@@ -95,6 +95,7 @@ class GaussianWeights:
 # noinspection PyUnresolvedReferences
 class Gaussian(BoundKernels):
     INTERFACE = "convolvesep"
+    load_program_config =  {}
 
     def __init__(self, device_name: Optional[str] = None, gaussian_weights: Optional[List[np.ndarray]] = None):
         self.gaussian_weights = GaussianWeights() if gaussian_weights is None else gaussian_weights

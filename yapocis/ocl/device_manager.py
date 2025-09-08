@@ -27,7 +27,7 @@ class DeviceManager(BufferManager):
     Coordinates an OpenCL device with a queue, a context, and a buffer manager
     """
 
-    def __init__(self, device_name: Optional[str] = None, autoflatten: bool = True, timed: bool = False, **kwargs):
+    def __init__(self, device_name: Optional[str] = None, timed: bool = False, **kwargs):
         assert device_name is None or isinstance(device_name, (str, int, bytes)), device_name
         self.device_name, self.device = get_device(device_name=device_name)
         try:
@@ -37,7 +37,6 @@ class DeviceManager(BufferManager):
             self.device_name, self.device = get_device()
             super(DeviceManager, self).__init__(pyopencl.Context([self.device]), None, timed=timed, **kwargs)
         self.context_meta = {}
-        self.autoflatten = autoflatten
 
     def build(self, source: str, options=None) -> pyopencl.Program:
         binary = pyopencl.Program(self.ctx, source)
