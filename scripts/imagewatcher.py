@@ -91,8 +91,9 @@ def delete_image(i=None):
         os.unlink(path)
     get_images()
 
-    
-  def main():
+WIDTH=1024
+HEIGHT=800
+def main():
     global WIDTH, HEIGHT
     pygame.init()
     font_path = find_font("default")
@@ -114,7 +115,7 @@ def delete_image(i=None):
                 display_surface.blit(label, (0, 0))
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame_quit()
+                pygame.quit()
             if event.type == pygame.VIDEORESIZE:
                 # Resize window and image to match
                 dim = min(event.w, event.h)
@@ -125,7 +126,7 @@ def delete_image(i=None):
                 image, label_text = step_image()
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_ESCAPE, pygame.K_q):
-                    pygame_quit()
+                    pygame.quit()
                 # Stop tailing the directory
                 pygame.time.set_timer(pygame.USEREVENT, 0)
                 if event.key == pygame.K_a:

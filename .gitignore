@@ -12,6 +12,7 @@
 *.png
 *.svg
 .\#*
+*.log
 .deps
 .libs
 
