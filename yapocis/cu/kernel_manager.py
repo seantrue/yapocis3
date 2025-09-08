@@ -73,9 +73,7 @@ class CUDAKernelManager:
         prog = self.load_program(name, **mako_vars)
         callables = { k.name: getattr(prog, k.name) for k in prog.iface.kernels }
         if namespace:
-            return program, program.callable
-        else:
-            return program, list(program.callable.values())
-
-import_program = CudaKernelManager.import_program
-load_program = CudaKernelManager.load_program
+            import inspect, sys
+            mod = sys.modules[inspect.getmodule(self.import_program).__name__]
+            for n, fn in callables.items(): setattr(mod, n, fn)
+        return prog, callables

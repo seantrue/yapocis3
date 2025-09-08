@@ -1,4 +1,5 @@
 *.pyc
+*.ocl
 *.swp
 *.pyd
 *.so

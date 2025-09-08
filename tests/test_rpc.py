@@ -54,7 +54,7 @@ def test_buffers():
 
 def test_buffers_async_write():
     # TODO: Test all available devices
-    bmgr = DeviceManager(timed=True, device_name=0)
+    bmgr = DeviceManager(device_name=0, timed=True)
     a = np.random.sample((2000, 1000)).astype(np.float32)
     t = a.sum()
     for i in range(1000):
@@ -64,7 +64,7 @@ def test_buffers_async_write():
     assert a.sum() == t
     print(bmgr.snapshot(name="async_write"))
     del bmgr
-    bmgr = DeviceManager(timed=True, device_name=0)
+    bmgr = DeviceManager(device_name=0, timed=True)
     arrays = []
     a = np.random.sample((2000, 1000)).astype(np.float32)
     t = a.sum()
@@ -158,6 +158,35 @@ def test_demo_kernel():
 def test_import():
     import_program("demo", sum="frabjous_day")
     assert callable(frabjous_day)
+
+def test_interface_tiled_propagates_to_kernels():
+    interface = get_interface(
+        """\
+        interface tiled foo {
+            kernel bar(widthof a, heightof a, inout float a, widthof lines, in float lines, in float distance, in float rcolor);
+            kernel fu(widthof a, heightof a, inout float a, widthof lines, in float lines, in float rcolor);
+        };
+        """
+    )
+    assert getattr(interface, "tiled", False) is True
+    assert len(interface.kernels) == 2
+    assert all(k.tiled for k in interface.kernels)
+
+
+def test_kernel_level_tiled_only_one():
+    interface = get_interface(
+        """\
+        interface foo {
+            kernel tiled bar(widthof a, heightof a, inout float a, widthof lines, in float lines, in float distance, in float rcolor);
+            kernel fu(widthof a, heightof a, inout float a, widthof lines, in float lines, in float rcolor);
+        };
+        """
+    )
+    assert getattr(interface, "tiled", False) is False
+    assert len(interface.kernels) == 2
+    assert interface.kernels[0].tiled is True
+    assert interface.kernels[1].tiled is False
+
 
 
 def test_devices():
