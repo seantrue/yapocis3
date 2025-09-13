@@ -5,11 +5,9 @@ import pytest
 
 from yapocis.ocl.device import get_available_device_names, get_device
 from yapocis.ocl.device_manager import DeviceManager
-from yapocis.ocl.interface import get_interface
+from yapocis.core.interface import get_interface
 from yapocis.ocl.kernel_manager import import_program, load_program
 from yapocis.utils.stereo_typing import *
-
-from . import show_snapshots
 
 
 def test_buffers():

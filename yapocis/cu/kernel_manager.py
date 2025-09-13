@@ -1,10 +1,10 @@
 from __future__ import annotations
-import numpy as np, cupy as cp
+import cupy as cp
 from pathlib import Path
 from typing import Any
-from yapocis.ocl.interface import load_interface, get_interface
+from core.interface import load_interface, get_interface
 from yapocis.core.mako_utils import render_template, resolve_template
-from yapocis.core.autopad import pad_sizes, infer_wh_from_args
+from yapocis.core.autopad import pad_sizes
 from yapocis.core.tunecache import get_local_size
 from yapocis.core.devbuf import ensure_device, empty_like_device
 class CUDAProgram:

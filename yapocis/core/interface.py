@@ -3,103 +3,12 @@
 # Process an improper subset of the CORBA IDL grammar to facilitate calling opencl from a python Numpy framework
 # Inspired by an IDL parser by Paul McGuire, shipped as a demo with pyparser
 #
-from collections import namedtuple
-
-from pyparsing import (Group, Keyword, Literal, OneOrMore, Optional,
-                       ParseException, Word, ZeroOrMore, alphanums, alphas,
-                       cStyleComment, delimitedList, restOfLine)
 
 from yapocis.interfaces import find_interface
 from yapocis.utils.stereo_typing import Any, Dict, List
+from .interface_parser import parse_interface_text, KernelParamSpec, KernelSpec, InterfaceSpec, ParseException
 
 # Map from OpenCL datatype to a numpy data type
-
-
-def INTERFACECL_BNF() -> OneOrMore:
-    """
-    pyparser grammar for the yapocis interface specification.
-    Inspired by CORBA IDL parser by Paul McGuire, shipped as a demo with pyparser.
-    """
-    # punctuation
-    lbrace = Literal("{")
-    rbrace = Literal("}")
-    lparen = Literal("(")
-    rparen = Literal(")")
-    dot = Literal(".")
-    star = Literal("*")
-    semi = Literal(";")
-
-    # keywords
-    alias_ = Keyword("alias")
-    as_ = Keyword("as")
-    boolean_ = Keyword("boolean")
-    char_ = Keyword("char")
-    complex64_ = Keyword("complex64")
-    depthof_ = Keyword("depthof") | Keyword("depth_of")
-    extension_ = Keyword("extension")
-    float_ = Keyword("float")
-    float32_ = Keyword("float32")
-    heightof_ = Keyword("heightof") | Keyword("height_of")
-    inout_ = Keyword("inout")
-    interface_ = Keyword("interface")
-    in_ = Keyword("in")
-    int_ = Keyword("int")
-    int16_ = Keyword("int16")
-    int32_ = Keyword("int32")
-    kernel_ = Keyword("kernel")
-    tiled_ = Keyword("tiled")
-    of_ = Keyword("of")
-    out_ = Keyword("out")
-    out_like_ = Keyword("out_like") | Keyword("outlike")
-    resident_ = Keyword("resident")
-    short_ = Keyword("short")
-    sizeof_ = Keyword("sizeof") | Keyword("size_of")
-    uint16_ = Keyword("uint16")
-    uint32_ = Keyword("uint32")
-    void_ = Keyword("void")
-    widthof_ = Keyword("widthof") | Keyword("width_of")
-
-    identifier = Word(alphas, alphanums + "_")
-    as_identifier = as_ + identifier("aliasof")
-    extension_identifier = of_ + identifier("aliasof")
-    typeName = (boolean_ ^ char_ ^
-                int16_ ^ int32_ ^
-                float_ ^ float32_ ^ complex64_ ^
-                uint16_ ^ uint32_ ^ int_ ^ short_)
-    bufferHints = (inout_ | in_ | out_ | out_like_ | resident_)("hint")
-    bufferDim = (widthof_ | heightof_ | sizeof_ | depthof_)("dim")
-    paramlist = delimitedList(Group(Optional(bufferHints | bufferDim) +
-                                    Optional(typeName("data_type")) +
-                                    identifier("name")))
-    interfaceItem = Group((Optional(kernel_ ^ void_ ^ alias_ ^ typeName ^ extension_)("kernel_type") +
-                           Optional(tiled_)("tiled") +
-                           identifier("name") +
-                           Optional(as_identifier ^ extension_identifier) +
-                           lparen +
-                           Optional(paramlist("parameters")) + rparen + semi)
-                          )
-
-    interfaceDef = Group(interface_ +
-                         Optional(tiled_)("tiled") +
-                         identifier("name") +
-                         lbrace +
-                         ZeroOrMore(interfaceItem("kernel"))("kernels") +
-                         rbrace + semi)
-    moduleItem = interfaceDef
-
-    bnf = OneOrMore(moduleItem)
-
-    singleLineComment = "//" + restOfLine
-    splatLineComment = "#" + restOfLine
-    bnf.ignore(splatLineComment)
-    bnf.ignore(singleLineComment)
-    bnf.ignore(cStyleComment)
-
-    return bnf
-
-
-bnf = INTERFACECL_BNF()
-
 ctype_to_nptype = {
     "int":    "int32",
     "short":  "int16",
@@ -115,17 +24,12 @@ def scan_kernel_parameters(kernel):
     definitions = {param.name: param for param in kernel.parameters if param.hint not in ("out", "out_like")}
     return definitions
 
-
-KernelParamSpec = namedtuple("KernelParam", ["name", "hint", "dim", "pointer", "data_type", "np_dtype", "derived","derived_from"])
-KernelSpec = namedtuple("KernelSpec", ["name", "alias", "parameters", "definitions", "tiled"])
-Interface = namedtuple("InterfaceSpec", ["name", "tiled", "kernels", "aliases"])
-
 _interfaces: Dict[str, Any] = {}
 
 
-def get_interfaces(s: str) -> List[Interface]:
-    """\
-    Builds an InterfaceCL for the source interface definition.
+def get_interfaces(s: str) -> List[InterfaceSpec]:
+    """
+    Builds an InterfaceSpec for the source interface definition.
     """
     try:
         interfaces = _interfaces[s]
@@ -133,7 +37,7 @@ def get_interfaces(s: str) -> List[Interface]:
     except KeyError:
         interfaces = []
     try:
-        parsed_interfaces = bnf.parseString(s)
+        interfaces = parse_interface_text(s)
     except ParseException as e:
         print(e.args[0], e.args[2], e.line)
         source = e.args[0].splitlines()
@@ -142,12 +46,12 @@ def get_interfaces(s: str) -> List[Interface]:
         source.insert(e.lineno, cursor)
         source = "\n".join(source)
         raise RuntimeError(f"Can't parse:\n{source}")
-    for interface in parsed_interfaces:
+    for interface in interfaces:
         kernel_definitions = []
         kernel_aliases = {}
         interface_tiled = bool(getattr(interface, "tiled", ""))
         for kernel in interface.kernels:
-            aliasof = kernel.aliasof
+            aliasof = kernel.alias_of
             param_definitions = scan_kernel_parameters(kernel)
             kernel_parameters = []
             for param in kernel.parameters:
@@ -180,9 +84,9 @@ def get_interfaces(s: str) -> List[Interface]:
                                      definitions=param_definitions,
                                      tiled=kernel_tiled)
             kernel_definitions.append(kernel_spec)
-            if kernel.aliasof:
-                kernel_aliases[kernel_name] = kernel.aliasof
-        interfaces.append(Interface(name=interface.name,
+            if kernel.alias_of:
+                kernel_aliases[kernel_name] = kernel.alias_of
+        interfaces.append(InterfaceSpec(name=interface.name,
                                     tiled=interface_tiled,
                                     kernels=kernel_definitions,
                                     aliases=kernel_aliases))
@@ -190,7 +94,7 @@ def get_interfaces(s: str) -> List[Interface]:
     return interfaces
 
 
-def get_interface(s: str) -> Interface:
+def get_interface(s: str) -> InterfaceSpec:
     return get_interfaces(s)[0]
 
 

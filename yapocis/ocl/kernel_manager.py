@@ -9,9 +9,9 @@ from mako.template import Template
 
 from yapocis.kernels import find_kernel
 from yapocis.ocl.device_manager import get_device_manager
-from yapocis.ocl.interface import Interface, get_interface, load_interface
+from core.interface import Interface, get_interface, load_interface
 from yapocis.ocl.kernel import Kernel
-from yapocis.utils.internals import find_yapocis_file, get_yapocis_dir
+from yapocis.utils.internals import get_yapocis_dir
 from yapocis.utils.stereo_typing import Context
 
 
