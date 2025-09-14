@@ -68,7 +68,8 @@ from typing import List, Dict, Optional, Tuple, Any
 from pyparsing import (
     Word, alphas, alphanums, nums,
     oneOf, Keyword, Suppress, Optional as PPOptional, Group, delimitedList,
-    ZeroOrMore, Regex, ParseException, ParserElement, Literal
+    ZeroOrMore, Regex, ParseException, ParserElement, Literal,
+    cppStyleComment, cStyleComment, pythonStyleComment
 )
 
 # ---------------------------------------------------------------------------
@@ -78,14 +79,8 @@ from pyparsing import (
 @dataclass
 class KernelParamSpec:
     name: str
-    role: str
-    dtype: str
-    hint: str
-    dim: str
-    pointer:str
-    np_dtype:str
-    derived:str
-    derived_from:str
+    role: Optional[str] = None
+    dtype: Optional[str] = None
     shape: Optional[str] = None           # e.g., "[9]"
     layout: Optional[str] = None          # e.g., "planar"
     qualifiers: Dict[str, str] = field(default_factory=dict)  # {"constant":"true","local":"bytes_of(...)","texture2d":"true"}
@@ -136,7 +131,11 @@ def _pp_to_param_list(pp_params) -> List[KernelParamSpec]:
                 quals[q.q] = "true"
         shape = f"[{p.shape.shape}]" if p.shape and "shape" in p.shape else None
         layout = p.layout if ("layout" in p and p.layout) else None
-        out.append(KernelParamSpec(role=p.role, dtype=p.dtype, name=p.name,
+        core = p[1] if len(p) > 1 else p
+        role = core.get("role", None)
+        dtype_val = core.get("dtype", None)
+        name_val = core.get("name", None)
+        out.append(KernelParamSpec(name=name_val, role=role, dtype=dtype_val,
                                    shape=shape, layout=layout, qualifiers=quals))
     return out
 
@@ -172,16 +171,27 @@ qualifier   = (qual_local | qual_simple)
 
 layout_suffix = PPOptional(colon + Keyword("layout") + ident("layout"))
 
-dtype = oneOf("float float32 half f16 double int int32 uint32 short int16 uint16 boolean char float4")
-role_kw = oneOf("in out resident out_like READWRITE")
+dtype = oneOf("float float32 half f16 double int int32 uint32 short int16 uint16 boolean char float4 complex64 complex32")
+
+# Roles and legacy spellings
+io_role_kw   = oneOf("in out inout in_out resident READWRITE")
+dim_role_kw  = oneOf("size_of sizeof width_of widthof height_of heightof depth_of depthof")
+outlike_role = oneOf("out_like outlike")
 
 brackets = Group(Suppress("[") + Regex(r"[^\]]*")("shape") + Suppress("]"))
 
+# Parameter patterns
+param_core = (
+    Group((outlike_role | dim_role_kw)("role") + PPOptional(dtype("dtype")) + ident("name"))
+    |
+    Group(io_role_kw("role") + dtype("dtype") + ident("name"))
+    |
+    Group(dtype("dtype") + ident("name"))
+)
+
 param = Group(
     Group(ZeroOrMore(qualifier))("quals") +
-    role_kw("role") +
-    dtype("dtype") +
-    ident("name") +
+    param_core +
     PPOptional(brackets)("shape") +
     layout_suffix
 )
@@ -189,7 +199,7 @@ param = Group(
 # --- kernel & with { ... } -------------------------------------------------
 
 kernel_kw = Keyword("kernel")
-kernel_sig = (kernel_kw + ident("kname") +
+kernel_sig = (kernel_kw + PPOptional(Keyword("tiled")("tiled")) + ident("kname") +
               lparen + PPOptional(delimitedList(param))("params") + rparen + semi)
 
 trait_key = oneOf("""class axis radius boundary tile halo fastmem taps identity op
@@ -217,25 +227,28 @@ alias_stmt = Group(
 # --- extension (with optional with { ... }) -------------------------------
 
 ext_stmt = Group(
-    Keyword("extension") + ident("new") + Keyword("of") + ident("base") +
+    Keyword("extension")("extension") + ident("new") + (Keyword("of") | Keyword("as")) + ident("base") +
     lparen + PPOptional(delimitedList(param))("params") + rparen +
     PPOptional(Keyword("with") + lbrace +
                Group(ZeroOrMore(kv_pair))("traits") +
                Group(ZeroOrMore(backend_block))("backends") +
-               rbrace + semi)
-)
+               rbrace) + semi)
 
 # --- interface -------------------------------------------------------------
 
 iface_kw = Keyword("interface")
 interface_grammar = (
-    iface_kw + ident("iname") + lbrace +
+    iface_kw + PPOptional(Keyword("tiled")("tiled")) + ident("iname") + lbrace +
     meta_block("meta") +
     Group(ZeroOrMore(kernel_stmt | alias_stmt | ext_stmt))("items") +
     rbrace + PPOptional(semi)
 )
 
 interfaces_grammar = Group(interface_grammar)
+# Ignore C/C++ style comments throughout
+interfaces_grammar.ignore(cppStyleComment)
+interfaces_grammar.ignore(cStyleComment)
+interfaces_grammar.ignore(pythonStyleComment)
 # ---------------------------------------------------------------------------
 # Parse → IR
 # ---------------------------------------------------------------------------
@@ -255,7 +268,7 @@ def parse_interface_text(src: str) -> List[InterfaceSpec]:
         # ---- meta
         meta_items: List[Tuple[str, Any]] = []
         if "meta" in res and res.meta and "items" in res.meta:
-            for kv in res.meta.items:
+            for kv in res.meta["items"]:
                 v = kv.v.asList() if hasattr(kv.v, "asList") else kv.v
                 meta_items.append((kv.k, v))
         md = _items_to_dict(meta_items)
@@ -265,6 +278,9 @@ def parse_interface_text(src: str) -> List[InterfaceSpec]:
             "fast_math": _norm_bool(md.get("fast_math", "on"), True),
             "workgroup": tuple(md.get("workgroup", (32, 8, 1))),
         }
+        # Propagate 'tiled' modifier at the interface level via meta for downstream consumers
+        if "tiled" in res and res.tiled:
+            meta["tiled"] = True
         # optional meta extras
         for k in ("class","blend","cull","binning","tile_pixels","stage_tile"):
             if k in md:
@@ -276,11 +292,11 @@ def parse_interface_text(src: str) -> List[InterfaceSpec]:
         pending_aliases: List[Tuple[str, str, Optional[List[KernelParamSpec]]]] = []
         pending_exts: List[Tuple[str, str, List[KernelParamSpec], Dict[str,Any], Dict[str,Dict[str,Any]]]] = []
 
-        for item in res.items:
+        for item in res["items"]:
             # Kernel
             if "sig" in item:
                 sig = item.sig
-                params = _pp_to_param_list(sig.params)
+                params = _pp_to_param_list(item.params)
                 traits: Dict[str, Any] = {}
                 backends: Dict[str, Dict[str, Any]] = {}
 
@@ -293,13 +309,16 @@ def parse_interface_text(src: str) -> List[InterfaceSpec]:
                     if "backends" in wt and wt.backends:
                         for bb in wt.backends:
                             items = {}
-                            for kv in bb.items:
+                            for kv in bb["items"]:
                                 v = kv.v.asList() if hasattr(kv.v, "asList") else kv.v
                                 items[kv.k] = v
                             backends[bb.backend] = items
+                # kernel-level tiled modifier
+                if ("tiled" in item and item.tiled) or ("tiled" in sig and sig.tiled):
+                    traits["tiled"] = True
 
                 k = KernelSpec(
-                    name=sig.kname,
+                    name=item.kname,
                     params=params,
                     shapes={},         # width_of/height_of symbols can be normalized later if desired
                     traits=traits,
@@ -311,9 +330,10 @@ def parse_interface_text(src: str) -> List[InterfaceSpec]:
 
             # Alias
             if "base" in item and "new" in item and not ("extension" in item):
-                base, new = item.base, item.new
+                # Grammar is: alias <new_name> as <base_name>(...)
+                new_name, base_name = item.base, item.new
                 new_params = _pp_to_param_list(item.params) if "params" in item and item.params else None
-                pending_aliases.append((base, new, new_params))
+                pending_aliases.append((new_name, base_name, new_params))
                 continue
 
             # Extension
@@ -329,7 +349,7 @@ def parse_interface_text(src: str) -> List[InterfaceSpec]:
                 if "backends" in item and item.backends:
                     for bb in item.backends:
                         items = {}
-                        for kv in bb.items:
+                        for kv in bb["items"]:
                             v = kv.v.asList() if hasattr(kv.v, "asList") else kv.v
                             items[kv.k] = v
                         backends[bb.backend] = items
@@ -337,20 +357,20 @@ def parse_interface_text(src: str) -> List[InterfaceSpec]:
                 continue
 
         # ---- resolve aliases
-        for base, new, new_params in pending_aliases:
-            if base not in kernel_by_name:
-                raise ParseException(f"[interface_parser] alias refers to unknown kernel '{base}'")
-            src = kernel_by_name[base]
+        for new_name, base_name, new_params in pending_aliases:
+            if base_name not in kernel_by_name:
+                raise ParseException(f"[interface_parser] alias refers to unknown kernel '{base_name}'")
+            src = kernel_by_name[base_name]
             kcopy = KernelSpec(
-                name=new,
+                name=new_name,
                 params=(new_params if new_params else [KernelParamSpec(**vars(p)) for p in src.params]),
                 shapes=dict(src.shapes),
                 traits=dict(src.traits),
                 backend_overrides={b: dict(v) for b, v in src.backend_overrides.items()},
-                alias_of=base
+                alias_of=base_name
             )
             kernels.append(kcopy)
-            kernel_by_name[new] = kcopy
+            kernel_by_name[new_name] = kcopy
 
         # ---- resolve extensions
         def _merge_traits(base_traits: Dict[str,Any], add_traits: Dict[str,Any]) -> Dict[str,Any]:

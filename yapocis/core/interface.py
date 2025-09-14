@@ -4,9 +4,43 @@
 # Inspired by an IDL parser by Paul McGuire, shipped as a demo with pyparser
 #
 
+from dataclasses import dataclass
+from typing import Optional
+
 from yapocis.interfaces import find_interface
 from yapocis.utils.stereo_typing import Any, Dict, List
-from .interface_parser import parse_interface_text, KernelParamSpec, KernelSpec, InterfaceSpec, ParseException
+from .interface_parser import parse_interface_text, ParseException
+
+@dataclass
+class KernelParamSpec:
+    name: str
+    hint: str
+    dim: str
+    pointer: str
+    data_type: str
+    np_dtype: str
+    derived: bool
+    derived_from: str
+
+
+@dataclass
+class KernelSpec:
+    name: str
+    alias: Optional[str]
+    parameters: List[KernelParamSpec]
+    definitions: Dict[str, KernelParamSpec]
+    tiled: bool
+
+
+@dataclass
+class InterfaceSpec:
+    name: str
+    tiled: bool
+    kernels: List[KernelSpec]
+    aliases: Dict[str, str]
+
+# Public alias used by other modules
+Interface = InterfaceSpec
 
 # Map from OpenCL datatype to a numpy data type
 ctype_to_nptype = {
@@ -25,8 +59,7 @@ def scan_kernel_parameters(kernel):
     return definitions
 
 _interfaces: Dict[str, Any] = {}
-
-
+# ... existing code ...
 def get_interfaces(s: str) -> List[InterfaceSpec]:
     """
     Builds an InterfaceSpec for the source interface definition.
@@ -37,7 +70,23 @@ def get_interfaces(s: str) -> List[InterfaceSpec]:
     except KeyError:
         interfaces = []
     try:
-        interfaces = parse_interface_text(s)
+        # Normalize legacy spellings to match the parser's expected tokens.
+        # This preserves compatibility with existing tests/specs that use widthof/heightof/outlike/in_out.
+        def _normalize(text: str) -> str:
+            import re
+            subs = [
+                (r"\bwidthof\b", "width_of"),
+                (r"\bheightof\b", "height_of"),
+                (r"\boutlike\b", "out_like"),
+                (r"\bin_out\b", "inout"),
+                (r"\bdepthof\b", "depth_of"),
+            ]
+            for pat, repl in subs:
+                text = re.sub(pat, repl, text)
+            return text
+
+        s_norm = _normalize(s)
+        parsed_interfaces = parse_interface_text(s_norm)
     except ParseException as e:
         print(e.args[0], e.args[2], e.line)
         source = e.args[0].splitlines()
@@ -46,52 +95,113 @@ def get_interfaces(s: str) -> List[InterfaceSpec]:
         source.insert(e.lineno, cursor)
         source = "\n".join(source)
         raise RuntimeError(f"Can't parse:\n{source}")
-    for interface in interfaces:
-        kernel_definitions = []
-        kernel_aliases = {}
-        interface_tiled = bool(getattr(interface, "tiled", ""))
-        for kernel in interface.kernels:
-            aliasof = kernel.alias_of
-            param_definitions = scan_kernel_parameters(kernel)
-            kernel_parameters = []
-            for param in kernel.parameters:
-                param_name = derived_from = param.name
-                derived = False
-                if param.dim:
-                    derived = True
-                    data_type = "int"
-                elif param.hint in ("outlike", "out_like"):
-                    derived = True
-                    param_name = f"out_like_{param_name}"
-                    data_type = param_definitions[param.name].data_type if param.data_type == '' else param.data_type
+    out: List[InterfaceSpec] = []
+    for p_iface in parsed_interfaces:
+        kernel_definitions: List[KernelSpec] = []
+        kernel_aliases: Dict[str, str] = {}
+        interface_tiled = bool(getattr(p_iface, "meta", {}).get("tiled", False))
+
+        for p_kernel in p_iface.kernels:
+            aliasof = getattr(p_kernel, "alias_of", None)
+            extends = getattr(p_kernel, "extends", None)
+
+            # Build parameter definitions first (non-output parameters define dtypes)
+            temp_params: Dict[str, KernelParamSpec] = {}
+            for p in p_kernel.params:
+                role = (p.role or "").lower() if hasattr(p, "role") else ""
+                name = p.name
+                dtype = (p.dtype or "") if hasattr(p, "dtype") else ""
+                hint = ""
+                dim = ""
+                pointer = ""
+                if role in ("in", "out", "inout", "in_out", "resident", "readwrite"):
+                    hint = "inout" if role in ("inout", "in_out", "readwrite") else role
+                    pointer = "*"
+                elif role in ("out_like", "outlike"):
+                    hint = "out_like"
+                    pointer = "*"
+                    dtype = ""  # derive later from like param
+                elif role in ("size_of", "sizeof", "width_of", "widthof", "height_of", "heightof", "depth_of"):
+                    dim = {
+                        "size_of": "size_of", "sizeof": "sizeof",
+                        "width_of": "width_of", "widthof": "width_of",
+                        "height_of": "height_of", "heightof": "height_of",
+                        "depth_of": "depth_of",
+                    }[role]
+                    dtype = "int"
+                # scalar form: dtype name
+                elif dtype:
+                    hint = ""
+                np_dtype = ctype_to_nptype.get(dtype, dtype)
+                # Only record definitions for non-output, non-derived params
+                if not dim and hint not in ("out", "out_like"):
+                    temp_params[name] = KernelParamSpec(
+                        name=name, hint=hint, dim=dim, pointer=pointer,
+                        data_type=dtype, np_dtype=np_dtype, derived=False, derived_from=name,
+                    )
+
+            # Now finalize kernel parameters list including derived forms
+            kernel_parameters: List[KernelParamSpec] = []
+            for p in p_kernel.params:
+                role = (p.role or "").lower() if hasattr(p, "role") else ""
+                name = p.name
+                dtype = (p.dtype or "") if hasattr(p, "dtype") else ""
+                if role in ("size_of", "sizeof", "width_of", "widthof", "height_of", "heightof", "depth_of"):
+                    dim = {
+                        "size_of": "size_of", "sizeof": "sizeof",
+                        "width_of": "width_of", "widthof": "width_of",
+                        "height_of": "height_of", "heightof": "height_of",
+                        "depth_of": "depth_of",
+                    }[role]
+                    kernel_parameters.append(KernelParamSpec(
+                        name=name, hint="", dim=dim, pointer="", data_type="int",
+                        np_dtype=ctype_to_nptype.get("int", "int32"), derived=True, derived_from=name,
+                    ))
+                elif role in ("out_like", "outlike"):
+                    like_dtype = temp_params[name].data_type if not dtype else dtype
+                    kernel_parameters.append(KernelParamSpec(
+                        name=f"out_like_{name}", hint="out_like", dim="", pointer="*",
+                        data_type=like_dtype, np_dtype=ctype_to_nptype.get(like_dtype, like_dtype),
+                        derived=True, derived_from=name,
+                    ))
                 else:
-                    data_type = param.data_type
-                np_dtype = ctype_to_nptype.get(data_type, data_type)
-                kernel_parameters.append(
-                    KernelParamSpec(name=param_name,
-                                    hint=param.hint,
-                                    dim=param.dim,
-                                    pointer=param.pointer,
-                                    data_type=data_type,
-                                    np_dtype=np_dtype,
-                                    derived=derived,
-                                    derived_from=derived_from))
-            kernel_name = f"{aliasof}_{kernel.name}" if kernel.kernel_type == "extension" else kernel.name
-            kernel_tiled = bool(getattr(kernel, "tiled", "")) or interface_tiled
+                    # in/out/inout/resident, or scalar (no role)
+                    hint = ""
+                    pointer = ""
+                    if role in ("in", "out", "inout", "in_out", "resident", "readwrite"):
+                        hint = "inout" if role in ("inout", "in_out", "readwrite") else role
+                        pointer = "*"
+                    np_dtype = ctype_to_nptype.get(dtype, dtype)
+                    kernel_parameters.append(KernelParamSpec(
+                        name=name, hint=hint, dim="", pointer=pointer,
+                        data_type=dtype, np_dtype=np_dtype, derived=False, derived_from=name,
+                    ))
+
+            param_definitions = {kp.name: kp for kp in kernel_parameters if kp.hint not in ("out", "out_like")}
+
+            base_name = getattr(p_kernel, "name", None) or getattr(p_kernel, "kname", None) or ""
+            # For extensions, expose as "<base>_<new>" but call underlying base kernel
+            if extends:
+                kernel_name = f"{extends}_{base_name}"
+                alias_for_runtime = extends
+            else:
+                kernel_name = base_name
+                alias_for_runtime = aliasof
+            kernel_tiled = bool(getattr(p_kernel, "traits", {}).get("tiled", False) or interface_tiled)
             kernel_spec = KernelSpec(name=kernel_name,
-                                     alias=aliasof,
+                                     alias=alias_for_runtime,
                                      parameters=kernel_parameters,
                                      definitions=param_definitions,
                                      tiled=kernel_tiled)
             kernel_definitions.append(kernel_spec)
-            if kernel.alias_of:
-                kernel_aliases[kernel_name] = kernel.alias_of
-        interfaces.append(InterfaceSpec(name=interface.name,
-                                    tiled=interface_tiled,
-                                    kernels=kernel_definitions,
-                                    aliases=kernel_aliases))
-    _interfaces[s] = interfaces
-    return interfaces
+            if aliasof:
+                kernel_aliases[kernel_name] = aliasof
+
+        out.append(InterfaceSpec(name=p_iface.name, tiled=interface_tiled,
+                                  kernels=kernel_definitions, aliases=kernel_aliases))
+    _interfaces[s] = out
+    return out
+# ... existing code ...
 
 
 def get_interface(s: str) -> InterfaceSpec:

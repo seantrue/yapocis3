@@ -2,7 +2,7 @@ from __future__ import annotations
 import cupy as cp
 from pathlib import Path
 from typing import Any
-from core.interface import load_interface, get_interface
+from yapocis.core.interface import load_interface, get_interface
 from yapocis.core.mako_utils import render_template, resolve_template
 from yapocis.core.autopad import pad_sizes
 from yapocis.core.tunecache import get_local_size

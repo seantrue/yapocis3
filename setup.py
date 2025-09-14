@@ -1,10 +1,14 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
+from pathlib import Path
 from setuptools import find_packages, setup
+
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text(encoding="utf-8")
 
 setup(
     name = "yapocis",
-    version = "0.3.0",
+    version = "0.3.1",
     packages = find_packages(),
     zip_safe=False,
     # Requirements are in requirements.txt
@@ -24,13 +28,6 @@ setup(
                    "License :: OSI Approved :: Python Software Foundation License",
                    "Topic :: Scientific/Engineering :: Image Recognition",
                    ],
-    long_description="""
-Yapocis is "Yet another Python OpenCL interface specification".
-
-Memorable. Easy to pronounce and spell. Clearly related to the semantics of the project.
-
-Or not, all the good names are used and I am not in marketing
-
-It includes easy-to-call-from-Python, reasonably performing implementations of the Mandelbrot kernel, 3x3 median filters, image gradients, and HSI <-> RGB image conversions. I use it to develop much less generally useful implementations of bizarre image processing ideas.
-"""
+    long_description=long_description,
+    long_description_content_type="text/markdown",
 )
