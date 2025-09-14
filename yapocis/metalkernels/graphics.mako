@@ -8,9 +8,9 @@ kernel void lines(constant int &width [[ buffer(0) ]],
                   constant int &height [[ buffer(1) ]],
                   device float *a [[ buffer(2) ]],
                   constant int &nelements [[ buffer(3) ]],
-                  device float2 *coords [[ buffer(4) ]],
-                  device float *rdist [[ buffer(5) ]],
-                  device float2 *colors [[ buffer(6) ]],
+                  const device float2 *coords [[ buffer(4) ]],
+                  const device float *rdist [[ buffer(5) ]],
+                  const device float2 *colors [[ buffer(6) ]],
                   uint gid [[ thread_position_in_grid ]])
 {
     float color = a[gid];
@@ -35,15 +35,14 @@ kernel void lines(constant int &width [[ buffer(0) ]],
         color = (u >= 0.0f && u <= 1.0f && dist2 < threshold2) ? clr : color;
     }
     a[gid] = color;
-    barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
 kernel void rects(constant int &width [[ buffer(0) ]],
                   constant int &height [[ buffer(1) ]],
                   device float *a [[ buffer(2) ]],
                   constant int &nlines [[ buffer(3) ]],
-                  device float4 *coords [[ buffer(4) ]],
-                  device float2 *colors [[ buffer(5) ]],
+                  const device float4 *coords [[ buffer(4) ]],
+                  const device float2 *colors [[ buffer(5) ]],
                   uint gid [[ thread_position_in_grid ]])
 {
     float color = a[gid];
@@ -63,15 +62,14 @@ kernel void rects(constant int &width [[ buffer(0) ]],
         color = (l <= x && x <= r && b <= y && y <= t) ? clr : color;
     }
     a[gid] = color;
-    barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
 kernel void circles(constant int &width [[ buffer(0) ]],
                     constant int &height [[ buffer(1) ]],
                     device float *a [[ buffer(2) ]],
                     constant int &nlines [[ buffer(3) ]],
-                    device float *coords [[ buffer(4) ]],
-                    device float2 *colors [[ buffer(5) ]],
+                    const device float *coords [[ buffer(4) ]],
+                    const device float2 *colors [[ buffer(5) ]],
                     uint gid [[ thread_position_in_grid ]])
 {
     float color = a[gid];
@@ -89,7 +87,6 @@ kernel void circles(constant int &width [[ buffer(0) ]],
         color = dxdy2(center,point) <= radius ? clr : color;
     }
     a[gid] = color;
-    barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
 #define signex(p1,p2,p3) ((p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y))
@@ -98,8 +95,8 @@ kernel void triangles(constant int &width [[ buffer(0) ]],
                       constant int &height [[ buffer(1) ]],
                       device float *a [[ buffer(2) ]],
                       constant int &nlines [[ buffer(3) ]],
-                      device float2 *coords [[ buffer(4) ]],
-                      device float2 *colors [[ buffer(5) ]],
+                      const device float2 *coords [[ buffer(4) ]],
+                      const device float2 *colors [[ buffer(5) ]],
                       uint gid [[ thread_position_in_grid ]])
 {
     float color = a[gid];
@@ -122,7 +119,6 @@ kernel void triangles(constant int &width [[ buffer(0) ]],
         color = !(has_neg && has_pos) ? clr : color;
     }
     a[gid] = color;
-    barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
 // (x-h)^2/a^2 + (y-k)^2/b^2 <= 1
@@ -130,8 +126,8 @@ kernel void ellipses(constant int &width [[ buffer(0) ]],
                      constant int &height [[ buffer(1) ]],
                      device float *a [[ buffer(2) ]],
                      constant int &nlines [[ buffer(3) ]],
-                     device float2 *coords [[ buffer(4) ]],
-                     device float2 *colors [[ buffer(5) ]],
+                     const device float2 *coords [[ buffer(4) ]],
+                     const device float2 *colors [[ buffer(5) ]],
                      uint gid [[ thread_position_in_grid ]])
 {
     float color = a[gid];
@@ -148,16 +144,15 @@ kernel void ellipses(constant int &width [[ buffer(0) ]],
         color = (dist.x+dist.y) <= 1.0f ? clr : color;
     }
     a[gid] = color;
-    barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
 kernel void composite(constant int &width [[ buffer(0) ]],
                       constant int &height [[ buffer(1) ]],
                       device float *a [[ buffer(2) ]],
                       constant int &n [[ buffer(3) ]],
-                      device int4 *coords [[ buffer(4) ]],
-                      device float2 *pixels [[ buffer(5) ]],
-                      device int *ipixels [[ buffer(6) ]],
+                      const device int4 *coords [[ buffer(4) ]],
+                      const device float2 *pixels [[ buffer(5) ]],
+                      const device int *ipixels [[ buffer(6) ]],
                       constant int &npixels [[ buffer(7) ]],
                       uint gid [[ thread_position_in_grid ]])
 {
@@ -180,5 +175,4 @@ kernel void composite(constant int &width [[ buffer(0) ]],
         color = inside ? clr : color;
     }
     a[gid] = color;
-    barrier(CLK_GLOBAL_MEM_FENCE);
 }

@@ -2,7 +2,9 @@
 % for name, conv in convs:
 <% margin = len(conv)//2 %>
 __kernel
-void ${name}(int vertical, int width, int height, __global float* a, __global float* ret )
+void ${name}(int vertical, int width, int height,
+             __global const float* restrict a,
+             __global float* restrict ret)
 {
     size_t i = get_global_id(0);
     size_t n = width*height;
@@ -23,7 +25,9 @@ void ${name}(int vertical, int width, int height, __global float* a, __global fl
     return;
 }
 __kernel
-void ${name}_h(int width, int height, __global float* a, __global float* ret )
+void ${name}_h(int width, int height,
+               __global const float* restrict a,
+               __global float* restrict ret)
 {
     size_t i = get_global_id(0);
     size_t n = width*height;
@@ -38,7 +42,9 @@ void ${name}_h(int width, int height, __global float* a, __global float* ret )
     return;
 }
 __kernel
-void ${name}_v(int width, int height, __global float* a, __global float* ret )
+void ${name}_v(int width, int height,
+               __global const float* restrict a,
+               __global float* restrict ret)
 {
     size_t i = get_global_id(0);
     size_t n = width*height;

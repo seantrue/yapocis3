@@ -1,4 +1,4 @@
-interface graphics4 {
+interface tiled graphics4 {
     # Kernels have extensiones for running on resident buffers
     kernel lines(width_of a, height_of a, inout float a, width_of lines, in float lines, in float distance, in float rcolor);
     extension res as lines(width_of a, height_of a, resident float a, width_of lines, in float lines, in float distance, in float rcolor);

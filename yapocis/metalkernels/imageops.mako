@@ -1,7 +1,7 @@
 // Metal translations of imageops kernels
 <%include file="constants.mako" />
 
-kernel void clamp_pixels(device float *input [[ buffer(0) ]],
+kernel void clamp_pixels(const device float *input [[ buffer(0) ]],
                          constant float &low [[ buffer(1) ]],
                          constant float &high [[ buffer(2) ]],
                          device float *output [[ buffer(3) ]],
@@ -12,7 +12,7 @@ kernel void clamp_pixels(device float *input [[ buffer(0) ]],
     output[gid] = value;
 }
 
-kernel void stretch(device float *input [[ buffer(0) ]],
+kernel void stretch(const device float *input [[ buffer(0) ]],
                     constant float &input_min [[ buffer(1) ]],
                     constant float &input_max [[ buffer(2) ]],
                     constant float &low [[ buffer(3) ]],
@@ -27,7 +27,7 @@ kernel void stretch(device float *input [[ buffer(0) ]],
     output[gid] = value;
 }
 
-kernel void binarize(device float *input [[ buffer(0) ]],
+kernel void binarize(const device float *input [[ buffer(0) ]],
                      constant float &threshold [[ buffer(1) ]],
                      device float *output [[ buffer(2) ]],
                      uint gid [[ thread_position_in_grid ]]) {
@@ -36,7 +36,7 @@ kernel void binarize(device float *input [[ buffer(0) ]],
     output[gid] = value;
 }
 
-kernel void histogram(device float *input [[ buffer(0) ]],
+kernel void histogram(const device float *input [[ buffer(0) ]],
                       constant int &size_of_input [[ buffer(1) ]],
                       constant float &low [[ buffer(2) ]],
                       constant float &high [[ buffer(3) ]],

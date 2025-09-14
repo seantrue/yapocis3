@@ -11,12 +11,14 @@ kernel void lines(constant int &width [[ buffer(0) ]],
                   constant int &height [[ buffer(1) ]],
                   device float4 *a [[ buffer(2) ]],
                   constant int &nelements [[ buffer(3) ]],
-                  device float2 *coords [[ buffer(4) ]],
-                  device float *rdist [[ buffer(5) ]],
-                  device float4 *colors [[ buffer(6) ]],
-                  uint gid [[ thread_position_in_grid ]]) {
-  int x = X(gid);
-  int y = Y(gid);
+                  const device float2 *coords [[ buffer(4) ]],
+                  const device float *rdist [[ buffer(5) ]],
+                  const device float4 *colors [[ buffer(6) ]],
+                  uint2 tid [[ thread_position_in_grid ]]) {
+  int x = int(tid.x);
+  int y = int(tid.y);
+  if (x >= width || y >= height) return;
+  size_t gid = size_t(x) * size_t(height) + size_t(y);
   float4 color = a[gid];
 
   float2 point = float2((float)x, (float)y);
@@ -38,19 +40,20 @@ kernel void lines(constant int &width [[ buffer(0) ]],
   }
   color.w = 0.0f;
   a[gid] = color;
-  barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
 kernel void rects(constant int &width [[ buffer(0) ]],
                   constant int &height [[ buffer(1) ]],
                   device float4 *a [[ buffer(2) ]],
                   constant int &nelements [[ buffer(3) ]],
-                  device float4 *coords [[ buffer(4) ]],
-                  device float4 *colors [[ buffer(5) ]],
-                  uint gid [[ thread_position_in_grid ]]) {
+                  const device float4 *coords [[ buffer(4) ]],
+                  const device float4 *colors [[ buffer(5) ]],
+                  uint2 tid [[ thread_position_in_grid ]]) {
+  int x = int(tid.x);
+  int y = int(tid.y);
+  if (x >= width || y >= height) return;
+  size_t gid = size_t(x) * size_t(height) + size_t(y);
   float4 pixel = a[gid];
-  int x = X(gid);
-  int y = Y(gid);
 
   for (int ielement = 0; ielement < nelements; ielement++) {
     float4 rgba = *colors++;
@@ -65,19 +68,20 @@ kernel void rects(constant int &width [[ buffer(0) ]],
     pixel = (l <= x && x <= r && b <= y && y <= t) ? clr : pixel;
   }
   a[gid] = pixel;
-  barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
 kernel void circles(constant int &width [[ buffer(0) ]],
                     constant int &height [[ buffer(1) ]],
                     device float4 *a [[ buffer(2) ]],
                     constant int &nelements [[ buffer(3) ]],
-                    device float *coords [[ buffer(4) ]],
-                    device float4 *colors [[ buffer(5) ]],
-                    uint gid [[ thread_position_in_grid ]]) {
+                    const device float *coords [[ buffer(4) ]],
+                    const device float4 *colors [[ buffer(5) ]],
+                    uint2 tid [[ thread_position_in_grid ]]) {
+  int x = int(tid.x);
+  int y = int(tid.y);
+  if (x >= width || y >= height) return;
+  size_t gid = size_t(x) * size_t(height) + size_t(y);
   float4 pixel = a[gid];
-  int x = X(gid);
-  int y = Y(gid);
 
   float2 point = float2((float)x, (float)y);
   for (int ielement = 0; ielement < nelements; ielement++) {
@@ -94,7 +98,6 @@ kernel void circles(constant int &width [[ buffer(0) ]],
     pixel = dxdy2(center, point) <= radius ? clr : pixel;
   }
   a[gid] = pixel;
-  barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
 #define signex(p1, p2, p3) ((p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y))
@@ -103,12 +106,14 @@ kernel void triangles(constant int &width [[ buffer(0) ]],
                       constant int &height [[ buffer(1) ]],
                       device float4 *a [[ buffer(2) ]],
                       constant int &nelements [[ buffer(3) ]],
-                      device float2 *coords [[ buffer(4) ]],
-                      device float4 *colors [[ buffer(5) ]],
-                      uint gid [[ thread_position_in_grid ]]) {
+                      const device float2 *coords [[ buffer(4) ]],
+                      const device float4 *colors [[ buffer(5) ]],
+                      uint2 tid [[ thread_position_in_grid ]]) {
+  int x = int(tid.x);
+  int y = int(tid.y);
+  if (x >= width || y >= height) return;
+  size_t gid = size_t(x) * size_t(height) + size_t(y);
   float4 pixel = a[gid];
-  int x = X(gid);
-  int y = Y(gid);
   float2 point = float2((float)x, (float)y);
   for (int ielement = 0; ielement < nelements; ielement++) {
     float4 rgba = *colors++;
@@ -128,7 +133,6 @@ kernel void triangles(constant int &width [[ buffer(0) ]],
     pixel = !(has_neg && has_pos) ? clr : pixel;
   }
   a[gid] = pixel;
-  barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
 // (x-h)^2/a^2 + (y-k)^2/b^2 <= 1
@@ -136,12 +140,14 @@ kernel void ellipses(constant int &width [[ buffer(0) ]],
                      constant int &height [[ buffer(1) ]],
                      device float4 *a [[ buffer(2) ]],
                      constant int &nelements [[ buffer(3) ]],
-                     device float4 *coords [[ buffer(4) ]],
-                     device float4 *colors [[ buffer(5) ]],
-                     uint gid [[ thread_position_in_grid ]]) {
+                     const device float4 *coords [[ buffer(4) ]],
+                     const device float4 *colors [[ buffer(5) ]],
+                     uint2 tid [[ thread_position_in_grid ]]) {
+  int x = int(tid.x);
+  int y = int(tid.y);
+  if (x >= width || y >= height) return;
+  size_t gid = size_t(x) * size_t(height) + size_t(y);
   float4 pixel = a[gid];
-  int x = X(gid);
-  int y = Y(gid);
   float2 point = float2((float)x, (float)y);
   for (int ielement = 0; ielement < nelements; ielement++) {
     float4 rgba = *colors++;
@@ -156,21 +162,22 @@ kernel void ellipses(constant int &width [[ buffer(0) ]],
     pixel = (dist.x + dist.y) <= 1.0f ? clr : pixel;
   }
   a[gid] = pixel;
-  barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
 kernel void composite(constant int &width [[ buffer(0) ]],
                       constant int &height [[ buffer(1) ]],
                       device float4 *a [[ buffer(2) ]],
                       constant int &nelements [[ buffer(3) ]],
-                      device int4 *coords [[ buffer(4) ]],
-                      device float4 *pixels [[ buffer(5) ]],
-                      device int *ipixels [[ buffer(6) ]],
+                      const device int4 *coords [[ buffer(4) ]],
+                      const device float4 *pixels [[ buffer(5) ]],
+                      const device int *ipixels [[ buffer(6) ]],
                       constant int &npixels [[ buffer(7) ]],
-                      uint gid [[ thread_position_in_grid ]]) {
+                      uint2 tid [[ thread_position_in_grid ]]) {
+  int x = int(tid.x);
+  int y = int(tid.y);
+  if (x >= width || y >= height) return;
+  size_t gid = size_t(y) * size_t(width) + size_t(x);
   float4 pixel = a[gid];
-  int x = X(gid);
-  int y = Y(gid);
 
   int2 xy = int2(x,y);
   for (int ielement = 0; ielement < nelements; ielement++) {
@@ -191,5 +198,4 @@ kernel void composite(constant int &width [[ buffer(0) ]],
     pixel = inside ? clr : pixel;
   }
   a[gid] = pixel;
-  barrier(CLK_GLOBAL_MEM_FENCE);
 }

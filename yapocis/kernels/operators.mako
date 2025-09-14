@@ -2,10 +2,11 @@
 
 %for name, operator in operators:
 __kernel
-void ${name}(__global float* input1, __global float* input2, __global float *output)
+void ${name}(__global const float* restrict input1,
+             __global const float* restrict input2,
+             __global float* restrict output)
 {
-    size_t i;
-    i = get_global_id(0);
+    size_t i = get_global_id(0);
     output[i] = input1[i] ${operator} input2[i];
 }
 %endfor

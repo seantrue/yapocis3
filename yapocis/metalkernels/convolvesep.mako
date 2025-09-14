@@ -7,7 +7,7 @@
 kernel void ${name}(constant int &vertical [[ buffer(0) ]],
                     constant int &width [[ buffer(1) ]],
                     constant int &height [[ buffer(2) ]],
-                    device float* a [[ buffer(3) ]],
+                    const device float* a [[ buffer(3) ]],
                     device float* ret [[ buffer(4) ]],
                     uint gid [[ thread_position_in_grid ]])
 {
@@ -31,7 +31,7 @@ kernel void ${name}(constant int &vertical [[ buffer(0) ]],
 
 kernel void ${name}_h(constant int &width [[ buffer(0) ]],
                       constant int &height [[ buffer(1) ]],
-                      device float* a [[ buffer(2) ]],
+                      const device float* a [[ buffer(2) ]],
                       device float* ret [[ buffer(3) ]],
                       uint gid [[ thread_position_in_grid ]])
 {
@@ -47,7 +47,7 @@ kernel void ${name}_h(constant int &width [[ buffer(0) ]],
 
 kernel void ${name}_v(constant int &width [[ buffer(0) ]],
                       constant int &height [[ buffer(1) ]],
-                      device float* a [[ buffer(2) ]],
+                      const device float* a [[ buffer(2) ]],
                       device float* ret [[ buffer(3) ]],
                       uint gid [[ thread_position_in_grid ]])
 {

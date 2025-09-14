@@ -205,7 +205,7 @@ constant float transforms[] =
     0,0,1
 };
 
-kernel void transform(device float *input [[ buffer(0) ]],
+kernel void transform(const device float *input [[ buffer(0) ]],
                       constant int &transform_id [[ buffer(1) ]],
                       device float *output [[ buffer(2) ]],
                       uint gid [[ thread_position_in_grid ]]) {
@@ -230,7 +230,7 @@ kernel void transform(device float *input [[ buffer(0) ]],
 // x = X/(X+Y+Z)
 // y = Y/(X+Y+Z)
 // y = y
-kernel void xyz2xyY(device float *input [[ buffer(0) ]],
+kernel void xyz2xyY(const device float *input [[ buffer(0) ]],
                     device float *output [[ buffer(1) ]],
                     uint gid [[ thread_position_in_grid ]]) {
     size_t i = gid*3;
@@ -246,7 +246,7 @@ kernel void xyz2xyY(device float *input [[ buffer(0) ]],
 // X = x*Y/y
 // Y = Y
 // Z = ((1−x−y)*Y)/y
-kernel void xyY2xyz(device float *input [[ buffer(0) ]],
+kernel void xyY2xyz(const device float *input [[ buffer(0) ]],
                     device float *output [[ buffer(1) ]],
                     uint gid [[ thread_position_in_grid ]]) {
     size_t i = gid*3;

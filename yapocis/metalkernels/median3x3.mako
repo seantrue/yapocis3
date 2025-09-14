@@ -18,15 +18,15 @@ static inline float median9(thread float *a, int n) {
 
 kernel void median3x3(constant int &width [[ buffer(0) ]],
                       constant int &height [[ buffer(1) ]],
-                      device float* a [[ buffer(2) ]],
+                      const device float* a [[ buffer(2) ]],
                       device float* ret [[ buffer(3) ]],
                       uint gid [[ thread_position_in_grid ]])
 {
     float aa[9];
     size_t i = gid;
     float m = a[i];
-    size_t left = height + 1;
-    size_t right = width - left;
+    size_t left = (size_t)height + 1;
+    size_t right = (size_t)width - left;
     int h = height;
     if ((i >= left) && (i < right)) {
         aa[0] = a[(i-h)-1];

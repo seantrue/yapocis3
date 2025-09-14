@@ -10,12 +10,15 @@
 #define ONES ONE4
 #define ZEROS ZERO4
 
-__kernel void lines(int width, int height, READWRITE float4 *a, int nelements,
-                    READONLY float2 *coords, READONLY float *rdist,
-                    READONLY float4 *colors) {
-  size_t i = get_global_id(0);
-  int x = X(i);
-  int y = Y(i);
+__kernel void lines(int width, int height,
+                    READWRITE float4 * restrict a, int nelements,
+                    READONLY const float2 * restrict coords,
+                    READONLY const float * restrict rdist,
+                    READONLY const float4 * restrict colors) {
+  int x = get_global_id(0);
+  int y = get_global_id(1);
+  if (x >= width || y >= height) return;
+  size_t i = (size_t)y * (size_t)width + (size_t)x;
   float4 color = a[i];
 
   float2 point = (float2)((float)x, (float)y);
@@ -37,15 +40,17 @@ __kernel void lines(int width, int height, READWRITE float4 *a, int nelements,
   }
   color.s3 = 0.0f;
   a[i] = color;
-  barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-__kernel void rects(int width, int height, READWRITE float4 *a, int nelements,
-                    READONLY float4 *coords, READONLY float4 *colors) {
-  size_t i = get_global_id(0);
+__kernel void rects(int width, int height,
+                    READWRITE float4 * restrict a, int nelements,
+                    READONLY const float4 * restrict coords,
+                    READONLY const float4 * restrict colors) {
+  int x = get_global_id(0);
+  int y = get_global_id(1);
+  if (x >= width || y >= height) return;
+  size_t i = (size_t)y * (size_t)width + (size_t)x;
   float4 pixel = a[i];
-  int x = X(i);
-  int y = Y(i);
 
   for (int ielement = 0; ielement < nelements; ielement++) {
     float4 rgba = *colors++;
@@ -61,15 +66,17 @@ __kernel void rects(int width, int height, READWRITE float4 *a, int nelements,
     pixel = (l <= x && x <= r && b <= y && y <= t) ? clr : pixel;
   }
   a[i] = pixel;
-  barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-__kernel void circles(int width, int height, READWRITE float4 *a, int nelements,
-                      READONLY float *coords, READONLY float4 *colors) {
-  size_t i = get_global_id(0);
+__kernel void circles(int width, int height,
+                      READWRITE float4 * restrict a, int nelements,
+                      READONLY const float * restrict coords,
+                      READONLY const float4 * restrict colors) {
+  int x = get_global_id(0);
+  int y = get_global_id(1);
+  if (x >= width || y >= height) return;
+  size_t i = (size_t)y * (size_t)width + (size_t)x;
   float4 pixel = a[i];
-    int x = X(i);
-    int y = Y(i);
 
     float2 point = (float2)((float)x, (float)y);
       for (int ielement = 0; ielement < nelements; ielement++) {
@@ -86,18 +93,20 @@ __kernel void circles(int width, int height, READWRITE float4 *a, int nelements,
         pixel = dxdy2(center, point) <= radius ? clr : pixel;
       }
   a[i] = pixel;
-  barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
 #define signex(p1, p2, p3)                                                     \
   ((p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y))
 
-__kernel void triangles(int width, int height, READWRITE float4 *a, int nelements,
-                        READONLY float2 *coords, READONLY float4 *colors) {
-  size_t i = get_global_id(0);
+__kernel void triangles(int width, int height,
+                        READWRITE float4 * restrict a, int nelements,
+                        READONLY const float2 * restrict coords,
+                        READONLY const float4 * restrict colors) {
+  int x = get_global_id(0);
+  int y = get_global_id(1);
+  if (x >= width || y >= height) return;
+  size_t i = (size_t)y * (size_t)width + (size_t)x;
   float4 pixel = a[i];
-  int x = X(i);
-  int y = Y(i);
   float2 point = (float2)((float)x, (float)y);
   for (int ielement = 0; ielement < nelements; ielement++) {
     float4 rgba = *colors++;
@@ -117,16 +126,18 @@ __kernel void triangles(int width, int height, READWRITE float4 *a, int nelement
     pixel = !(has_neg && has_pos) ? clr : pixel;
   }
   a[i] = pixel;
-  barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
 // (x-h)^2/a^2 + (y-k)^2/b^2 <= 1
-__kernel void ellipses(int width, int height, READWRITE float4 *a, int nelements,
-                       READONLY float4 *coords, READONLY float4 *colors) {
-  size_t i = get_global_id(0);
+__kernel void ellipses(int width, int height,
+                       READWRITE float4 * restrict a, int nelements,
+                       READONLY const float4 * restrict coords,
+                       READONLY const float4 * restrict colors) {
+  int x = get_global_id(0);
+  int y = get_global_id(1);
+  if (x >= width || y >= height) return;
+  size_t i = (size_t)y * (size_t)width + (size_t)x;
   float4 pixel = a[i];
-  int x = X(i);
-  int y = Y(i);
   float2 point = (float2)((float)x, (float)y);
   for (int ielement = 0; ielement < nelements; ielement++) {
     float4 rgba = *colors++;
@@ -141,16 +152,18 @@ __kernel void ellipses(int width, int height, READWRITE float4 *a, int nelements
     pixel = (dist.x + dist.y) <= 1.0 ? clr : pixel;
   }
   a[i] = pixel;
-  barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-__kernel void composite(int width, int height, READWRITE float4 *a, int nelements,
-                        READONLY int4 *coords, READWRITE float4 *pixels,
-                        READONLY int *ipixels, int npixels) {
-  size_t i = get_global_id(0);
+__kernel void composite(int width, int height,
+                        READWRITE float4 * restrict a, int nelements,
+                        READONLY const int4 * restrict coords,
+                        READONLY const float4 * restrict pixels,
+                        READONLY const int * restrict ipixels, int npixels) {
+  int x = get_global_id(0);
+  int y = get_global_id(1);
+  if (x >= width || y >= height) return;
+  size_t i = (size_t)y * (size_t)width + (size_t)x;
   float4 pixel = a[i];
-  int x = X(i);
-  int y = Y(i);
 
   int2 xy = (int2)(x,y);
   for (int ielement = 0; ielement < nelements; ielement++) {
@@ -173,5 +186,4 @@ __kernel void composite(int width, int height, READWRITE float4 *a, int nelement
     pixel = inside ? clr : pixel;
   }
   a[i] = pixel;
-  barrier(CLK_GLOBAL_MEM_FENCE);
 }

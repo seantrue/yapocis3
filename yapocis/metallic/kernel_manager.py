@@ -83,7 +83,11 @@ class KernelManager:
         for kernel in interface.kernels:
             name = kernel.alias if getattr(kernel, "alias", None) else kernel.name
             pm_kernel = pm.Kernel(self.dmgr.device, source=source, func=name)
-            self.callable[kernel.name] = Kernel(name, self, pm_kernel, kernel.parameters, async_write=async_write)
+            use_tiled = bool(getattr(kernel, "tiled", False) or getattr(interface, "tiled", False))
+            self.callable[kernel.name] = Kernel(
+                name, self, pm_kernel, kernel.parameters,
+                async_write=async_write, tiled=use_tiled
+            )
 
     def read(self, a):
         return self.dmgr.read(a)
