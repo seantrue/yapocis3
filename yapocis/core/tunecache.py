@@ -26,13 +26,20 @@ def save_cache(data: Dict[str, Any], path: Path = DEFAULT_PATH) -> None:
 def get_device_fingerprint(backend: str = "cuda") -> str:
     if backend == "cuda":
         try:
-            import cupy as cp
-            dev = cp.cuda.runtime.getDevice()
-            props = cp.cuda.runtime.getDeviceProperties(dev)
-            name = props["name"].decode("utf-8") if isinstance(props["name"], (bytes, bytearray)) else str(props["name"])
-            cc_major = props.get("major", 0); cc_minor = props.get("minor", 0)
-            mp = props.get("multiProcessorCount", 0)
-            return f"cuda:{name}:cc{cc_major}{cc_minor}:mp{mp}"
+            import pycuda.driver as cuda  # type: ignore
+            # Ensure context is initialized; if pycuda.autoinit not imported, try init
+            try:
+                _ = cuda.Context.get_current()
+            except Exception:
+                cuda.init()
+            dev = cuda.Device(0)
+            name = dev.name()
+            cc = dev.compute_capability()
+            try:
+                mp = dev.get_attribute(cuda.device_attribute.MULTIPROCESSOR_COUNT)  # type: ignore[attr-defined]
+            except Exception:
+                mp = 0
+            return f"cuda:{name}:cc{cc[0]}{cc[1]}:mp{mp}"
         except Exception:
             return "cuda:unknown"
     # Fallback / other backends

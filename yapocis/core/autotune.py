@@ -1,7 +1,7 @@
 
 """
 Auto-tuning helpers for choosing local_size / tile sizes.
-- CUDA: uses CuPy events for accurate timing.
+- CUDA: uses PyCUDA events for accurate timing when available.
 - Fallback: uses time.perf_counter with best-effort synchronization.
 """
 from __future__ import annotations
@@ -9,17 +9,22 @@ from typing import Iterable, Sequence, Tuple, Any, Dict, Optional
 import time
 
 try:
-    import cupy as cp
+    import pycuda.driver as _cuda  # type: ignore
 except Exception:  # pragma: no cover
-    cp = None
+    _cuda = None
 
 def _sync_cuda():
-    if cp is not None:
-        cp.cuda.runtime.deviceSynchronize()
+    if _cuda is not None:
+        try:
+            _cuda.Context.synchronize()
+        except Exception:
+            pass
 
 def _time_kernel_cuda(fn, args, *, global_size, local_size, iters=10, warmup=2) -> float:
-    start = cp.cuda.Event()  # type: ignore[attr-defined]
-    end   = cp.cuda.Event()  # type: ignore[attr-defined]
+    if _cuda is None:
+        raise RuntimeError("PyCUDA not available")
+    start = _cuda.Event()
+    end = _cuda.Event()
     # warmup
     for _ in range(warmup):
         fn(*args, global_size=global_size, local_size=local_size)
@@ -29,7 +34,12 @@ def _time_kernel_cuda(fn, args, *, global_size, local_size, iters=10, warmup=2) 
         fn(*args, global_size=global_size, local_size=local_size)
     end.record()
     end.synchronize()
-    return cp.cuda.get_elapsed_time(start, end) / iters  # milliseconds
+    try:
+        # Prefer end.time_since(start) if available
+        elapsed = end.time_since(start)
+    except Exception:
+        elapsed = start.time_till(end)
+    return elapsed / iters  # milliseconds
 
 def _time_kernel_fallback(fn, args, *, global_size, local_size, iters=10, warmup=2) -> float:
     for _ in range(warmup):
@@ -51,12 +61,8 @@ def autotune_local_size(fn, args: Sequence[Any], *, global_size: Sequence[int],
     """
     results = []
     timer = None
-    if prefer_cuda_timer and cp is not None:
-        try:
-            _ = cp.cuda.Event  # type check
-            timer = _time_kernel_cuda
-        except Exception:
-            timer = None
+    if prefer_cuda_timer and _cuda is not None:
+        timer = _time_kernel_cuda
     if timer is None:
         timer = _time_kernel_fallback
 

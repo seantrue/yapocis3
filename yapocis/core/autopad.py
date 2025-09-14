@@ -8,10 +8,13 @@ except Exception:
 
 
 def _is_array(x: Any) -> bool:
-    if _np is not None and isinstance(x, _np.ndarray): return True
+    if _np is not None and isinstance(x, _np.ndarray):
+        return True
+    # Detect PyCUDA GPUArray without importing at module import time if unavailable
     try:
-        import cupy as _cp
-        if isinstance(x, _cp.ndarray): return True
+        import pycuda.gpuarray as _ga  # type: ignore
+        if isinstance(x, _ga.GPUArray):
+            return True
     except Exception:
         pass
     return False
