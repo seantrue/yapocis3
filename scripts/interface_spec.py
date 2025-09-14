@@ -7,7 +7,7 @@ from argparse import ArgumentParser
 from io import StringIO
 
 from yapocis.interfaces import interfaces
-from core.interface import (explain_interface, get_interface,
+from yapocis.core.interface import (explain_interface, get_interface,
                             load_interface,
                             opencl_stubs, python_stubs)
 from yapocis.ocl.kernel_manager import render_interface

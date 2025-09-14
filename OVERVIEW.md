@@ -15,10 +15,11 @@ simple Mandelbrot example in the README demonstrates the RPC-style approach for 
     - **`core`** – Utilities such as:
         - Automatic global/local size padding.
         - Local-size autotuning and timing utilities.
-        - Backend selection between OpenCL and CUDA.
+        - Backend selection between OpenCL, CUDA, and Metal.
         - Device buffer helpers.
     - **`interfaces`** & **`kernels`** – Interface DSL and corresponding Mako templates defining actual GPU code.
     - **`cu`/`cukernels`** – Parallel CUDA support built with CuPy.
+    - **`metallic`/`metalkernels`** – Apple Metal backend and Mako templates (MSL) with OpenCL-like semantics.
     - **`lib`** – Higher-level classes like `BoundKernels` that bind an interface and expose kernel calls via
       convenience methods.
 
@@ -97,7 +98,7 @@ kernel_name(
 
 ### Usage in Yapocis
 * Parse & Bind: The interface is parsed (via pyparsing) to produce a structured representation of kernel signatures.
-* Template Coupling: The corresponding .mako template holds the actual OpenCL/CUDA source. KernelManager.load_program pairs the interface with the template, rendering source code with appropriate definitions.
+* Template Coupling: The corresponding .mako template holds the actual OpenCL/CUDA/Metal source. KernelManager.load_program pairs the interface with the template, rendering source code with appropriate definitions.
 * Generated Wrappers: Python wrappers are created automatically. When invoked, they handle buffer transfers, type conversions, and dimension checks based on the interface declarations.
 * Runtime Checks: If arguments don’t match the declared types or directions, the wrapper raises informative errors before launching the kernel.
 
@@ -114,8 +115,33 @@ kernel_name(
 #### When to Use .interface Files
 - You want a formal description of kernel APIs that’s independent of the implementation.
 - You need automated glue code for parameter handling and buffer management.
-- Multiple kernels share a consistent interface style across OpenCL and CUDA backends. 
+- Multiple kernels share a consistent interface style across OpenCL, CUDA, and Metal backends. 
 
 #### When Alternatives Make Sense
 - Direct control: Writing low-level wrappers yourself is preferable if you require fine-grained control over memory and kernel invocation.
 - Python-only kernels: Frameworks like Numba or Triton may be better when staying entirely in Python and targeting specific hardware.
+
+## Metal Backend Notes
+
+The Metal backend mirrors OpenCL/CUDA structure but generates Metal Shading Language (MSL) kernels from Mako templates in `yapocis/metalkernels`. The Metal KernelManager prefers `metalkernels/<name>.mako` and falls back to OpenCL templates if not available.
+
+Key points:
+
+- Compatibility layer: `metalkernels/constants.mako` maps common OpenCL constructs to MSL:
+  - Qualifiers: `__kernel`→`kernel`, `__global`→`device`, `__local`→`threadgroup`.
+  - Builtins: `get_global_id(0)` becomes `uint gid [[ thread_position_in_grid ]]`.
+  - Barriers: `barrier(CLK_GLOBAL_MEM_FENCE)` becomes `threadgroup_barrier(mem_flags::mem_device)`.
+  - Atomics: wrapper around `atomic_fetch_add_explicit` for `atomic_inc` on `device atomic_int*`.
+- Argument binding: scalars are passed as `constant T &arg [[ buffer(i) ]]`; buffers use `device T* [[ buffer(i) ]]`. The Python wrapper keeps OpenCL-like call semantics via a PyMetallic shim.
+- Global/local sizes: The same Python auto-padding/tiling logic applies; the shim accepts `(queue, global_size, local_size, *args)` like PyOpenCL.
+- Limitations: For additional atomics or memory scopes, extend `constants.mako`. Some OpenCL intrinsics may not have a one-to-one MSL equivalent; prefer core math functions or add shims in `constants.mako`/`helpers.mako`.
+
+Backend selection:
+
+```python
+from yapocis.core.manager import get_manager
+mgr = get_manager("metal")  # or "ocl" / "cuda"
+prog = mgr.load_program("imageops")
+```
+
+Set `YAPOCIS_BACKEND=metal` to route high-level wrappers to Metal automatically.

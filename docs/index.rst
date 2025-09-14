@@ -6,20 +6,24 @@
 Welcome to Yapocis
 ==================
 
-Here to make using OpenCL via Python just a little easier. You can find Yapocis at:
+Yapocis makes writing and calling GPU kernels from Python easier across multiple backends: OpenCL, CUDA, and Metal.
+You can find Yapocis at:
 
 * Pypi: http://pypi.python.org/pypi/yapocis
 
 * Github: https://github.com/seantrue/Yapocis
 
-Yapocis depends on, and is grateful for:
+Backends and dependencies
+-------------------------
 
-* PyOpenCL: https://documen.tician.de/pyopencl/
+- OpenCL via PyOpenCL: https://documen.tician.de/pyopencl/
+- CUDA via CuPy: https://cupy.dev/
+- Metal via a thin PyMetallic shim for testing and basic compute coverage.
 
-* pyparsing: https://pyparsing-docs.readthedocs.io/en/latest/pyparsing.html
+Select backend using the environment variable `YAPOCIS_BACKEND` (values: `ocl`, `cuda`, `metal`).
 
-I've been using Yapocis for about 10 years, it isn't completely raw, and appears to be nutritious.
-Now, for Python 3.7
+I've been using Yapocis for about 10 years; it isn't completely raw, and appears to be nutritious.
+Now for modern Python 3.
 
 Contents:
 
@@ -31,11 +35,17 @@ Contents:
    architecture
    examples
    kernels
+   metal
+   testing
    
+Testing
+-------
+
+See the testing overview for backend markers and examples: :doc:`testing`.
+
 Indices and tables
 ==================
 
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-

@@ -3,7 +3,6 @@
 from yapocis.lib.gradient import Gradient
 from yapocis.lib.operators import Operators
 from yapocis.lib.zc import ZC
-from yapocis.ocl.kernel import Kernel
 from yapocis.utils.basic import set_frame, set_margin
 from yapocis.utils.stereo_typing import *
 
@@ -109,7 +108,8 @@ class Gaussian(BoundKernels):
         self.zc = ZC(device_name=device_name)
         self.grad = Gradient(device_name=device_name)
         self.ops = Operators(device_name=device_name)
-        self.gaussian_kernels: List[Kernel] = [getattr(kmgr, name) for (name, conv) in convs]
+        # Avoid importing OpenCL-specific Kernel class here; keep backend-agnostic
+        self.gaussian_kernels: List[object] = [getattr(kmgr, name) for (name, conv) in convs]
         for i, (name, conv) in enumerate(convs):
             self.gaussian_kernels[i].res = getattr(kmgr, convsres[i][0])
             self.gaussian_kernels[i].h = getattr(kmgr, convsh[i][0])
@@ -123,7 +123,7 @@ class Gaussian(BoundKernels):
     def get_gaussian_kernels(self):
         return self.gaussian_kernels
 
-    def get_gaussian_kernel(self, scale: int) -> Kernel:
+    def get_gaussian_kernel(self, scale: int):
         return self.gaussian_kernels[scale]
 
     def gauss_image(self, a: Image1, scale: int) -> Image1:

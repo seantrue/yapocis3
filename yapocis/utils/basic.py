@@ -20,6 +20,15 @@ DEBUG = False
 BENCHMARKING = os.environ.get('BENCHMARKING', None)
 
 
+def _current_backend() -> str:
+    """Return the active backend name for labeling output images.
+
+    Falls back to 'ocl' if not set. Keeps value simple and lowercase.
+    """
+    b = os.environ.get("YAPOCIS_BACKEND")
+    return (b or "ocl").lower()
+
+
 # bytescale, toimage borrowed from scipy.misc
 # Used under the liberal BSD license
 # Returns a byte-scaled image
@@ -247,6 +256,10 @@ def sign_array(*args, **kwargs) -> Tuple[str, PILImage]:
     array = args[-1]
     args = args[:-1]
     title = " ".join([str(arg) for arg in args]).strip()
+    # Append backend tag to the title/filename for clarity in multi-backend runs
+    backend = _current_backend()
+    if backend:
+        title = f"{title} [{backend}]" if title else f"[{backend}]"
     if not title:
         title = f"Array {_showArrayCounter}"
     if len(array.shape) == 3 and array.shape[2] == 4:

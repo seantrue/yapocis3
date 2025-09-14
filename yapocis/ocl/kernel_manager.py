@@ -21,7 +21,9 @@ def render_program(base_filename: str, **context: Context) -> str:
     """
     tfilename = find_kernel(base_filename)
     template_directories = [os.path.dirname(tfilename)]
-    mako_modules = os.path.join(get_yapocis_dir(), "mako_modules")
+    # Use a backend-specific cache directory to avoid template name collisions
+    # with other backends (e.g., Metal also has demo.mako).
+    mako_modules = os.path.join(get_yapocis_dir(), "mako_modules", "ocl")
     mylookup = TemplateLookup(directories=template_directories, module_directory=mako_modules)
     filename = os.path.split(tfilename)[-1]
     t = mylookup.get_template(filename)
@@ -95,7 +97,8 @@ class KernelManager:
         d = dict(interfacename=self.interface.name,
                  calls=self.calls,
                  runtime=self.runtime,
-                 device=self.dmgr.device_name)
+                 device=self.dmgr.device_name,
+                 backend="ocl")
         d.update(kwargs)
         self.dmgr.snapshot(**d)
 

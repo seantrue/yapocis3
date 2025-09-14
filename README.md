@@ -1,18 +1,18 @@
 # What is Yapocis?
 
-Yapocis is "Yet another Python OpenCL interface specification".
+Yapocis is "Yet another Python OpenCL interface specification" — now with multiple backends: OpenCL, CUDA, and Metal.
 
 Memorable. Easy to pronounce and spell. Clearly related to the semantics of the project.
 
 Or not, all the good names are used and I am not in marketing.
 
-It includes easy-to-call-from-Python, reasonably performing implementations of the Mandelbrot kernel, 3x3 median filters, image gradients, and HSI <-> RGB image conversions. I use it to develop much less generally useful implementations of bizarre image processing ideas.
+It includes easy-to-call-from-Python, reasonably performing implementations of kernels such as Mandelbrot, 3x3 median, image gradients, HSI <-> RGB conversions, color math, and 2D graphics primitives. I use it to develop much less generally useful implementations of bizarre image processing ideas.
 
 ## Why this happened?
 
 *Some brief history, "living backwards" order:*
 
-I'm putting this code up on Github to be used or snickered at. Both can be helpful. It has been used on Mac OS/X Lion with a 64-bit Python, and assumes Numpy and Matplotlib. It also assumes a working implementation of OpenCL and Pyopencl. I can't help resolve issues on dependencies, it's hard enough to make new dependencies happen.
+I'm putting this code up on Github to be used or snickered at. Both can be helpful. It has been used on macOS and Linux with a 64-bit Python, and assumes NumPy and Matplotlib for examples/demos. It supports OpenCL (PyOpenCL), CUDA (CuPy), and Metal (via a thin `pymetallic` shim used in tests). I can't help resolve issues on dependencies; it's hard enough to make new ones happen.
 
 *This in response to a note I got back from the pyopencl list:*
 
@@ -57,7 +57,7 @@ interface mandelbrot {
 ```
 
 ```c
-// mandelbrot.mako is just what it has always been.
+// mandelbrot.mako is just what it has always been (OpenCL). Metal/CUDA versions are auto-translated templates.
 __kernel void mandelbrot(__global float2 *q,  __global short *output, int const maxiter)
 {
     int gid = get_global_id(0);
@@ -74,12 +74,62 @@ __kernel void mandelbrot(__global float2 *q,  __global short *output, int const 
 }
 ```
 
+## Backends and selection
+
+- Backends: `ocl` (OpenCL via PyOpenCL), `cuda` (CuPy), and `metal` (PyMetallic shim).
+- Select backend via env: `export YAPOCIS_BACKEND=ocl|cuda|metal`.
+- You can also select explicitly in code:
+
+```python
+from yapocis.core.manager import get_manager
+mgr = get_manager("metal")  # or "ocl"/"cuda"
+prog = mgr.load_program("demo")
+```
+
+High-level wrappers (e.g., `yapocis.lib.*`) route through `yapocis.core.manager` and honor `YAPOCIS_BACKEND`.
+
+## Development & tests
+
+Quickstart:
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt -r requirements_dev.txt
+pip install -e .
+
+# Run non-CUDA tests in repo
+make test
+
+# Run all tests, including external CUDA ones (requires pycuda)
+make test-all
+```
+
+Backend test markers and dependencies:
+
+- Markers exist for each backend: `-m ocl`, `-m metal`, `-m cuda`.
+- Tests will skip cleanly if the backend runtime isn’t installed:
+  - OpenCL tests require `pyopencl`.
+  - Metal tests require a working `pymetallic` runtime and an Apple GPU.
+  - CUDA tests require `cupy` for the core CUDA runtime tests; the PyCUDA legacy test requires `pycuda`.
+- Useful invocations:
+  - `pytest -q -m metal` to run only Metal tests.
+  - `pytest -q -m ocl` to run only OpenCL tests.
+  - `pytest -q -m cuda` to run only CUDA tests.
+  - `pytest -q tests/test_backend_smoke.py` to smoke‑compile all interfaces across available backends.
+  - `pytest -q tests/test_backend_runtime.py` to run a tiny runtime sanity call per backend.
+
+CUDA/PyCUDA notes:
+
+- The CUDA demo/runtime tests use CuPy and do not require PyCUDA.
+- The legacy PyCUDA test at `yapocis/cukernels/test_convolve.py` is auto‑skipped if `pycuda` isn’t installed, so you can still run the rest of the suite.
+
 ## Known misfeatures
 
 There are several. Here are some I remember:
 
 - Untested in any other environment, as noted.
 - The `requirements.txt` does not include matplotlib or scipy, which are needed for some performance comparisons and demos.
+- CUDA tests under `yapocis/cukernels` depend on `pycuda`. They are excluded from `make test` and included by `make test-all`.
 
 ## Changes and new features
 
@@ -91,5 +141,4 @@ There are several. Here are some I remember:
 
 Other than removing the misfeatures:
 
-- Selecting the OpenCL based on strategy (operation and image size).
-
+- Backend-aware scheduling strategies (hardware and array-geometry sensitive execution).
