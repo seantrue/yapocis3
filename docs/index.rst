@@ -17,7 +17,7 @@ Backends and dependencies
 -------------------------
 
 - OpenCL via PyOpenCL: https://documen.tician.de/pyopencl/
-- CUDA via CuPy: https://cupy.dev/
+- CUDA via PyCUDA: https://documen.tician.de/pycuda/
 - Metal via a thin PyMetallic shim for testing and basic compute coverage.
 
 Select backend using the environment variable `YAPOCIS_BACKEND` (values: `ocl`, `cuda`, `metal`).

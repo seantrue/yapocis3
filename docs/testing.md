@@ -2,7 +2,7 @@
 
 Yapocis ships helper tests to validate that interfaces compile and a small demo kernel runs across supported backends.
 
-- Backends: `ocl` (OpenCL via PyOpenCL), `cuda` (CuPy), `metal` (PyMetallic shim)
+- Backends: `ocl` (OpenCL via PyOpenCL), `cuda` (PyCUDA), `metal` (PyMetallic shim)
 - Select backend globally with `YAPOCIS_BACKEND` or per test via markers.
 
 ## Quick Start
@@ -36,7 +36,7 @@ pytest -q tests/test_backend_runtime.py
 
 Notes:
 - OpenCL and Metal tests use NumPy arrays and return host arrays.
-- CUDA test uses CuPy device arrays and writes into a provided output buffer.
+- CUDA runtime tests use PyCUDA; numpy arrays are staged to device and results are returned to host.
 
 ## Backend Markers
 
@@ -52,12 +52,11 @@ pytest -q -m cuda    # only CUDA tests
 
 - OpenCL tests require `pyopencl`
 - Metal tests require `pymetallic` and an Apple GPU
-- CUDA runtime tests require `cupy`
+- CUDA runtime tests require `pycuda`
 - Legacy PyCUDA test under `yapocis/cukernels/test_convolve.py` is auto-skipped if `pycuda` is not installed
 
 ## Device Selection
 
 - OpenCL device selection is handled by the OpenCL backend config
 - Metal device can be set via `YAPOCIS_ENGINE` (name or index as reported by `pymetallic`)
-- CUDA uses the default CuPy device unless overridden via standard CuPy environment variables
-
+- CUDA uses the default device via PyCUDA's context (pycuda.autoinit)

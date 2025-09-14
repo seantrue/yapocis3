@@ -4,7 +4,7 @@
 - `yapocis/` – core package:
   - `ocl/` OpenCL devices, buffers, kernel build (`DeviceManager`, `KernelManager`).
   - `core/` shared utilities (backend selection, autotune, tunecache, interface parsing).
-  - `cu/` and `cukernels/` CUDA support via CuPy and Mako templates.
+- `cu/` and `cukernels/` CUDA support via PyCUDA and Mako templates.
   - `interfaces/`, `kernels/` interface DSL and Mako kernel templates.
 - `tests/` – pytest suite (`test_*.py`).
 - `examples/` – runnable demos and performance scripts.
@@ -39,4 +39,3 @@
 - Do not commit secrets or large artifacts. Prefer sample data in `examples/`.
 - Useful env vars: `YAPOCIS_BACKEND` (`ocl`|`cuda`), `YAPOCIS_ENGINE` (device name/index), `YAPOCIS_CACHE` (kernel cache dir), `YAPOCIS_TUNECACHE` (autotune JSON path), `YAPOCIS_PROJECT` (extra asset root), `YAPOCIS_VIEWER` (image viewer).
 - See `OVERVIEW.md` for architecture details and asset lookup behavior.
-

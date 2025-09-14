@@ -52,20 +52,18 @@ def test_runtime_demo_metal():
 @pytest.mark.cuda
 def test_runtime_demo_cuda():
     try:
-        import cupy as cp  # type: ignore
+        import pycuda.autoinit  # noqa: F401
+        import pycuda.driver as cuda  # noqa: F401
     except Exception as e:
-        pytest.skip(f"cupy not available: {e}")
+        pytest.skip(f"pycuda not available: {e}")
     _set_backend("cuda")
     from yapocis.core.manager import get_manager
     mgr = get_manager("cuda")
     prog = mgr.load_program("demo")
 
-    # Use cupy device arrays so we can observe in-place mutation
-    a = cp.arange(16, dtype=cp.float32)
-    b = cp.ones_like(a) * 11
-    c = cp.zeros_like(a)
-    # CUDA wrapper does not auto-allocate output; pass c explicitly
-    _ = prog.sum(a, b, c, global_size=int(a.size))
-    out = cp.asnumpy(c)
-    np.testing.assert_allclose(out, cp.asnumpy(a + b))
-
+    # Use numpy arrays; CUDA wrapper will stage to device and return host array
+    a = np.arange(16, dtype=np.float32)
+    b = np.ones_like(a) * 11
+    out = prog.sum(a, b, global_size=int(a.size))
+    assert isinstance(out, np.ndarray)
+    np.testing.assert_allclose(out, a + b)

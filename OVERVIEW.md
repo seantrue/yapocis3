@@ -18,7 +18,7 @@ simple Mandelbrot example in the README demonstrates the RPC-style approach for 
         - Backend selection between OpenCL, CUDA, and Metal.
         - Device buffer helpers.
     - **`interfaces`** & **`kernels`** – Interface DSL and corresponding Mako templates defining actual GPU code.
-    - **`cu`/`cukernels`** – Parallel CUDA support built with CuPy.
+    - **`cu`/`cukernels`** – CUDA support built with PyCUDA and Mako templates.
     - **`metallic`/`metalkernels`** – Apple Metal backend and Mako templates (MSL) with OpenCL-like semantics.
     - **`lib`** – Higher-level classes like `BoundKernels` that bind an interface and expose kernel calls via
       convenience methods.
@@ -106,7 +106,7 @@ kernel_name(
 | Approach                                         | Advantages                                                                                                             | Drawbacks                                                                              |
 | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | **Yapocis `.interface` files**                   | - Clear separation of interface & implementation<br>- Automatic wrapper generation<br>- Early validation of parameters | - Requires learning IDL syntax<br>- Coupled to Yapocis tooling                         |
-| **Hand-written wrappers (PyOpenCL / CuPy)**      | - Full flexibility in Python/CUDA/OpenCL code<br>- No custom IDL to learn                                              | - Manual buffer transfers<br>- Error-prone parameter handling                          |
+| **Hand-written wrappers (PyOpenCL / PyCUDA)**      | - Full flexibility in Python/CUDA/OpenCL code<br>- No custom IDL to learn                                              | - Manual buffer transfers<br>- Error-prone parameter handling                          |
 | **Docstrings or Decorators**                     | - Keeps metadata close to Python functions<br>- Leverages standard Python tooling                                      | - Less expressive for low-level memory semantics<br>- Harder to validate at parse time |
 | **Language-specific DSLs (e.g., Numba, Triton)** | - High-level, Pythonic kernel definitions<br>- JIT compilation and optimization                                        | - May be less portable between backends<br>- Often tied to specific runtime frameworks |
 
