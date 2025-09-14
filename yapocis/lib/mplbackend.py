@@ -46,22 +46,16 @@ class RendererTemplate(RendererBase):
                 line = flat_points[i * 2:i * 2 + 4]
                 self.kd.line(line, color=color)
         if closed_polygon_points:
+            # Triangulate all closed polygons and fill with rgbFace.
+            # Note: Using a single fill color avoids mis-indexing across rings.
             earcut_points = np.concatenate(closed_polygon_points)
-            earcut_lengths  = [len(points) for points in closed_polygon_points]
-            earcut_lengths = np.cumsum(earcut_lengths)
+            earcut_lengths = np.cumsum([len(points) for points in closed_polygon_points])
             simplices = earcut.triangulate_float32(earcut_points, earcut_lengths)
             vertices = earcut_points[simplices]
-            first = 0
-            for last in earcut_lengths:
-                triangles = vertices[first:last]
-                for i in range(0, len(triangles), 3):
-                    triangle = vertices[i:i + 3].ravel()
-                    if first == 0:
-                        color = rgbFace
-                    else:
-                        color = [0,0,0,0]
-                    self.kd.triangle(triangle, color=color)
-                first = last
+            fill_color = rgbFace if rgbFace is not None else color
+            for i in range(0, len(vertices), 3):
+                triangle = vertices[i:i + 3].ravel()
+                self.kd.triangle(triangle, color=fill_color)
 
         self.kd.render()
 
