@@ -1,0 +1,8 @@
+G20 ; inches
+G90 ; absolute positioning
+G0 Z0.1000
+G0 X5.7413 Y0.3706
+G1 Z-0.1551 F15.000
+G1 X5.7413 Y0.3706 F40.000
+G0 Z0.1000
+M2
