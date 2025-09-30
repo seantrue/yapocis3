@@ -6,8 +6,8 @@
 kernel void ${name}(const device float* input1 [[ buffer(0) ]],
                     const device float* input2 [[ buffer(1) ]],
                     device float *output [[ buffer(2) ]],
-                    uint gid [[ thread_position_in_grid ]])
+                    uint i [[ thread_position_in_grid ]])
 {
-    output[gid] = input1[gid] ${operator} input2[gid];
+    output[i] = input1[i] ${operator} input2[i];
 }
 % endfor

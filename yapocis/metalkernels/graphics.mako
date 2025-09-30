@@ -11,11 +11,11 @@ kernel void lines(constant int &width [[ buffer(0) ]],
                   const device float2 *coords [[ buffer(4) ]],
                   const device float *rdist [[ buffer(5) ]],
                   const device float2 *colors [[ buffer(6) ]],
-                  uint gid [[ thread_position_in_grid ]])
+                  uint i [[ thread_position_in_grid ]])
 {
-    float color = a[gid];
-    int x = X(gid);
-    int y = Y(gid);
+    float color = a[i];
+    int x = X(i);
+    int y = Y(i);
     float2 point = float2((float)x, (float)y);
     for (int ielement = 0; ielement < nelements; ielement++) {
         float threshold2 = ((*rdist++ * .5f) + .5f);
@@ -34,7 +34,7 @@ kernel void lines(constant int &width [[ buffer(0) ]],
         float clr = (value*alpha)+(color*(1.0f-alpha));
         color = (u >= 0.0f && u <= 1.0f && dist2 < threshold2) ? clr : color;
     }
-    a[gid] = color;
+    a[i] = color;
 }
 
 kernel void rects(constant int &width [[ buffer(0) ]],
@@ -43,11 +43,11 @@ kernel void rects(constant int &width [[ buffer(0) ]],
                   constant int &nlines [[ buffer(3) ]],
                   const device float4 *coords [[ buffer(4) ]],
                   const device float2 *colors [[ buffer(5) ]],
-                  uint gid [[ thread_position_in_grid ]])
+                  uint i [[ thread_position_in_grid ]])
 {
-    float color = a[gid];
-    int x = X(gid);
-    int y = Y(gid);
+    float color = a[i];
+    int x = X(i);
+    int y = Y(i);
     float4 region;
     for (int iline=0; iline < nlines; iline++) {
         region = *coords++;
@@ -61,7 +61,7 @@ kernel void rects(constant int &width [[ buffer(0) ]],
 
         color = (l <= x && x <= r && b <= y && y <= t) ? clr : color;
     }
-    a[gid] = color;
+    a[i] = color;
 }
 
 kernel void circles(constant int &width [[ buffer(0) ]],
@@ -70,11 +70,11 @@ kernel void circles(constant int &width [[ buffer(0) ]],
                     constant int &nlines [[ buffer(3) ]],
                     const device float *coords [[ buffer(4) ]],
                     const device float2 *colors [[ buffer(5) ]],
-                    uint gid [[ thread_position_in_grid ]])
+                    uint i [[ thread_position_in_grid ]])
 {
-    float color = a[gid];
-    int x = X(gid);
-    int y = Y(gid);
+    float color = a[i];
+    int x = X(i);
+    int y = Y(i);
     float2 point = float2((float)x,(float)y);
     for (int iline=0; iline < nlines; iline++) {
         float cx = *coords++;
@@ -86,7 +86,7 @@ kernel void circles(constant int &width [[ buffer(0) ]],
         float2 center = float2(cx,cy);
         color = dxdy2(center,point) <= radius ? clr : color;
     }
-    a[gid] = color;
+    a[i] = color;
 }
 
 #define signex(p1,p2,p3) ((p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y))
@@ -97,11 +97,11 @@ kernel void triangles(constant int &width [[ buffer(0) ]],
                       constant int &nlines [[ buffer(3) ]],
                       const device float2 *coords [[ buffer(4) ]],
                       const device float2 *colors [[ buffer(5) ]],
-                      uint gid [[ thread_position_in_grid ]])
+                      uint i [[ thread_position_in_grid ]])
 {
-    float color = a[gid];
-    int x = X(gid);
-    int y = Y(gid);
+    float color = a[i];
+    int x = X(i);
+    int y = Y(i);
     float2 point = float2((float)x,(float)y);
     for (int iline=0; iline < nlines; iline++) {
         float2 v1 = *coords++;
@@ -118,7 +118,7 @@ kernel void triangles(constant int &width [[ buffer(0) ]],
 
         color = !(has_neg && has_pos) ? clr : color;
     }
-    a[gid] = color;
+    a[i] = color;
 }
 
 // (x-h)^2/a^2 + (y-k)^2/b^2 <= 1
@@ -128,11 +128,11 @@ kernel void ellipses(constant int &width [[ buffer(0) ]],
                      constant int &nlines [[ buffer(3) ]],
                      const device float2 *coords [[ buffer(4) ]],
                      const device float2 *colors [[ buffer(5) ]],
-                     uint gid [[ thread_position_in_grid ]])
+                     uint i [[ thread_position_in_grid ]])
 {
-    float color = a[gid];
-    int x = X(gid);
-    int y = Y(gid);
+    float color = a[i];
+    int x = X(i);
+    int y = Y(i);
     float2 point = float2((float)x,(float)y);
     for (int iline=0; iline < nlines; iline++) {
         float2 center = *coords++;
@@ -143,7 +143,7 @@ kernel void ellipses(constant int &width [[ buffer(0) ]],
         float2 dist = (point-center)*(point-center)/(axes*axes);
         color = (dist.x+dist.y) <= 1.0f ? clr : color;
     }
-    a[gid] = color;
+    a[i] = color;
 }
 
 kernel void composite(constant int &width [[ buffer(0) ]],
@@ -154,11 +154,11 @@ kernel void composite(constant int &width [[ buffer(0) ]],
                       const device float2 *pixels [[ buffer(5) ]],
                       const device int *ipixels [[ buffer(6) ]],
                       constant int &npixels [[ buffer(7) ]],
-                      uint gid [[ thread_position_in_grid ]])
+                      uint i [[ thread_position_in_grid ]])
 {
-    float color = a[gid];
-    int x = X(gid);
-    int y = Y(gid);
+    float color = a[i];
+    int x = X(i);
+    int y = Y(i);
     int2 xy = int2(x,y);
     for (int j=0; j < n; j++) {
         int4 coord = coords[j];
@@ -174,5 +174,5 @@ kernel void composite(constant int &width [[ buffer(0) ]],
         float clr = (color_alpha.x*color_alpha.y)+(color*(1.0f-color_alpha.y));
         color = inside ? clr : color;
     }
-    a[gid] = color;
+    a[i] = color;
 }

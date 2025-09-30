@@ -1,7 +1,7 @@
-/* Metal versions of SDFPath kernels. Minimal implementations to support
- * backend smoke compilation. Not performance tuned. */
+/* Metal versions of SDFPath kernels. */
 
 <%include file="constants.mako" />
+<%include file="helpers.mako" />
 
 inline float4 make_seed(float x, float y) {
     return float4(x, y, 0.0f, 0.0f);
@@ -12,15 +12,13 @@ kernel void init_seed_from_mask(constant int &width  [[ buffer(0) ]],
                                 const device int *mask [[ buffer(2) ]],
                                 device float4 *seed [[ buffer(3) ]],
                                 device float *dist [[ buffer(4) ]],
-                                uint2 tid [[ thread_position_in_grid ]])
+                                uint i [[ thread_position_in_grid ]])
 {
-    int x = int(tid.x);
-    int y = int(tid.y);
-    if (x >= width || y >= height) return;
-    size_t idx = size_t(y) * size_t(width) + size_t(x);
-    int m = mask[idx];
-    seed[idx] = (m != 0) ? make_seed((float)x, (float)y) : make_seed(-1.0f, -1.0f);
-    dist[idx] = (m != 0) ? 0.0f : 1e30f;
+    int x = X(i);
+    int y = Y(i);
+    int m = mask[i];
+    seed[i] = (m != 0) ? make_seed((float)x, (float)y) : make_seed(-1.0f, -1.0f);
+    dist[i] = (m != 0) ? 0.0f : 1e30f;
 }
 
 kernel void jfa_step(constant int &width  [[ buffer(0) ]],
@@ -29,22 +27,20 @@ kernel void jfa_step(constant int &width  [[ buffer(0) ]],
                      const device float4 *seed_in [[ buffer(3) ]],
                      device float *dist_inout      [[ buffer(4) ]],
                      device float4 *seed_out       [[ buffer(5) ]],
-                     uint2 tid [[ thread_position_in_grid ]])
+                     uint i [[ thread_position_in_grid ]])
 {
-    int x = int(tid.x);
-    int y = int(tid.y);
-    if (x >= width || y >= height) return;
-    size_t idx = size_t(y) * size_t(width) + size_t(x);
+    int x = X(i);
+    int y = Y(i);
 
-    float4 best_seed = seed_in[idx];
-    float  best_dist = dist_inout[idx];
+    float4 best_seed = seed_in[i];
+    float  best_dist = dist_inout[i];
 
     const int dirs[8][2] = {{-1,-1},{0,-1},{1,-1},{-1,0},{1,0},{-1,1},{0,1},{1,1}};
     for (int k=0;k<8;++k) {
         int nx = x + dirs[k][0]*jump;
         int ny = y + dirs[k][1]*jump;
         if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
-        size_t nidx = size_t(ny) * size_t(width) + size_t(nx);
+        size_t nidx = (size_t)nx * (size_t)height + (size_t)ny;
         float4 nseed = seed_in[nidx];
         if (nseed.x < 0.0f) continue;
         float dx = nseed.x - (float)x;
@@ -55,8 +51,8 @@ kernel void jfa_step(constant int &width  [[ buffer(0) ]],
             best_seed = nseed;
         }
     }
-    seed_out[idx] = best_seed;
-    dist_inout[idx] = best_dist;
+    seed_out[i] = best_seed;
+    dist_inout[i] = best_dist;
 }
 
 kernel void marching_squares(constant int &width  [[ buffer(0) ]],
@@ -65,16 +61,16 @@ kernel void marching_squares(constant int &width  [[ buffer(0) ]],
                              constant float &iso      [[ buffer(3) ]],
                              device atomic_uint &seg_counter [[ buffer(4) ]],
                              device float *segments_out [[ buffer(5) ]],
-                             uint2 tid [[ thread_position_in_grid ]])
+                             uint i [[ thread_position_in_grid ]])
 {
-    int x = int(tid.x);
-    int y = int(tid.y);
+    int x = X(i);
+    int y = Y(i);
     if (x >= width-1 || y >= height-1) return;
 
-    size_t idx00 = size_t(y) * size_t(width) + size_t(x);
-    size_t idx10 = idx00 + 1;
-    size_t idx11 = idx00 + size_t(width) + 1;
-    size_t idx01 = idx00 + size_t(width);
+    size_t idx00 = i;
+    size_t idx10 = i + height;
+    size_t idx01 = i + 1;
+    size_t idx11 = i + height + 1;
 
     float v00 = dist[idx00] - iso;
     float v10 = dist[idx10] - iso;
@@ -125,4 +121,3 @@ kernel void marching_squares(constant int &width  [[ buffer(0) ]],
         segments_out[base+2] = b.x; segments_out[base+3] = b.y;
     }
 }
-

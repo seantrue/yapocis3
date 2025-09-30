@@ -16,7 +16,13 @@ def get_backends() -> list[str]:
         backends.append("cuda")
     except:
         pass
+    try:
+        import numba
+        backends.append("numba")
+    except:
+        pass
     return backends
+
 def get_manager(backend: str | None = None):
     """
     Return a backend manager module exposing `load_program` and `import_program`.
@@ -37,6 +43,10 @@ def get_manager(backend: str | None = None):
     elif backend in ("metal", "metallic", "mtl"):
         # Return the Metal kernel_manager module (uses pymetallic runtime)
         from yapocis.metallic import kernel_manager as km
+        return km
+    elif backend in ("numba"):
+        # Return the Metal kernel_manager module (uses pymetallic runtime)
+        from yapocis.numba import kernel_manager as km
         return km
     raise ValueError(f"Unknown backend: {backend}")
 def load_program(interface: str, backend: str | None = None, **mako_vars):

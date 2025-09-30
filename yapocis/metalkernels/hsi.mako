@@ -73,12 +73,12 @@ kernel void rgb2hsi(device float *ra [[ buffer(0) ]],
                     device float *ha [[ buffer(3) ]],
                     device float *sa [[ buffer(4) ]],
                     device float *ia [[ buffer(5) ]],
-                    uint gid [[ thread_position_in_grid ]]) {
-    float3 c = float3(ra[gid], ba[gid], ga[gid]);
+                    uint i [[ thread_position_in_grid ]]) {
+    float3 c = float3(ra[i], ba[i], ga[i]);
     float3 hsi = _rgb2hsi(c);
-    ha[gid] = hsi.x;
-    sa[gid] = hsi.y;
-    ia[gid] = hsi.z;
+    ha[i] = hsi.x;
+    sa[i] = hsi.y;
+    ia[i] = hsi.z;
 }
 
 kernel void hsi2rgb(device float *ha [[ buffer(0) ]],
@@ -87,47 +87,47 @@ kernel void hsi2rgb(device float *ha [[ buffer(0) ]],
                     device float *ra [[ buffer(3) ]],
                     device float *ga [[ buffer(4) ]],
                     device float *ba [[ buffer(5) ]],
-                    uint gid [[ thread_position_in_grid ]]) {
-    float3 hsi = float3(ha[gid],sa[gid],ia[gid]);
+                    uint i [[ thread_position_in_grid ]]) {
+    float3 hsi = float3(ha[i],sa[i],ia[i]);
     float3 c = _hsi2rgb(hsi);
-    ra[gid] = c.x;
-    ga[gid] = c.y;
-    ba[gid] = c.z;
+    ra[i] = c.x;
+    ga[i] = c.y;
+    ba[i] = c.z;
 }
 
 kernel void rgb2hsi3(constant int &depth [[ buffer(0) ]],
                      device float *input [[ buffer(1) ]],
                      device float *output [[ buffer(2) ]],
-                     uint gid [[ thread_position_in_grid ]]) {
-    size_t i = gid * (size_t)depth;
-    float3 c = float3(input[i], input[i+2], input[i+1]);
+                     uint i [[ thread_position_in_grid ]]) {
+    size_t idx = i * (size_t)depth;
+    float3 c = float3(input[idx], input[idx+2], input[idx+1]);
     float3 hsi = _rgb2hsi(c);
-    output[i] =   hsi.x;
-    output[i+1] = hsi.y;
-    output[i+2]=  hsi.z;
+    output[idx] =   hsi.x;
+    output[idx+1] = hsi.y;
+    output[idx+2]=  hsi.z;
 }
 
 kernel void hsi2rgb3(constant int &depth [[ buffer(0) ]],
                      device float *input [[ buffer(1) ]],
                      device float *output [[ buffer(2) ]],
-                     uint gid [[ thread_position_in_grid ]]) {
-    size_t i = gid * (size_t)depth;
-    float3 hsi = float3(input[i],input[i+1],input[i+2]);
+                     uint i [[ thread_position_in_grid ]]) {
+    size_t idx = i * (size_t)depth;
+    float3 hsi = float3(input[idx],input[idx+1],input[idx+2]);
     float3 c = _hsi2rgb(hsi);
-    output[i] =   c.x;
-    output[i+1] = c.y;
-    output[i+2] = c.z;
+    output[idx] =   c.x;
+    output[idx+1] = c.y;
+    output[idx+2] = c.z;
 }
 
 kernel void rgb2lab3(constant int &depth [[ buffer(0) ]],
                      device float *input [[ buffer(1) ]],
                      device float *output [[ buffer(2) ]],
-                     uint gid [[ thread_position_in_grid ]]) {
-    size_t i = gid * (size_t)depth;
-    float3 c = float3(input[i], input[i+2], input[i+1]);
+                     uint i [[ thread_position_in_grid ]]) {
+    size_t idx = i * (size_t)depth;
+    float3 c = float3(input[idx], input[idx+2], input[idx+1]);
     float3 xyz = _rgb2xyz(c);
     float3 lab = _xyz2lab(xyz);
-    output[i] =   lab.x;
-    output[i+1] = lab.y;
-    output[i+2]=  lab.z;
+    output[idx] =   lab.x;
+    output[idx+1] = lab.y;
+    output[idx+2]=  lab.z;
 }

@@ -7,9 +7,8 @@
 kernel void ${name}(constant int &width [[ buffer(0) ]],
                     device float* a [[ buffer(1) ]],
                     device float* ret [[ buffer(2) ]],
-                    uint gid [[ thread_position_in_grid ]])
+                    uint i [[ thread_position_in_grid ]])
 {
-    size_t i = gid;
     float sum = 0.0f;
     size_t right = width-${left};
     if ((i > ${left}) &&  (i < right)) {

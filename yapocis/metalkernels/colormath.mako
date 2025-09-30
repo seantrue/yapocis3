@@ -208,8 +208,8 @@ constant float transforms[] =
 kernel void transform(const device float *input [[ buffer(0) ]],
                       constant int &transform_id [[ buffer(1) ]],
                       device float *output [[ buffer(2) ]],
-                      uint gid [[ thread_position_in_grid ]]) {
-    size_t i = gid*3;
+                      uint i [[ thread_position_in_grid ]]) {
+    size_t idx = i*3;
     size_t tid  = (size_t)transform_id*9;
 #ifndef TRANSPOSE
     float3 a = float3(transforms[tid+0],transforms[tid+1],transforms[tid+2]);
@@ -220,11 +220,11 @@ kernel void transform(const device float *input [[ buffer(0) ]],
     float3 b = float3(transforms[tid+1],transforms[tid+4],transforms[tid+7]);
     float3 c = float3(transforms[tid+2],transforms[tid+5],transforms[tid+8]);
 #endif
-    float3 rgb = float3(input[i], input[i+1], input[i+2]);
+    float3 rgb = float3(input[idx], input[idx+1], input[idx+2]);
     float3 xyz = vxm3(rgb, a, b, c);
-    output[i]   = xyz.x;
-    output[i+1] = xyz.y;
-    output[i+2] = xyz.z;
+    output[idx]   = xyz.x;
+    output[idx+1] = xyz.y;
+    output[idx+2] = xyz.z;
 }
 
 // x = X/(X+Y+Z)
@@ -232,15 +232,15 @@ kernel void transform(const device float *input [[ buffer(0) ]],
 // y = y
 kernel void xyz2xyY(const device float *input [[ buffer(0) ]],
                     device float *output [[ buffer(1) ]],
-                    uint gid [[ thread_position_in_grid ]]) {
-    size_t i = gid*3;
-    float x = input[i];
-    float y = input[i+1];
-    float z = input[i+2];
+                    uint i [[ thread_position_in_grid ]]) {
+    size_t idx = i*3;
+    float x = input[idx];
+    float y = input[idx+1];
+    float z = input[idx+2];
     float sum = x+y+z;
-    output[i]   = x/sum;
-    output[i+1] = y/sum;
-    output[i+2] = z;
+    output[idx]   = x/sum;
+    output[idx+1] = y/sum;
+    output[idx+2] = z;
 }
 
 // X = x*Y/y
@@ -248,14 +248,14 @@ kernel void xyz2xyY(const device float *input [[ buffer(0) ]],
 // Z = ((1−x−y)*Y)/y
 kernel void xyY2xyz(const device float *input [[ buffer(0) ]],
                     device float *output [[ buffer(1) ]],
-                    uint gid [[ thread_position_in_grid ]]) {
-    size_t i = gid*3;
-    float x = input[i];
-    float y = input[i+1];
-    float Y = input[i+2];
+                    uint i [[ thread_position_in_grid ]]) {
+    size_t idx = i*3;
+    float x = input[idx];
+    float y = input[idx+1];
+    float Y = input[idx+2];
     float X = x*Y/(y);
     float Z = ((1.0-x-y)*Y)/(y);
-    output[i]   = y != 0.0 ? X : 0.0;
-    output[i+2] = y != 0.0 ? Y : 0.0;
-    output[i+1] = y != 0.0 ? Z: 0.0;
+    output[idx]   = y != 0.0 ? X : 0.0;
+    output[idx+2] = y != 0.0 ? Y : 0.0;
+    output[idx+1] = y != 0.0 ? Z: 0.0;
 }
