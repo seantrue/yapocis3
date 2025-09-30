@@ -3,7 +3,7 @@
 import os
 
 import numpy as np
-import py.test
+import pytest
 from PIL import Image, ImageDraw
 
 from yapocis.fonts import font, fonts, image_font
@@ -44,12 +44,12 @@ def test_icons():
 
 def test_interfaces():
     assert len(interfaces()) > 0
-    with py.test.raises(ValueError):
+    with pytest.raises(ValueError):
         icon_path = find_interface("default")
     assert os.path.basename(find_interface("demo")) == "demo.interface"
 
 def test_kernels():
     assert len(kernels()) > 0
-    with py.test.raises(ValueError):
+    with pytest.raises(ValueError):
         kernel_path = find_kernel("default")
     assert os.path.basename(find_kernel("demo")) == "demo.mako"

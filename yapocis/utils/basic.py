@@ -41,7 +41,7 @@ def byte_scale(data: Array, cmin: Optional[float] = None, cmax: Optional[float] 
     cmax = data.max() if cmax is None else cmax
     scale = high * 1.0 / (cmax - cmin or 1)
     bytedata = ((data * 1.0 - cmin) * scale + 0.4999).astype(np.uint8)
-    return bytedata + np.cast[np.uint8](low)
+    return bytedata + np.uint8(low)
 
 
 _errstr = "Mode is unknown or incompatible with input array shape."
