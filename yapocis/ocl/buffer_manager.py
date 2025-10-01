@@ -31,10 +31,11 @@ class BufferManager:
     DEBUG = True
     TIMED = False
     TIMED_METHODS = ("make_buffer","ensure_buffer","read_buffer","write_buffer")
-    def __init__(self, context: pyopencl.Context, queue: pyopencl.CommandQueue, timed:bool=False):
+    def __init__(self, context: pyopencl.Context, queue: pyopencl.CommandQueue, timed:bool=False, autoflatten:bool=True):
         self.ctx = context
         self.queue = pyopencl.CommandQueue(self.ctx) if queue is None else queue
         # Buffer management
+        self.autoflatten = autoflatten
         self.arrays = Weak()
         self.buffers = {}
         self.hits = self.misses = 0

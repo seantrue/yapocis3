@@ -11,7 +11,7 @@ from yapocis.kernels import find_kernel
 from yapocis.ocl.device_manager import get_device_manager
 from yapocis.core.interface import Interface, get_interface, load_interface
 from yapocis.ocl.kernel import Kernel
-from yapocis.utils.internals import get_yapocis_dir
+from yapocis.utils.internals import find_yapocis_file, get_yapocis_dir
 from yapocis.utils.stereo_typing import Context
 
 
@@ -21,9 +21,7 @@ def render_program(base_filename: str, **context: Context) -> str:
     """
     tfilename = find_kernel(base_filename)
     template_directories = [os.path.dirname(tfilename)]
-    # Use a backend-specific cache directory to avoid template name collisions
-    # with other backends (e.g., Metal also has demo.mako).
-    mako_modules = os.path.join(get_yapocis_dir(), "mako_modules", "ocl")
+    mako_modules = os.path.join(get_yapocis_dir(), "mako_modules")
     mylookup = TemplateLookup(directories=template_directories, module_directory=mako_modules)
     filename = os.path.split(tfilename)[-1]
     t = mylookup.get_template(filename)
@@ -97,8 +95,7 @@ class KernelManager:
         d = dict(interfacename=self.interface.name,
                  calls=self.calls,
                  runtime=self.runtime,
-                 device=self.dmgr.device_name,
-                 backend="ocl")
+                 device=self.dmgr.device_name)
         d.update(kwargs)
         self.dmgr.snapshot(**d)
 

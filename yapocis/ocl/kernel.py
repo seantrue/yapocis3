@@ -7,24 +7,22 @@ import numpy as np
 import pyopencl
 
 from yapocis.utils.stereo_typing import Array
-from yapocis.core.autopad import pad_sizes, infer_wh_from_args
+
 
 class Kernel:
     """
     Provide a callable interface to an OpenCL kernel function.
     """
 
-    def __init__(self, name, kernel_manager: "KernelManager", kernel: Callable, params: List[Tuple],
-                 async_write: bool = False, local_size: tuple | None = None, tiled: bool = False):
+    def __init__(self, name, kernel_manager: "KernelManager", kernel: Callable, params: List[Tuple], async_write:bool=False):
         self.name = name
         self.kernel_manager = kernel_manager
         self.queue = kernel_manager.dmgr.queue
         self.kernel = kernel
         self.params = params
-        self.argspecs = self.posbyname = self.returns = self.global_size = None
+        self.autoflatten = kernel_manager.dmgr.autoflatten
+        self.argspecs = self.posbyname = self.returns = self.local_size = self.global_size = None
         self.async_write = async_write
-        self.local_size = local_size
-        self.tiled = tiled
         self.map_arguments()
 
     def read(self, a: Array):
@@ -77,6 +75,14 @@ class Kernel:
                     method_name="handle_resident"
                 real_arg = getattr(self, method_name)(arg, dtype)
             realargs[iparam] = real_arg
+        if self.global_size is None:
+            for arg in args:
+                if hasattr(arg, "size"):
+                    if self.autoflatten:
+                        self.global_size = arg.size
+                    else:
+                        self.global_size = arg.shape
+                    break
         return tuple(realargs)
 
     def handle_sizeof(self, arg, dtype):
@@ -143,18 +149,6 @@ class Kernel:
         assert not isinstance(self.global_size, float) and not isinstance(self.local_size,float), f"{self.global_size},{self.local_size}"
         resident_arrays = kwargs.pop("resident", None)
         prepared_args = self.prepare_arguments(args, resident_arrays=resident_arrays)
-        if self.global_size is None:
-            if self.tiled:
-                # Use autopad only for tiled kernels, and favor a 2D default local size
-                self.global_size, self.local_size = pad_sizes(None, self.local_size, args, (16, 16), self.tiled)
-            else:
-                shape = infer_wh_from_args(args)
-                if len(shape) > 1:
-                    global_size = (shape[0]*shape[1],1)
-                else:
-                    global_size = shape
-                self.global_size, self.local_size = global_size, None
-
         def show_args():
             print("Python arguments")
             for iarg, arg in enumerate(args):

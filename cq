@@ -1,0 +1,6 @@
+#!/bin/bash
+rm queue/*.png
+rm queue/raw/*.png
+rm queue/raw/*.npz
+exit 0
+
