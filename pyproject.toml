@@ -1,0 +1,208 @@
+# pyproject.toml
+# Modern Python packaging configuration for yapocis
+
+[project]
+name = "yapocis"
+version = "0.3.1"
+description = "Yet another PyOpenCL interface specifier - Multi-backend GPU/CPU computing framework for image processing"
+readme = "README.md"
+authors = [
+    { name = "Sean D. True", email = "sean.true@gmail.com" }
+]
+license = { text = "PSF" }
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Python Software Foundation License",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+keywords = ["opencl", "pyopencl", "thunk", "ocl", "image", "gpu", "computing", "metal", "cuda", "numba"]
+requires-python = ">=3.10"
+dependencies = [
+    # Core dependencies - always required
+    "Mako>=1.3.0",
+    "MarkupSafe>=3.0.0",
+    "Pillow>=10.3.0",
+    "decorator>=5.2.0",
+    "numpy>=2.1.0",
+    "pyyaml>=6.0.0",
+    "mapbox-earcut>=1.0.0",
+    "pyparsing>=3.2.0",
+    "pytools>=2025.1.0",
+    "scikit-image>=0.25.0",
+    "freetype-py>=2.5.0",
+    "requests>=2.32.4",
+    "Jinja2>=3.1.6",
+    "Pygments>=2.15.1",
+    "certifi>=2024.7.4",
+    "idna>=3.7",
+]
+
+[project.optional-dependencies]
+# Backend-specific dependencies
+opencl = [
+    "pyopencl>=2025.1.0",
+]
+metal = [
+      "pymetallic",
+]
+#cuda = [
+#    "pycuda>=2024.1",
+#]
+numba = [
+    "numba>=0.59.0",
+]
+
+# Combined backend groups
+all-backends = [
+    "yapocis[opencl,metal,cuda,numba]",
+]
+gpu-backends = [
+    "yapocis[opencl,metal,cuda]",
+]
+
+# Development dependencies
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=3.0.0",
+    "black>=22.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+    "pip-tools>=7.0.0",
+    "matplotlib>=3.7.0",
+    "scipy>=1.11.0",
+    "pygame>=2.5.0",
+    "pyopengl>=3.1.0",
+    "build>=1.0.0",
+    "watchdog>=4.0.0",
+]
+
+# Testing dependencies
+test = [
+    "pytest>=7.4.0",
+    "pytest-cov>=3.0.0",
+    "matplotlib>=3.7.0",
+    "scipy>=1.11.0",
+]
+
+# Documentation dependencies
+docs = [
+    "sphinx>=8.0.0",
+    "sphinx-autoapi>=3.0.0",
+    "recommonmark>=0.7.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/seantrue/Yapocis/"
+Documentation = "https://yapocis.readthedocs.io/"
+Repository = "https://github.com/seantrue/Yapocis.git"
+"Bug Tracker" = "https://github.com/seantrue/Yapocis/issues"
+
+# [project.scripts]
+# Note: Scripts are executable via python -m scripts.script_name or directly as scripts/script_name.py
+# Consider adding main() wrapper functions to scripts for proper entry points if needed
+
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["yapocis*"]
+exclude = ["tests*", "docs*", "examples*"]
+
+[tool.setuptools.package-data]
+yapocis = [
+    "*.interface",
+    "*.mako",
+    "*.cl",
+    "*.ttf",
+    "test.jpg",
+    "test.txt",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py310', 'py311', 'py312', 'py313']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | external
+  | claude-debug
+)/
+'''
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+    "B904",  # raise from
+]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/*" = ["B011"]
+
+[tool.ruff.mccabe]
+max-complexity = 10
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "pyopencl.*",
+    "pymetallic.*",
+    "pycuda.*",
+    "numba.*",
+    "mako.*",
+    "mapbox_earcut.*",
+    "freetype.*",
+    "skimage.*",
+    "pygame.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q"
+testpaths = [
+    "tests",
+]
+markers = [
+    "ocl: marks tests for OpenCL backend",
+    "metal: marks tests for Metal backend",
+    "cuda: marks tests for CUDA backend",
+    "numba: marks tests for Numba backend",
+    "validation: marks tests that use validation framework",
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "gpu: marks tests that require GPU hardware",
+]
