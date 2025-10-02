@@ -1,10 +1,10 @@
 /* Helpful macros and in-line functions (MSL-safe) */
 
 // Address macros (column-major, matching OCL): index = x*height + y
-#define ADDRESS(xx,yy) (((yy)*width)+(xx))
+#define ADDRESS(xx,yy) (((xx)*height)+(yy))
 
-#define X(addr) ((addr)/width)
-#define Y(addr) ((addr)%width)
+#define X(addr) ((addr)/height)
+#define Y(addr) ((addr)%height)
 
 #define SWAPINT(xxx,yyy) {int tmp = xxx; xxx=yyy; yyy=tmp;}
 #define SWAPFLOAT(xxx,yyy) {float tmp = xxx; xxx=yyy; yyy=tmp;}

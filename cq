@@ -1,6 +1,19 @@
 #!/bin/bash
-rm queue/*.png
-rm queue/raw/*.png
-rm queue/raw/*.npz
-exit 0
+shopt -s nullglob
 
+pngs=(queue/*.png)
+if (( ${#pngs[@]} )); then
+  rm -- "${pngs[@]}"
+fi
+
+raw_pngs=(queue/raw/*.png)
+if (( ${#raw_pngs[@]} )); then
+  rm -- "${raw_pngs[@]}"
+fi
+
+raw_npz=(queue/raw/*.npz)
+if (( ${#raw_npz[@]} )); then
+  rm -- "${raw_npz[@]}"
+fi
+
+exit 0

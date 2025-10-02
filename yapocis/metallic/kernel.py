@@ -15,8 +15,7 @@ except Exception as e:  # pragma: no cover
     raise RuntimeError("PyMetallic is required for the metallic backend") from e
 
 from yapocis.utils.stereo_typing import Array
-from yapocis.core.autopad import pad_sizes, infer_wh_from_args
-from yapocis.core.tunecache import get_local_size, set_local_size
+from yapocis.core.autopad import infer_wh_from_args
 
 
 class Kernel:
@@ -28,7 +27,6 @@ class Kernel:
         params: List[Tuple],
         async_write: bool = False,
         local_size: tuple | None = None,
-        tiled: bool = False,
     ):
         self.name = name
         self.kernel_manager = kernel_manager
@@ -38,7 +36,6 @@ class Kernel:
         self.argspecs = self.posbyname = self.returns = self.global_size = None
         self.async_write = async_write
         self.local_size = local_size
-        self.tiled = tiled
         self.map_arguments()
 
     def read(self, a: Array):
@@ -102,48 +99,38 @@ class Kernel:
             realargs[iparam] = real_arg
         return tuple(realargs)
 
-    def handle_lengthof(self, arg, dtype):
-        if not dtype:
-            dtype = np.int32
-        return dtype(max(arg.shape))
+    def package_scalar(self, value, dtype):
+        return np.array([value], dtype=dtype)
+
+    def handle_lengthof(self, arg, dtype=np.int32):
+        return self.package_scalar(max(arg.shape), dtype)
 
     handle_length_of = handle_lengthof
 
-    def handle_sizeof(self, arg, dtype):
-        if not dtype:
-            dtype = np.int32
-        return dtype(arg.size)
+    def handle_sizeof(self, arg, dtype=np.int32):
+        return self.package_scalar(arg.size, dtype)
 
     handle_size_of = handle_sizeof
 
-    def handle_widthof(self, arg, dtype):
-        if not dtype:
-            dtype = np.int32
-        # Numpy arrays are (height, width) for 2D; width is the second dimension.
-        return dtype(arg.shape[0] if arg.ndim >= 2 else arg.shape[0])
+    def handle_widthof(self, arg, dtype=np.int32):
+        # Column-major layout: width is shape[0]
+        return self.package_scalar(arg.shape[0], dtype)
 
     handle_width_of = handle_widthof
 
-    def handle_heightof(self, arg, dtype):
-        if not dtype:
-            dtype = np.int32
-        # Height is the first dimension for 2D arrays.
-        return dtype(arg.shape[1])
+    def handle_heightof(self, arg, dtype=np.int32):
+        # Column-major layout: height is shape[1]
+        return self.package_scalar(arg.shape[1], dtype)
 
     handle_height_of = handle_heightof
 
-    def handle_depthof(self, arg, dtype):
-        if not dtype:
-            dtype = np.int32
-        return dtype(arg.shape[2])
+    def handle_depthof(self, arg, dtype=np.int32):
+        return self.package_scalar(arg.shape[2], dtype)
 
     handle_depth_of = handle_depthof
 
-    def handle_countof(self, arg, dtype):
-        if not dtype:
-            dtype = np.int32
-        # Number of elements (first dimension) for both 1D and 2D+
-        return dtype(arg.shape[0])
+    def handle_countof(self, arg, dtype=np.int32):
+        return self.package_scalar(arg.shape[0], dtype)
 
     handle_count_of = handle_countof
 
@@ -192,18 +179,12 @@ class Kernel:
             list(args), resident_arrays=resident_arrays
         )
         if self.global_size is None:
-            if self.tiled:
-                # Use autopad only for tiled kernels, and favor a 2D default local size
-                self.global_size, self.local_size = pad_sizes(
-                    None, self.local_size, args, (16, 16), self.tiled
-                )
+            shape = infer_wh_from_args(args)
+            if len(shape) > 1:
+                global_size = (shape[0] * shape[1], 1)
             else:
-                shape = infer_wh_from_args(args)
-                if len(shape) > 1:
-                    global_size = (shape[0] * shape[1], 1)
-                else:
-                    global_size = shape
-                self.global_size, self.local_size = global_size, None
+                global_size = shape
+            self.global_size, self.local_size = global_size, None
 
         def show_args():
             print("Python arguments")
@@ -223,85 +204,24 @@ class Kernel:
                 arr = real if isinstance(real, np.ndarray) else np.asarray(real)
                 bytes_args.append((arr, idx))
 
-        # If tiled and no local_size chosen yet, try tunecache; otherwise do a quick autotune
-        if self.tiled:
-            if not self.local_size:
-                cached = get_local_size(
-                    self.kernel_manager.interface.name, self.name, backend="metal"
-                )
-                if cached:
-                    self.local_size = tuple(int(x) for x in cached)
-            if not self.local_size:
-                # Simple autotune: try a few threadgroup sizes and pick fastest
-                candidates = [(8, 8), (16, 8), (8, 16), (16, 16), (32, 8), (8, 32)]
-                best = None
-                best_ms = 1e30
-                # Precompute argument lists (buffers/bytes) once
-                buffers_t = list(buffers)
-                bytes_args_t = list(bytes_args)
-                for ls in candidates:
-                    # Compute padded sizes for this local size
-                    pg, pl = pad_sizes(self.global_size, ls, args, (16, 16), True)
-                    gs_try = pg if pg is not None else self.global_size
-                    ls_try = pl if pl is not None else ls
-                    # Build dispatch dims
-                    if not isinstance(gs_try, (tuple, list)):
-                        grid_try = (int(gs_try), 1, 1)
-                    else:
-                        g0 = int(gs_try[0])
-                        g1 = int((gs_try[1] if len(gs_try) > 1 else 1))
-                        g2 = int((gs_try[2] if len(gs_try) > 2 else 1))
-                        grid_try = (g0, g1, g2)
-                    tgs_try = (int(ls_try[0]), int(ls_try[1]), 1)
-                    # Warm-up once then time a single dispatch
-                    try:
-                        self.kernel(
-                            self.kernel_manager.dmgr.queue,
-                            grid_try,
-                            tgs_try,
-                            buffers=buffers_t,
-                            bytes_args=bytes_args_t,
-                        )
-                        t0 = time.perf_counter()
-                        self.kernel(
-                            self.kernel_manager.dmgr.queue,
-                            grid_try,
-                            tgs_try,
-                            buffers=buffers_t,
-                            bytes_args=bytes_args_t,
-                        )
-                        ms = (time.perf_counter() - t0) * 1000.0
-                        if ms < best_ms:
-                            best_ms = ms
-                            best = ls_try
-                    except Exception:
-                        continue
-                if best:
-                    self.local_size = tuple(best)
-                    try:
-                        set_local_size(
-                            self.kernel_manager.interface.name,
-                            self.name,
-                            tuple(best),
-                            backend="metal",
-                        )
-                    except Exception:
-                        pass
-
         # Convert sizes to 3D grid and optional threadgroup size
         if not isinstance(self.global_size, (tuple, list)):
             grid = (int(self.global_size), 1, 1)
+        self.global_size = (
+            (self.global_size,)
+            if isinstance(self.global_size, int)
+            else self.global_size
+        )
+        if len(self.global_size) == 1:
+            grid = (int(self.global_size[0]), 1, 1)
+        elif len(self.global_size) == 2:
+            grid = (int(self.global_size[0]), int(self.global_size[1]), 1)
         else:
-            if len(self.global_size) == 1:
-                grid = (int(self.global_size[0]), 1, 1)
-            elif len(self.global_size) == 2:
-                grid = (int(self.global_size[0]), int(self.global_size[1]), 1)
-            else:
-                grid = (
-                    int(self.global_size[0]),
-                    int(self.global_size[1]),
-                    int(self.global_size[2]),
-                )
+            grid = (
+                int(self.global_size[0]),
+                int(self.global_size[1]),
+                int(self.global_size[2]),
+            )
         tgs = None
         if self.local_size is not None:
             ls = (

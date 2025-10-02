@@ -10,7 +10,6 @@ This mirrors the OpenCL `BufferManager` but calls into `pymetallic` for:
 """
 
 import time
-import numpy as np
 from weakref import WeakValueDictionary as Weak
 
 try:
@@ -120,7 +119,10 @@ class BufferManager:
         return buf
 
     def find_buffer(self, a: Array, op: int) -> "pymetallic.Buffer | None":
-        assert op in (self.READ, self.WRITE)
+        assert op in (
+            self.READ,
+            self.WRITE,
+        ), f"{op=} not one of {self.READ=},{self.WRITE=}"
         buffer_id = id(a)
         havea = buffer_id in self.buffers and buffer_id in self.arrays
         if havea:
@@ -131,7 +133,7 @@ class BufferManager:
         if not havea:
             if op == self.READ:
                 raise ValueError(
-                    "Array not in yapocis management, you may have written to it, or be using an assigned or .copy"
+                    f"Array {buffer_id=} not in yapocis management, you may have written to it, or be using an assigned or .copy"
                 )
             return None
-        raise RuntimeError(f"Failed to find a buffer for {op} {a}")
+        raise RuntimeError(f"Failed to find a buffer for {op} a@{buffer_id=}")

@@ -167,7 +167,7 @@ kernel void composite(constant int &width [[ buffer(0) ]],
         int2 yt = lb + coord.zw;
         int outside = ANYISLESS(xy,lb) + ANYISGTE(xy,yt);
         int2 source_location = xy - lb;
-        int source_offset = (source_location.y * coord.z) + source_location.x;
+        int source_offset = (source_location.x * coord.z) + source_location.y;
         int ipixel_source = ipixel + source_offset;
         int inside = !outside && 0<=ipixel_source && ipixel_source < npixels;
         float2 color_alpha = inside ? pixels[ipixel_source] : float2(0.0f,0.0f);

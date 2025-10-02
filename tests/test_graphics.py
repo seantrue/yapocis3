@@ -2,19 +2,27 @@
 
 from random import randint
 
+from tests import (
+    ASIZE,
+    StopWatcher,
+    double_shuffle,
+    image_test,
+    interesting_words,
+    show,
+    show_snapshots,
+)
 from yapocis.lib.channels import split_channels
 from yapocis.lib.graphics import Graphics1
 from yapocis.lib.hsi import HSI
 from yapocis.utils.stereo_typing import *
 
-from tests import (ASIZE, StopWatcher, double_shuffle, image_test,
-               interesting_words, show, show_snapshots)
-
 hsis = HSI()
 
 
 def setup_test(device_name: Optional[str] = None) -> Tuple[Image1, Graphics1]:
-    return np.zeros((ASIZE, ASIZE)).astype(np.float32), Graphics1(device_name=device_name)
+    return np.zeros((ASIZE, ASIZE)).astype(np.float32), Graphics1(
+        device_name=device_name
+    )
 
 
 def image_source(align=5):
@@ -34,7 +42,7 @@ def image_sprites(steps=4):
     blocks = []
     for x in range(0, dimension, step):
         for y in range(0, dimension, step):
-            blocks.append(image[x:x + step, y:y + step])
+            blocks.append(image[x : x + step, y : y + step])
     return blocks
 
 
@@ -57,7 +65,7 @@ def random_colors(n=100):
 
 
 def random_alpha(n=100):
-    return np.random.uniform(.25, 1.0, n).astype(np.float32)
+    return np.random.uniform(0.25, 1.0, n).astype(np.float32)
 
 
 def random_lines(n=100):
@@ -131,7 +139,7 @@ def random_texts(n=100):
     strings = interesting_words(n // 10)
     fonts = ["bold", "italic", "light", "regular"]
     sizes = [18, 36, 72, 112]
-    alphas = ["bug", "mask", .5, 1.0]
+    alphas = ["bug", "mask", 0.5, 1.0]
     rotations = double_shuffle(list(range(0, 360, 30)), n)
     strings = double_shuffle(strings, n)
     sizes = double_shuffle(sizes, n)
@@ -149,8 +157,10 @@ def test_lines():
         for j in range(100, ASIZE, 100):
             coords.append([0, 0, i, j])
     with StopWatcher() as show:
-        grph.lines(canvas, coords, width=1.0, colors=random_colors(len(coords)), alpha=1.0)
-        grph.lines(canvas, random_coords, widths=widths, colors=random_colors(), alphas=random_alpha())
+        grph.lines(
+            canvas, coords, width=1.0, colors=random_colors(len(coords)), alpha=1.0
+        )
+        # grph.lines(canvas, random_coords, widths=widths, colors=random_colors(), alphas=random_alpha())
         show(grph, canvas)
 
 
@@ -176,7 +186,9 @@ def test_circles():
             coords.append([i, j, 100])
     with StopWatcher() as show:
         grph.circles(canvas, coords, color=1.0, alpha=0.5)
-        grph.circles(canvas, random_coords, colors=random_colors(), alphas=random_alpha())
+        grph.circles(
+            canvas, random_coords, colors=random_colors(), alphas=random_alpha()
+        )
         show(grph, canvas)
 
 
@@ -189,7 +201,9 @@ def test_triangles():
             coords.append([i, j, i + 50, j + 0, i + 50, j - 50])
     with StopWatcher() as show:
         grph.triangles(canvas, coords, color=1.0, alpha=0.5)
-        grph.triangles(canvas, random_coords, colors=random_colors(), alphas=random_alpha())
+        grph.triangles(
+            canvas, random_coords, colors=random_colors(), alphas=random_alpha()
+        )
         show(grph, canvas)
 
 
@@ -208,7 +222,9 @@ def test_ellipses():
     alpha = 1.0
     with StopWatcher() as show:
         grph.ellipses(canvas, coords, colors=colors, alpha=alpha)
-        grph.ellipses(canvas, random_coords, colors=random_colors(), alphas=random_alpha())
+        grph.ellipses(
+            canvas, random_coords, colors=random_colors(), alphas=random_alpha()
+        )
         show(grph, canvas)
 
 
@@ -232,6 +248,7 @@ def test_composite_mosaic():
     _, grph = setup_test()
     image = image_test()
     from random import shuffle
+
     r, g, b = split_channels(image)
     h, s, i = hsis.rgb2hsi(r, g, b)
     d = min(*i.shape)
@@ -244,7 +261,7 @@ def test_composite_mosaic():
     coords = [(0, 0)]
     for x in range(0, d, step):
         for y in range(0, d, step):
-            block = i[x:x + step, y:y + step]
+            block = i[x : x + step, y : y + step]
             coords.append((x, y))
             blocks.append(block)
     shuffle(blocks)
@@ -261,7 +278,9 @@ def test_simple_texts():
         locations.append((x // 2, x))
     strings = double_shuffle(text, len(locations))
     with StopWatcher() as show:
-        grph.draw_strings(canvas, locations, strings, font="default", size=32, alpha="bug")
+        grph.draw_strings(
+            canvas, locations, strings, font="default", size=32, alpha="bug"
+        )
         show(grph, canvas)
 
 
@@ -272,8 +291,10 @@ def test_text_rotation_centered():
     locations = [(center, center)] * len(rotations)
     strings = [f"-------- {r:03d}" for r in rotations]
     with StopWatcher() as show:
-        grph.draw_strings(canvas, locations, strings, rotations=rotations, color=1, alpha="mask")
-        grph.circles(canvas, [(center, center, 20)], color=.5)
+        grph.draw_strings(
+            canvas, locations, strings, rotations=rotations, color=1, alpha="mask"
+        )
+        grph.circles(canvas, [(center, center, 20)], color=0.5)
         show(grph, canvas)
 
 
@@ -282,14 +303,22 @@ def test_text_rotation():
     rotations = list(range(0, 360, 10))
     center = canvas.shape[0] // 2
     locations = [[center, center] for y in range(100, 1000, 800 // len(rotations))]
-    locations = locations[:len(rotations)]
+    locations = locations[: len(rotations)]
     strings = [f"-------------------- {r:03d}" for r in rotations]
     with StopWatcher() as show:
-        grph.draw_strings(canvas, locations, strings, size=32, rotations=rotations, color=1, alpha="mask")
+        grph.draw_strings(
+            canvas,
+            locations,
+            strings,
+            size=32,
+            rotations=rotations,
+            color=1,
+            alpha="mask",
+        )
         for location in locations:
             location.append(10)
             location[0], location[1] = location[1], location[0]
-        grph.circles(canvas, locations[:-1], color=.5)
+        grph.circles(canvas, locations[:-1], color=0.5)
         show(grph, canvas)
 
 
@@ -297,7 +326,9 @@ def test_texts():
     canvas, grph = setup_test()
     locations, strings, fonts, sizes, rotations, alphas = random_texts(300)
     with StopWatcher() as show:
-        grph.draw_strings(canvas, locations, strings, fonts=fonts, sizes=sizes, alphas=alphas)
+        grph.draw_strings(
+            canvas, locations, strings, fonts=fonts, sizes=sizes, alphas=alphas
+        )
         show(grph, canvas)
 
 
@@ -305,7 +336,15 @@ def test_stressed_texts():
     canvas, grph = setup_test()
     locations, strings, fonts, sizes, rotations, _ = random_texts(300)
     with StopWatcher() as show:
-        grph.draw_strings(canvas, locations, strings, fonts=fonts, sizes=sizes, rotations=rotations, alpha="mask")
+        grph.draw_strings(
+            canvas,
+            locations,
+            strings,
+            fonts=fonts,
+            sizes=sizes,
+            rotations=rotations,
+            alpha="mask",
+        )
         show(grph, canvas)
 
 
@@ -314,11 +353,35 @@ def test_one():
     with StopWatcher() as show:
         grph.lines(canvas, [[0, 0, ASIZE, ASIZE]], distance=1.5, color=1.0, alpha=1.0)
         grph.circles(canvas, [[ASIZE / 2, ASIZE / 2, 20]], color=1.0, alpha=1.0)
-        grph.rects(canvas, [[ASIZE / 4, ASIZE / 4, ASIZE / 4 + 40, ASIZE / 4 + 40]], color=1.0, alpha=1.0)
+        grph.rects(
+            canvas,
+            [[ASIZE / 4, ASIZE / 4, ASIZE / 4 + 40, ASIZE / 4 + 40]],
+            color=1.0,
+            alpha=1.0,
+        )
         grph.ellipses(canvas, [[ASIZE / 4, ASIZE / 2, 80, 40]], color=1.0, alpha=1.0)
-        grph.triangles(canvas, [
-            [ASIZE * 3 / 4, ASIZE / 2, 40 + ASIZE * 3 / 4, 20 + ASIZE / 2, 40 + ASIZE * 3 / 4, -20 + ASIZE / 2]],
-                       color=1.0, alpha=1.0)
-        grph.draw_strings(canvas, [[ASIZE * 3 / 4, ASIZE * 3 / 4]], ["Hello world"], font="bold", color=1.0,
-                          alpha="mask", size=32)
+        grph.triangles(
+            canvas,
+            [
+                [
+                    ASIZE * 3 / 4,
+                    ASIZE / 2,
+                    40 + ASIZE * 3 / 4,
+                    20 + ASIZE / 2,
+                    40 + ASIZE * 3 / 4,
+                    -20 + ASIZE / 2,
+                ]
+            ],
+            color=1.0,
+            alpha=1.0,
+        )
+        grph.draw_strings(
+            canvas,
+            [[ASIZE * 3 / 4, ASIZE * 3 / 4]],
+            ["Hello world"],
+            font="bold",
+            color=1.0,
+            alpha="mask",
+            size=32,
+        )
         show(grph, canvas)
