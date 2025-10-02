@@ -173,10 +173,11 @@ kernel void composite(constant int &width [[ buffer(0) ]],
     int4 coord = *coords++;
     int ipixel = *ipixels++;
 
-    int2 lb = coord.xy;
-    int2 yt = lb + coord.zw;
+    int2 lb = coord.yx;  // Swap for column-major, matching OCL's coord.s10
+    int2 yt = lb + coord.wz;  // Swap dimensions, matching OCL's coord.s32
     int outside = ANYISLESS(xy,lb) + ANYISGTE(xy,yt);
     int2 source_location = xy - lb;
+    // Blocks raveled row-major: offset = row*width + col = x*width + y (canvas x=rows, y=cols)
     int source_offset = (source_location.x * coord.z) + source_location.y;
     int ipixel_source = ipixel + source_offset;
     int inside = !outside && 0 <= ipixel_source && ipixel_source < npixels;
