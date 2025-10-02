@@ -171,20 +171,26 @@ class AbstractKernelDraw:
         return coords, colors, widths
 
 
-    def coerce_colors(self, n:int, color:Optional[float]=None, colors=None, **kwargs):
+    def coerce_colors(self, n:int, color:Optional[float]=None, colors=None, alpha=None, **kwargs):
         # a tuple, list, array of COLOR_WIDTH floats
         # a list or tuple of array/list/tuple of COLOR_WIDTH floats
         # an array of nxCOLOR_WIDTH floats
+        # For COLOR_WIDTH=1, output is (n, 2) for [color, alpha] pairs
         if color is None and colors is None:
             color = self.color
+        if alpha is None:
+            alpha = self.alpha
         if color:
             if self.COLOR_WIDTH > 1:
                 color = np.asarray(color, dtype=np.float32)
                 colors = np.empty((n, self.COLOR_WIDTH), dtype=np.float32)
+                colors[:] = color
             else:
+                # For single-channel, create (n, 2) array for [color, alpha]
                 assert isinstance(color, (float, int))
-                colors = np.empty(n, dtype=np.float32)
-            colors[:] = color
+                colors = np.empty((n, 2), dtype=np.float32)
+                colors[:, 0] = color
+                colors[:, 1] = alpha
         else:
             colors = np.asarray(colors, dtype=np.float32)
             if self.COLOR_WIDTH > 1:
@@ -192,8 +198,11 @@ class AbstractKernelDraw:
                     colors = np.column_stack([colors for i in range(self.COLOR_WIDTH)])
                 assert colors.shape == (n, self.COLOR_WIDTH)
             else:
+                # For single-channel, ensure (n, 2) shape for [color, alpha]
+                if len(colors.shape) == 1:
+                    colors = np.column_stack([colors, np.full(n, alpha, dtype=np.float32)])
                 shape = colors.shape
-                assert (shape[0] == n)
+                assert shape == (n, 2), f"Expected ({n}, 2) but got {shape}"
         return np.ascontiguousarray(colors)
 
     def coerce_alphas(self, n, alpha=None, alphas=None, **kwargs):
