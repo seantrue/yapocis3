@@ -11,8 +11,14 @@ from yapocis.utils.stereo_typing import *
 
 VIEWER = os.environ.get("YAPOCIS_VIEWER")
 VIEWING_QUEUE = os.environ.get("YAPOCIS_VIEW")
-VIEWING_QUEUE = os.path.join(os.path.dirname(os.path.abspath(yapocis.__file__)),"..",
-                             "queue") if VIEWING_QUEUE is None else VIEWING_QUEUE
+VIEWING_QUEUE = (
+    os.path.join(os.path.dirname(os.path.abspath(yapocis.__file__)), "..", "queue")
+    if VIEWING_QUEUE is None
+    else VIEWING_QUEUE
+)
+RAW_QUEUE = os.path.join(VIEWING_QUEUE, "raw")
+os.makedirs(RAW_QUEUE, exist_ok=True)
+
 if not os.path.isdir(VIEWING_QUEUE):
     raise RuntimeError(f"Can't find viewing queue '{VIEWING_QUEUE}'")
 
@@ -250,6 +256,23 @@ def sign(title: str, img: Union[Image1, PILImage]) -> PILImage:
 _showArrayCounter = 0
 
 
+def array_to_image(array):
+    if len(array.shape) == 3 and array.shape[2] == 4:
+        array = array[:, :, :3]
+    if array.dtype != np.uint8:
+        array = array.copy()
+        if array.dtype in (np.float32, np.float64, float):
+            array -= array.min()
+            mx = array.max()
+            array /= mx if mx != 0.0 else 1.0
+            array *= 255.0
+            array = array.astype(np.uint8)
+    img = Image.fromarray(array)
+    if img.mode == "L":
+        img = img.convert("RGB")
+    return img
+
+
 def sign_array(*args, **kwargs) -> Tuple[str, PILImage]:
     global _showArrayCounter
     _showArrayCounter += 1
@@ -262,17 +285,7 @@ def sign_array(*args, **kwargs) -> Tuple[str, PILImage]:
         title = f"{title} [{backend}]" if title else f"[{backend}]"
     if not title:
         title = f"Array {_showArrayCounter}"
-    if len(array.shape) == 3 and array.shape[2] == 4:
-        array = array[:, :, :3]
-    if array.dtype != np.uint8:
-        array = array.copy()
-        if array.dtype in (np.float32, np.float64, float):
-            array -= array.min()
-            mx = array.max()
-            array /= mx if mx != 0.0 else 1.0
-            array *= 255.
-            array = array.astype(np.uint8)
-    img = Image.fromarray(array)
+    img = array_to_image(array)
     shape = array.shape
     font = ImageFont.truetype(find_font("default"), size=22)
     draw = ImageDraw.Draw(img)
@@ -294,18 +307,21 @@ def sign_array(*args, **kwargs) -> Tuple[str, PILImage]:
     return title, img
 
 
-def show_array(*args, **kwargs) -> None:
+def show_array(a: np.ndarray, *args, checkzero=True, **kwargs) -> None:
     if BENCHMARKING:
-        print(args[:-1], file=sys.stderr)
+        print(args, file=sys.stderr)
         return
-    title, img = sign_array(*args, **kwargs)
-    if img.mode == "L":
-        img = img.convert("RGB")
+    if checkzero:
+        assert a.flatten().sum() > 0, f"No one likes an empty picture {args}"
+    raw_img = array_to_image(a)
+    title, img = sign_array(*args, a, **kwargs)
     name = f"{title}.png"
-    path = os.path.join(VIEWING_QUEUE, name)
-    img.save(path)
+    img.save(os.path.join(VIEWING_QUEUE, name))
+    raw_img.save(os.path.join(RAW_QUEUE, name))
+    npz_name = f"{title}.npz"
+    np.savez_compressed(os.path.join(RAW_QUEUE, npz_name), a)
     if VIEWER:
-        os.system(f'{VIEWER} "{os.path.abspath(path)}"&')
+        os.system(f'{VIEWER} "{os.path.abspath(os.path.join(VIEWING_QUEUE, name))}"&')
 
 def show_arraygrad(title: str, image: Image1, theta: Image1, grad: Optional[Image1] = None) -> None:
     """
@@ -353,7 +369,7 @@ def show_arraygrad(title: str, image: Image1, theta: Image1, grad: Optional[Imag
             else:
                 color = "white"
             draw.line([(x1, y1), (x2, y2)], fill=color)
-    show_array(title, np.array(img))
+    show_array(np.array(img), title)
 
 
 class Shaper:
