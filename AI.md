@@ -4,11 +4,43 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Summary Statistics
 
-- **Total AI-assisted commits**: ~8
-- **Major features developed with AI assistance**: Metal backend fixes, coordinate system standardization, renamed truetrace module, validation framework fixes, numba backend completeness
+- **Total AI-assisted commits**: ~9
+- **Major features developed with AI assistance**: Metal backend fixes, coordinate system standardization, renamed truetrace module, validation framework fixes, numba backend completeness, StopWatcher enhancements
 - **Lines of code**: Tracking started 2025-10-03
 
 ## Detailed Contributions
+
+### 2025-10-03: StopWatcher Enhancement - Context Manager Checkpoints and Auto-logging
+
+**AI Contribution (Claude):**
+- Enhanced StopWatcher.checkpoint() to work as both method call and context manager
+  - Backward compatible: `sw.checkpoint("label")` still works
+  - New context manager style: `with sw.checkpoint("label"): code...`
+  - Automatically times the block when used with `with`
+  - Added `_CheckpointContext` helper class for context management
+- Added auto-logging on StopWatcher exit
+  - New `log` parameter in `__init__` accepts callable
+  - Automatically calls `log(summary())` when context exits
+  - Enables cleaner test code: no manual `print(sw.summary())` needed
+  - Example: `with StopWatcher(log=print) as sw: ...`
+- Fixed duplicate `__exit__` method that was overriding functionality
+- Lines changed: ~50 additions/modifications
+
+**Files modified:**
+- `tests/__init__.py` - Enhanced StopWatcher class with new features
+
+**Testing:**
+- Verified backward compatibility with existing checkpoint usage
+- Tested new context manager style for checkpoint blocks
+- Tested mixed usage (both styles together)
+- Verified auto-logging with print and custom log functions
+- Confirmed no logging when log parameter not provided
+
+**Human Contribution:**
+- Feature request and design requirements
+- Testing and verification
+
+---
 
 ### 2025-10-03: StopWatcher Pattern Standardization and Show Array Updates
 

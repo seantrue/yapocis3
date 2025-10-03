@@ -107,10 +107,34 @@ def snapshow(
     show_array(a, f"{fname} {tname}", *args, checkzero=checkzero, **kwargs)
 
 
+class _CheckpointContext:
+    """Context manager for timing a checkpoint block."""
+
+    def __init__(self, stopwatcher, name):
+        self.stopwatcher = stopwatcher
+        self.name = name
+        self.start_time = None
+
+    def __enter__(self):
+        """Start timing this checkpoint block."""
+        self.start_time = time.time()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Record the checkpoint with the time elapsed in this block."""
+        if self.start_time is not None:
+            now = time.time()
+            elapsed = now - self.start_time
+            self.stopwatcher.checkpoints[self.name] = elapsed
+            self.stopwatcher.last_checkpoint = now
+        return False
+
+
 class StopWatcher:
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, log=None, **kwargs):
         self.args = args
         self.kwargs = kwargs
+        self.log = log
         self.checkpoints = {}
         self.last_checkpoint = None
 
@@ -118,6 +142,12 @@ class StopWatcher:
         self.t = time.time()
         self.last_checkpoint = self.t
         return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Exit the context and optionally log the summary."""
+        if self.log is not None and callable(self.log):
+            self.log(self.summary())
+        return False
 
     def __call__(
         self, snapper: "BoundKernel", array: np.ndarray, *args, checkzero=False, depth=0
@@ -136,15 +166,30 @@ class StopWatcher:
 
     show = __call__
 
-    def checkpoint(self, name: str) -> float:
-        """Add a timing checkpoint and return elapsed time since last checkpoint."""
+    def checkpoint(self, name: str):
+        """
+        Add a timing checkpoint. Can be used in two ways:
+
+        1. As a regular method call (records time since last checkpoint):
+           sw.checkpoint("operation")
+
+        2. As a context manager (records time within the block):
+           with sw.checkpoint("operation"):
+               # code to time
+
+        Returns a context manager that can optionally be used with 'with'.
+        """
+        # For backward compatibility: record checkpoint immediately when called as regular method
         now = time.time()
         if self.last_checkpoint is None:
             self.last_checkpoint = self.t
         elapsed = now - self.last_checkpoint
         self.checkpoints[name] = elapsed
         self.last_checkpoint = now
-        return elapsed
+
+        # Return context manager for optional 'with' usage
+        # If used with 'with', it will overwrite the checkpoint with block timing
+        return _CheckpointContext(self, name)
 
     @property
     def stats(self) -> dict:
@@ -199,9 +244,6 @@ class StopWatcher:
             return f"<StopWatcher {status}: {elapsed:.3f}s elapsed>"
         else:
             return f"<StopWatcher {status}>"
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        return
 
 
 class PerformanceTracker:
