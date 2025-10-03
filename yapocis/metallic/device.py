@@ -63,7 +63,7 @@ def get_device(
     if not devices:
         raise RuntimeError("No Metal devices found via PyMetallic")
     keys = list(devices.keys())
-    if device_name is None:
+    if not device_name:
         device_name = pick_default_device(keys)
         print(f"Defaulting to Metal device {device_name}")
     if device_name not in devices:

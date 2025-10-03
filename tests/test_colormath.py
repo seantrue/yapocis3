@@ -3,10 +3,9 @@
 from yapocis.lib.channels import join_channels, split_channels
 from yapocis.lib.colormath import Colormath, transform_names
 from yapocis.lib.hsi import HSI
-from yapocis.utils.basic import histeq
 from yapocis.utils.stereo_typing import *
 
-from . import ASIZE, StopWatcher, image_test, show, show_snapshots, snapshow
+from . import ASIZE, StopWatcher, image_test, show
 
 
 def test_hsi():
@@ -23,24 +22,34 @@ def test_hsi():
     show("RGB in", rgb)
     r, g, b = split_channels(rgb)
     rgb2 = join_channels(r, g, b)
-    with StopWatcher() as shower:
+    with StopWatcher("hsi") as sw:
+
+        def checkshow(a, checkpoint):
+            sw.checkpoint(checkpoint)
+            sw.show(hsis, a, checkpoint, depth=1)
+
         h, s, i = hsis.rgb2hsi(r, g, b)
+        sw.checkpoint("rgb2hsi")
         hsi3 = hsis.rgb2hsi3(rgb)
-        h3,s3,i3 = split_channels(hsi3)
+        checkshow(hsi3, "rgb2hsi3")
         rgb3 = hsis.hsi2rgb3(hsi3)
-        shower(hsis, "RGB3 out", rgb3)
-        rgb4 = np.zeros((ASIZE,ASIZE,4), dtype=np.float32)
-        rgb4[:,:,:3] = rgb[:,:,:]
+        checkshow(rgb3, "hsi2rgb3")
+        rgb4 = np.zeros((ASIZE, ASIZE, 4), dtype=np.float32)
+        rgb4[:, :, :3] = rgb[:, :, :]
         hsi4 = hsis.rgb2hsi3(rgb4)
+        checkshow(hsi4, "rgb2hsi3")
         rgb5 = hsis.hsi2rgb3(hsi4)
-        rgb5 = rgb5[:,:,:3]
-        shower(hsis, "RGB5 out", rgb5)
-    assert np.sum(rgb-rgb2) == 0.0
-    assert abs(np.sum(rgb.ravel()-rgb3.ravel()))/rgb.size < .00001
-    assert abs(np.sum(rgb.ravel()-rgb5.ravel()))/rgb.size < .00001
-    assert np.sum(i-i3) == 0.0
-    assert np.sum(s-s3) == 0.0
-    assert np.sum(h-h3) == 0.0
+        rgb5 = rgb5[:, :, :3]
+        checkshow(rgb5, "hsi2rgb3")
+        print(sw.summary())
+
+    assert np.sum(rgb - rgb2) == 0.0
+    assert abs(np.sum(rgb.ravel() - rgb3.ravel())) / rgb.size < 0.00001
+    assert abs(np.sum(rgb.ravel() - rgb5.ravel())) / rgb.size < 0.00001
+    h3, s3, i3 = split_channels(hsi3)
+    assert np.sum(i - i3) == 0.0
+    assert np.sum(s - s3) == 0.0
+    assert np.sum(h - h3) == 0.0
 
 
 def test_xyz():
@@ -56,48 +65,59 @@ def test_xyz():
     rgb /= ASIZE
     show("RGB in", rgb)
     rgb = np.ascontiguousarray(rgb)
-    with StopWatcher() as shower:
+    with StopWatcher("xyz") as sw:
         xyz = cm.transform(rgb, 0, global_size=rgb.size // 3)
         rgb2 = cm.transform_named("adobe1998_d65.xyz2rgb", xyz)
-        shower(cm, "RGB out", rgb2)
+        sw.checkpoint("roundtrip")
+        sw.show(cm, rgb2, "roundtrip")
+        print(sw.summary())
+
 
 def test_xyz_view():
     cm = Colormath()
     rgb = image_test()
-    xyz = cm.transform_named("srgb_d50.rgb2xyz", rgb)
-    show("xyz", xyz)
-    x, y, z = split_channels(xyz)
-    ones = np.ones_like(x)*.3
-    xyz = join_channels(x, y, z)
-    show("RGB in", rgb)
-    with StopWatcher() as shower:
-        rgb2 = cm.transform_named("srgb_d50.xyz2rgb", xyz)
-        xyz = join_channels(ones,y, z)
-        rgb3 = cm.transform_named("srgb_d50.xyz2rgb", xyz)
-        xyz = join_channels(x, ones, z)
-        rgb4 = cm.transform_named("srgb_d50.xyz2rgb", xyz)
-        xyz = join_channels(x, y, ones)
-        rgb5 = cm.transform_named("srgb_d50.xyz2rgb", xyz)
-        shower(cm, "RGB out", rgb2)
-    show("x=1", rgb3)
-    show("y=1", rgb4)
-    show("z=1", rgb5)
-    show("Y", y)
+    with StopWatcher("srgb_d50") as sw:
+        xyz = cm.transform_named("srgb_d50.rgb2xyz", rgb)
+        sw.checkpoint("xzy")
+        sw.show(cm, xyz, "2xyz")
+        x, y, z = split_channels(xyz)
+        sw.show(cm, x, "X")
+        sw.show(cm, y, "Y")
+        sw.show(cm, z, "Z")
+        ones = np.ones_like(x) * 0.3
+
+        def checkshow(x1, y1, z1, checkpoint):
+            a = join_channels(x1, y1, z1)
+            rgbout = cm.transform_named("srgb_d50.xyz2rgb", xyz)
+            sw.checkpoint(checkpoint)
+            sw.show(cm, a, checkpoint, depth=1)
+
+        checkshow(x, y, z, "2rgb")
+        checkshow(ones, y, z, "1yz")
+        checkshow(x, ones, z, "x1z")
+        checkshow(x, y, ones, "xy1")
+        print(sw.summary())
 
 
 def test_colorspaces():
     cm = Colormath()
     rgb = image_test()
-    show("RGB in", rgb)
     transformed = []
-    with StopWatcher() as shower:
+    with StopWatcher("colormath") as sw:
+        sw.show(cm, rgb, "rgb")
+        sw.checkpoint("show")
+
+        def checkshow(a, checkpoint):
+            sw.checkpoint(checkpoint)
+            sw.show(cm, a, checkpoint, depth=1)
+
         xyz = cm.transform_named("srgb_d50.rgb2xyz", rgb)
+        checkshow(xyz, "xyz")
         for name in transform_names[1::2]:
             rgb2 = cm.transform_named(name, xyz)
-            transformed.append((name, rgb2))
-        shower(cm, *transformed[0])
-    for name, rgb2 in transformed[1:]:
-        show(name, rgb2)
+            checkshow(rgb2, name)
+        print(sw.summary())
+
 
 def test_xyY():
     cm = Colormath()
@@ -112,10 +132,15 @@ def test_xyY():
     rgb /= ASIZE
     show("RGB in", rgb)
     rgb = np.ascontiguousarray(rgb)
-    with StopWatcher() as shower:
+    with StopWatcher("xyY") as sw:
         xyz = cm.transform_named("srgb_d50.rgb2xyz", rgb)
+        sw.checkpoint("xyz")
         xyY = cm.xyz2xyY(xyz)
+        sw.checkpoint("xyY")
         xyz2 = cm.xyY2xyz(xyY)
+        sw.checkpoint("xyY")
         rgb2 = cm.transform_named("adobe1998_d65.xyz2rgb", xyz2)
-        show("RGB out", rgb2)
-    show("xyY", xyY)
+        sw.checkpoint("2rgb")
+        sw.show(cm, xyY, "xyY")
+        sw.show(cm, rgb2, "RGB out")
+        print(sw.summary())

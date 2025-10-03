@@ -2,8 +2,8 @@
 import os
 import sys
 
-from PIL import Image, ImageDraw, ImageFont
 import skimage
+from PIL import Image, ImageDraw, ImageFont
 
 import yapocis
 from yapocis.fonts import font as find_font
@@ -307,19 +307,19 @@ def sign_array(*args, **kwargs) -> Tuple[str, PILImage]:
     return title, img
 
 
-def show_array(a: np.ndarray, *args, checkzero=True, **kwargs) -> None:
+def show_array(array: np.ndarray, *args, checkzero=True, **kwargs) -> None:
     if BENCHMARKING:
         print(args, file=sys.stderr)
         return
     if checkzero:
-        assert a.flatten().sum() > 0, f"No one likes an empty picture {args}"
-    raw_img = array_to_image(a)
-    title, img = sign_array(*args, a, **kwargs)
+        assert array.flatten().sum() > 0, f"No one likes an empty picture {args}"
+    raw_img = array_to_image(array)
+    title, img = sign_array(*args, array, **kwargs)
     name = f"{title}.png"
     img.save(os.path.join(VIEWING_QUEUE, name))
     raw_img.save(os.path.join(RAW_QUEUE, name))
     npz_name = f"{title}.npz"
-    np.savez_compressed(os.path.join(RAW_QUEUE, npz_name), a)
+    np.savez_compressed(os.path.join(RAW_QUEUE, npz_name), array)
     if VIEWER:
         os.system(f'{VIEWER} "{os.path.abspath(os.path.join(VIEWING_QUEUE, name))}"&')
 

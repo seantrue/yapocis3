@@ -156,12 +156,13 @@ def test_lines():
     for i in range(100, ASIZE, 100):
         for j in range(100, ASIZE, 100):
             coords.append([0, 0, i, j])
-    with StopWatcher() as show:
+    with StopWatcher() as sw:
         grph.lines(
             canvas, coords, width=1.0, colors=random_colors(len(coords)), alpha=1.0
         )
-        # grph.lines(canvas, random_coords, widths=widths, colors=random_colors(), alphas=random_alpha())
-        show(grph, canvas)
+        sw.checkpoint("grph")
+        sw.show(grph, canvas)
+        print(sw.summary())
 
 
 def test_rects():
@@ -171,10 +172,12 @@ def test_rects():
     for i in range(100, ASIZE, 100):
         for j in range(100, ASIZE, 100):
             coords.append([i - 25, j - 25, i + 25, j + 25])
-    with StopWatcher() as show:
+    with StopWatcher() as sw:
         grph.rects(canvas, coords, color=1.0, alpha=0.5)
         grph.rects(canvas, random_coords, colors=random_colors(), alphas=random_alpha())
-        show(grph, canvas)
+        sw.checkpoint("graph")
+        sw.show(grph, canvas)
+        print(sw.summary())
 
 
 def test_circles():
@@ -184,12 +187,14 @@ def test_circles():
     for i in range(100, ASIZE, 100):
         for j in range(100, ASIZE, 100):
             coords.append([i, j, 100])
-    with StopWatcher() as show:
+    with StopWatcher() as sw:
         grph.circles(canvas, coords, color=1.0, alpha=0.5)
         grph.circles(
             canvas, random_coords, colors=random_colors(), alphas=random_alpha()
         )
-        show(grph, canvas)
+        sw.checkpoint("circles")
+        sw.show(grph, canvas)
+        print(sw.summary())
 
 
 def test_triangles():
@@ -199,12 +204,14 @@ def test_triangles():
     for i in range(100, ASIZE, 100):
         for j in range(100, ASIZE, 100):
             coords.append([i, j, i + 50, j + 0, i + 50, j - 50])
-    with StopWatcher() as show:
+    with StopWatcher() as sw:
         grph.triangles(canvas, coords, color=1.0, alpha=0.5)
         grph.triangles(
             canvas, random_coords, colors=random_colors(), alphas=random_alpha()
         )
-        show(grph, canvas)
+        sw.checkpoint("triangles")
+        sw.show(grph, canvas)
+        print(sw.summary())
 
 
 def test_ellipses():
@@ -220,28 +227,34 @@ def test_ellipses():
         coords.append([i, i, 100, 50])
     colors = np.linspace(0.0, 1.0, len(coords))
     alpha = 1.0
-    with StopWatcher() as show:
+    with StopWatcher() as sw:
         grph.ellipses(canvas, coords, colors=colors, alpha=alpha)
         grph.ellipses(
             canvas, random_coords, colors=random_colors(), alphas=random_alpha()
         )
-        show(grph, canvas)
+        sw.checkpoint("ellipses")
+        sw.show(grph, canvas)
+        print(sw.summary())
 
 
 def test_composite():
     canvas, grph = setup_test()
     random_coords, random_blocks = random_composites()
-    with StopWatcher() as show:
+    with StopWatcher() as sw:
         grph.composite(canvas, random_coords, random_blocks)
-        show(grph, canvas)
+        sw.checkpoint("composite")
+        sw.show(grph, canvas)
+        print(sw.summary())
 
 
 def test_composite_sprites():
     canvas, grph = setup_test()
     random_coords, random_sprites_ = random_sprites()
-    with StopWatcher() as show:
+    with StopWatcher() as sw:
         grph.sprites(canvas, random_coords, random_sprites_)
-        show(grph, canvas)
+        sw.checkpoint("sprites")
+        sw.show(grph, canvas)
+        print(sw.summary())
 
 
 def test_composite_mosaic():
@@ -265,9 +278,11 @@ def test_composite_mosaic():
             coords.append((x, y))
             blocks.append(block)
     shuffle(blocks)
-    with StopWatcher() as shower:
+    with StopWatcher() as sw:
         grph.composite(canvas, coords, blocks)
-        shower(grph, canvas)
+        sw.checkpoint("composite")
+        sw.show(grph, canvas)
+        print(sw.summary())
 
 
 def test_simple_texts():
@@ -277,11 +292,13 @@ def test_simple_texts():
     for x in range(100, ASIZE, 100):
         locations.append((x // 2, x))
     strings = double_shuffle(text, len(locations))
-    with StopWatcher() as show:
+    with StopWatcher() as sw:
         grph.draw_strings(
             canvas, locations, strings, font="default", size=32, alpha="bug"
         )
-        show(grph, canvas)
+        sw.checkpoint("simple")
+        sw.show(grph, canvas)
+        print(sw.summary())
 
 
 def test_text_rotation_centered():
@@ -290,12 +307,15 @@ def test_text_rotation_centered():
     center = canvas.shape[0] // 2
     locations = [(center, center)] * len(rotations)
     strings = [f"-------- {r:03d}" for r in rotations]
-    with StopWatcher() as show:
+    with StopWatcher() as sw:
         grph.draw_strings(
             canvas, locations, strings, rotations=rotations, color=1, alpha="mask"
         )
+        sw.checkpoint("strings")
         grph.circles(canvas, [(center, center, 20)], color=0.5)
-        show(grph, canvas)
+        sw.checkpoint("circle")
+        sw.show(grph, canvas)
+        print(sw.summary())
 
 
 def test_text_rotation():
@@ -305,7 +325,7 @@ def test_text_rotation():
     locations = [[center, center] for y in range(100, 1000, 800 // len(rotations))]
     locations = locations[: len(rotations)]
     strings = [f"-------------------- {r:03d}" for r in rotations]
-    with StopWatcher() as show:
+    with StopWatcher() as sw:
         grph.draw_strings(
             canvas,
             locations,
@@ -315,27 +335,32 @@ def test_text_rotation():
             color=1,
             alpha="mask",
         )
+        sw.checkpoint("strings")
         for location in locations:
             location.append(10)
             location[0], location[1] = location[1], location[0]
         grph.circles(canvas, locations[:-1], color=0.5)
-        show(grph, canvas)
+        sw.checkpoint("circles")
+        sw.show(grph, canvas)
+        print(sw.summary())
 
 
 def test_texts():
     canvas, grph = setup_test()
     locations, strings, fonts, sizes, rotations, alphas = random_texts(300)
-    with StopWatcher() as show:
+    with StopWatcher() as sw:
         grph.draw_strings(
             canvas, locations, strings, fonts=fonts, sizes=sizes, alphas=alphas
         )
-        show(grph, canvas)
+        sw.checkpoint("strings")
+        sw, show(grph, canvas)
+        print(sw.summary())
 
 
 def test_stressed_texts():
     canvas, grph = setup_test()
     locations, strings, fonts, sizes, rotations, _ = random_texts(300)
-    with StopWatcher() as show:
+    with StopWatcher() as sw:
         grph.draw_strings(
             canvas,
             locations,
@@ -345,21 +370,27 @@ def test_stressed_texts():
             rotations=rotations,
             alpha="mask",
         )
-        show(grph, canvas)
+        sw.checkpoint("strings")
+        sw.show(grph, canvas)
+        print(sw.summary())
 
 
 def test_one():
     canvas, grph = setup_test()
-    with StopWatcher() as show:
+    with StopWatcher() as sw:
         grph.lines(canvas, [[0, 0, ASIZE, ASIZE]], distance=1.5, color=1.0, alpha=1.0)
+        sw.checkpoint("lines")
         grph.circles(canvas, [[ASIZE / 2, ASIZE / 2, 20]], color=1.0, alpha=1.0)
+        sw.checkpoint("circles")
         grph.rects(
             canvas,
             [[ASIZE / 4, ASIZE / 4, ASIZE / 4 + 40, ASIZE / 4 + 40]],
             color=1.0,
             alpha=1.0,
         )
+        sw.checkpoint("rects")
         grph.ellipses(canvas, [[ASIZE / 4, ASIZE / 2, 80, 40]], color=1.0, alpha=1.0)
+        sw.checkpoint("ellipses")
         grph.triangles(
             canvas,
             [
@@ -375,6 +406,7 @@ def test_one():
             color=1.0,
             alpha=1.0,
         )
+        sw.checkpoint("triangles")
         grph.draw_strings(
             canvas,
             [[ASIZE * 3 / 4, ASIZE * 3 / 4]],
@@ -384,4 +416,6 @@ def test_one():
             alpha="mask",
             size=32,
         )
-        show(grph, canvas)
+        sw.checkpoint("strings")
+        sw.show(grph, canvas)
+        print(sw.summary())

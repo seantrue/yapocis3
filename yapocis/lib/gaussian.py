@@ -10,7 +10,7 @@ from .bound_kernels import BoundKernels
 
 
 def are_close(a: float, b: float) -> bool:
-    eps = .00001
+    eps = 0.00001
     return abs(a - b) <= eps
 
 
@@ -21,8 +21,13 @@ class GaussianWeights:
     def gaussian_weights(self):
         return self.gws
 
-    def compute_gaussian_weights(self, max_width: int = 100, scale: float = 1.6, limit: float = .001,
-                                 sigmas: Optional[List[float]] = None) -> List[Array]:
+    def compute_gaussian_weights(
+        self,
+        max_width: int = 100,
+        scale: float = 1.6,
+        limit: float = 0.001,
+        sigmas: Optional[List[float]] = None,
+    ) -> List[Array]:
         """
         Generate a list of gaussian kernels with size less than max_width
         Args:
@@ -49,7 +54,9 @@ class GaussianWeights:
         return gws
 
     @staticmethod
-    def compute_gaussian_weight(sigma: float = 1., dt: float = 1., limit: float = .01, normalize: bool = True) -> Array:
+    def compute_gaussian_weight(
+        sigma: float = 1.0, dt: float = 1.0, limit: float = 0.01, normalize: bool = True
+    ) -> Array:
         """
         Get a Gaussian distribution that sums to 1 along 1 dimension, quantized by discrete steps.
 
@@ -63,10 +70,10 @@ class GaussianWeights:
 
         """
         tail = []
-        x = 0.
-        val = 1.
+        x = 0.0
+        val = 1.0
         two_times_sigma_squared = 2 * sigma * sigma
-        scale_factor = 1. / np.sqrt(two_times_sigma_squared * np.pi)
+        scale_factor = 1.0 / np.sqrt(two_times_sigma_squared * np.pi)
         while val > limit:
             val = float(np.exp(-(x * x) / two_times_sigma_squared) * scale_factor)
             tail.append(val)
@@ -94,10 +101,16 @@ class GaussianWeights:
 # noinspection PyUnresolvedReferences
 class Gaussian(BoundKernels):
     INTERFACE = "convolvesep"
-    load_program_config =  {}
+    load_program_config = {}
 
-    def __init__(self, device_name: Optional[str] = None, gaussian_weights: Optional[List[np.ndarray]] = None):
-        self.gaussian_weights = GaussianWeights() if gaussian_weights is None else gaussian_weights
+    def __init__(
+        self,
+        device_name: Optional[str] = None,
+        gaussian_weights: Optional[List[np.ndarray]] = None,
+    ):
+        self.gaussian_weights = (
+            GaussianWeights() if gaussian_weights is None else gaussian_weights
+        )
         gws = self.gaussian_weights.gaussian_weights()
         convs = [("gauss%s" % len(a), a) for a in gws]
         convsres = [("gauss%s_res" % len(a), a) for a in gws]
@@ -109,7 +122,9 @@ class Gaussian(BoundKernels):
         self.grad = Gradient(device_name=device_name)
         self.ops = Operators(device_name=device_name)
         # Avoid importing OpenCL-specific Kernel class here; keep backend-agnostic
-        self.gaussian_kernels: List[object] = [getattr(kmgr, name) for (name, conv) in convs]
+        self.gaussian_kernels: List[object] = [
+            getattr(kmgr, name) for (name, conv) in convs
+        ]
         for i, (name, conv) in enumerate(convs):
             self.gaussian_kernels[i].res = getattr(kmgr, convsres[i][0])
             self.gaussian_kernels[i].h = getattr(kmgr, convsh[i][0])
@@ -128,14 +143,14 @@ class Gaussian(BoundKernels):
 
     def gauss_image(self, a: Image1, scale: int) -> Image1:
         g = self.get_gaussian_kernel(scale)
-        #a = a.copy()
-        b = np.empty_like(a)
-        g.write(a)
+        aa = a.copy()
+        b = np.empty_like(aa)
+        g.write(aa)
         g.write(b)
-        g.h(a, b)
-        g.v(b, a)
-        g.read(a)
-        return a
+        g.h(aa, b)
+        g.v(b, aa)
+        g.read(aa)
+        return aa
 
     def zcs(self, image, threshold=None):
         threshold = self.threshold if threshold is None else threshold
@@ -145,9 +160,15 @@ class Gaussian(BoundKernels):
         threshold = self.threshold if threshold is None else threshold
         return self.zc.zcs_res(image, zcs, threshold=threshold)
 
-    def zcsdog(self, a: Image1, scale: int, threshold=None, clear_margin: bool = True, frame: bool = True,
-               res: bool = True) -> \
-            Tuple[Image1, Image1, Image1]:
+    def zcsdog(
+        self,
+        a: Image1,
+        scale: int,
+        threshold=None,
+        clear_margin: bool = True,
+        frame: bool = True,
+        res: bool = True,
+    ) -> Tuple[Image1, Image1, Image1]:
         threshold = self.threshold if threshold is None else threshold
         if res:
             g = self.get_gaussian_kernel(scale)
@@ -185,6 +206,6 @@ class Gaussian(BoundKernels):
             set_margin(theta, margin)
         if frame:
             set_frame(zca, margin)
-        zca, grad, theta =  zca.copy(), grad.copy(), theta.copy()
+        zca, grad, theta = zca.copy(), grad.copy(), theta.copy()
         self.purge()
         return zca, grad, theta

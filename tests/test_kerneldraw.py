@@ -27,7 +27,7 @@ def setup_test(device_name: Optional[str] = None, chunk_size: Optional[int] = No
 def test_batch():
     canvas, ad = setup_test()
     locations, strings, fonts, sizes, _, text_alphas = random_texts()
-    with StopWatcher() as show:
+    with StopWatcher() as sw:
         ad.composite(*random_composites(), alpha=1.0)
         ad.sprites(*random_sprites(), alpha=1.0)
         ad.ellipses(random_ellipses(), colors=random_colors(), alphas=random_alpha())
@@ -35,9 +35,13 @@ def test_batch():
         ad.rects(random_rects(), colors=random_colors(), alphas=random_alpha())
         ad.lines(random_lines(), colors=random_colors(), alphas=random_alpha())
         ad.draw_strings(locations, strings, fonts=fonts, sizes=sizes, alphas=text_alphas)
+        sw.checkpoint("display_list")
         ad.render()
+        sw.checkpoint("render")
         a = ad.read()
-        show(ad, a)
+        sw.checkpoint("read")
+        sw.show(ad, a)
+        print(sw.summary())
 
 
 def fill_display_list(ad: KernelDraw1, n: int = 1000) -> None:
@@ -65,21 +69,28 @@ def fill_display_list(ad: KernelDraw1, n: int = 1000) -> None:
 def test_display_list():
     canvas, ad = setup_test()
     fill_display_list(ad, 100)
-    with StopWatcher() as show:
+    with StopWatcher() as sw:
         ad.render()
+        sw.checkpoint("render")
         a = ad.read()
-        show(ad, a)
+        sw.checkpoint("read")
+        sw.show(ad, a)
+        print(sw.summary())
 
 # @pytest.mark.skip("Too slow for now")
 def test_chunking():
     times = []
     for chunk_size in (10, 100, 500):
         canvas, ad = setup_test(chunk_size=chunk_size)
-        with StopWatcher() as show:
+        with StopWatcher() as sw:
             t = time.time()
             fill_display_list(ad, 1000)
+            sw.checkpoint("fill_display_list")
             ad.render()
+            sw.checkpoint("render")
             canvas = ad.read()
+            sw.checkpoint("read")
             times.append(time.time() - t)
-            show(ad, f"{chunk_size}", canvas)
+            sw.show(ad, canvas, f"chunk_size={chunk_size}")
+            print(sw.summary())
     print(times)

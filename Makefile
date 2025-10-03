@@ -310,6 +310,11 @@ clean-all: clean ## Clean everything including virtual environment
 	rm -rf $(VENV_DIR)
 	@echo "$(GREEN)Full cleanup complete$(NC)"
 
+.PHONY: clean-test
+clean-test:
+	@echo "$(YELLOW)Cleaning up image queue$(NC)"
+	./cq
+
 .PHONY: reset
 reset: clean-all venv install-dev ## Complete reset: clean everything and reinstall
 

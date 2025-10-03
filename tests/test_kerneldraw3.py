@@ -26,7 +26,7 @@ def test_batch():
     triangles = random_triangles()
     ellipses = random_ellipses()
     alphas = random_colors()
-    with StopWatcher() as show:
+    with StopWatcher() as sw:
         ad.set_color((1, 0, 0))
         ad.ellipses(random_coords, alphas=alphas)
         ad.set_color((0, 1, 0))
@@ -42,9 +42,13 @@ def test_batch():
         ad.set_color((1, 1, 1))
         ad.ellipses(ellipses, color=(.5, .5, .2), alphas=alphas)
         ad.draw_strings(locations, strings, fonts=fonts, sizes=sizes, rotations=rotations, colors=colors, alpha="mask")
+        sw.checkpoint("display_list")
         ad.render()
+        sw.checkpoint("render")
         a = ad.read()
-        show(ad, a)
+        sw.checkpoint("read")
+        sw.show(ad, a)
+        print(sw.summary())
 
 
 def test_displaylist():
@@ -54,7 +58,7 @@ def test_displaylist():
     lines = random_lines()
     colors = list(zip(random_colors(), random_colors(), random_colors()))
     alphas = random_alpha()
-    with StopWatcher() as show:
+    with StopWatcher() as sw:
         for circle, color, alpha in zip(circles, colors, alphas):
             ad.circle(circle, color=color, alpha=alpha)
         for xyxy, color, alpha in zip(lines, colors, alphas):
@@ -63,6 +67,10 @@ def test_displaylist():
             ad.rect(rect, color=color, alpha=alpha)
         for x in range(100, ASIZE, 100):
             ad.draw_string((x // 2, x), "Hello world!", alpha="bug")
+        sw.checkpoint("display_list")
         ad.render()
+        sw.checkpoint("render")
         a = ad.read()
-        show(ad, a)
+        sw.checkpoint("read")
+        sw.show(ad, a)
+        print(sw.summary())

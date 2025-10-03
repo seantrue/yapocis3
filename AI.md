@@ -10,6 +10,47 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2025-10-03: StopWatcher Pattern Standardization and Show Array Updates
+
+**AI Contribution (Claude):**
+- Backported NPZ file saving to show_array from main branch
+  - Added RAW_QUEUE directory for storing raw arrays
+  - Implemented array_to_image() helper function
+  - Modified show_array to save both PNG and NPZ files for validation framework
+  - Updated show_array signature: array now first parameter
+- Fixed StopWatcher timing bugs
+  - Fixed undefined variable 't' in __call__
+  - Fixed AttributeError in __enter__ accessing self.t before initialization
+  - Improved checkpoint timing accuracy
+- Applied consistent StopWatcher pattern across all test files
+  - Updated test_graphics.py, test_graphics4.py (14 functions)
+  - Updated test_kerneldraw.py, test_kerneldraw3.py, test_kerneldraw4.py (8 functions)
+  - Updated test_anisodiff.py, test_gaussians.py, test_colormath.py
+  - Added appropriate timing checkpoints (display_list, render, read)
+  - Standardized on sw.checkpoint(), sw.show(), and print(sw.summary())
+- Updated all show_array callers to use new signature
+- Lines changed: ~425 additions, ~270 deletions across 11 files
+
+**Files modified:**
+- `yapocis/utils/basic.py` - NPZ saving and signature update
+- `yapocis/utils/advanced.py` - Updated show_array calls
+- `tests/__init__.py` - Fixed StopWatcher bugs
+- `tests/test_graphics.py` - StopWatcher pattern
+- `tests/test_graphics4.py` - StopWatcher pattern
+- `tests/test_kerneldraw.py` - StopWatcher pattern
+- `tests/test_kerneldraw3.py` - StopWatcher pattern
+- `tests/test_kerneldraw4.py` - StopWatcher pattern
+- `tests/test_anisodiff.py` - StopWatcher pattern
+- `tests/test_gaussians.py` - StopWatcher pattern
+- `tests/test_colormath.py` - StopWatcher pattern
+
+**Human Contribution:**
+- Design decision to backport NPZ saving
+- Manual update of test_graphics.py with new StopWatcher pattern as example
+- Request to apply pattern consistently across all tests
+
+---
+
 ### 2025-10-03: Validation Framework Fixes and Numba HSI Completion
 
 **AI Contribution (Claude):**

@@ -18,7 +18,7 @@ def get_available_device_names():
     return device_names
 
 
-def get_available_devices(aliases:bool=True) -> Dict[str, "Device"]:
+def get_available_devices(aliases: bool = True) -> Dict[str, "Device"]:
     """
     Get the names of the available OpenCL platforms and devices. Name is device name,
     with an alias of platform:device name.
@@ -40,9 +40,10 @@ def get_available_devices(aliases:bool=True) -> Dict[str, "Device"]:
             i += 1
     return devices
 
-def pick_default_device(device_names:List[str]) -> str:
-    dns = {dn.lower():dn for dn in device_names if isinstance(dn,str)}
-    preferences = ('nvidia','amd','intel')
+
+def pick_default_device(device_names: List[str]) -> str:
+    dns = {dn.lower(): dn for dn in device_names if isinstance(dn, str)}
+    preferences = ("nvidia", "amd", "intel")
     for preference in preferences:
         for dn in dns.keys():
             if preference in dn and "cpu" not in dn:
@@ -50,7 +51,7 @@ def pick_default_device(device_names:List[str]) -> str:
     for preference in preferences:
         for dn in dns.keys():
             if preference in dn and "cpu" in dn:
-               return dns[dn]
+                return dns[dn]
     return device_names[-1]
 
 
@@ -65,19 +66,23 @@ def get_device(device_name: Optional[str] = None) -> "Device":
     Returns: an OpenCL device as wrapped by PyOpenCL
 
     """
-    device_name = os.environ.get("YAPOCIS_ENGINE", None) if device_name is None else device_name
+    device_name = (
+        os.environ.get("YAPOCIS_ENGINE", None) if device_name is None else device_name
+    )
     devices = get_available_devices()
     if not devices:
         raise RuntimeError("No OpenCL devices found")
     device_names = list(devices.keys())
-    if device_name is None:
+    if not device_name:
         device_name = pick_default_device(device_names)
         print(f"Defaulting to {device_name}")
     if device_name not in devices:
         try:
             engine_index = int(device_name)
         except ValueError:
-            raise RuntimeError(f"{device_name} not an available device or device index  {device_names}")
+            raise RuntimeError(
+                f"{device_name} not an available device or device index  {device_names}"
+            )
         except TypeError:
             raise RuntimeError(f"{device_name} not a string or integer")
         return get_device(device_names[engine_index])

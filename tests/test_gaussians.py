@@ -1,5 +1,4 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
-import time
 
 import numpy as np
 
@@ -8,8 +7,7 @@ from yapocis.lib.gaussian import Gaussian, GaussianWeights, are_close
 from yapocis.lib.gradient import Gradient
 from yapocis.lib.hsi import HSI
 from yapocis.ocl.device import get_available_device_names
-
-from . import StopWatcher, image_test, show, show_snapshots, snapshow
+from . import StopWatcher, image_test
 
 
 def test_weight_sum():
@@ -27,59 +25,68 @@ def test_weights():
 
 def test_kernels():
     g = Gaussian()
-    for scale in range(g.get_scales()):
-        gkernel = g.get_gaussian_kernel(scale)
-        a = np.zeros((400,401), dtype=np.float32)
-        a[127, 127] = 1.0
-        b = gkernel(1, a)
-        gsum = g.gaussian_weights.get_gaussian_weight(scale).sum()
-        assert are_close(b[127, :].sum(), gsum)
-        b = gkernel(0, a)
-        assert are_close(b[:, 127].sum(), gsum)
-        # Compare in order of lowest precision
-        assert are_close(a.sum(), 1.0)
+    a = np.zeros((400, 401), dtype=np.float32)
+    a[127, 127] = 1.0
+    with StopWatcher("impulse ") as sw:
+        for scale in range(g.get_scales()):
+            checkpoint = f"{scale}"
+            b = g.gauss_image(a, scale)
+            sw.checkpoint(checkpoint)
+            sw.show(g, b, checkpoint)
+            gsum = g.gaussian_weights.get_gaussian_weight(scale).sum()
+            bsum = b.sum()
+            assert are_close(gsum, bsum)
+            assert are_close(bsum, 1.0)
+            sw.checkpoint("check")
 
 
 def test_image():
     g = Gaussian()
-    for scale in range(g.get_scales()):
-        a = np.zeros((400, 401), dtype=np.float32)
-        a[200, :] = 1.0
-        a[:, 200] = 1.0
-        for xy in range(400):
-            a[xy, xy] = 1.0
-        with StopWatcher() as show:
+    a = np.zeros((400, 401), dtype=np.float32)
+    a[200, :] = 1.0
+    a[:, 200] = 1.0
+    for xy in range(400):
+        a[xy, xy] = 1.0
+    with StopWatcher("gauss_image") as sw:
+        for scale in range(g.get_scales()):
+            checkpoint = f"{scale=}"
             b = g.gauss_image(a, scale)
-            show(g, f"scale {scale}", b)
+            sw.checkpoint(checkpoint)
+            sw.show(g, b, checkpoint)
+        print(sw.summary())
 
 
 def test_zcs():
     g = Gaussian()
     image = np.zeros((512, 513), dtype=np.float32)
     image[255, 240:280] = 1.0
-    with StopWatcher() as shower:
-        smaller = g.gauss_image(image, 0)
-        larger = g.gauss_image(image, 1)
-        dog = smaller - larger
-        zca = g.zcs(dog)
-        shower(g, zca)
-    show("scale 4", smaller)
-    show("scale 5", larger)
-    show("dog", dog)
+
+    with StopWatcher("zcs") as sw:
+        for scale in range(g.get_scales() - 1):
+            checkpoint = f"{scale=}"
+            smaller = g.gauss_image(image, scale)
+            larger = g.gauss_image(image, scale + 1)
+            dog = smaller - larger
+            zca = g.zcs(dog)
+            sw.checkpoint(checkpoint)
+            sw.show(g, zca, checkpoint)
+            sw.show(g, dog, "dog", checkpoint)
+        print(sw.summary())
+
 
 def test_multiscale_zcs():
+    a = np.zeros((400, 401), dtype=np.float32)
+    a[150:250, 150:250] = 1.0
     for device_name in get_available_device_names():
         g = Gaussian(device_name=device_name)
-        subtotal = 0.0
-        for scale in range(g.get_scales() - 1):
-            a = np.zeros((400, 401), dtype=np.float32)
-            a[150:250, 150:250] = 1.0
-            with StopWatcher() as show:
-                t = time.time()
+        with StopWatcher(device_name) as sw:
+            for scale in range(g.get_scales() - 1):
+                checkpoint = f"{scale=}"
                 zca, grad, theta = g.zcsdog(a, scale, res=True)
-                subtotal += (time.time() - t)
-                show(g, scale, zca)
-        print(f" {device_name} {subtotal:.03f} seconds")
+                sw.checkpoint(checkpoint)
+                sw.show(g, zca, f"{scale=}")
+            print(sw.summary())
+
 
 # def test_thresholds():
 #     g = Gaussian()
@@ -98,21 +105,26 @@ def test_gradient():
     for device_name in get_available_device_names():
         hsi = HSI(device_name=device_name)
         g = Gradient(device_name=device_name)
-        _,_,I = hsi.rgb2hsi(*split_planes(img))
-        with StopWatcher() as shower:
-            gr,th = g.gradient(I, 3)
-            shower(g, device_name, "theta",th)
-        show(device_name, "grad", gr)
+        _, _, I = hsi.rgb2hsi(*split_planes(img))
+        with StopWatcher() as sw:
+            gr, th = g.gradient(I, 3)
+            sw.checkpoint("gradient")
+            sw.show(g, th, "theta", th)
+            sw.show(g, gr, device_name)
+            print(sw.summary())
+
 
 def test_multiscale_zcs_test():
     hsis = HSI()
     img = image_test()
-    h,s,i = split_planes(hsis.hsi2rgb3(img))
+    h, s, i = split_planes(hsis.hsi2rgb3(img))
     g = Gaussian(device_name=0)
     subtotal = 0.0
-    for scale in range(g.get_scales() - 1):
-        t = time.time()
-        zca, grad, theta = g.zcsdog(i, scale, res=True)
-        subtotal += (time.time() - t)
-        snapshow(g, scale, f"{subtotal:.03f}", zca)
-    print(f"{subtotal:.03f} seconds")
+    with StopWatcher() as sw:
+        for scale in range(g.get_scales() - 1):
+            checkpoint = f"{scale=}"
+            zca, grad, theta = g.zcsdog(i, scale, res=True)
+            sw.show(g, zca, checkpoint)
+        sw.show(g, grad, "grad")
+        sw.show(g, theta, "theta")
+        print(sw.summary())

@@ -119,20 +119,22 @@ class StopWatcher:
         self.last_checkpoint = self.t
         return self
 
-    def __call__(self, snapper, *args, checkzero=False):
+    def __call__(
+        self, snapper: "BoundKernel", array: np.ndarray, *args, checkzero=False, depth=0
+    ):
         t = time.time() - self.t
-        # Extract array from args (last argument) for snapshow signature
-        array = args[-1]
-        other_args = args[:-1]
+        self.checkpoint("show")
         snapshow(
             snapper,
             array,
             *self.args,
-            *other_args,
-            depth=3,
+            *args,
+            depth=3 + depth,
             t=f"{t:.03f}",
             checkzero=checkzero,
         )
+
+    show = __call__
 
     def checkpoint(self, name: str) -> float:
         """Add a timing checkpoint and return elapsed time since last checkpoint."""
@@ -197,22 +199,6 @@ class StopWatcher:
             return f"<StopWatcher {status}: {elapsed:.3f}s elapsed>"
         else:
             return f"<StopWatcher {status}>"
-
-    def show(self, snapper, *args, checkzero=False):
-        """Show method that does the same as __call__ for backward compatibility."""
-        t = time.time() - self.t
-        # Extract array from args (last argument) for snapshow signature
-        array = args[-1]
-        other_args = args[:-1]
-        snapshow(
-            snapper,
-            array,
-            *self.args,
-            *other_args,
-            depth=3,
-            t=f"{t:.03f}",
-            checkzero=checkzero,
-        )
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         return
