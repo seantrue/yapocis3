@@ -119,6 +119,6 @@ def show_arraygrad(title, image, theta, grad = None) -> None:
             ad.line((x1,y1,x2,y2), distance=1.1, color=color, alpha=1)
     ad.render()
     a = ad.read()
-    show_array(title, a, normalize=False)
+    show_array(a, title, normalize=False)
 
 

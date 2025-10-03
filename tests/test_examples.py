@@ -15,7 +15,7 @@ def example_test(module, label):
     r, g, b = split_channels(image)
     h, s, i = hsi.rgb2hsi(r, g, b)
     g, a = grad.gradient(i, 7)
-    module.show_array(f"Gradient ({label})", g)
+    module.show_array(g, f"Gradient ({label})")
     module.show_arraygrad(f"Grad angle ({label})", image, a)
     module.show_arraygrad(f"Grad vectors ({label})", image, a, g)
     snapshot(hsi)

@@ -8,6 +8,6 @@ def test_images():
     tifs = [name for name in images() if name.endswith(".tif")]
     for tif in tifs:
         img = imread(find_image(tif))
-        show_array("imread", tif, img)
+        show_array(img, "imread", tif)
 
 
