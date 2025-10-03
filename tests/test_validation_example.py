@@ -43,18 +43,33 @@ def test_graphics4_circles_validation(backend, validate_result):
 @pytest.mark.validation
 def test_manual_validation_context():
     """Example showing manual validation context usage."""
-    from yapocis.utils.validation import ValidationContext
+    from yapocis.utils.validation import ValidationContext, VALIDATION_DIR
+    from pathlib import Path
 
-    # Generate test data
+    # Clean up any existing reference to ensure test is deterministic
+    ref_file = VALIDATION_DIR / "manual_validation_test.npz"
+    if ref_file.exists():
+        ref_file.unlink()
+
+    # Generate test data (deterministic based on test_name)
     test_data = generate_test_field(
         (50, 50), test_name="manual_validation", distribution="random"
     )
 
-    # Use validation context
+    # Use validation context with auto_promote
     with ValidationContext("manual_validation_test", auto_promote=True) as validator:
-        # Perform validation
+        # Perform validation - should auto-promote since no reference exists
         is_valid = validator.validate(test_data)
         assert is_valid, "Validation should pass (auto-promote if no reference)"
+
+    # Second validation should also pass (now comparing against promoted reference)
+    with ValidationContext("manual_validation_test", auto_promote=False) as validator:
+        # Generate same deterministic data
+        test_data2 = generate_test_field(
+            (50, 50), test_name="manual_validation", distribution="random"
+        )
+        is_valid2 = validator.validate(test_data2)
+        assert is_valid2, "Validation should pass against promoted reference"
 
 
 def test_no_validation():

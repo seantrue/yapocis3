@@ -4,11 +4,41 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Summary Statistics
 
-- **Total AI-assisted commits**: ~7
-- **Major features developed with AI assistance**: Metal backend fixes, coordinate system standardization, renamed truetrace module
+- **Total AI-assisted commits**: ~8
+- **Major features developed with AI assistance**: Metal backend fixes, coordinate system standardization, renamed truetrace module, validation framework fixes, numba backend completeness
 - **Lines of code**: Tracking started 2025-10-03
 
 ## Detailed Contributions
+
+### 2025-10-03: Validation Framework Fixes and Numba HSI Completion
+
+**AI Contribution (Claude):**
+- Fixed test_manual_validation_context test failure
+  - Analyzed validation framework auto-promotion logic
+  - Added cleanup of stale validation references
+  - Enhanced test to verify both auto-promotion and subsequent validation
+  - Improved test documentation and comments
+- Completed Numba HSI backend implementation
+  - Identified missing `hsi2rgb` function in numba/kernels/hsi.py
+  - Implemented `hsi2rgb` matching OCL kernel interface
+  - Maintained proper channel swizzle (r,b,g) for consistency
+  - Verified all numba backend tests pass
+- Lines changed: ~30 additions across 2 files
+
+**Files modified:**
+- `tests/test_validation_example.py` - Fixed validation test with proper cleanup and verification
+- `yapocis/numba/kernels/hsi.py` - Added missing `hsi2rgb` function
+
+**Testing:**
+- All numba backend tests pass (18 tests)
+- Validation framework tests pass
+- HSI color conversion tests pass on numba backend
+
+**Human Contribution:**
+- Bug identification and reporting
+- Testing and verification
+
+---
 
 ### 2025-10-03: Rename sdfpath to truetrace + Numba documentation
 

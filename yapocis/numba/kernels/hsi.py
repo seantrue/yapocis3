@@ -195,6 +195,23 @@ def rgb2hsi3(depth: int, input: np.ndarray, output: np.ndarray):
     return output
 
 
+def hsi2rgb(
+    h: np.ndarray,
+    s: np.ndarray,
+    i: np.ndarray,
+    ro: np.ndarray,
+    go: np.ndarray,
+    bo: np.ndarray,
+):
+    # Match kernel swizzle (r,b,g) - inverse of rgb2hsi
+    hsi = np.stack([h, s, i], axis=-1)
+    rgb = _hsi2rgb_glsl(hsi)
+    ro[:] = rgb[..., 0]
+    bo[:] = rgb[..., 2]
+    go[:] = rgb[..., 1]
+    return ro, go, bo
+
+
 def hsi2rgb3(depth: int, input: np.ndarray, output: np.ndarray):
     output[:] = _hsi2rgb_glsl(input)
     return output
