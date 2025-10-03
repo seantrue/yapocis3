@@ -1,18 +1,18 @@
 # What is Yapocis?
 
-Yapocis is "Yet another Python OpenCL interface specification" — now with multiple backends: OpenCL, CUDA, and Metal.
+Yapocis is "Yet another Python OpenCL interface specification" — now with multiple backends: OpenCL, CUDA, Metal, and Numba.
 
 Memorable. Easy to pronounce and spell. Clearly related to the semantics of the project.
 
 Or not, all the good names are used and I am not in marketing.
 
-It includes easy-to-call-from-Python, reasonably performing implementations of kernels such as Mandelbrot, 3x3 median, image gradients, HSI <-> RGB conversions, color math, and 2D graphics primitives. I use it to develop much less generally useful implementations of bizarre image processing ideas.
+It includes easy-to-call-from-Python, reasonably performing implementations of kernels such as Mandelbrot, 3x3 median, image gradients, HSI <-> RGB conversions, color math, 2D graphics primitives, and signed distance field path tracing. I use it to develop much less generally useful implementations of bizarre image processing ideas.
 
 ## Why this happened?
 
 *Some brief history, "living backwards" order:*
 
-I'm putting this code up on Github to be used or snickered at. Both can be helpful. It has been used on macOS and Linux with a 64-bit Python, and assumes NumPy and Matplotlib for examples/demos. It supports OpenCL (PyOpenCL), CUDA (CuPy), and Metal (via a thin `pymetallic` shim used in tests). I can't help resolve issues on dependencies; it's hard enough to make new ones happen.
+I'm putting this code up on Github to be used or snickered at. Both can be helpful. It has been used on macOS and Linux with a 64-bit Python, and assumes NumPy and Matplotlib for examples/demos. It supports OpenCL (PyOpenCL), CUDA (CuPy), Metal (via a thin `pymetallic` shim), and Numba (CPU fallback with JIT compilation). I can't help resolve issues on dependencies; it's hard enough to make new ones happen.
 
 *This in response to a note I got back from the pyopencl list:*
 
@@ -76,17 +76,23 @@ __kernel void mandelbrot(__global float2 *q,  __global short *output, int const 
 
 ## Backends and selection
 
-- Backends: `ocl` (OpenCL via PyOpenCL), `cuda` (CuPy), and `metal` (PyMetallic shim).
-- Select backend via env: `export YAPOCIS_BACKEND=ocl|cuda|metal`.
+- Backends: `ocl` (OpenCL via PyOpenCL), `cuda` (CuPy), `metal` (PyMetallic shim), and `numba` (CPU with JIT).
+- Select backend via env: `export YAPOCIS_BACKEND=ocl|cuda|metal|numba`.
 - You can also select explicitly in code:
 
 ```python
 from yapocis.core.manager import get_manager
-mgr = get_manager("metal")  # or "ocl"/"cuda"
+mgr = get_manager("metal")  # or "ocl"/"cuda"/"numba"
 prog = mgr.load_program("demo")
 ```
 
 High-level wrappers (e.g., `yapocis.lib.*`) route through `yapocis.core.manager` and honor `YAPOCIS_BACKEND`.
+
+**Numba backend notes:**
+- Provides CPU fallback when GPU backends are unavailable
+- Uses Numba's JIT compilation for Python/NumPy code
+- Automatically selected when no GPU backend is available
+- Useful for testing and development without GPU hardware
 
 ## Development & tests
 
@@ -106,15 +112,17 @@ make test-all
 
 Backend test markers and dependencies:
 
-- Markers exist for each backend: `-m ocl`, `-m metal`, `-m cuda`.
-- Tests will skip cleanly if the backend runtime isn’t installed:
+- Markers exist for each backend: `-m ocl`, `-m metal`, `-m cuda`, `-m numba`.
+- Tests will skip cleanly if the backend runtime isn't installed:
   - OpenCL tests require `pyopencl`.
   - Metal tests require a working `pymetallic` runtime and an Apple GPU.
   - CUDA tests require `cupy` for the core CUDA runtime tests; the PyCUDA legacy test requires `pycuda`.
+  - Numba tests require `numba` (usually available in most environments).
 - Useful invocations:
   - `pytest -q -m metal` to run only Metal tests.
   - `pytest -q -m ocl` to run only OpenCL tests.
   - `pytest -q -m cuda` to run only CUDA tests.
+  - `pytest -q -m numba` to run only Numba tests.
   - `pytest -q tests/test_backend_smoke.py` to smoke‑compile all interfaces across available backends.
   - `pytest -q tests/test_backend_runtime.py` to run a tiny runtime sanity call per backend.
 

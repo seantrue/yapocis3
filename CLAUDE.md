@@ -79,7 +79,7 @@ export YAPOCIS_PROJECT=external
 - `convolve.py`: Image convolution operations
 - `colormath.py`, `hsi.py`: Color space conversions
 - `anisodiff.py`: Anisotropic diffusion
-- `sdfpath.py`: Signed distance field path tracing
+- `truetrace.py`: Signed distance field path tracing
 
 ### Backend Architecture
 
