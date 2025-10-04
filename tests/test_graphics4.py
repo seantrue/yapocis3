@@ -2,17 +2,15 @@
 
 from yapocis.lib.graphics4 import Graphics4
 from yapocis.utils.stereo_typing import *
-from . import ASIZE, StopWatcher, text_test_lines
+from . import ASIZE, StopWatcher, text_test_lines, double_shuffle
 from .random_data import (
     random_points,
     random_lines,
-    random_rects,
     random_triangles,
     random_circles,
     random_ellipses,
     random_texts,
     # Graphics4-specific imports
-    random_vector,
     components_to_colors,
     random_colors_4ch as random_colors,
     random_alpha_4ch as random_alpha,
