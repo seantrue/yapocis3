@@ -13,6 +13,7 @@ from yapocis.lib.truetrace import (
 from . import (
     ASIZE,
     show,
+    StopWatcher,
 )
 
 
@@ -94,13 +95,15 @@ def test_truetrace_matches_original_fill_iou_ssim(tmp_path):
 
     # New GPU pipeline → segments → rings → regions
     tracer = TrueTrace()
-    segs, (w2, h2) = tracer.trace_segments(mask, iso=0.0)
-    assert (w2, h2) == (W, H)
+    with StopWatcher("truetrace", kernel=tracer) as sw:
+        with sw.checkpoint("trace_segments"):
+            segs, (w2, h2) = tracer.trace_segments(mask, iso=0.0)
+        assert (w2, h2) == (W, H)
 
-    # Render segments to an array and save for visual inspection
-    seg_img = render_segments_to_array(segs, (W, H), line_width=1, aa=4)
-    seg_img = seg_img / seg_img.max()
-    show("truetrace", seg_img)
+        # Render segments to an array and save for visual inspection
+        seg_img = render_segments_to_array(segs, (W, H), line_width=1, aa=4)
+        seg_img = seg_img / seg_img.max()
+        sw.show(seg_img)
 
     polys = chain_segments_to_polylines(segs, tol=0.25)
     simp = [douglas_peucker(p, 0.75) for p in polys if p.shape[0] >= 3]

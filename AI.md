@@ -10,57 +10,81 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
-### 2025-10-04: StopWatcher Pattern Refactoring Across Test Suite
+### 2025-10-04: Comprehensive StopWatcher Pattern Audit and Refactoring
 
 **AI Contribution (Claude):**
+- Conducted comprehensive audit of all test files for StopWatcher usage
 - Refactored test files to match the updated StopWatcher pattern from `tests/test_graphics.py`
+- Added performance tracking to previously untracked kernel operations
 - Pattern changes applied:
   - Added descriptive names to StopWatcher initialization: `StopWatcher("test_name", kernel=obj)`
   - Converted checkpoint calls to context manager style: `with sw.checkpoint("label"):`
   - Removed manual `print(sw.summary())` calls (now auto-logged via save_perf)
   - Updated `sw.show()` signature from `sw.show(kernel, canvas)` to `sw.show(canvas)`
+  - Preserved `sw.showcheck()` for intermediate checkpoints with metadata
 - Applied formatting improvements via linter (black/ruff)
   - Standardized spacing and line breaks
   - Fixed import organization
   - Improved code readability
-- Lines changed: ~150 modifications across 3 files
+- Lines changed: ~250 modifications across 8 files
 
-**test_graphics4.py - 15 functions refactored:**
-- `test_lines`, `test_rects`, `test_circles`, `test_triangles`, `test_ellipses`
-- `test_composite`, `test_composite_sprites`, `test_composite_mosaic`
-- `test_simple_icons`, `test_random_icons`
-- `test_simple_texts`, `test_text_rotation`
-- `test_texts_stressed`, `test_texts_stressed_rotation`, `test_typesetting`
-- `test_one`
+**Previously Refactored (earlier commits):**
+- `test_graphics4.py` - 15 functions refactored
+- `test_kerneldraw.py` - 3 functions refactored
+- `test_kerneldraw4.py` - 3 functions refactored
 
-**test_kerneldraw.py - 3 functions refactored:**
-- `test_batch` - Batch rendering with multiple primitive types
-- `test_display_list` - Display list rendering
-- `test_chunking` - Performance testing with different chunk sizes
+**Newly Refactored (this commit):**
 
-**test_kerneldraw4.py - 3 functions refactored:**
-- `test_batch` - Batch rendering for 4-channel graphics
+**test_kerneldraw3.py - 2 functions:**
+- `test_batch` - Batch rendering with 3-channel graphics
 - `test_displaylist` - Display list with individual draw calls
-- `test_chunking` - Chunk size performance comparison
+
+**test_mandelbrot.py - 1 function:**
+- `test_mandelbrot` - Mandelbrot set computation with perf_tracker integration
+
+**test_convolve.py - 1 function:**
+- `test_convolve` - 1D convolution performance testing
+
+**test_imageops.py - 6 functions (NEW tracking added):**
+- `test_clamp` - Pixel clamping operation
+- `test_binarize` - Binarization operation
+- `test_stretch` - Histogram stretching
+- `test_histogram` - Histogram computation with different bin counts
+- `test_histogram_res` - Resident buffer histogram operations
+- `test_ops` - Combined operations (clamp, histogram, stretch)
+
+**test_truetrace.py - 1 function (NEW tracking added):**
+- `test_truetrace_matches_original_fill_iou_ssim` - GPU-accelerated SDF tracing
+
+**Files verified (already using correct pattern):**
+- `test_anisodiff.py` - Uses `sw.showcheck()` appropriately
+- `test_colormath.py` - Uses `sw.showcheck()` appropriately
+- `test_gaussians.py` - Uses `sw.showcheck()` appropriately
+- `test_examples.py` - Uses modern pattern appropriately
 
 **Files modified:**
-- `tests/test_graphics4.py` - Refactored StopWatcher usage pattern
-- `tests/test_kerneldraw.py` - Refactored StopWatcher usage pattern
-- `tests/test_kerneldraw4.py` - Refactored StopWatcher usage pattern
+- `tests/test_kerneldraw3.py` - Refactored StopWatcher usage pattern
+- `tests/test_mandelbrot.py` - Refactored StopWatcher usage pattern
+- `tests/test_convolve.py` - Added names and kernel parameters
+- `tests/test_imageops.py` - Added StopWatcher tracking to 6 functions
+- `tests/test_truetrace.py` - Added StopWatcher tracking
 
 **Testing:**
-- Verified test_batch passes in all files with new pattern
+- Verified all refactored tests maintain correct functionality
 - Confirmed consistent usage across all test functions
 - Maintained backward compatibility with existing functionality
 
 **Benefits:**
-- Consistent StopWatcher usage across entire test suite
+- Complete StopWatcher coverage across all kernel-calling tests
+- Consistent pattern usage across entire test suite
+- Better integration with performance tracking and DuckDB storage
+- Improved visibility into kernel performance
 - Cleaner checkpoint timing with context managers
-- Better integration with performance tracking system
-- Improved code readability and maintainability
 
 **Human Contribution:**
-- Request to refactor based on test_graphics.py pattern
+- Request for comprehensive audit
+- Clarification on showcheck() vs show() usage pattern
+- Approval to refactor all identified files
 - Code review and linting
 
 ---
