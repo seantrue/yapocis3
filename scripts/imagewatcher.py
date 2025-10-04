@@ -30,6 +30,7 @@ from yapocis.utils.basic import VIEWING_QUEUE
 
 # Import validation framework
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from pathlib import Path
 from yapocis.utils.validation import (
     promote_to_validation,
     load_validation_reference,
@@ -127,7 +128,7 @@ def get_npz_path(image_path, target_dir=None):
     if not image_path:
         return None
 
-    base_name = os.path.splitext(os.path.basename(image_path))[0].lower()
+    base_name = os.path.splitext(os.path.basename(image_path))[0]
     npz_name = f"{base_name}.npz"
 
     if target_dir:
@@ -567,6 +568,12 @@ def promote_current_image(font, force_overwrite=False, backend_specific=False):
         show_status_message(font, "Cannot parse image name", (255, 0, 0))
         return
 
+    # Get the npz file path directly from the image path (same base name, different extension)
+    npz_path = get_npz_path(most_recent)
+    if not npz_path or not os.path.exists(npz_path):
+        show_status_message(font, "No .npz file found", (255, 0, 0))
+        return
+
     try:
         # Check if validation reference already exists
         existing_ref = load_validation_reference(test_name, backend)
@@ -577,9 +584,9 @@ def promote_current_image(font, force_overwrite=False, backend_specific=False):
             )
             return
 
-        # Try to promote using the validation framework
+        # Try to promote using the validation framework, passing the actual source file
         success = promote_to_validation(
-            test_name, backend, backend_specific=backend_specific
+            test_name, backend, source_file=Path(npz_path), backend_specific=backend_specific
         )
         if success:
             status = (
