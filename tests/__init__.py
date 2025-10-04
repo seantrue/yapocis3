@@ -7,6 +7,7 @@ import time
 from random import shuffle
 
 import numpy as np
+from numpy.testing import assert_allclose
 
 random.seed(42)
 
@@ -173,15 +174,17 @@ YAPOCIS_PERFORMANCE = "YAPOCIS_PERFORMANCE" in os.environ
 
 
 class StopWatcher:
-    def __init__(self, *args, log=None, save_perf=False, **kwargs):
+    def __init__(self, *args, log=None, save_perf=False, kernel=None, **kwargs):
         self.args = args
         self.kwargs = kwargs
         self.log = log
         self.save_perf = save_perf or YAPOCIS_PERFORMANCE
         self.checkpoints = {}
         self.last_checkpoint = None
+        self.kernel = kernel
         self._test_name = None
         self._test_file = None
+        self._checkpoint_name = None
 
     def __enter__(self):
         self.t = time.time()
@@ -227,12 +230,17 @@ class StopWatcher:
         return False
 
     def __call__(
-        self, snapper: "BoundKernel", array: np.ndarray, *args, checkzero=False, depth=0
+        self,
+        array: np.ndarray,
+        *args,
+        checkzero=False,
+        depth=0,
+        kernel=None,
     ):
         t = time.time() - self.t
-        self.checkpoint("show")
+        kernel = kernel if kernel else self.kernel
         snapshow(
-            snapper,
+            kernel,
             array,
             *self.args,
             *args,
@@ -242,6 +250,19 @@ class StopWatcher:
         )
 
     show = __call__
+
+    def showcheck(
+        self, array: np.ndarray, *args, checkzero=False, depth=0, kernel=None
+    ):
+        kernel = kernel if kernel else self.kernel
+        self.show(
+            array,
+            self._checkpoint_name,
+            *args,
+            checkzero=checkzero,
+            depth=depth + 1,
+            kernel=kernel,
+        )
 
     def checkpoint(self, name: str):
         """
@@ -263,6 +284,7 @@ class StopWatcher:
         elapsed = now - self.last_checkpoint
         self.checkpoints[name] = elapsed
         self.last_checkpoint = now
+        self._checkpoint_name = name
 
         # Return context manager for optional 'with' usage
         # If used with 'with', it will overwrite the checkpoint with block timing
@@ -715,9 +737,9 @@ def backend_comparison(request):
     """Run the same test across multiple backends for comparison."""
     available_backends = []
 
-    try:
-        from yapocis.core.manager import get_backends
+    from yapocis.core.manager import get_backends
 
+    try:
         available_backends = get_backends()
     except ImportError:
         available_backends = ["ocl"]  # fallback
@@ -761,3 +783,8 @@ def backend_comparison(request):
 
     # Return both the runner function and the tracker
     return run_on_backends, tracker
+
+
+def assert_closeenough(a, b):
+    assert a.shape == b.shape
+    assert_allclose(a, b, atol=0.0001)

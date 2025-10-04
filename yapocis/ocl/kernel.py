@@ -14,22 +14,32 @@ class Kernel:
     Provide a callable interface to an OpenCL kernel function.
     """
 
-    def __init__(self, name, kernel_manager: "KernelManager", kernel: Callable, params: List[Tuple], async_write:bool=False):
+    def __init__(
+        self,
+        name,
+        kernel_manager: "KernelManager",
+        kernel: Callable,
+        params: List[Tuple],
+        async_write: bool = False,
+    ):
         self.name = name
         self.kernel_manager = kernel_manager
         self.queue = kernel_manager.dmgr.queue
         self.kernel = kernel
         self.params = params
         self.autoflatten = kernel_manager.dmgr.autoflatten
-        self.argspecs = self.posbyname = self.returns = self.local_size = self.global_size = None
+        self.argspecs = self.posbyname = self.returns = self.local_size = (
+            self.global_size
+        ) = None
         self.async_write = async_write
         self.map_arguments()
 
     def read(self, a: Array):
+
         return self.kernel_manager.dmgr.read(a)
 
-    def write(self, a: Array,wait=True):
-        return self.kernel_manager.dmgr.write(a,wait=wait)
+    def write(self, a: Array, wait=True):
+        return self.kernel_manager.dmgr.write(a, wait=wait)
 
     def ensure(self, a: Array):
         return self.kernel_manager.dmgr.ensure(a)
@@ -46,9 +56,13 @@ class Kernel:
         self.argspecs = argspecs
         self.posbyname = posbyname
 
-    def prepare_arguments(self, args:List[Any], resident_arrays:Optional[List[str]]=None):
+    def prepare_arguments(
+        self, args: List[Any], resident_arrays: Optional[List[str]] = None
+    ):
         "Takes the actual arguments and maps to the arguments needed by the kernel"
-        assert len(self.posbyname) == len(args), f" Got {len(args)}, expected {len(self.posbyname)} arguments, [{self.posbyname}]"
+        assert len(self.posbyname) == len(
+            args
+        ), f" Got {len(args)}, expected {len(self.posbyname)} arguments, [{self.posbyname}]"
         self.returns = []
         if resident_arrays is not None:
             resident_arrays = [id(ra) for ra in resident_arrays]
@@ -70,9 +84,15 @@ class Kernel:
                 method_name = f"handle_{param.hint}"
                 arg = args[iarg]
                 if not isinstance(arg, np.ndarray):
-                    raise RuntimeError(f"Parameter {param.name} is defined as an array, but is a {type(arg)}")
-                if param.hint != "out_like" and resident_arrays and id(arg) in resident_arrays:
-                    method_name="handle_resident"
+                    raise RuntimeError(
+                        f"Parameter {param.name} is defined as an array, but is a {type(arg)}"
+                    )
+                if (
+                    param.hint != "out_like"
+                    and resident_arrays
+                    and id(arg) in resident_arrays
+                ):
+                    method_name = "handle_resident"
                 real_arg = getattr(self, method_name)(arg, dtype)
             realargs[iparam] = real_arg
         if self.global_size is None:
@@ -89,24 +109,28 @@ class Kernel:
         if not dtype:
             dtype = np.int32
         return dtype(arg.size)
+
     handle_size_of = handle_sizeof
 
     def handle_widthof(self, arg, dtype):
         if not dtype:
             dtype = np.int32
         return dtype(arg.shape[0])
+
     handle_width_of = handle_widthof
 
     def handle_heightof(self, arg, dtype):
         if not dtype:
             dtype = np.int32
         return dtype(arg.shape[1])
+
     handle_height_of = handle_heightof
 
     def handle_depthof(self, arg, dtype):
         if not dtype:
             dtype = np.int32
         return dtype(arg.shape[2])
+
     handle_depth_of = handle_depthof
 
     def handle_outlike(self, arg, dtype):
@@ -116,16 +140,17 @@ class Kernel:
         buf = self.ensure(a)
         self.returns.append((a, buf))
         return buf
+
     handle_out_like = handle_outlike
 
     def handle_in(self, arg, dtype):
         arg = arg.astype(dtype, copy=False)
-        buf = self.write(arg,wait=not self.async_write)
+        buf = self.write(arg, wait=not self.async_write)
         return buf
 
     def handle_inout(self, arg, dtype):
         arg = arg.astype(dtype, copy=False)
-        buf = self.write(arg,wait=not self.async_write)
+        buf = self.write(arg, wait=not self.async_write)
         self.returns.append((arg, buf))
         return buf
 
@@ -146,9 +171,12 @@ class Kernel:
         t = time.time()
         self.global_size = kwargs.pop("global_size", None)
         self.local_size = kwargs.pop("local_size", None)
-        assert not isinstance(self.global_size, float) and not isinstance(self.local_size,float), f"{self.global_size},{self.local_size}"
+        assert not isinstance(self.global_size, float) and not isinstance(
+            self.local_size, float
+        ), f"{self.global_size},{self.local_size}"
         resident_arrays = kwargs.pop("resident", None)
         prepared_args = self.prepare_arguments(args, resident_arrays=resident_arrays)
+
         def show_args():
             print("Python arguments")
             for iarg, arg in enumerate(args):
@@ -156,12 +184,18 @@ class Kernel:
             print("Kernel arguments")
             for iarg, arg in enumerate(prepared_args):
                 print(f"Argument: {iarg+1}: {type(arg)} {str(arg)[:64]}")
+
         if not isinstance(self.global_size, (tuple, list)):
             self.global_size = (self.global_size,)
         if self.local_size and not isinstance(self.local_size, (tuple, list)):
             self.local_size = (self.local_size,)
         try:
-            self.evt = self.kernel(self.kernel_manager.dmgr.queue, self.global_size, self.local_size, *prepared_args)
+            self.evt = self.kernel(
+                self.kernel_manager.dmgr.queue,
+                self.global_size,
+                self.local_size,
+                *prepared_args,
+            )
         except pyopencl.LogicError:
             print(f"Logic error calling {self.name}")
             show_args()
@@ -181,7 +215,7 @@ class Kernel:
             self.evt.wait()
         # pyopencl.enqueue_barrier(self.queue)
         rval = self.prepare_return()
-        self.kernel_manager.runtime += (time.time() - t)
+        self.kernel_manager.runtime += time.time() - t
         return rval
 
     def prepare_return(self) -> Union[Any, Tuple[Any], None]:
