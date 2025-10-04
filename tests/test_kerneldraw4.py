@@ -4,10 +4,17 @@ import time
 
 import numpy as np
 
-from .test_graphics4 import (random_alpha, random_circles, random_colors,
-                             random_composites, random_ellipses,
-                             random_lines, random_rects, random_sprites,
-                             random_triangles)
+from .random_data import (
+    random_alpha_4ch as random_alpha,
+    random_circles,
+    random_colors_4ch as random_colors,
+    random_composites_4ch as random_composites,
+    random_ellipses,
+    random_lines,
+    random_rects,
+    random_sprites_4ch as random_sprites,
+    random_triangles,
+)
 from yapocis.lib.kerneldraw4 import KernelDraw4
 from yapocis.utils.stereo_typing import Optional, Image4
 

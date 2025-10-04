@@ -1,9 +1,16 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 import numpy as np
 
-from .test_graphics import (random_alpha, random_circles, random_colors,
-                            random_ellipses, random_lines, random_rects,
-                            random_texts, random_triangles)
+from .random_data import (
+    random_alpha,
+    random_circles,
+    random_colors,
+    random_ellipses,
+    random_lines,
+    random_rects,
+    random_texts,
+    random_triangles,
+)
 from yapocis.lib.kerneldraw3 import KernelDraw3
 from yapocis.utils.stereo_typing import Optional, Image3
 

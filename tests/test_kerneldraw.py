@@ -4,10 +4,17 @@ import pytest
 
 import numpy as np
 
-from .test_graphics import (random_alpha, random_circles, random_colors,
-                            random_composites, random_ellipses,
-                            random_lines, random_rects, random_sprites,
-                            random_texts)
+from .random_data import (
+    random_alpha,
+    random_circles,
+    random_colors,
+    random_composites,
+    random_ellipses,
+    random_lines,
+    random_rects,
+    random_sprites,
+    random_texts,
+)
 from yapocis.lib.kerneldraw1 import KernelDraw1
 from yapocis.utils.stereo_typing import Optional, Image1
 

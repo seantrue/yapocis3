@@ -4,11 +4,67 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Summary Statistics
 
-- **Total AI-assisted commits**: ~13
-- **Major features developed with AI assistance**: Metal backend fixes, coordinate system standardization, renamed truetrace module, validation framework fixes, numba backend completeness, StopWatcher enhancements, performance tracking system, DuckDB migration, test refactoring
-- **Lines of code**: ~1300 lines added for performance tracking (2025-10-03), ~400 lines modified for DuckDB migration (2025-10-03), ~100 lines refactored in test_graphics4.py (2025-10-04)
+- **Total AI-assisted commits**: ~14
+- **Major features developed with AI assistance**: Metal backend fixes, coordinate system standardization, renamed truetrace module, validation framework fixes, numba backend completeness, StopWatcher enhancements, performance tracking system, DuckDB migration, test refactoring, random data centralization
+- **Lines of code**: ~1300 lines added for performance tracking (2025-10-03), ~400 lines modified for DuckDB migration (2025-10-03), ~100 lines refactored in test_graphics4.py (2025-10-04), ~550 lines refactored for random data centralization (2025-10-04)
 
 ## Detailed Contributions
+
+### 2025-10-04: Random Data Generation Refactoring with Reproducible Seeding
+
+**AI Contribution (Claude):**
+- Created centralized `tests/random_data.py` module for all random test data generation
+- Implemented reproducible seeding via `YAPOCIS_VALIDATION` environment variable
+- Extracted and consolidated random data functions from multiple test files
+- Resolved naming conflicts between single-channel and 4-channel variants
+- Pattern applied:
+  - Single-channel (graphics1) functions: `random_colors_1ch()`, `random_alpha_1ch()`, etc.
+  - 4-channel (graphics4/RGBA) functions: `random_colors_4ch()`, `random_alpha_4ch()`, etc.
+  - Common functions without channel-specific behavior: `random_points()`, `random_lines()`, etc.
+  - Backward-compatible aliases default to single-channel versions
+  - Shared functions: `random_texts()` used by both graphics1 and graphics4
+
+**Reproducible Seeding:**
+- When `YAPOCIS_VALIDATION` environment variable is set, seeds both `random` and `numpy.random` to 42
+- Enables reproducible test data generation for validation and regression testing
+- Verified with automated testing showing identical output when env var is set
+- Does not affect normal test execution when env var is not set
+
+**Files Created:**
+- `tests/random_data.py` - 265 lines of centralized random data functions
+
+**Files Modified:**
+- `tests/test_graphics.py` - Removed 147 lines of duplicate functions, added imports
+- `tests/test_graphics4.py` - Removed 154 lines of duplicate functions, added imports
+- `tests/test_kerneldraw.py` - Updated imports to use random_data
+- `tests/test_kerneldraw3.py` - Updated imports to use random_data
+- `tests/test_kerneldraw4.py` - Updated imports to use random_data (with _4ch suffix)
+
+**Functions Extracted:**
+- Common: `random_points()`, `random_lines()`, `random_widths()`, `random_rects`, `random_triangles()`, `random_circles()`, `random_ellipses()`
+- Graphics1: `random_colors_1ch()`, `random_alpha_1ch()`, `image_source_1ch()`, `image_sprites_1ch()`, `random_composites_1ch()`, `random_sprites_1ch()`
+- Graphics4: `random_vector()`, `components_to_colors()`, `random_colors_4ch()`, `random_alpha_4ch()`, `random_icons()`, `image_source_4ch()`, `image_sprites_4ch()`, `random_composites_4ch()`, `random_sprites_4ch()`
+- Shared: `random_texts()`
+
+**Testing:**
+- Verified all tests pass with new imports: test_graphics, test_graphics4, test_kerneldraw, test_kerneldraw3, test_kerneldraw4
+- Created validation script in `claude-debug/test_validation_seeding.py`
+- Confirmed reproducible seeding works correctly with YAPOCIS_VALIDATION
+
+**Benefits:**
+- Eliminates code duplication across test files (reduced by ~300 lines total)
+- Centralized location for all random test data generation
+- Enables reproducible test data for validation framework
+- Clear separation between single-channel and 4-channel variants
+- Easier maintenance of test data generation logic
+- Supports future expansion of validation framework
+
+**Human Contribution:**
+- Request for reproducible seeding via environment variable
+- Specification of YAPOCIS_VALIDATION as the trigger mechanism
+- Direction to avoid name collisions
+
+---
 
 ### 2025-10-04: Comprehensive StopWatcher Pattern Audit and Refactoring
 

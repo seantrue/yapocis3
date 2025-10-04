@@ -1,12 +1,26 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
-from random import randint, shuffle
-
-from yapocis.icons import icon, icons
 from yapocis.lib.graphics4 import Graphics4
 from yapocis.utils.stereo_typing import *
-from . import ASIZE, StopWatcher, double_shuffle, image_test, text_test_lines
-from .test_graphics import random_texts
+from . import ASIZE, StopWatcher, text_test_lines
+from .random_data import (
+    random_points,
+    random_lines,
+    random_rects,
+    random_triangles,
+    random_circles,
+    random_ellipses,
+    random_texts,
+    # Graphics4-specific imports
+    random_vector,
+    components_to_colors,
+    random_colors_4ch as random_colors,
+    random_alpha_4ch as random_alpha,
+    random_icons,
+    image_sprites_4ch as image_sprites,
+    random_composites_4ch as random_composites,
+    random_sprites_4ch as random_sprites,
+)
 
 RED = [1, 0, 0, 1]
 GREEN = [0, 1, 0, 1]
@@ -18,140 +32,6 @@ PURPLE = [1, 0, 1, 1]
 
 def setup_test(device_name=None):
     return np.zeros((ASIZE, ASIZE, 4)).astype(np.float32), Graphics4(device_name)
-
-
-def image_source(align=5):
-    image = image_test()
-    d = min(image.shape[0], image.shape[1])
-    d = d - int(d % align)
-    image4 = np.zeros((d, d, 4), dtype=np.float32)
-    image4[:, :, :3] = image[:d, :d, :]
-    image4[:, :, 3] = 1.0
-    return image4
-
-
-def image_sprites(steps=4):
-    image = image_source(align=steps)
-    dimension = image.shape[0]
-    step = dimension // steps
-    sprites = []
-    for x in range(0, dimension, step):
-        for y in range(0, dimension, step):
-            sprites.append(((x, y), image[x : x + step, y : y + step, :]))
-    return sprites
-
-
-def random_icons(n=100):
-
-    icon_names = icons()
-    shuffle(icon_names)
-    icon_names = icon_names[:n]
-    colors = random_colors(n)
-    icns = [icon(icon_name, size=100) for icon_name in icon_names]
-    # for icon_name, icn, color in zip(icon_names, icns, colors):
-    #     if "essential" in icon_name:
-    #         icn[:,:,:3] = (1.0 - icn[:,:,:3])
-    #         # icn[:,:,:] *= color
-    #         # icn[:,:,3] = 1.0
-    #         # icn[:,:,:] = (1.0-icn[:,:,:])
-    #         pass
-    icns = double_shuffle(icns, n)
-    return icns
-
-
-def random_points(n=100):
-
-    def rx():
-        return randint(0, ASIZE)
-
-    def ry():
-        return randint(0, ASIZE)
-
-    points = []
-    for iline in range(n):
-        x, y = rx(), ry()
-        points.append([x, y])
-    return points
-
-
-def random_vector(n=100):
-    return np.random.uniform(0.2, 1.0, n).astype(np.float32)
-
-
-def components_to_colors(*components):
-    colors = list(zip(*components))
-    colors = np.array(colors)
-    return colors
-
-
-def random_colors(n=100):
-    colors = components_to_colors(
-        random_vector(n), random_vector(n), random_vector(n), random_vector(n)
-    )
-    return colors
-
-
-def random_alpha(n=100):
-    return random_vector(n)
-
-
-def random_lines(n=100):
-    lines = random_points(n)
-    length = 50
-    for line in lines:
-        x, y = line
-        x1, y1 = x + randint(-length, length), y + randint(-length, length)
-        line += [x1, y1]
-    return lines
-
-
-random_rects = random_lines
-
-
-def random_triangles(n=100):
-    lines = random_points(n)
-    a = np.zeros((ASIZE, ASIZE)).astype(np.float32)
-    length = 50
-    for line in lines:
-        x, y = line
-        x1, y1 = x + randint(-length, length), y + randint(-length, length)
-        line += [x1, y1]
-        x1, y1 = x + randint(-length, length), y + randint(-length, length)
-        line += [x1, y1]
-    return lines
-
-
-def random_circles(n=100):
-    circles = random_points(n)
-    radius = 50
-    for circle in circles:
-        circle.append(randint(2, radius))
-    return circles
-
-
-def random_ellipses(n=100):
-    ellipses = random_points(n=n)
-    radius = 50
-    for ellipse in ellipses:
-        ellipse += [randint(2, radius), randint(2, radius)]
-    return ellipses
-
-
-def random_composites(n=100):
-    locations = random_points(n)
-    sprites = [sprite for _, sprite in image_sprites(8)]
-    blocks = sprites[:]
-    blocks = double_shuffle(blocks, n)
-    return locations, blocks
-
-
-def random_sprites(n=100):
-    random_coords, random_sprites = random_composites(n)
-    random_sprites = random_sprites[:n]
-    for i in range(len(random_coords)):
-        j = int(i % len(random_sprites))
-        random_coords[i].insert(0, j)
-    return random_coords, random_sprites
 
 
 def test_lines():
@@ -260,9 +140,9 @@ def test_composite_sprites():
 
 
 def test_composite_mosaic():
-    _, grph = setup_test()
     from random import shuffle
 
+    _, grph = setup_test()
     sprites = image_sprites(5)
     coords, blocks = zip(*sprites)
     coords = list(coords)
