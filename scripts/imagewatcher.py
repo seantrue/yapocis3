@@ -127,7 +127,7 @@ def get_npz_path(image_path, target_dir=None):
     if not image_path:
         return None
 
-    base_name = os.path.splitext(os.path.basename(image_path))[0]
+    base_name = os.path.splitext(os.path.basename(image_path))[0].lower()
     npz_name = f"{base_name}.npz"
 
     if target_dir:
