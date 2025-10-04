@@ -31,40 +31,38 @@ def test_batch():
     lines = random_lines()
     locations, blocks = random_composites()
     sprite_locations, sprites = random_sprites()
-    with StopWatcher() as sw:
-        ad.composite(locations, blocks)
-        ad.sprites(sprite_locations, sprites)
-        ad.ellipses(random_coords, colors=random_colors())
-        ad.circles(circles, colors=random_colors())
-        ad.rects(rects, colors=random_colors())
-        ad.lines(lines, colors=random_colors(), distance=1.5)
-        sw.checkpoint("display_list")
-        ad.render()
-        sw.checkpoint("render")
-        a = ad.read()
-        sw.checkpoint("read")
-        sw.show(ad, a)
-        print(sw.summary())
+    with StopWatcher("batch", kernel=ad) as sw:
+        with sw.checkpoint("display_list"):
+            ad.composite(locations, blocks)
+            ad.sprites(sprite_locations, sprites)
+            ad.ellipses(random_coords, colors=random_colors())
+            ad.circles(circles, colors=random_colors())
+            ad.rects(rects, colors=random_colors())
+            ad.lines(lines, colors=random_colors(), distance=1.5)
+        with sw.checkpoint("render"):
+            ad.render()
+        with sw.checkpoint("read"):
+            a = ad.read()
+        sw.show(a)
 
 
 def test_displaylist():
     canvas, ad = setup_test()
     rects = random_rects()
     lines = random_lines()
-    with StopWatcher() as sw:
-        for xyxy, color in zip(lines, random_colors()):
-            ad.line(xyxy, color=color, distance=1.5)
-        for rect, color in zip(rects, random_colors()):
-            ad.rect(rect, color=color)
-        for x in range(0, ASIZE, 100):
-            ad.draw_string((x, x), "Hello world!", color=[1, 1, 1, .5])
-        sw.checkpoint("display_list")
-        ad.render()
-        sw.checkpoint("render")
-        a = ad.read()
-        sw.checkpoint("read")
-        sw.show(ad, a)
-        print(sw.summary())
+    with StopWatcher("display list", kernel=ad) as sw:
+        with sw.checkpoint("display_list"):
+            for xyxy, color in zip(lines, random_colors()):
+                ad.line(xyxy, color=color, distance=1.5)
+            for rect, color in zip(rects, random_colors()):
+                ad.rect(rect, color=color)
+            for x in range(0, ASIZE, 100):
+                ad.draw_string((x, x), "Hello world!", color=[1, 1, 1, .5])
+        with sw.checkpoint("render"):
+            ad.render()
+        with sw.checkpoint("read"):
+            a = ad.read()
+        sw.show(a)
 
 
 def test_chunking():
@@ -79,19 +77,18 @@ def test_chunking():
         canvas = just_canvas()
         t = time.time()
         ad = KernelDraw4(canvas, chunk_size=chunk_size)
-        with StopWatcher() as sw:
-            for xyxy, color, alpha in zip(lines, colors, alphas):
-                ad.line(xyxy, distance=1.5, color=color, alpha=alpha)
-            for rect, color, alpha in zip(rects, colors, alphas):
-                ad.rect(rect, color=color, alpha=alpha)
-            for x in range(0, ASIZE, 100):
-                ad.draw_string((x, x), "Hello world!")
-            sw.checkpoint("display_list")
-            ad.render()
-            sw.checkpoint("render")
-            canvas = ad.read()
-            sw.checkpoint("read")
+        with StopWatcher(f"chunking {chunk_size}", kernel=ad) as sw:
+            with sw.checkpoint("display_list"):
+                for xyxy, color, alpha in zip(lines, colors, alphas):
+                    ad.line(xyxy, distance=1.5, color=color, alpha=alpha)
+                for rect, color, alpha in zip(rects, colors, alphas):
+                    ad.rect(rect, color=color, alpha=alpha)
+                for x in range(0, ASIZE, 100):
+                    ad.draw_string((x, x), "Hello world!")
+            with sw.checkpoint("render"):
+                ad.render()
+            with sw.checkpoint("read"):
+                canvas = ad.read()
             times.append(time.time() - t)
-            sw.show(ad, canvas, f"chunk_size={chunk_size}")
-            print(sw.summary())
+            sw.show(canvas, f"chunk_size={chunk_size}")
     print(times)

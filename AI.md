@@ -10,22 +10,22 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
-### 2025-10-04: StopWatcher Pattern Refactoring in test_graphics4.py
+### 2025-10-04: StopWatcher Pattern Refactoring Across Test Suite
 
 **AI Contribution (Claude):**
-- Refactored all 15 test functions in `tests/test_graphics4.py` to match the updated StopWatcher pattern from `tests/test_graphics.py`
+- Refactored test files to match the updated StopWatcher pattern from `tests/test_graphics.py`
 - Pattern changes applied:
-  - Added descriptive names to StopWatcher initialization: `StopWatcher("test_name", kernel=grph)`
+  - Added descriptive names to StopWatcher initialization: `StopWatcher("test_name", kernel=obj)`
   - Converted checkpoint calls to context manager style: `with sw.checkpoint("label"):`
   - Removed manual `print(sw.summary())` calls (now auto-logged via save_perf)
-  - Updated `sw.show()` signature from `sw.show(grph, canvas)` to `sw.show(canvas)`
+  - Updated `sw.show()` signature from `sw.show(kernel, canvas)` to `sw.show(canvas)`
 - Applied formatting improvements via linter (black/ruff)
   - Standardized spacing and line breaks
   - Fixed import organization
   - Improved code readability
-- Lines changed: ~100 modifications across 1 file
+- Lines changed: ~150 modifications across 3 files
 
-**Refactored test functions:**
+**test_graphics4.py - 15 functions refactored:**
 - `test_lines`, `test_rects`, `test_circles`, `test_triangles`, `test_ellipses`
 - `test_composite`, `test_composite_sprites`, `test_composite_mosaic`
 - `test_simple_icons`, `test_random_icons`
@@ -33,16 +33,28 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 - `test_texts_stressed`, `test_texts_stressed_rotation`, `test_typesetting`
 - `test_one`
 
+**test_kerneldraw.py - 3 functions refactored:**
+- `test_batch` - Batch rendering with multiple primitive types
+- `test_display_list` - Display list rendering
+- `test_chunking` - Performance testing with different chunk sizes
+
+**test_kerneldraw4.py - 3 functions refactored:**
+- `test_batch` - Batch rendering for 4-channel graphics
+- `test_displaylist` - Display list with individual draw calls
+- `test_chunking` - Chunk size performance comparison
+
 **Files modified:**
 - `tests/test_graphics4.py` - Refactored StopWatcher usage pattern
+- `tests/test_kerneldraw.py` - Refactored StopWatcher usage pattern
+- `tests/test_kerneldraw4.py` - Refactored StopWatcher usage pattern
 
 **Testing:**
-- Verified test_one passes with new pattern
+- Verified test_batch passes in all files with new pattern
 - Confirmed consistent usage across all test functions
 - Maintained backward compatibility with existing functionality
 
 **Benefits:**
-- Consistent StopWatcher usage across test suite
+- Consistent StopWatcher usage across entire test suite
 - Cleaner checkpoint timing with context managers
 - Better integration with performance tracking system
 - Improved code readability and maintainability

@@ -27,21 +27,20 @@ def setup_test(device_name: Optional[str] = None, chunk_size: Optional[int] = No
 def test_batch():
     canvas, ad = setup_test()
     locations, strings, fonts, sizes, _, text_alphas = random_texts()
-    with StopWatcher() as sw:
-        ad.composite(*random_composites(), alpha=1.0)
-        ad.sprites(*random_sprites(), alpha=1.0)
-        ad.ellipses(random_ellipses(), colors=random_colors(), alphas=random_alpha())
-        ad.circles(random_circles(), colors=random_colors(), alphas=random_alpha())
-        ad.rects(random_rects(), colors=random_colors(), alphas=random_alpha())
-        ad.lines(random_lines(), colors=random_colors(), alphas=random_alpha())
-        ad.draw_strings(locations, strings, fonts=fonts, sizes=sizes, alphas=text_alphas)
-        sw.checkpoint("display_list")
-        ad.render()
-        sw.checkpoint("render")
-        a = ad.read()
-        sw.checkpoint("read")
-        sw.show(ad, a)
-        print(sw.summary())
+    with StopWatcher("batch", kernel=ad) as sw:
+        with sw.checkpoint("display_list"):
+            ad.composite(*random_composites(), alpha=1.0)
+            ad.sprites(*random_sprites(), alpha=1.0)
+            ad.ellipses(random_ellipses(), colors=random_colors(), alphas=random_alpha())
+            ad.circles(random_circles(), colors=random_colors(), alphas=random_alpha())
+            ad.rects(random_rects(), colors=random_colors(), alphas=random_alpha())
+            ad.lines(random_lines(), colors=random_colors(), alphas=random_alpha())
+            ad.draw_strings(locations, strings, fonts=fonts, sizes=sizes, alphas=text_alphas)
+        with sw.checkpoint("render"):
+            ad.render()
+        with sw.checkpoint("read"):
+            a = ad.read()
+        sw.show(a)
 
 
 def fill_display_list(ad: KernelDraw1, n: int = 1000) -> None:
@@ -69,28 +68,26 @@ def fill_display_list(ad: KernelDraw1, n: int = 1000) -> None:
 def test_display_list():
     canvas, ad = setup_test()
     fill_display_list(ad, 100)
-    with StopWatcher() as sw:
-        ad.render()
-        sw.checkpoint("render")
-        a = ad.read()
-        sw.checkpoint("read")
-        sw.show(ad, a)
-        print(sw.summary())
+    with StopWatcher("display list", kernel=ad) as sw:
+        with sw.checkpoint("render"):
+            ad.render()
+        with sw.checkpoint("read"):
+            a = ad.read()
+        sw.show(a)
 
 # @pytest.mark.skip("Too slow for now")
 def test_chunking():
     times = []
     for chunk_size in (10, 100, 500):
         canvas, ad = setup_test(chunk_size=chunk_size)
-        with StopWatcher() as sw:
+        with StopWatcher(f"chunking {chunk_size}", kernel=ad) as sw:
             t = time.time()
-            fill_display_list(ad, 1000)
-            sw.checkpoint("fill_display_list")
-            ad.render()
-            sw.checkpoint("render")
-            canvas = ad.read()
-            sw.checkpoint("read")
+            with sw.checkpoint("fill_display_list"):
+                fill_display_list(ad, 1000)
+            with sw.checkpoint("render"):
+                ad.render()
+            with sw.checkpoint("read"):
+                canvas = ad.read()
             times.append(time.time() - t)
-            sw.show(ad, canvas, f"chunk_size={chunk_size}")
-            print(sw.summary())
+            sw.show(canvas, f"chunk_size={chunk_size}")
     print(times)
