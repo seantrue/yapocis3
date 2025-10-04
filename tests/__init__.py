@@ -77,14 +77,53 @@ def strip_test_prefix(s):
     return s
 
 
-def name_of_test(depth=1):
+def name_of_test(depth=1, full_path=False):
+    """
+    Extract test name from call stack.
+
+    Args:
+        depth: How many frames up the stack to look
+        full_path: If True, return full module.class.function path and file path
+                   If False (default), return (function_name, module_name) for backward compatibility
+
+    Returns:
+        If full_path=False: (function_name, module_name)  # backward compatible
+        If full_path=True: (full_test_path, file_path)   # e.g., ("test_graphics4.TestClass.test_method", "/path/to/test_graphics4.py")
+    """
     current_frame = inspect.currentframe()
     call_frames = inspect.getouterframes(current_frame, depth + 1)
     fi = call_frames[depth]
+
     caller_name = fi.function
     file_name = fi.filename
-    file_name = os.path.splitext(os.path.basename(os.path.split(file_name)[-1]))[0]
-    return strip_test_prefix(caller_name), strip_test_prefix(file_name)
+    file_path = os.path.abspath(file_name)
+    module_name = os.path.splitext(os.path.basename(os.path.split(file_name)[-1]))[0]
+
+    if not full_path:
+        # Backward compatible behavior
+        return strip_test_prefix(caller_name), strip_test_prefix(module_name)
+
+    # Build full path: module.class.function
+    parts = [strip_test_prefix(module_name)]
+
+    # Check if this is a method call by looking for 'self' or 'cls' in frame locals
+    frame_locals = fi.frame.f_locals
+    if "self" in frame_locals:
+        # Instance method - get class name
+        obj = frame_locals["self"]
+        class_name = obj.__class__.__name__
+        parts.append(class_name)
+    elif "cls" in frame_locals:
+        # Class method - get class name
+        cls = frame_locals["cls"]
+        class_name = cls.__name__
+        parts.append(class_name)
+
+    # Add function name
+    parts.append(strip_test_prefix(caller_name))
+
+    full_test_path = ".".join(parts)
+    return full_test_path, file_path
 
 
 def show(*args, **kwargs):
@@ -130,23 +169,61 @@ class _CheckpointContext:
         return False
 
 
+YAPOCIS_PERFORMANCE = "YAPOCIS_PERFORMANCE" in os.environ
+
+
 class StopWatcher:
-    def __init__(self, *args, log=None, **kwargs):
+    def __init__(self, *args, log=None, save_perf=False, **kwargs):
         self.args = args
         self.kwargs = kwargs
         self.log = log
+        self.save_perf = save_perf or YAPOCIS_PERFORMANCE
         self.checkpoints = {}
         self.last_checkpoint = None
+        self._test_name = None
+        self._test_file = None
 
     def __enter__(self):
         self.t = time.time()
         self.last_checkpoint = self.t
+
+        # Capture test information for performance tracking
+        if self.save_perf:
+            try:
+                self._test_name, self._test_file = name_of_test(depth=2, full_path=True)
+            except Exception:
+                # If we can't get test info, disable performance saving
+                self.save_perf = False
+
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Exit the context and optionally log the summary."""
+        """Exit the context, optionally log the summary, and save performance data."""
+        # Log summary if requested
         if self.log is not None and callable(self.log):
             self.log(self.summary())
+
+        # Save performance data if requested
+        if self.save_perf and self._test_name and self._test_file:
+            try:
+                from yapocis.utils.performance import save_performance_data
+
+                # Get backend from environment
+                backend = os.environ.get("YAPOCIS_BACKEND", "unknown")
+
+                # Save the data
+                save_performance_data(
+                    test_name=self._test_name,
+                    file_path=self._test_file,
+                    backend=backend,
+                    timing_data=self.checkpoints.copy(),
+                )
+            except Exception as e:
+                # Don't fail the test if performance tracking fails
+                import sys
+
+                print(f"Warning: Failed to save performance data: {e}", file=sys.stderr)
+
         return False
 
     def __call__(

@@ -4,11 +4,85 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Summary Statistics
 
-- **Total AI-assisted commits**: ~9
-- **Major features developed with AI assistance**: Metal backend fixes, coordinate system standardization, renamed truetrace module, validation framework fixes, numba backend completeness, StopWatcher enhancements
-- **Lines of code**: Tracking started 2025-10-03
+- **Total AI-assisted commits**: ~10
+- **Major features developed with AI assistance**: Metal backend fixes, coordinate system standardization, renamed truetrace module, validation framework fixes, numba backend completeness, StopWatcher enhancements, performance tracking system
+- **Lines of code**: ~1300 lines added for performance tracking (2025-10-03)
 
 ## Detailed Contributions
+
+### 2025-10-03: Performance Tracking System Implementation
+
+**AI Contribution (Claude):**
+- Designed and implemented comprehensive performance tracking system for cross-backend and longitudinal analysis
+- Enhanced `name_of_test()` to extract full module.class.function path with class detection
+  - Added `full_path` parameter for backward compatibility
+  - Detects instance methods via 'self' and class methods via 'cls' in frame locals
+  - Returns both full test path and absolute file path
+- Created `yapocis/utils/performance.py` module (860+ lines)
+  - `save_performance_data()`: Auto-save timing data to JSON with git metadata
+  - `get_git_info()`: Extract branch, commit hash, and file modification status
+  - `load_performance_data()`: Load and filter performance data with flexible criteria
+  - `purge_performance_data()`: Delete old data with dry-run support
+  - `generate_summary_table()`: Tabular summaries using tabulate
+  - `generate_checkpoint_comparison_table()`: Compare checkpoints across runs
+  - `plot_backend_comparison()`: Bar charts with error bars (matplotlib/seaborn)
+  - `plot_longitudinal_trend()`: Time-series line graphs for trend analysis
+  - `plot_checkpoint_breakdown()`: Pie/bar charts of checkpoint distribution
+  - `generate_backend_comparison_report()`: Markdown reports with embedded graphs
+  - `generate_longitudinal_report()`: Trend reports with regression detection
+  - `generate_comprehensive_report()`: Overview of all performance data
+- Enhanced StopWatcher class with `save_perf` parameter
+  - Auto-captures test name and file path on __enter__
+  - Auto-saves performance data on __exit__ when save_perf=True
+  - Extracts backend from environment (YAPOCIS_BACKEND)
+  - Gracefully handles errors without failing tests
+- Created CLI tool `scripts/performance_report.py` (250+ lines)
+  - Commands: list, stats, compare, trend, comprehensive, purge
+  - Filter by backend, test name, date range
+  - Generate reports and visualizations
+  - Dry-run support for purge operations
+- Updated `pyproject.toml` dependencies
+  - Added seaborn>=0.12.0 for advanced visualizations
+  - Added tabulate>=0.9.0 for formatted tables
+- Updated `.gitignore` to exclude performance/results/ and performance/reports/
+- Created performance data directories with auto-creation
+- Lines changed: ~1300 additions across 6 files
+
+**Files created:**
+- `yapocis/utils/performance.py` - Core performance tracking module
+- `scripts/performance_report.py` - CLI tool for managing performance data
+- `performance/results/` - Auto-saved JSON performance data (gitignored)
+- `performance/reports/` - Generated reports and graphs (gitignored)
+
+**Files modified:**
+- `tests/__init__.py` - Enhanced name_of_test() and StopWatcher with save_perf
+- `pyproject.toml` - Added seaborn and tabulate dependencies
+- `.gitignore` - Excluded performance data directories
+
+**Testing:**
+- Verified auto-save of performance data with save_perf=True
+- Tested class method detection in name_of_test()
+- Verified git info extraction (branch, commit, file status)
+- Tested CLI list and stats commands
+- Confirmed backward compatibility (save_perf=False by default)
+
+**Features:**
+- Auto-tracking: Simply use `StopWatcher(save_perf=True)` to track performance
+- Git integration: Tracks branch, commit, and file modification status
+- Backend comparison: Compare performance across OCL, Metal, Numba, CUDA
+- Longitudinal analysis: Track performance trends over time
+- Regression detection: Auto-detect >10% performance changes
+- Flexible filtering: By backend, test, date, file status
+- Rich visualizations: Bar charts, line graphs, pie charts with seaborn
+- Markdown reports: Publication-ready reports with embedded graphs
+- Data management: Purge old data with flexible criteria
+
+**Human Contribution:**
+- Feature request and high-level design requirements
+- Refinement of auto-save behavior and data schema
+- Testing and verification
+
+---
 
 ### 2025-10-03: StopWatcher Enhancement - Context Manager Checkpoints and Auto-logging
 

@@ -33,3 +33,5 @@
 /.pydevproject
 /.project
 /yapocis/icons/*/*
+/performance/results/
+/performance/reports/
