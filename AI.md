@@ -4,11 +4,92 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Summary Statistics
 
-- **Total AI-assisted commits**: ~10
-- **Major features developed with AI assistance**: Metal backend fixes, coordinate system standardization, renamed truetrace module, validation framework fixes, numba backend completeness, StopWatcher enhancements, performance tracking system
-- **Lines of code**: ~1300 lines added for performance tracking (2025-10-03)
+- **Total AI-assisted commits**: ~11
+- **Major features developed with AI assistance**: Metal backend fixes, coordinate system standardization, renamed truetrace module, validation framework fixes, numba backend completeness, StopWatcher enhancements, performance tracking system, DuckDB migration
+- **Lines of code**: ~1300 lines added for performance tracking (2025-10-03), ~400 lines modified for DuckDB migration (2025-10-03)
 
 ## Detailed Contributions
+
+### 2025-10-03: DuckDB Migration for Performance Tracking
+
+**AI Contribution (Claude):**
+- Migrated performance tracking system from JSON file storage to DuckDB relational database
+- Designed normalized database schema with two tables:
+  - `performance_runs`: Stores test execution metadata and aggregate statistics
+  - `performance_checkpoints`: Stores individual checkpoint timings with foreign key to runs
+- Implemented DuckDB sequences for auto-increment primary keys
+- Completely rewrote `yapocis/utils/performance.py` (1158 lines)
+  - `_get_connection()`: DuckDB connection management with automatic schema creation
+  - `save_performance_data()`: INSERT INTO with auto-generated IDs
+  - `load_performance_data()`: Dynamic SQL queries with parameterized filtering
+  - `purge_performance_data()`: DELETE with foreign key cascade handling
+  - Maintained exact same return data structure for backward compatibility
+- Updated `scripts/performance_report.py` to remove obsolete imports
+- Updated `.gitignore` to track .duckdb and .duckdb.wal files instead of results/ directory
+- Added DuckDB>=1.1.0 to pyproject.toml dev dependencies
+- Created indexes on (test_name, backend, branch, commit, file_status) and timestamp_unix
+- Lines changed: ~400 modifications across 4 files
+
+**Database Schema:**
+```sql
+-- Auto-increment sequences
+CREATE SEQUENCE runs_seq START 1
+CREATE SEQUENCE checkpoints_seq START 1
+
+-- Main runs table with aggregated stats
+CREATE TABLE performance_runs (
+    id INTEGER PRIMARY KEY DEFAULT nextval('runs_seq'),
+    test_name VARCHAR NOT NULL,
+    test_file VARCHAR NOT NULL,
+    backend VARCHAR NOT NULL,
+    branch VARCHAR NOT NULL,
+    commit VARCHAR NOT NULL,
+    file_status VARCHAR NOT NULL,
+    timestamp TIMESTAMP NOT NULL,
+    timestamp_unix DOUBLE NOT NULL,
+    total_time DOUBLE NOT NULL,
+    min_time DOUBLE,
+    max_time DOUBLE,
+    mean_time DOUBLE,
+    slowest_operation VARCHAR,
+    fastest_operation VARCHAR
+)
+
+-- Checkpoints with foreign key
+CREATE TABLE performance_checkpoints (
+    id INTEGER PRIMARY KEY DEFAULT nextval('checkpoints_seq'),
+    run_id INTEGER NOT NULL,
+    checkpoint_name VARCHAR NOT NULL,
+    elapsed_time DOUBLE NOT NULL,
+    FOREIGN KEY (run_id) REFERENCES performance_runs(id)
+)
+```
+
+**Files modified:**
+- `yapocis/utils/performance.py` - Complete rewrite to use DuckDB
+- `pyproject.toml` - Added duckdb dependency
+- `.gitignore` - Updated to track .duckdb files
+- `scripts/performance_report.py` - Removed obsolete imports
+
+**Testing:**
+- Verified save/load operations with DuckDB
+- Tested all CLI commands (list, stats, compare, trend, comprehensive, purge)
+- Confirmed backward compatibility with all reporting functions
+- Verified foreign key constraints and cascading deletes
+
+**Benefits:**
+- Better query performance for filtering and aggregation
+- Relational structure enables complex queries
+- Smaller storage footprint (single database vs thousands of JSON files)
+- ACID compliance for concurrent access
+- Built-in indexing for fast lookups
+- No file system limitations on number of records
+
+**Human Contribution:**
+- Decision to migrate to DuckDB for better scalability
+- Testing and verification
+
+---
 
 ### 2025-10-03: Performance Tracking System Implementation
 

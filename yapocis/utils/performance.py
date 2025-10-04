@@ -1,5 +1,5 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
-"""Performance tracking and reporting for yapocis tests."""
+"""Performance tracking and reporting for yapocis tests using DuckDB."""
 
 import json
 import os
@@ -9,14 +9,73 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+import duckdb
+
 # Performance data directory
 PERFORMANCE_DIR = Path(__file__).parent.parent.parent / "performance"
-RESULTS_DIR = PERFORMANCE_DIR / "results"
 REPORTS_DIR = PERFORMANCE_DIR / "reports"
+DB_PATH = PERFORMANCE_DIR / "performance.duckdb"
 
 # Ensure directories exist
-RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+PERFORMANCE_DIR.mkdir(parents=True, exist_ok=True)
 REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _get_connection():
+    """Get a DuckDB connection and ensure schema exists."""
+    conn = duckdb.connect(str(DB_PATH))
+
+    # Create tables if they don't exist
+    conn.execute("""
+        CREATE SEQUENCE IF NOT EXISTS runs_seq START 1
+    """)
+
+    conn.execute("""
+        CREATE SEQUENCE IF NOT EXISTS checkpoints_seq START 1
+    """)
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS performance_runs (
+            id INTEGER PRIMARY KEY DEFAULT nextval('runs_seq'),
+            test_name VARCHAR NOT NULL,
+            test_file VARCHAR NOT NULL,
+            backend VARCHAR NOT NULL,
+            branch VARCHAR NOT NULL,
+            commit VARCHAR NOT NULL,
+            file_status VARCHAR NOT NULL,
+            timestamp TIMESTAMP NOT NULL,
+            timestamp_unix DOUBLE NOT NULL,
+            total_time DOUBLE NOT NULL,
+            min_time DOUBLE,
+            max_time DOUBLE,
+            mean_time DOUBLE,
+            slowest_operation VARCHAR,
+            fastest_operation VARCHAR
+        )
+    """)
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS performance_checkpoints (
+            id INTEGER PRIMARY KEY DEFAULT nextval('checkpoints_seq'),
+            run_id INTEGER NOT NULL,
+            checkpoint_name VARCHAR NOT NULL,
+            elapsed_time DOUBLE NOT NULL,
+            FOREIGN KEY (run_id) REFERENCES performance_runs(id)
+        )
+    """)
+
+    # Create indexes for common queries
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_test_backend_branch
+        ON performance_runs(test_name, backend, branch, commit, file_status)
+    """)
+
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_timestamp
+        ON performance_runs(timestamp_unix DESC)
+    """)
+
+    return conn
 
 
 def get_git_info(file_path: str) -> Dict[str, str]:
@@ -83,9 +142,9 @@ def save_performance_data(
     backend: str,
     timing_data: Dict[str, float],
     metadata: Optional[Dict] = None
-) -> Path:
+) -> int:
     """
-    Save performance data to JSON file.
+    Save performance data to DuckDB.
 
     Args:
         test_name: Full test name (e.g., "test_graphics4.TestClass.test_method")
@@ -95,54 +154,64 @@ def save_performance_data(
         metadata: Optional additional metadata
 
     Returns:
-        Path to the saved JSON file
+        Run ID of the inserted record
     """
     git_info = get_git_info(file_path)
-
-    # Build data structure
-    data = {
-        "metadata": {
-            "test_name": test_name,
-            "test_file": os.path.basename(file_path),
-            "backend": backend,
-            "branch": git_info["branch"],
-            "commit": git_info["commit"],
-            "file_status": git_info["file_status"],
-            "timestamp": datetime.now().isoformat(),
-            "timestamp_unix": time.time(),
-        },
-        "timing": {
-            "checkpoints": timing_data,
-            "total": sum(timing_data.values()) if timing_data else 0,
-        },
-        "stats": {}
-    }
-
-    # Add optional metadata
-    if metadata:
-        data["metadata"].update(metadata)
+    timestamp = datetime.now()
+    timestamp_unix = time.time()
 
     # Calculate statistics
-    if timing_data:
-        times = list(timing_data.values())
-        data["stats"] = {
-            "min": min(times),
-            "max": max(times),
-            "mean": sum(times) / len(times),
+    total_time = sum(timing_data.values()) if timing_data else 0
+    times = list(timing_data.values()) if timing_data else []
+
+    stats = {}
+    if times:
+        stats = {
+            "min_time": min(times),
+            "max_time": max(times),
+            "mean_time": sum(times) / len(times),
             "slowest_operation": max(timing_data.items(), key=lambda x: x[1])[0],
             "fastest_operation": min(timing_data.items(), key=lambda x: x[1])[0],
         }
 
-    # Generate filename: {backend}_{commit}_{status}_{timestamp}.json
-    timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-    filename = f"{backend}_{git_info['commit']}_{git_info['file_status']}_{timestamp_str}.json"
-    filepath = RESULTS_DIR / filename
+    conn = _get_connection()
 
-    # Save to JSON
-    with open(filepath, 'w') as f:
-        json.dump(data, f, indent=2)
+    # Insert run
+    result = conn.execute("""
+        INSERT INTO performance_runs (
+            test_name, test_file, backend, branch, commit, file_status,
+            timestamp, timestamp_unix, total_time, min_time, max_time,
+            mean_time, slowest_operation, fastest_operation
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        RETURNING id
+    """, [
+        test_name,
+        os.path.basename(file_path),
+        backend,
+        git_info["branch"],
+        git_info["commit"],
+        git_info["file_status"],
+        timestamp,
+        timestamp_unix,
+        total_time,
+        stats.get("min_time"),
+        stats.get("max_time"),
+        stats.get("mean_time"),
+        stats.get("slowest_operation"),
+        stats.get("fastest_operation"),
+    ]).fetchone()
 
-    return filepath
+    run_id = result[0]
+
+    # Insert checkpoints
+    for checkpoint_name, elapsed_time in timing_data.items():
+        conn.execute("""
+            INSERT INTO performance_checkpoints (run_id, checkpoint_name, elapsed_time)
+            VALUES (?, ?, ?)
+        """, [run_id, checkpoint_name, elapsed_time])
+
+    conn.close()
+    return run_id
 
 
 def load_performance_data(
@@ -154,7 +223,7 @@ def load_performance_data(
     exact_match: bool = False
 ) -> List[Dict]:
     """
-    Load and filter performance data.
+    Load and filter performance data from DuckDB.
 
     Args:
         backend: Filter by backend (ocl, metal, numba, cuda)
@@ -167,42 +236,89 @@ def load_performance_data(
     Returns:
         List of performance data dictionaries, sorted by timestamp (newest first)
     """
-    results = []
+    conn = _get_connection()
 
-    # Load all JSON files
-    for filepath in RESULTS_DIR.glob("*.json"):
-        try:
-            with open(filepath, 'r') as f:
-                data = json.load(f)
+    # Build query
+    query = """
+        SELECT
+            r.id, r.test_name, r.test_file, r.backend, r.branch, r.commit,
+            r.file_status, r.timestamp, r.timestamp_unix, r.total_time,
+            r.min_time, r.max_time, r.mean_time, r.slowest_operation, r.fastest_operation
+        FROM performance_runs r
+        WHERE 1=1
+    """
+    params = []
 
-            # Apply filters
-            if backend and data["metadata"]["backend"] != backend:
-                continue
-            if test_name:
-                if exact_match:
-                    if data["metadata"]["test_name"] != test_name:
-                        continue
-                else:
-                    if test_name not in data["metadata"]["test_name"]:
-                        continue
-            if branch and data["metadata"]["branch"] != branch:
-                continue
-            if file_status and data["metadata"]["file_status"] != file_status:
-                continue
+    if backend:
+        query += " AND r.backend = ?"
+        params.append(backend)
 
-            results.append(data)
-        except (json.JSONDecodeError, KeyError):
-            # Skip malformed files
-            continue
+    if test_name:
+        if exact_match:
+            query += " AND r.test_name = ?"
+            params.append(test_name)
+        else:
+            query += " AND r.test_name LIKE ?"
+            params.append(f"%{test_name}%")
 
-    # Sort by timestamp (newest first)
-    results.sort(key=lambda x: x["metadata"]["timestamp_unix"], reverse=True)
+    if branch:
+        query += " AND r.branch = ?"
+        params.append(branch)
 
-    # Apply limit
+    if file_status:
+        query += " AND r.file_status = ?"
+        params.append(file_status)
+
+    query += " ORDER BY r.timestamp_unix DESC"
+
     if limit:
-        results = results[:limit]
+        query += f" LIMIT {limit}"
 
-    return results
+    results = conn.execute(query, params).fetchall()
+
+    # Load checkpoint data for each run
+    data = []
+    for row in results:
+        run_id = row[0]
+
+        # Get checkpoints for this run
+        checkpoints_result = conn.execute("""
+            SELECT checkpoint_name, elapsed_time
+            FROM performance_checkpoints
+            WHERE run_id = ?
+        """, [run_id]).fetchall()
+
+        checkpoints = {name: time for name, time in checkpoints_result}
+
+        # Build data structure
+        entry = {
+            "metadata": {
+                "test_name": row[1],
+                "test_file": row[2],
+                "backend": row[3],
+                "branch": row[4],
+                "commit": row[5],
+                "file_status": row[6],
+                "timestamp": row[7].isoformat(),
+                "timestamp_unix": row[8],
+            },
+            "timing": {
+                "checkpoints": checkpoints,
+                "total": row[9],
+            },
+            "stats": {
+                "min": row[10],
+                "max": row[11],
+                "mean": row[12],
+                "slowest_operation": row[13],
+                "fastest_operation": row[14],
+            }
+        }
+
+        data.append(entry)
+
+    conn.close()
+    return data
 
 
 def purge_performance_data(
@@ -212,50 +328,60 @@ def purge_performance_data(
     dry_run: bool = False
 ) -> Tuple[int, List[str]]:
     """
-    Delete old performance data files.
+    Delete old performance data from DuckDB.
 
     Args:
-        older_than_days: Delete files older than N days
-        backend: Only delete files for specific backend
-        test_name: Only delete files for specific test (partial match)
+        older_than_days: Delete data older than N days
+        backend: Only delete data for specific backend
+        test_name: Only delete data for specific test (partial match)
         dry_run: If True, don't actually delete, just return what would be deleted
 
     Returns:
-        Tuple of (count_deleted, list_of_filenames)
+        Tuple of (count_deleted, list_of_descriptions)
     """
-    deleted_files = []
-    cutoff_time = None
+    conn = _get_connection()
+
+    # Build query
+    query = "SELECT id, test_name, backend, timestamp FROM performance_runs WHERE 1=1"
+    params = []
 
     if older_than_days:
         cutoff_time = time.time() - (older_than_days * 24 * 60 * 60)
+        query += " AND timestamp_unix < ?"
+        params.append(cutoff_time)
 
-    for filepath in RESULTS_DIR.glob("*.json"):
-        should_delete = True
+    if backend:
+        query += " AND backend = ?"
+        params.append(backend)
 
-        try:
-            with open(filepath, 'r') as f:
-                data = json.load(f)
+    if test_name:
+        query += " AND test_name LIKE ?"
+        params.append(f"%{test_name}%")
 
-            # Apply filters
-            if backend and data["metadata"]["backend"] != backend:
-                should_delete = False
-            if test_name and test_name not in data["metadata"]["test_name"]:
-                should_delete = False
-            if cutoff_time and data["metadata"]["timestamp_unix"] > cutoff_time:
-                should_delete = False
+    results = conn.execute(query, params).fetchall()
 
-            if should_delete:
-                deleted_files.append(filepath.name)
-                if not dry_run:
-                    filepath.unlink()
+    deleted_descriptions = []
+    for row in results:
+        run_id, test, backend, timestamp = row
+        deleted_descriptions.append(f"{test} ({backend}) - {timestamp}")
 
-        except (json.JSONDecodeError, KeyError):
-            # Delete malformed files too
-            deleted_files.append(filepath.name)
-            if not dry_run:
-                filepath.unlink()
+    if not dry_run and results:
+        run_ids = [row[0] for row in results]
 
-    return len(deleted_files), deleted_files
+        # Delete checkpoints first (foreign key constraint)
+        conn.execute(f"""
+            DELETE FROM performance_checkpoints
+            WHERE run_id IN ({','.join('?' * len(run_ids))})
+        """, run_ids)
+
+        # Delete runs
+        conn.execute(f"""
+            DELETE FROM performance_runs
+            WHERE id IN ({','.join('?' * len(run_ids))})
+        """, run_ids)
+
+    conn.close()
+    return len(results), deleted_descriptions
 
 
 def generate_summary_table(data: List[Dict]) -> str:

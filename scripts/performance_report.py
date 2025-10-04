@@ -21,8 +21,6 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from yapocis.utils.performance import (
-    RESULTS_DIR,
-    REPORTS_DIR,
     load_performance_data,
     purge_performance_data,
     generate_summary_table,
