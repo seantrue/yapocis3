@@ -86,7 +86,11 @@ def get_git_info(file_path: str) -> Dict[str, str]:
         file_path: Path to the test file being tracked
 
     Returns:
-        Dictionary with keys: branch, commit, file_status (clean/modified)
+        Dictionary with keys: branch, commit, file_status (clean/modified/untracked)
+
+    Note:
+        file_status is "clean" ONLY if there are NO uncommitted changes or untracked files
+        anywhere in the repository. This ensures "clean" results are fully replicable.
     """
     info = {
         "branch": "unknown",
@@ -95,13 +99,15 @@ def get_git_info(file_path: str) -> Dict[str, str]:
     }
 
     try:
+        repo_dir = os.path.dirname(file_path)
+
         # Get current branch
         result = subprocess.run(
             ["git", "rev-parse", "--abbrev-ref", "HEAD"],
             capture_output=True,
             text=True,
             check=True,
-            cwd=os.path.dirname(file_path)
+            cwd=repo_dir
         )
         info["branch"] = result.stdout.strip()
 
@@ -111,20 +117,27 @@ def get_git_info(file_path: str) -> Dict[str, str]:
             capture_output=True,
             text=True,
             check=True,
-            cwd=os.path.dirname(file_path)
+            cwd=repo_dir
         )
         info["commit"] = result.stdout.strip()
 
-        # Check if file is modified
+        # Check entire repository status (not just the file)
+        # Status is "clean" ONLY if there are NO changes or untracked files anywhere
         result = subprocess.run(
-            ["git", "status", "--porcelain", file_path],
+            ["git", "status", "--porcelain"],
             capture_output=True,
             text=True,
             check=True,
-            cwd=os.path.dirname(file_path)
+            cwd=repo_dir
         )
-        # If output is empty, file is clean; otherwise modified
-        info["file_status"] = "clean" if not result.stdout.strip() else "modified"
+
+        # If there's ANY output, repository has uncommitted changes
+        if not result.stdout.strip():
+            info["file_status"] = "clean"
+        else:
+            # Check if there are untracked files
+            has_untracked = any(line.startswith('??') for line in result.stdout.strip().split('\n'))
+            info["file_status"] = "untracked" if has_untracked else "modified"
 
     except subprocess.CalledProcessError:
         # Git command failed - likely not in a git repo or git not available
@@ -141,7 +154,8 @@ def save_performance_data(
     file_path: str,
     backend: str,
     timing_data: Dict[str, float],
-    metadata: Optional[Dict] = None
+    metadata: Optional[Dict] = None,
+    test_start_time: Optional[float] = None
 ) -> int:
     """
     Save performance data to DuckDB.
@@ -152,13 +166,20 @@ def save_performance_data(
         backend: Backend name (ocl, metal, numba, cuda)
         timing_data: Dictionary of checkpoint names to elapsed times
         metadata: Optional additional metadata
+        test_start_time: Unix timestamp when test started (optional, defaults to now)
 
     Returns:
         Run ID of the inserted record
     """
     git_info = get_git_info(file_path)
-    timestamp = datetime.now()
-    timestamp_unix = time.time()
+
+    # Use provided test start time if available, otherwise use current time
+    if test_start_time is not None:
+        timestamp = datetime.fromtimestamp(test_start_time)
+        timestamp_unix = test_start_time
+    else:
+        timestamp = datetime.now()
+        timestamp_unix = time.time()
 
     # Calculate statistics
     total_time = sum(timing_data.values()) if timing_data else 0

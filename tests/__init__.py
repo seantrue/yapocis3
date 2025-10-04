@@ -220,6 +220,7 @@ class StopWatcher:
                     file_path=self._test_file,
                     backend=backend,
                     timing_data=self.checkpoints.copy(),
+                    test_start_time=self.t,
                 )
             except Exception as e:
                 # Don't fail the test if performance tracking fails

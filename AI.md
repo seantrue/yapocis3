@@ -4,11 +4,62 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Summary Statistics
 
-- **Total AI-assisted commits**: ~14
-- **Major features developed with AI assistance**: Metal backend fixes, coordinate system standardization, renamed truetrace module, validation framework fixes, numba backend completeness, StopWatcher enhancements, performance tracking system, DuckDB migration, test refactoring, random data centralization
-- **Lines of code**: ~1300 lines added for performance tracking (2025-10-03), ~400 lines modified for DuckDB migration (2025-10-03), ~100 lines refactored in test_graphics4.py (2025-10-04), ~550 lines refactored for random data centralization (2025-10-04)
+- **Total AI-assisted commits**: ~15
+- **Major features developed with AI assistance**: Metal backend fixes, coordinate system standardization, renamed truetrace module, validation framework fixes, numba backend completeness, StopWatcher enhancements, performance tracking system, DuckDB migration, test refactoring, random data centralization, performance reproducibility improvements
+- **Lines of code**: ~1300 lines added for performance tracking (2025-10-03), ~400 lines modified for DuckDB migration (2025-10-03), ~100 lines refactored in test_graphics4.py (2025-10-04), ~550 lines refactored for random data centralization (2025-10-04), ~70 lines modified for performance reproducibility (2025-10-04)
 
 ## Detailed Contributions
+
+### 2025-10-04: Performance System Reproducibility Enhancements
+
+**AI Contribution (Claude):**
+- Enhanced performance tracking system to ensure "clean" status means fully replicable results
+- Modified `get_git_info()` to check entire repository status instead of just test file
+  - Status is "clean" ONLY when there are NO uncommitted changes or untracked files anywhere
+  - Added "untracked" status for repositories with untracked files
+  - Added "modified" status for repositories with only tracked file modifications
+  - Ensures "clean" performance results are fully replicable
+- Updated `save_performance_data()` to accept `test_start_time` parameter
+  - Timestamp now reflects when test started, not when it finished
+  - More accurate timing data for longitudinal analysis
+  - Defaults to current time if test_start_time not provided (backward compatible)
+- Updated `StopWatcher.__exit__()` to pass test start time to `save_performance_data()`
+  - Uses `self.t` captured in `__enter__()` as test start time
+  - Ensures timestamp accuracy in performance database
+- Lines changed: ~70 modifications across 2 files
+
+**Status Classification:**
+- **clean**: No uncommitted changes, no untracked files → fully replicable
+- **modified**: Has modified tracked files, no untracked files → partially tracked
+- **untracked**: Has untracked files (may also have modifications) → not fully tracked
+
+**Files Modified:**
+- `yapocis/utils/performance.py`:
+  - Modified `get_git_info()` to check entire repository status (lines 81-149)
+  - Added `test_start_time` parameter to `save_performance_data()` (lines 152-183)
+- `tests/__init__.py`:
+  - Updated `StopWatcher.__exit__()` to pass `test_start_time=self.t` (line 223)
+
+**Testing:**
+- Verified with `test_truetrace.py` using `YAPOCIS_PERFORMANCE=1`
+- Confirmed "untracked" status correctly detected when untracked files present
+- Verified timestamp reflects test start time in DuckDB
+- Confirmed backward compatibility when test_start_time not provided
+
+**Benefits:**
+- "clean" status provides strong reproducibility guarantee
+- Performance comparisons can filter to only replicable results
+- Accurate test start timestamps for longitudinal analysis
+- Better understanding of repository state when performance data was captured
+- Enables identification of performance regressions vs. environmental changes
+
+**Human Contribution:**
+- Request to make "clean" status mean fully replicable
+- Specification of timestamp requirement
+- Testing and verification
+
+---
+
 
 ### 2025-10-04: Random Data Generation Refactoring with Reproducible Seeding
 
