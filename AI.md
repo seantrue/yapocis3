@@ -4,11 +4,78 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Summary Statistics
 
-- **Total AI-assisted commits**: ~11
-- **Major features developed with AI assistance**: Metal backend fixes, coordinate system standardization, renamed truetrace module, validation framework fixes, numba backend completeness, StopWatcher enhancements, performance tracking system, DuckDB migration
-- **Lines of code**: ~1300 lines added for performance tracking (2025-10-03), ~400 lines modified for DuckDB migration (2025-10-03)
+- **Total AI-assisted commits**: ~13
+- **Major features developed with AI assistance**: Metal backend fixes, coordinate system standardization, renamed truetrace module, validation framework fixes, numba backend completeness, StopWatcher enhancements, performance tracking system, DuckDB migration, test refactoring
+- **Lines of code**: ~1300 lines added for performance tracking (2025-10-03), ~400 lines modified for DuckDB migration (2025-10-03), ~100 lines refactored in test_graphics4.py (2025-10-04)
 
 ## Detailed Contributions
+
+### 2025-10-04: StopWatcher Pattern Refactoring in test_graphics4.py
+
+**AI Contribution (Claude):**
+- Refactored all 15 test functions in `tests/test_graphics4.py` to match the updated StopWatcher pattern from `tests/test_graphics.py`
+- Pattern changes applied:
+  - Added descriptive names to StopWatcher initialization: `StopWatcher("test_name", kernel=grph)`
+  - Converted checkpoint calls to context manager style: `with sw.checkpoint("label"):`
+  - Removed manual `print(sw.summary())` calls (now auto-logged via save_perf)
+  - Updated `sw.show()` signature from `sw.show(grph, canvas)` to `sw.show(canvas)`
+- Applied formatting improvements via linter (black/ruff)
+  - Standardized spacing and line breaks
+  - Fixed import organization
+  - Improved code readability
+- Lines changed: ~100 modifications across 1 file
+
+**Refactored test functions:**
+- `test_lines`, `test_rects`, `test_circles`, `test_triangles`, `test_ellipses`
+- `test_composite`, `test_composite_sprites`, `test_composite_mosaic`
+- `test_simple_icons`, `test_random_icons`
+- `test_simple_texts`, `test_text_rotation`
+- `test_texts_stressed`, `test_texts_stressed_rotation`, `test_typesetting`
+- `test_one`
+
+**Files modified:**
+- `tests/test_graphics4.py` - Refactored StopWatcher usage pattern
+
+**Testing:**
+- Verified test_one passes with new pattern
+- Confirmed consistent usage across all test functions
+- Maintained backward compatibility with existing functionality
+
+**Benefits:**
+- Consistent StopWatcher usage across test suite
+- Cleaner checkpoint timing with context managers
+- Better integration with performance tracking system
+- Improved code readability and maintainability
+
+**Human Contribution:**
+- Request to refactor based on test_graphics.py pattern
+- Code review and linting
+
+---
+
+### 2025-10-03: JSON to DuckDB Migration Script
+
+**AI Contribution (Claude):**
+- Created migration script `scripts/migrate_json_to_duckdb.py` to import legacy JSON performance data
+- Successfully migrated 409 JSON performance records to DuckDB
+- Imported 1,352 checkpoint records with proper foreign key relationships
+- Zero errors during migration process
+- Lines changed: ~100 additions in migration script
+
+**Migration Results:**
+- 409 performance runs successfully imported
+- 1,352 checkpoints successfully imported
+- All historical data preserved with full fidelity
+- Database verified with CLI tools (list, stats commands)
+
+**Files created:**
+- `scripts/migrate_json_to_duckdb.py` - One-time migration utility
+
+**Human Contribution:**
+- Request to migrate existing data
+- Verification of migration results
+
+---
 
 ### 2025-10-03: DuckDB Migration for Performance Tracking
 
