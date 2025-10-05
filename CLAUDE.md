@@ -80,6 +80,15 @@ python scripts/bench_convolvesep_numba.py --sizes 512,1024 --repeats 3 --backend
 python scripts/bench_median3x3.py --sizes 512,1024 --backends auto
 ```
 
+### Changelog Management
+```bash
+# Generate CHANGELOG.md from git history
+make changelog
+
+# Show unreleased changes
+make changelog-unreleased
+```
+
 ### Building & Distribution
 ```bash
 # Build distribution packages

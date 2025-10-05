@@ -228,6 +228,19 @@ crosscheck-numba: venv ## Cross-validate Numba vs Metal
 	YAPOCIS_BACKEND= YAPOCIS_CROSSCHECK_REF=metal YAPOCIS_CROSSCHECK_TEST=numba \
 		$(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)/test_backend_crosscheck.py
 
+##@ Changelog & Version Management
+
+.PHONY: changelog
+changelog: ## Generate CHANGELOG.md from git history
+	@echo "$(YELLOW)Generating changelog...$(NC)"
+	git-cliff -o CHANGELOG.md
+	@echo "$(GREEN)Changelog generated at CHANGELOG.md$(NC)"
+
+.PHONY: changelog-unreleased
+changelog-unreleased: ## Show unreleased changes
+	@echo "$(YELLOW)Showing unreleased changes...$(NC)"
+	git-cliff --unreleased
+
 ##@ Building & Distribution
 
 .PHONY: build

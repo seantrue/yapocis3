@@ -142,6 +142,34 @@ packages = ["yapocis"]
 3. **License**: Verify LICENSE.txt matches pyproject.toml declaration
 4. **Coverage**: Run `make test-coverage` to generate coverage reports with new config
 
+### 9. Automated Changelog Generation
+- **Added**: git-cliff for automated changelog generation
+- **Added**: cliff.toml configuration
+  - Conventional commits parsing (feat, fix, docs, refactor, etc.)
+  - Keep a Changelog format compliance
+  - Semantic versioning support
+  - Automatic grouping by commit type
+- **Added**: Makefile targets
+  - `make changelog`: Generate/update CHANGELOG.md from git history
+  - `make changelog-unreleased`: Preview unreleased changes
+- **Generated**: Initial CHANGELOG.md from project history
+- **Benefits**:
+  - Automated release notes generation
+  - Consistent changelog format
+  - No manual changelog maintenance
+  - Conventional commits enforcement
+
+### Changelog System Usage
+
+The changelog is automatically generated from git commit messages following conventional commit format:
+- `feat:` → Added section
+- `fix:` → Fixed section
+- `docs:` → Documentation section
+- `refactor:` → Refactored section
+- `perf:` → Performance section
+- `test:` → Testing section
+- `chore:` → Miscellaneous Tasks section
+
 ## Future Improvements
 
 Based on pymetallic structure but not yet implemented:
@@ -150,6 +178,5 @@ Based on pymetallic structure but not yet implemented:
 - [ ] Pre-commit hooks configuration
 - [ ] CLI entry points for key scripts
 - [ ] Enhanced PyPI metadata (classifiers, keywords)
-- [ ] Automated changelog generation
 
 See the `modernize` branch for these additional improvements.
