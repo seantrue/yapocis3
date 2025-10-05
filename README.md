@@ -2,8 +2,8 @@
 
 [![PyPI version](https://badge.fury.io/py/yapocis.svg)](https://badge.fury.io/py/yapocis)
 [![Python Versions](https://img.shields.io/pypi/pyversions/yapocis.svg)](https://pypi.org/project/yapocis/)
-[![License](https://img.shields.io/github/license/seantrue/yapocis.svg)](https://github.com/seantrue/yapocis/blob/main/LICENSE)
-[![CI Status](https://github.com/seantrue/yapocis/workflows/CI/badge.svg)](https://github.com/seantrue/yapocis/actions)
+[![License](https://img.shields.io/github/license/seantrue/yapocis3.svg)](https://github.com/seantrue/yapocis3/blob/main/LICENSE)
+[![CI Status](https://github.com/seantrue/yapocis3/workflows/CI/badge.svg)](https://github.com/seantrue/yapocis3/actions)
 
 # What is Yapocis?
 

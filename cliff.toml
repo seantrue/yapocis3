@@ -34,7 +34,7 @@ footer = """
 """
 # postprocessors
 postprocessors = [
-  # { pattern = '<REPO>', replace = "https://github.com/seantrue/Yapocis" }, # replace repository URL
+  # { pattern = '<REPO>', replace = "https://github.com/seantrue/yapocis3" }, # replace repository URL
 ]
 
 [git]
