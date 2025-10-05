@@ -282,3 +282,4 @@ def test_operation(backend, validate_result):
 2. **Review outputs** and promote good results to validation references
 3. **Daily development** with `pytest --validate` to catch regressions
 4. **Update references** with `--update-validation` for intentional changes
+- The yapocis package is in the repository named yapocis3. The prior version of yapocis is in the repository yapocis.

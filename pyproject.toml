@@ -47,11 +47,11 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/seantrue/Yapocis/"
+Homepage = "https://github.com/seantrue/Yapocis3/"
 Documentation = "https://yapocis.readthedocs.io/"
-Repository = "https://github.com/seantrue/Yapocis.git"
-"Bug Tracker" = "https://github.com/seantrue/Yapocis/issues"
-Changelog = "https://github.com/seantrue/Yapocis/blob/main/CHANGELOG.md"
+Repository = "https://github.com/seantrue/Yapocis3.git"
+"Bug Tracker" = "https://github.com/seantrue/Yapocis3/issues"
+Changelog = "https://github.com/seantrue/Yapocis3/blob/main/CHANGELOG.md"
 
 
 [project.optional-dependencies]

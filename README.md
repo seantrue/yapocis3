@@ -5,191 +5,321 @@
 [![License](https://img.shields.io/github/license/seantrue/yapocis3.svg)](https://github.com/seantrue/yapocis3/blob/main/LICENSE)
 [![CI Status](https://github.com/seantrue/yapocis3/workflows/CI/badge.svg)](https://github.com/seantrue/yapocis3/actions)
 
-# What is Yapocis?
+## Overview
 
-Yapocis is "Yet another Python OpenCL interface specification" — now with multiple backends: OpenCL, CUDA, Metal, and Numba.
+Yapocis is a multi-backend GPU/CPU computing framework for image processing and graphics operations. It provides a unified Python interface to OpenCL, CUDA, Metal, and Numba backends through an IDL-like interface definition language and Mako template system.
 
-Memorable. Easy to pronounce and spell. Clearly related to the semantics of the project.
+The framework enables developers to write compute kernels once and execute them across different hardware platforms without code modification. Backend selection occurs at runtime through environment variables or programmatic configuration, proving that Write Once, Run Anywhere™ can actually work if you squint hard enough and control all the variables.
 
-Or not, all the good names are used and I am not in marketing.
+For the archaeological record of how this came to be, see [HISTORY.md](HISTORY.md).
 
-It includes easy-to-call-from-Python, reasonably performing implementations of kernels such as Mandelbrot, 3x3 median, image gradients, HSI <-> RGB conversions, color math, 2D graphics primitives, and signed distance field path tracing. I use it to develop much less generally useful implementations of bizarre numerical processing ideas.
+## Current Goals
 
-## Why this happened?
+**Version 0.3.x Development Focus:**
 
-*Some brief history, "living backwards" order:*
+1. **Performance Infrastructure**: Comprehensive performance tracking system with DuckDB storage, cross-backend comparison, and longitudinal analysis. Because if you can't measure it, you can't optimize it. And if you can measure it, you'll discover it's slower than you thought.
 
-I'm putting this code up on Github to be used or snickered at. Both can be helpful. It has been used on macOS and Linux with a 64-bit Python, and assumes NumPy and Matplotlib for examples/demos. It supports OpenCL (PyOpenCL), CUDA (CuPy), Metal (via a thin `pymetallic` shim), and Numba (CPU fallback with JIT compilation). I can't help resolve issues on dependencies; it's hard enough to make new ones happen.
+2. **Validation Framework**: Automated regression testing with pixel-exact validation across backends. 
 
-*This in response to a note I got back from the pyopencl list:*
+3. **Modern Packaging**: Migration to hatchling, modern tooling (ruff, isort, mypy), and Python 3.13 support. The good news: Python packaging has been solved. The bad news: it was solved again. And again.
 
-Sounds interesting. Please let the list know once you have public code to play with.
+4. **Backend Maturity**: Complete feature parity across OpenCL, Metal, and Numba backends with extensive test coverage. Write once, debug everywhere, ship when ready.
 
-Andreas
+**Future Roadmap:**
 
-*Which was in response to the following inquiry I sent to the list:*
+- Automated version management with setuptools_scm (eliminating the last remaining manual step)
+- Pre-commit hooks for code quality enforcement (because self-discipline is overrated)
+- CLI entry points for common development tools
+- Backend-aware scheduling strategies for optimal hardware utilization
+- Enhanced documentation with comprehensive examples (eventually)
 
-I'm wondering if yet-another-python-opencl-interface-layer would be of interest. This layer is built on top of pyopencl, and is intended to use familiar RPC definitions to ease the special joys of talking to opencl.
+## Key Features
 
-I've implemented this on OS/X and it is working for me and has been stable, oh, for several days (insert smiley face here). It eliminates the need for routine glue code, and can be extended to minimize movement of data between host and opencl service.
+### IDL-Based Interface System
 
-This code is currently private, and I will be happy to either fork pyopencl and submit a pull after integration, or a separate github project.
+Define kernel interfaces once using an intuitive interface definition language loosely inspired by Apollo NCS/OSF DCE/Microsoft IDL, which is to say, inspired by every RPC system ever designed and none of them:
 
--- Sean
-
-> Sean True  
-> Swapwizard Consulting  
-> *Not my day job*
-
-I've been trying to make these algorithms run fast enough to be useful and easy to use enough to make more core ideas testable for, oh, 25 years. Now I can work on camera resolution images in relatively quick turn around.
-
-## Presumed highlights
-
-```python
-# Use the rpc extension to define and load the kernel as a callable.
-from yapocis.rpc import kernels, interfaces
-calc_fractal_opencl = kernels.loadProgram(interfaces.mandelbrot).mandelbrot
-# Call it the way we like to call Python callables:
-output = calc_fractal(q, maxiter)
-```
-
-```text
-# RPC definition language loosely based on Apollo NCS/OSF DCE/Microsoft IDL
-# outlike is a novel keyword that says: allocate for me, return as part
-# of return vals.
-
+```idl
 interface mandelbrot {
-      kernel mandelbrot(in complex64 *q, outlike int16 *q, in int32 maxiter);
-      };
+    kernel mandelbrot(in complex64 q, out_like short q, in int32 maxiter);
+};
 ```
 
-```c
-// mandelbrot.mako is just what it has always been (OpenCL). Metal/CUDA versions are auto-translated templates.
-__kernel void mandelbrot(__global float2 *q,  __global short *output, int const maxiter)
-{
-    int gid = get_global_id(0);
-    float nreal, real = 0;
-    float imag = 0;
-    output[gid] = 0;
-    for(int curiter = 0; curiter < maxiter; curiter++) {
-            nreal = real*real - imag*imag + q[gid].x;
-            imag = 2* real*imag + q[gid].y;
-            real = nreal;
-            if (real*real + imag*imag > 4.0f)
-              output[gid] = curiter;
-    }
-}
-```
+The framework automatically handles:
+- Memory allocation and management (the hard parts)
+- Data transfer between host and device (the slow parts)
+- Type marshaling and buffer hints (the error-prone parts)
+- Multi-dimensional array handling (the confusing parts)
 
-## Backends and selection
+In other words, it does everything except write the kernel for you. We're working on that. Really.
 
-- Backends: `ocl` (OpenCL via PyOpenCL), `cuda` (CuPy), `metal` (PyMetallic shim), and `numba` (CPU with JIT).
-- Select backend via env: `export YAPOCIS_BACKEND=ocl|cuda|metal|numba`.
-- You can also select explicitly in code:
+### Multi-Backend Architecture
+
+Execute the same code across different compute platforms:
 
 ```python
 from yapocis.core.manager import get_manager
-mgr = get_manager("metal")  # or "ocl"/"cuda"/"numba"
-prog = mgr.load_program("demo")
+
+# Select backend programmatically
+mgr = get_manager("metal")  # or "ocl", "cuda", "numba"
+prog = mgr.load_program("mandelbrot")
+result = prog.mandelbrot(input_data, maxiter=1000)
+
+# Or use environment variable
+# export YAPOCIS_BACKEND=ocl
 ```
 
-High-level wrappers (e.g., `yapocis.lib.*`) route through `yapocis.core.manager` and honor `YAPOCIS_BACKEND`.
+**Supported Backends:**
+- **OpenCL** (via PyOpenCL): Cross-platform GPU/CPU support, runs everywhere except where it doesn't
+- **Metal** (via PyMetallic): Apple GPU acceleration, because some of us chose the shiny hardware
+- **CUDA** (via CuPy): NVIDIA GPU support, for those who prefer green LEDs
+- **Numba**: CPU fallback with JIT compilation, surprisingly fast for a "fallback"
 
-**Numba backend notes:**
-- Provides CPU fallback when GPU backends are unavailable
-- Uses Numba's JIT compilation for Python/NumPy code
-- Automatically selected when no GPU backend is available
-- Useful for testing and development without GPU hardware
+### High-Level Graphics Libraries
 
-## Development & tests
+Pre-built implementations for common operations:
+- 2D graphics primitives (lines, circles, rectangles, text rendering in multiple fonts and rotations)
+- Image processing (convolution, gradients, histogram operations)
+- Color space conversions (RGB, HSI, color math)
+- Anisotropic diffusion (because sometimes you need your blur to be anisotropic)
+- Signed distance field path tracing
+- Experimental matplotlib backend
 
-Quickstart:
+## Installation
+
+**Requirements:**
+- Python 3.10+ (Python 3.13 recommended for development)
+- NumPy 2.1+ (because NumPy 1.x is so 2020)
+- Backend-specific dependencies (PyOpenCL, PyMetallic, CuPy, or Numba)
+- Sufficient RAM 
+
+**Basic Installation:**
 
 ```bash
-# Using make (recommended - requires Python 3.13)
-make install-dev
-
-# Or manually with uv
-uv venv .venv --python python3.13 && source .venv/bin/activate
-uv pip install -e ".[dev]"
-
-# Install with all backends
-make install-backends
-
-# Run tests
-make test
-
-# Run backend-specific tests
-make test-ocl    # OpenCL tests
-make test-metal  # Metal tests
-make test-numba  # Numba tests
-
-# Code quality
-make format      # Format with isort and black
-make lint        # Lint with ruff
-make typecheck   # Type check with mypy
-make check       # Run all checks
-
-# Building & publishing
-make build           # Build distribution packages
-make publish-test    # Publish to TestPyPI
-make publish         # Publish to PyPI
+pip install yapocis
 ```
 
-Backend test markers and dependencies:
+**Development Installation:**
 
-- Markers exist for each backend: `-m ocl`, `-m metal`, `-m cuda`, `-m numba`.
-- Tests will skip cleanly if the backend runtime isn't installed:
-  - OpenCL tests require `pyopencl`.
-  - Metal tests require a working `pymetallic` runtime and an Apple GPU.
-  - CUDA tests require `cupy` for the core CUDA runtime tests; the PyCUDA legacy test requires `pycuda`.
-  - Numba tests require `numba` (usually available in most environments).
-- Useful invocations:
-  - `pytest -q -m metal` to run only Metal tests.
-  - `pytest -q -m ocl` to run only OpenCL tests.
-  - `pytest -q -m cuda` to run only CUDA tests.
-  - `pytest -q -m numba` to run only Numba tests.
-  - `pytest -q tests/test_backend_smoke.py` to smoke‑compile all interfaces across available backends.
-  - `pytest -q tests/test_backend_runtime.py` to run a tiny runtime sanity call per backend.
+```bash
+# Clone repository
+git clone https://github.com/seantrue/yapocis3.git
+cd yapocis3
 
-CUDA/PyCUDA notes:
+# Install with development tools (requires Python 3.13)
+make install-dev
 
-- The CUDA demo/runtime tests use CuPy and do not require PyCUDA.
-- The legacy PyCUDA test at `yapocis/cukernels/test_convolve.py` is auto‑skipped if `pycuda` isn’t installed, so you can still run the rest of the suite.
+# Or manually, for those who enjoy typing
+uv venv .venv --python python3.13 && source .venv/bin/activate
+uv pip install -e ".[dev]"
+```
 
-## Known misfeatures
+**Backend-Specific Installation:**
 
-There are several. Here are some I remember:
+```bash
+# OpenCL
+pip install yapocis[opencl]
 
-- Untested in any other environment, as noted.
-- CUDA tests under `yapocis/cukernels` depend on `pycuda`. They are excluded from standard test runs.
+# Metal (macOS only, sorry penguins)
+pip install yapocis[metal]
 
-## Modern Python Packaging (v0.3.1+)
+# Numba (the universal adapter)
+pip install yapocis[numba]
 
-Yapocis now uses modern Python packaging infrastructure:
+# Cuda (ubiquitous hardware)
+pip install yapocis[cuda]
 
-- **Build Backend**: Hatchling (PEP 517/518 compliant)
-- **Development Tools**: isort, black, ruff, mypy
-- **Testing**: pytest with coverage tracking
+# All backends (very unlikely that you will get Cuda and Metal on the same machine)
+pip install yapocis[all-backends]
+```
+
+## Quick Start
+
+### Basic Usage
+
+```python
+from yapocis.core.manager import get_manager
+import numpy as np
+
+# Initialize backend
+mgr = get_manager("ocl")  # OpenCL backend
+
+# Load and execute kernel
+prog = mgr.load_program("mandelbrot")
+grid = np.mgrid[-2:2:1024j, -2:2:1024j].astype(np.complex64)
+result = prog.mandelbrot(grid, maxiter=256)
+
+# Admire the fractal
+```
+
+### Graphics Example
+
+```python
+from yapocis.lib.graphics4 import Graphics4
+import numpy as np
+
+# Create graphics context
+g = Graphics4()
+canvas = np.zeros((512, 512, 4), dtype=np.float32)
+
+# Draw primitives
+circles = [(256, 256, 100), (128, 128, 50)]
+g.circles(canvas, circles, color=[1.0, 0.0, 0.0, 1.0])
+
+# Retrieve result
+result = g.read(canvas)
+
+# Profit (not guaranteed)
+```
+
+## Development
+
+### Running Tests
+
+```bash
+# All tests
+make test
+
+# Backend-specific tests
+make test-ocl      # OpenCL
+make test-metal    # Metal
+make test-numba    # Numba
+
+# Specific test markers
+pytest -m ocl      # Only OpenCL tests
+pytest -m metal    # Only Metal tests
+pytest -m validation  # Validation framework tests
+```
+
+### Code Quality
+
+```bash
+# Format code (automatically, because consistency)
+make format        # isort + black
+
+# Lint (find the bugs before they find you)
+make lint          # ruff
+make lint-fix      # ruff with auto-fix
+
+# Type checking (optional static typing, mandatory sanity)
+make typecheck     # mypy
+
+# All checks (for the perfectionists)
+make check         # format-check + lint + typecheck
+```
+
+### Performance Tracking
+
+```bash
+# Run tests with performance tracking
+YAPOCIS_PERFORMANCE=1 pytest tests/
+
+# Run tests that will produce the same output each time 
+YAPOCIS_VALIDATION=1 pytest tests/
+
+
+
+# Generate performance reports
+python scripts/performance_report.py list
+python scripts/performance_report.py compare --backend ocl metal
+python scripts/performance_report.py trend --test test_convolution
+
+# Watch your optimizations regress in real time
+```
+
+### Building and Publishing
+
+```bash
+# Build distribution packages
+make build
+
+# Publish to TestPyPI (for the cautious)
+make publish-test
+
+# Publish to PyPI (for the brave)
+make publish
+```
+
+## Architecture
+
+### Core Components
+
+**Backend Manager** (`yapocis.core.manager`)
+- Device enumeration and selection
+- Backend-specific kernel compilation
+- Runtime backend switching (because flexibility)
+
+**Interface Parser** (`yapocis.core.interface_parser`)
+- PyParsing-based IDL parser
+- Automatic parameter marshaling
+- Buffer hint processing (in, out, inout, out_like, resident)
+
+**Template System** (`yapocis.kernels/`, `yapocis.metalkernels/`, etc.)
+- Mako templates for kernel code generation
+- Backend-specific optimizations
+- Automatic coordinate system handling (column-major vs row-major, forever debated)
+
+**Validation Framework** (`yapocis/utils/validation.py`)
+- Pixel-exact regression testing (because "close enough" isn't)
+- Cross-backend output comparison
+- Automated test promotion
+
+**Performance Tracking** (`yapocis/utils/performance.py`)
+- DuckDB-backed performance database
+- Cross-backend comparison
+- Longitudinal trend analysis
+- Automated regression detection (it's not paranoia if it's real)
+
+## Modern Infrastructure (v0.3.1+)
+
+- **Build System**: Hatchling (PEP 517/518 compliant)
+- **Development Tools**: isort, black, ruff, mypy (the modern Python stack)
+- **Testing**: pytest with coverage tracking (because untested code is broken code)
 - **Publishing**: Automated PyPI workflow with twine
-- **Changelog**: Automated generation with git-cliff
-- **Python Version**: 3.13+ (enforced in virtual environments)
+- **Changelog**: Automated generation with git-cliff (conventional commits appreciated)
+- **Python**: 3.13+ enforced in development environments (keeping up with the times)
 
-See [RENOVATE.md](RENOVATE.md) for details on the modernization improvements.
+See [RENOVATE.md](RENOVATE.md) for detailed modernization documentation.
 
-## Changes and new features
+## Documentation
 
-- **v0.3.1**: Performance tracking system with DuckDB, validation framework, comprehensive backend testing
-- **v0.3.0**: Modern packaging infrastructure, automated changelog, Python 3.13 support
-- **v0.2.2**: Reduced data movement with resident buffers and alias keywords
-- Framework for dealing with two-dimensional arrays auto-magically. New buffer hints: sizeof, widthof, heightof for setting arguments invisibly.
-- The OpenCL engine to use is configured in `rpc.kernels`. Developer has choice of `CPU_ENGINE` and `GPU_ENGINE`.
+- **[CLAUDE.md](CLAUDE.md)**: Development guide and architecture reference
+- **[CONTRIBUTORS.md](CONTRIBUTORS.md)**: Contribution guidelines
+- **[CHANGELOG.md](CHANGELOG.md)**: Release notes and version history
+- **[AI.md](AI.md)**: AI-assisted development tracking (yes, really)
+- **[HISTORY.md](HISTORY.md)**: Project origins and evolution (the archaeological layer)
 
-## Future features
+## Contributing
 
-Other than removing the misfeatures:
+Contributions are welcome. Please see [CONTRIBUTORS.md](CONTRIBUTORS.md) for guidelines.
 
-- Backend-aware scheduling strategies (hardware and array-geometry sensitive execution)
-- Automated version management with setuptools_scm
-- Pre-commit hooks for code quality
-- CLI entry points for common tools
+**Development workflow:**
+1. Fork the repository
+2. Create a feature branch
+3. Write tests for new functionality (test-driven development, not test-eventually development)
+4. Follow code style guidelines (`make format`, `make lint`)
+5. Use conventional commits for changelog generation
+6. Submit pull request
+7. Wait for CI to find the bugs you didn't
+
+## Known Issues
+
+There are several. Some we remember:
+
+- Untested on Windows (pull requests welcome)
+- CUDA backend less mature than others (volunteers needed)
+- Documentation could always be better (but couldn't it always?)
+
+## License
+
+MIT License - see [LICENSE.txt](LICENSE.txt) for details.
+
+Because sharing is caring, and restrictive licenses are so 1990s.
+
+## Acknowledgments
+
+- PyOpenCL community and Andreas Klöckner (for making OpenCL usable)
+- Numba development team (for making Python fast)
+- Apple Metal framework (for making GPUs accessible to hipsters)
+- NVIDIA CUDA platform (for making GPUs ubiquitous)
+- The Python packaging ecosystem (for never being boring)
