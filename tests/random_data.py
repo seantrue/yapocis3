@@ -2,8 +2,9 @@
 """Centralized random data generation for tests with reproducible seeding."""
 
 import os
+from random import randint, shuffle, seed as random_seed
+
 import numpy as np
-from random import randint, shuffle
 
 # Import test dependencies
 from . import (
@@ -13,19 +14,29 @@ from . import (
     double_shuffle,
 )
 
-# Set reproducible seed if in validation mode
-if os.getenv('YAPOCIS_VALIDATION'):
-    import random
-    random.seed(42)
-    np.random.seed(42)
 
+def validating(func):
+    def wrapper(*args, **kwargs):
+        if os.getenv("YAPOCIS_VALIDATION"):
+            random_seed(42)
+            np.random.seed(42)
+        result = func(*args, **kwargs)
+        return result
+
+    return wrapper
+
+
+# Set reproducible seed if in validation mode
 
 # ==============================================================================
 # Common functions (shared by graphics1 and graphics4)
 # ==============================================================================
 
+
+@validating
 def random_points(n=100):
     """Generate n random (x, y) points."""
+
     def rx():
         return randint(0, ASIZE)
 
@@ -39,6 +50,7 @@ def random_points(n=100):
     return points
 
 
+@validating
 def random_lines(n=100):
     """Generate n random line segments (x0, y0, x1, y1)."""
     lines = random_points(n)
@@ -50,11 +62,13 @@ def random_lines(n=100):
     return lines
 
 
+@validating
 def random_widths(n=100):
     """Generate n random line widths (1.0 to 10.0)."""
     return np.random.uniform(1.0, 10.0, n).astype(np.float32)
 
 
+@validating
 def random_triangles(n=100):
     """Generate n random triangles (x0, y0, x1, y1, x2, y2)."""
     lines = random_points(n)
@@ -68,6 +82,7 @@ def random_triangles(n=100):
     return lines
 
 
+@validating
 def random_circles(n=100):
     """Generate n random circles (x, y, radius)."""
     circles = random_points(n)
@@ -77,6 +92,7 @@ def random_circles(n=100):
     return circles
 
 
+@validating
 def random_ellipses(n=100):
     """Generate n random ellipses (x, y, radius_x, radius_y)."""
     ellipses = random_points(n=n)
@@ -94,11 +110,14 @@ random_rects = random_lines
 # Graphics1 (single channel) functions
 # ==============================================================================
 
+
+@validating
 def random_colors_1ch(n=100):
     """Generate n random grayscale colors (0.0 to 1.0)."""
     return np.random.uniform(0, 1.0, n).astype(np.float32)
 
 
+@validating
 def random_alpha_1ch(n=100):
     """Generate n random alpha values (0.25 to 1.0)."""
     return np.random.uniform(0.25, 1.0, n).astype(np.float32)
@@ -131,6 +150,7 @@ def image_sprites_1ch(steps=4):
     return blocks
 
 
+@validating
 def random_composites_1ch(n=100):
     """Generate random composite locations and sprite blocks (single channel)."""
     locations = random_points(n)
@@ -142,6 +162,7 @@ def random_composites_1ch(n=100):
     return locations, blocks
 
 
+@validating
 def random_sprites_1ch(n=100):
     """Generate random sprite indices and locations (single channel)."""
     random_coords, random_sprites = random_composites_1ch(n)
@@ -156,6 +177,8 @@ def random_sprites_1ch(n=100):
 # Graphics4 (RGBA) functions
 # ==============================================================================
 
+
+@validating
 def random_vector(n=100):
     """Generate n random values (0.2 to 1.0) for RGBA components."""
     return np.random.uniform(0.2, 1.0, n).astype(np.float32)
@@ -168,6 +191,7 @@ def components_to_colors(*components):
     return colors
 
 
+@validating
 def random_colors_4ch(n=100):
     """Generate n random RGBA colors."""
     colors = components_to_colors(
@@ -176,11 +200,13 @@ def random_colors_4ch(n=100):
     return colors
 
 
+@validating
 def random_alpha_4ch(n=100):
     """Generate n random alpha values (0.2 to 1.0) for RGBA."""
     return random_vector(n)
 
 
+@validating
 def random_icons(n=100):
     """Generate n random icon sprites with shuffled selection."""
     from yapocis.icons import icon, icons
@@ -217,6 +243,7 @@ def image_sprites_4ch(steps=4):
     return sprites
 
 
+@validating
 def random_composites_4ch(n=100):
     """Generate random composite locations and sprite blocks (4-channel)."""
     locations = random_points(n)
@@ -226,6 +253,7 @@ def random_composites_4ch(n=100):
     return locations, blocks
 
 
+@validating
 def random_sprites_4ch(n=100):
     """Generate random sprite indices and locations (4-channel)."""
     random_coords, random_sprites = random_composites_4ch(n)
@@ -240,6 +268,8 @@ def random_sprites_4ch(n=100):
 # Shared functions (used by both graphics1 and graphics4)
 # ==============================================================================
 
+
+@validating
 def random_texts(n=100):
     """Generate random text rendering parameters.
 

@@ -151,7 +151,7 @@ test-verbose: venv ## Run tests with verbose output
 .PHONY: test-ocl
 test-ocl: venv ## Run tests with OpenCL backend
 	@echo "$(YELLOW)Running OpenCL tests...$(NC)"
-	YAPOCIS_BACKEND=ocl $(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)
+	YAPOCIS_VALIDATION=1 YAPOCIS_BACKEND=ocl $(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)
 
 .PHONY: test-metal
 test-metal: venv ## Run tests with Metal backend

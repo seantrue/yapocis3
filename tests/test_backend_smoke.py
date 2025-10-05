@@ -37,8 +37,8 @@ def _context_for_interface(name: str) -> dict:
 
 @pytest.mark.parametrize("backend", get_backends())  # exercise detected backends
 @pytest.mark.parametrize("iname", _list_interface_names())
-def test_compile_interfaces_all_backends(backend: str, iname: str):
-    os.environ["YAPOCIS_BACKEND"] = backend
+def test_compile_interfaces_all_backends(backend: str, iname: str, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     from yapocis.core.manager import get_manager
 
     mgr = get_manager(backend)

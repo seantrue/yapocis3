@@ -4,11 +4,68 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Summary Statistics
 
-- **Total AI-assisted commits**: ~15
-- **Major features developed with AI assistance**: Metal backend fixes, coordinate system standardization, renamed truetrace module, validation framework fixes, numba backend completeness, StopWatcher enhancements, performance tracking system, DuckDB migration, test refactoring, random data centralization, performance reproducibility improvements
-- **Lines of code**: ~1300 lines added for performance tracking (2025-10-03), ~400 lines modified for DuckDB migration (2025-10-03), ~100 lines refactored in test_graphics4.py (2025-10-04), ~550 lines refactored for random data centralization (2025-10-04), ~70 lines modified for performance reproducibility (2025-10-04)
+- **Total AI-assisted commits**: ~16
+- **Major features developed with AI assistance**: Metal backend fixes, coordinate system standardization, renamed truetrace module, validation framework fixes, numba backend completeness, StopWatcher enhancements, performance tracking system, DuckDB migration, test refactoring, random data centralization, performance reproducibility improvements, test isolation fixes
+- **Lines of code**: ~1300 lines added for performance tracking (2025-10-03), ~400 lines modified for DuckDB migration (2025-10-03), ~100 lines refactored in test_graphics4.py (2025-10-04), ~550 lines refactored for random data centralization (2025-10-04), ~70 lines modified for performance reproducibility (2025-10-04), ~25 lines modified for test isolation (2025-10-04)
 
 ## Detailed Contributions
+
+### 2025-10-04: Fix Test Isolation - Environment Variable Leakage
+
+**AI Contribution (Claude):**
+- Fixed environment variable leakage between pytest tests causing incorrect backend tagging
+- Identified root cause: Tests were permanently modifying `os.environ["YAPOCIS_BACKEND"]`
+- Problem: When running full test suite (`pytest tests`), parametrized tests across backends would leave `YAPOCIS_BACKEND=numba` (last backend tested) set for all subsequent tests
+- Solution: Replaced direct `os.environ` modification with pytest's `monkeypatch` fixture
+- Created `scripts/list_backends.py` utility to enumerate all available backends and devices
+- Lines changed: ~25 modifications across 3 test files, ~120 lines added for backend listing script
+
+**Root Cause Analysis:**
+- `test_backend_smoke.py`: Parametrized test across all backends modified environment without cleanup
+- `test_validation_example.py`: Similar issue in validation test
+- `test_backend_runtime.py`: All 4 runtime tests (ocl, metal, cuda, numba) leaked backend setting
+- When tests ran in order: ocl → metal → cuda → numba, final state was `YAPOCIS_BACKEND=numba`
+- This caused all subsequent tests to use numba backend regardless of shell environment
+
+**Files Modified:**
+- `tests/test_backend_smoke.py`:
+  - Added `monkeypatch` parameter to `test_compile_interfaces_all_backends`
+  - Changed `os.environ["YAPOCIS_BACKEND"] = backend` to `monkeypatch.setenv("YAPOCIS_BACKEND", backend)`
+- `tests/test_validation_example.py`:
+  - Added `monkeypatch` parameter to `test_graphics4_circles_validation`
+  - Changed direct environment modification to use `monkeypatch.setenv()`
+- `tests/test_backend_runtime.py`:
+  - Removed `_set_backend()` helper function
+  - Added `monkeypatch` parameter to all 4 test functions
+  - Changed all tests to use `monkeypatch.setenv("YAPOCIS_BACKEND", backend)`
+
+**Files Created:**
+- `scripts/list_backends.py`:
+  - Lists all available backends (OCL, Metal, CUDA, Numba)
+  - Enumerates devices for each backend
+  - Supports verbose mode and JSON output
+  - 120 lines of backend/device enumeration code
+
+**Testing:**
+- Verified files now correctly tagged with shell's `YAPOCIS_BACKEND` setting
+- Running `pytest tests/test_gaussians.py::test_image` with `YAPOCIS_BACKEND=metal` produces `[metal]` tagged files
+- Running full test suite no longer changes backend for subsequent tests
+- Confirmed `monkeypatch` automatically restores environment after each test
+
+**Benefits:**
+- Tests are now properly isolated - no environment variable leakage
+- Output files correctly tagged with intended backend
+- Shell environment variable properly respected when running full test suite
+- Makes debugging multi-backend issues easier
+- Backend enumeration script useful for CI/CD and user diagnostics
+
+**Human Contribution:**
+- Bug report: Files marked `[numba]` when running OCL tests
+- Clarification that issue occurred with full test suite, not individual tests
+- Testing and verification
+
+---
+
 
 ### 2025-10-04: Performance System Reproducibility Enhancements
 
