@@ -1,3 +1,10 @@
+# Yapocis
+
+[![PyPI version](https://badge.fury.io/py/yapocis.svg)](https://badge.fury.io/py/yapocis)
+[![Python Versions](https://img.shields.io/pypi/pyversions/yapocis.svg)](https://pypi.org/project/yapocis/)
+[![License](https://img.shields.io/github/license/seantrue/yapocis.svg)](https://github.com/seantrue/yapocis/blob/main/LICENSE)
+[![CI Status](https://github.com/seantrue/yapocis/workflows/CI/badge.svg)](https://github.com/seantrue/yapocis/actions)
+
 # What is Yapocis?
 
 Yapocis is "Yet another Python OpenCL interface specification" — now with multiple backends: OpenCL, CUDA, Metal, and Numba.
@@ -6,7 +13,7 @@ Memorable. Easy to pronounce and spell. Clearly related to the semantics of the 
 
 Or not, all the good names are used and I am not in marketing.
 
-It includes easy-to-call-from-Python, reasonably performing implementations of kernels such as Mandelbrot, 3x3 median, image gradients, HSI <-> RGB conversions, color math, 2D graphics primitives, and signed distance field path tracing. I use it to develop much less generally useful implementations of bizarre image processing ideas.
+It includes easy-to-call-from-Python, reasonably performing implementations of kernels such as Mandelbrot, 3x3 median, image gradients, HSI <-> RGB conversions, color math, 2D graphics primitives, and signed distance field path tracing. I use it to develop much less generally useful implementations of bizarre numerical processing ideas.
 
 ## Why this happened?
 
@@ -99,11 +106,11 @@ High-level wrappers (e.g., `yapocis.lib.*`) route through `yapocis.core.manager`
 Quickstart:
 
 ```bash
-# Using make (recommended)
+# Using make (recommended - requires Python 3.13)
 make install-dev
 
 # Or manually with uv
-uv venv .venv && source .venv/bin/activate
+uv venv .venv --python python3.13 && source .venv/bin/activate
 uv pip install -e ".[dev]"
 
 # Install with all backends
@@ -116,6 +123,17 @@ make test
 make test-ocl    # OpenCL tests
 make test-metal  # Metal tests
 make test-numba  # Numba tests
+
+# Code quality
+make format      # Format with isort and black
+make lint        # Lint with ruff
+make typecheck   # Type check with mypy
+make check       # Run all checks
+
+# Building & publishing
+make build           # Build distribution packages
+make publish-test    # Publish to TestPyPI
+make publish         # Publish to PyPI
 ```
 
 Backend test markers and dependencies:
@@ -146,9 +164,24 @@ There are several. Here are some I remember:
 - Untested in any other environment, as noted.
 - CUDA tests under `yapocis/cukernels` depend on `pycuda`. They are excluded from standard test runs.
 
+## Modern Python Packaging (v0.3.1+)
+
+Yapocis now uses modern Python packaging infrastructure:
+
+- **Build Backend**: Hatchling (PEP 517/518 compliant)
+- **Development Tools**: isort, black, ruff, mypy
+- **Testing**: pytest with coverage tracking
+- **Publishing**: Automated PyPI workflow with twine
+- **Changelog**: Automated generation with git-cliff
+- **Python Version**: 3.13+ (enforced in virtual environments)
+
+See [RENOVATE.md](RENOVATE.md) for details on the modernization improvements.
+
 ## Changes and new features
 
-- Reducing data movement between engine and Python code. This is implemented using an alias keyword to add alternate signatures to a kernel, and a resident parameter hint which hints the glue code to just use the buffer as-is on the engine. V0.2.2
+- **v0.3.1**: Performance tracking system with DuckDB, validation framework, comprehensive backend testing
+- **v0.3.0**: Modern packaging infrastructure, automated changelog, Python 3.13 support
+- **v0.2.2**: Reduced data movement with resident buffers and alias keywords
 - Framework for dealing with two-dimensional arrays auto-magically. New buffer hints: sizeof, widthof, heightof for setting arguments invisibly.
 - The OpenCL engine to use is configured in `rpc.kernels`. Developer has choice of `CPU_ENGINE` and `GPU_ENGINE`.
 
@@ -156,4 +189,7 @@ There are several. Here are some I remember:
 
 Other than removing the misfeatures:
 
-- Backend-aware scheduling strategies (hardware and array-geometry sensitive execution).
+- Backend-aware scheduling strategies (hardware and array-geometry sensitive execution)
+- Automated version management with setuptools_scm
+- Pre-commit hooks for code quality
+- CLI entry points for common tools
