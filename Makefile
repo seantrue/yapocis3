@@ -2,7 +2,8 @@
 # Modern Python project automation with uv package manager
 
 # Variables
-PYTHON ?= python3
+# Override PYTHON environment variable with specific version
+PYTHON := python3.13
 UV ?= uv
 PYTEST_ARGS ?= -v
 PACKAGE_NAME = yapocis
@@ -41,17 +42,23 @@ info: ## Show project information
 	@echo "  Source: $(SRC_DIR)/"
 	@echo "  Tests: $(TESTS_DIR)/"
 	@echo "  Scripts: $(SCRIPTS_DIR)/"
-	@echo "  Python: $(shell $(PYTHON) --version 2>/dev/null || echo 'Not found')"
+	@echo "  Target Python: $(PYTHON)"
+	@echo "  System Python: $(shell $(PYTHON) --version 2>/dev/null || echo 'Not found')"
 	@echo "  UV: $(shell $(UV) --version 2>/dev/null || echo 'Not installed')"
-	@if [ -d $(VENV_DIR) ]; then echo "  Venv: $(GREEN)Active$(NC) ($(VENV_DIR))"; else echo "  Venv: $(RED)Not found$(NC)"; fi
+	@if [ -d $(VENV_DIR) ]; then \
+		echo "  Venv: $(GREEN)Active$(NC) ($(VENV_DIR))"; \
+		echo "  Venv Python: $$($(VENV_PYTHON) --version 2>/dev/null || echo 'Not found')"; \
+	else \
+		echo "  Venv: $(RED)Not found$(NC)"; \
+	fi
 
 ##@ Environment Setup
 
 .PHONY: venv
-venv: ## Create virtual environment
+venv: ## Create virtual environment with Python 3.13
 	@if [ ! -d $(VENV_DIR) ]; then \
-		echo "$(YELLOW)Creating virtual environment...$(NC)"; \
-		$(UV) venv $(VENV_DIR); \
+		echo "$(YELLOW)Creating virtual environment with $(PYTHON)...$(NC)"; \
+		$(UV) venv $(VENV_DIR) --python $(PYTHON); \
 		echo "$(GREEN)Virtual environment created at $(VENV_DIR)$(NC)"; \
 	else \
 		echo "$(GREEN)Virtual environment already exists$(NC)"; \
@@ -74,6 +81,14 @@ install-backends: venv ## Install with all backend dependencies
 	@echo "$(YELLOW)Installing package with all backend dependencies...$(NC)"
 	$(UV) pip install -e ".[all-backends,dev]"
 	@echo "$(GREEN)Full installation complete$(NC)"
+
+.PHONY: install-mac
+install-mac: venv ## Install with OpenCL backend
+	$(UV) pip install -e ".[opencl,dev,metal,numba]"
+
+.PHONY: install-linux
+install-linux: venv ## Install with OpenCL backend
+	$(UV) pip install -e ".[opencl,dev,cuda,numba]"
 
 .PHONY: install-opencl
 install-opencl: venv ## Install with OpenCL backend
@@ -100,14 +115,18 @@ deps-update: venv ## Update all dependencies
 ##@ Development
 
 .PHONY: format
-format: venv ## Format code with black
-	@echo "$(YELLOW)Formatting code...$(NC)"
+format: venv ## Format code with black and isort
+	@echo "$(YELLOW)Formatting code with isort...$(NC)"
+	$(VENV_PYTHON) -m isort $(SRC_DIR) $(TESTS_DIR) $(SCRIPTS_DIR)
+	@echo "$(YELLOW)Formatting code with black...$(NC)"
 	$(VENV_PYTHON) -m black $(SRC_DIR) $(TESTS_DIR) $(SCRIPTS_DIR)
 	@echo "$(GREEN)Code formatted$(NC)"
 
 .PHONY: format-check
 format-check: venv ## Check code formatting
-	@echo "$(YELLOW)Checking code formatting...$(NC)"
+	@echo "$(YELLOW)Checking isort...$(NC)"
+	$(VENV_PYTHON) -m isort --check-only $(SRC_DIR) $(TESTS_DIR) $(SCRIPTS_DIR)
+	@echo "$(YELLOW)Checking black...$(NC)"
 	$(VENV_PYTHON) -m black --check $(SRC_DIR) $(TESTS_DIR) $(SCRIPTS_DIR)
 
 .PHONY: lint
@@ -231,6 +250,21 @@ build-sdist: venv ## Build source distribution only
 install-local: build ## Install from local build
 	@echo "$(YELLOW)Installing from local build...$(NC)"
 	$(UV) pip install dist/*.whl --force-reinstall
+
+.PHONY: publish-test
+publish-test: build ## Publish to TestPyPI
+	@echo "$(YELLOW)Publishing to TestPyPI...$(NC)"
+	$(VENV_PYTHON) -m twine upload --repository testpypi dist/*
+
+.PHONY: publish
+publish: build ## Publish to PyPI
+	@echo "$(YELLOW)Publishing to PyPI...$(NC)"
+	$(VENV_PYTHON) -m twine upload dist/*
+
+.PHONY: license-check
+license-check: venv ## Check license compliance
+	@echo "$(YELLOW)Checking licenses...$(NC)"
+	$(VENV_PYTHON) -m licensecheck
 
 ##@ Documentation
 

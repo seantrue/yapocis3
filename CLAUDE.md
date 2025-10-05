@@ -22,6 +22,31 @@ make install-backends
 # Or: uv pip install -e ".[all-backends,dev]"
 ```
 
+### Code Quality & Formatting
+```bash
+# Format code with isort and black
+make format
+
+# Check formatting
+make format-check
+
+# Lint with ruff
+make lint
+make lint-fix  # Auto-fix issues
+
+# Type check with mypy
+make typecheck
+
+# Run all checks
+make check
+
+# Auto-fix all issues
+make fix
+
+# Check license compliance
+make license-check
+```
+
 ### Testing
 ```bash
 # Run all tests across available backends
@@ -53,6 +78,21 @@ python scripts/bench_convolvesep_numba.py --sizes 512,1024 --repeats 3 --backend
 
 # Median 3x3 benchmark
 python scripts/bench_median3x3.py --sizes 512,1024 --backends auto
+```
+
+### Building & Distribution
+```bash
+# Build distribution packages
+make build
+
+# Build wheel only
+make build-wheel
+
+# Publish to TestPyPI
+make publish-test
+
+# Publish to PyPI
+make publish
 ```
 
 ### Asset Configuration
