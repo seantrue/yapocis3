@@ -89,7 +89,7 @@ def test_gradient():
         hsw.showcheck(I, "I")
         with gsw.checkpoint("gradient"):
             gr, th = g.gradient(I, 3)
-        gsw.showcheck(th, "theta", th)
+        gsw.showcheck(th, "theta")
         gsw.showcheck(gr, "grad")
 
 
