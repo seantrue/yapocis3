@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Modernize package infrastructure with hatchling and enhanced tooling
+- Add automated changelog generation with git-cliff
+
+### Documentation
+
+- Update README, CONTRIBUTORS, and AI contribution tracking
 
 ## [0.3.1] - 2025-10-05
 
