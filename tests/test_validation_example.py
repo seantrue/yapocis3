@@ -13,12 +13,10 @@ from yapocis.core.manager import get_backends
 
 @pytest.mark.validation
 @pytest.mark.parametrize("backend", get_backends())
-def test_graphics4_circles_validation(backend, validate_result):
+def test_graphics4_circles_validation(backend, validate_result, monkeypatch):
     """Example test with validation support."""
     # Set backend
-    import os
-
-    os.environ["YAPOCIS_BACKEND"] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     # Create test canvas
     canvas = np.zeros((100, 100, 4), dtype=np.float32)

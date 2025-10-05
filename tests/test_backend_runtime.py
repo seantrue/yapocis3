@@ -6,22 +6,17 @@ Each backend runs the 'demo.sum' kernel on a tiny vector and validates output.
 
 from __future__ import annotations
 
-import os
 import numpy as np
 import pytest
 
 
-def _set_backend(backend: str):
-    os.environ["YAPOCIS_BACKEND"] = backend
-
-
 @pytest.mark.ocl
-def test_runtime_demo_ocl():
+def test_runtime_demo_ocl(monkeypatch):
     try:
         import pyopencl  # noqa: F401
     except Exception as e:
         pytest.skip(f"pyopencl not available: {e}")
-    _set_backend("ocl")
+    monkeypatch.setenv("YAPOCIS_BACKEND", "ocl")
     from yapocis.core.manager import get_manager
 
     mgr = get_manager("ocl")
@@ -34,12 +29,12 @@ def test_runtime_demo_ocl():
 
 
 @pytest.mark.metal
-def test_runtime_demo_metal():
+def test_runtime_demo_metal(monkeypatch):
     try:
         import pymetallic  # noqa: F401
     except Exception as e:
         pytest.skip(f"pymetallic not available: {e}")
-    _set_backend("metal")
+    monkeypatch.setenv("YAPOCIS_BACKEND", "metal")
     from yapocis.core.manager import get_manager
 
     mgr = get_manager("metal")
@@ -52,13 +47,13 @@ def test_runtime_demo_metal():
 
 
 @pytest.mark.cuda
-def test_runtime_demo_cuda():
+def test_runtime_demo_cuda(monkeypatch):
     try:
         import pycuda.autoinit  # noqa: F401
         import pycuda.driver as cuda  # noqa: F401
     except Exception as e:
         pytest.skip(f"pycuda not available: {e}")
-    _set_backend("cuda")
+    monkeypatch.setenv("YAPOCIS_BACKEND", "cuda")
     from yapocis.core.manager import get_manager
 
     mgr = get_manager("cuda")
@@ -73,12 +68,12 @@ def test_runtime_demo_cuda():
 
 
 @pytest.mark.numba
-def test_runtime_demo_numba():
+def test_runtime_demo_numba(monkeypatch):
     try:
         import numba  # noqa: F401
     except Exception as e:
         pytest.skip(f"numba not available: {e}")
-    _set_backend("numba")
+    monkeypatch.setenv("YAPOCIS_BACKEND", "numba")
     from yapocis.core.manager import get_manager
 
     mgr = get_manager("numba")

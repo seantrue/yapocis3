@@ -175,6 +175,7 @@ def promote_to_validation(
     test_name: str,
     backend: Optional[str] = None,
     source_dir: Optional[Path] = None,
+    source_file: Optional[Path] = None,
     backend_specific: bool = False,
 ) -> bool:
     """
@@ -184,36 +185,54 @@ def promote_to_validation(
         test_name: Name of the test
         backend: Backend name (needed to find source file in raw)
         source_dir: Source directory, defaults to RAW_DIR
+        source_file: Optional direct path to source .npz file (bypasses search)
         backend_specific: If True, creates backend-specific validation reference
 
     Returns:
         True if promotion successful, False otherwise
     """
-    if source_dir is None:
-        source_dir = RAW_DIR
-
     if backend is None:
         backend = _current_backend()
 
-    # Look for source file - try different patterns since raw files might have [ref]/[test] qualifiers
-    source_patterns = [
-        f"{test_name} [{backend}].npz",  # Standard format
-        f"{test_name} [ref] [{backend}].npz",  # With [ref] qualifier
-        f"{test_name} [test] [{backend}].npz",  # With [test] qualifier
-    ]
+    # If source_file is provided directly, use it
+    if source_file is not None:
+        if not source_file.exists():
+            print(f"Source file not found: {source_file}")
+            return False
+    else:
+        # Fall back to searching for the file
+        if source_dir is None:
+            source_dir = RAW_DIR
 
-    source_file = None
-    for pattern in source_patterns:
-        candidate = source_dir / pattern
-        if candidate.exists():
-            source_file = candidate
-            break
+        # Look for source file - search for files matching test_name with any qualifiers
+        # This handles files like "test_name [100] [backend].npz" or "test [ref] name [backend].npz"
+        # We iterate through all .npz files and match by removing all bracket qualifiers
+        import re
 
-    if source_file is None:
-        print(
-            f"Source file not found. Tried: {[str(source_dir / p) for p in source_patterns]}"
-        )
-        return False
+        source_file = None
+        all_files = list(source_dir.glob("*.npz"))
+        for f in all_files:
+            fname = f.stem  # filename without extension
+
+            # Extract backend from filename (last bracketed term)
+            backend_match = re.search(r"\[(\w+)\]$", fname)
+            if not backend_match or backend_match.group(1) != backend:
+                continue  # Wrong backend or no backend marker
+
+            # Remove all bracket qualifiers to get the base test name
+            fname_base = re.sub(r"\s*\[\w+\]", "", fname).strip()
+
+            # Compare with test_name
+            if fname_base == test_name:
+                source_file = f
+                break
+
+        if source_file is None:
+            print(
+                f"Source file not found for test_name='{test_name}' backend='{backend}'"
+            )
+            print(f"  Searched in: {source_dir}")
+            return False
 
     # Load and re-save to validation directory
     data = np.load(source_file)

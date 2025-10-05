@@ -33,3 +33,6 @@
 /.pydevproject
 /.project
 /yapocis/icons/*/*
+/performance/performance.duckdb
+/performance/performance.duckdb.wal
+/performance/reports/

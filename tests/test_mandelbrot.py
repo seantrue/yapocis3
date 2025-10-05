@@ -18,20 +18,17 @@ def test_mandelbrot(perf_tracker):
     q = (xx + 1j * yy).astype(np.complex64)
     maxiter = 50
 
-    with StopWatcher() as show:
-        # Time the main computation
-        out = perf_tracker.time_operation(
-            "mandelbrot_computation", lambda: mb.mandelbrot(q, maxiter)
-        )
-        show.checkpoint("mandelbrot_kernel")
+    with StopWatcher("mandelbrot", kernel=mb) as sw:
+        with sw.checkpoint("mandelbrot_kernel"):
+            # Time the main computation
+            out = perf_tracker.time_operation(
+                "mandelbrot_computation", lambda: mb.mandelbrot(q, maxiter)
+            )
 
-        # Time the post-processing
-        out = perf_tracker.time_operation(
-            "normalize_result", lambda: out.astype(np.float32) / out.max()
-        )
-        show.checkpoint("normalization")
+        with sw.checkpoint("normalization"):
+            # Time the post-processing
+            out = perf_tracker.time_operation(
+                "normalize_result", lambda: out.astype(np.float32) / out.max()
+            )
 
-        show(mb, out)
-
-        print(f"\nMandelbrot Performance Summary:")
-        print(show.summary())
+        sw.show(out)

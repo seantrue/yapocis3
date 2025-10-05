@@ -4,8 +4,7 @@ from yapocis.lib.channels import join_channels, split_channels
 from yapocis.lib.colormath import Colormath, transform_names
 from yapocis.lib.hsi import HSI
 from yapocis.utils.stereo_typing import *
-
-from . import ASIZE, StopWatcher, image_test, show
+from . import ASIZE, StopWatcher, image_test, show, assert_closeenough
 
 
 def test_hsi():
@@ -19,37 +18,37 @@ def test_hsi():
         b[i, :] = ASIZE - i
     rgb = join_channels(r, g, b)
     rgb /= ASIZE
-    show("RGB in", rgb)
     r, g, b = split_channels(rgb)
     rgb2 = join_channels(r, g, b)
-    with StopWatcher("hsi") as sw:
-
-        def checkshow(a, checkpoint):
-            sw.checkpoint(checkpoint)
-            sw.show(hsis, a, checkpoint, depth=1)
-
-        h, s, i = hsis.rgb2hsi(r, g, b)
-        sw.checkpoint("rgb2hsi")
-        hsi3 = hsis.rgb2hsi3(rgb)
-        checkshow(hsi3, "rgb2hsi3")
-        rgb3 = hsis.hsi2rgb3(hsi3)
-        checkshow(rgb3, "hsi2rgb3")
+    with StopWatcher("hsi", kernel=hsis) as sw:
+        sw.show(rgb, "RGB in")
+        with sw.checkpoint("rgb2hsi"):
+            h, s, i = hsis.rgb2hsi(r, g, b)
+        sw.showcheck(h, "h")
+        sw.showcheck(s, "s")
+        sw.showcheck(i, "i")
+        with sw.checkpoint("rgb2hsi3"):
+            hsi3 = hsis.rgb2hsi3(rgb)
+        sw.showcheck(hsi3)
+        with sw.checkpoint("hsi2rgb3"):
+            rgb3 = hsis.hsi2rgb3(hsi3)
+        sw.showcheck(rgb3)
         rgb4 = np.zeros((ASIZE, ASIZE, 4), dtype=np.float32)
         rgb4[:, :, :3] = rgb[:, :, :]
-        hsi4 = hsis.rgb2hsi3(rgb4)
-        checkshow(hsi4, "rgb2hsi3")
-        rgb5 = hsis.hsi2rgb3(hsi4)
-        rgb5 = rgb5[:, :, :3]
-        checkshow(rgb5, "hsi2rgb3")
-        print(sw.summary())
+        with sw.checkpoint("rgb2hsi3"):
+            hsi4 = hsis.rgb2hsi3(rgb4)
+        sw.showcheck(hsi4)
+        with sw.checkpoint("hsi2rgb3"):
+            rgb5 = hsis.hsi2rgb3(hsi4)
+        sw.showcheck(rgb5)
 
-    assert np.sum(rgb - rgb2) == 0.0
-    assert abs(np.sum(rgb.ravel() - rgb3.ravel())) / rgb.size < 0.00001
-    assert abs(np.sum(rgb.ravel() - rgb5.ravel())) / rgb.size < 0.00001
+    assert_closeenough(rgb2, rgb)
+    assert_closeenough(rgb3, rgb)
+    assert_closeenough(rgb5[:, :, :3], rgb)
     h3, s3, i3 = split_channels(hsi3)
-    assert np.sum(i - i3) == 0.0
-    assert np.sum(s - s3) == 0.0
-    assert np.sum(h - h3) == 0.0
+    assert_closeenough(h3, h)
+    assert_closeenough(s3, s)
+    assert_closeenough(i3, i)
 
 
 def test_xyz():
@@ -65,58 +64,51 @@ def test_xyz():
     rgb /= ASIZE
     show("RGB in", rgb)
     rgb = np.ascontiguousarray(rgb)
-    with StopWatcher("xyz") as sw:
-        xyz = cm.transform(rgb, 0, global_size=rgb.size // 3)
-        rgb2 = cm.transform_named("adobe1998_d65.xyz2rgb", xyz)
-        sw.checkpoint("roundtrip")
-        sw.show(cm, rgb2, "roundtrip")
-        print(sw.summary())
+    with StopWatcher("xyz", kernel=cm) as sw:
+        with sw.checkpoint("roundtrip"):
+            xyz = cm.transform(rgb, 0, global_size=rgb.size // 3)
+            rgb2 = cm.transform_named("adobe1998_d65.xyz2rgb", xyz)
+        sw.showcheck(rgb2)
 
 
 def test_xyz_view():
     cm = Colormath()
     rgb = image_test()
-    with StopWatcher("srgb_d50") as sw:
-        xyz = cm.transform_named("srgb_d50.rgb2xyz", rgb)
-        sw.checkpoint("xzy")
-        sw.show(cm, xyz, "2xyz")
+    with StopWatcher("srgb_d50", kernel=cm) as sw:
+        with sw.checkpoint("xzy"):
+            xyz = cm.transform_named("srgb_d50.rgb2xyz", rgb)
+        sw.showcheck(xyz)
         x, y, z = split_channels(xyz)
-        sw.show(cm, x, "X")
-        sw.show(cm, y, "Y")
-        sw.show(cm, z, "Z")
+        sw.showcheck(x, "X")
+        sw.showcheck(y, "Y")
+        sw.showcheck(z, "Z")
         ones = np.ones_like(x) * 0.3
 
         def checkshow(x1, y1, z1, checkpoint):
             a = join_channels(x1, y1, z1)
-            rgbout = cm.transform_named("srgb_d50.xyz2rgb", xyz)
-            sw.checkpoint(checkpoint)
-            sw.show(cm, a, checkpoint, depth=1)
+            with sw.checkpoint(checkpoint):
+                rgbout = cm.transform_named("srgb_d50.xyz2rgb", xyz)
+            sw.showcheck(rgbout, depth=1)
 
         checkshow(x, y, z, "2rgb")
         checkshow(ones, y, z, "1yz")
         checkshow(x, ones, z, "x1z")
         checkshow(x, y, ones, "xy1")
-        print(sw.summary())
 
 
 def test_colorspaces():
     cm = Colormath()
     rgb = image_test()
     transformed = []
-    with StopWatcher("colormath") as sw:
-        sw.show(cm, rgb, "rgb")
-        sw.checkpoint("show")
-
-        def checkshow(a, checkpoint):
-            sw.checkpoint(checkpoint)
-            sw.show(cm, a, checkpoint, depth=1)
-
-        xyz = cm.transform_named("srgb_d50.rgb2xyz", rgb)
-        checkshow(xyz, "xyz")
+    with StopWatcher("colormath", kernel=cm) as sw:
+        sw.show(rgb, "rgb")
+        with sw.checkpoint("srgb_d50.rgb2xyz"):
+            xyz = cm.transform_named("srgb_d50.rgb2xyz", rgb)
+        sw.showcheck(xyz)
         for name in transform_names[1::2]:
-            rgb2 = cm.transform_named(name, xyz)
-            checkshow(rgb2, name)
-        print(sw.summary())
+            with sw.checkpoint(name):
+                rgb2 = cm.transform_named(name, xyz)
+            sw.showcheck(rgb2)
 
 
 def test_xyY():
@@ -132,15 +124,16 @@ def test_xyY():
     rgb /= ASIZE
     show("RGB in", rgb)
     rgb = np.ascontiguousarray(rgb)
-    with StopWatcher("xyY") as sw:
-        xyz = cm.transform_named("srgb_d50.rgb2xyz", rgb)
-        sw.checkpoint("xyz")
-        xyY = cm.xyz2xyY(xyz)
-        sw.checkpoint("xyY")
-        xyz2 = cm.xyY2xyz(xyY)
-        sw.checkpoint("xyY")
-        rgb2 = cm.transform_named("adobe1998_d65.xyz2rgb", xyz2)
-        sw.checkpoint("2rgb")
-        sw.show(cm, xyY, "xyY")
-        sw.show(cm, rgb2, "RGB out")
-        print(sw.summary())
+    with StopWatcher("xyY", kernel=cm) as sw:
+        with sw.checkpoint("xyz"):
+            xyz = cm.transform_named("srgb_d50.rgb2xyz", rgb)
+        sw.showcheck(xyz)
+        with sw.checkpoint("xyY"):
+            xyY = cm.xyz2xyY(xyz)
+        sw.showcheck(xyY)
+        with sw.checkpoint("xyz"):
+            xyz2 = cm.xyY2xyz(xyY)
+        sw.showcheck(xyz2)
+        with sw.checkpoint("2rgb"):
+            rgb2 = cm.transform_named("adobe1998_d65.xyz2rgb", xyz2)
+        sw.showcheck(rgb2)
