@@ -15,7 +15,7 @@
 *.log
 .deps
 .libs
-
+__pycache__
 #*
 /yapocis/mako_modules
 /queue
@@ -33,6 +33,6 @@
 /.pydevproject
 /.project
 /yapocis/icons/*/*
-/performance/performance.duckdb
-/performance/performance.duckdb.wal
+/performance
 /performance/reports/
+/code_cache
