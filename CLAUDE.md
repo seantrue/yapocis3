@@ -10,9 +10,16 @@ Yapocis is a multi-backend GPU/CPU computing framework for image processing and 
 
 ### Environment Setup
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt -r requirements_dev.txt
-pip install -e .
+# Using make (recommended)
+make install-dev
+
+# Or manually with uv
+uv venv .venv && source .venv/bin/activate
+uv pip install -e ".[dev]"
+
+# Install with all backends
+make install-backends
+# Or: uv pip install -e ".[all-backends,dev]"
 ```
 
 ### Testing

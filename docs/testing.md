@@ -8,9 +8,12 @@ Yapocis ships helper tests to validate that interfaces compile and a small demo 
 ## Quick Start
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt -r requirements_dev.txt
-pip install -e .
+# Using make (recommended)
+make install-dev
+
+# Or manually with uv
+uv venv .venv && source .venv/bin/activate
+uv pip install -e ".[dev]"
 ```
 
 ## Smoke Compilation

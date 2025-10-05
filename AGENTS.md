@@ -13,10 +13,13 @@
 
 ## Build, Test, and Development Commands
 - Create env + install:
-  - `python -m venv .venv && source .venv/bin/activate`
-  - `pip install -r requirements.txt -r requirements_dev.txt`
-  - `pip install -e .`
-- Run tests: `pytest -q` (example: `pytest tests/test_rpc.py::test_compiling -q`).
+  - `make install-dev` (recommended)
+  - Or manually: `uv venv .venv && source .venv/bin/activate && uv pip install -e ".[dev]"`
+- Run tests:
+  - `make test` (all available backends)
+  - `make test-ocl` (OpenCL only)
+  - `make test-metal` (Metal only)
+  - `pytest -q` (direct pytest, example: `pytest tests/test_backend_smoke.py -q`)
 - Run examples: `python examples/matplotlib_median_performance.py`.
 
 ## Coding Style & Naming Conventions

@@ -99,15 +99,23 @@ High-level wrappers (e.g., `yapocis.lib.*`) route through `yapocis.core.manager`
 Quickstart:
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt -r requirements_dev.txt
-pip install -e .
+# Using make (recommended)
+make install-dev
 
-# Run non-CUDA tests in repo
+# Or manually with uv
+uv venv .venv && source .venv/bin/activate
+uv pip install -e ".[dev]"
+
+# Install with all backends
+make install-backends
+
+# Run tests
 make test
 
-# Run all tests, including external CUDA ones (requires pycuda)
-make test-all
+# Run backend-specific tests
+make test-ocl    # OpenCL tests
+make test-metal  # Metal tests
+make test-numba  # Numba tests
 ```
 
 Backend test markers and dependencies:
@@ -136,8 +144,7 @@ CUDA/PyCUDA notes:
 There are several. Here are some I remember:
 
 - Untested in any other environment, as noted.
-- The `requirements.txt` does not include matplotlib or scipy, which are needed for some performance comparisons and demos.
-- CUDA tests under `yapocis/cukernels` depend on `pycuda`. They are excluded from `make test` and included by `make test-all`.
+- CUDA tests under `yapocis/cukernels` depend on `pycuda`. They are excluded from standard test runs.
 
 ## Changes and new features
 
