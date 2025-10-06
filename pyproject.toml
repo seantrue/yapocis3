@@ -13,6 +13,7 @@ license = { text = "MIT" }
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Topic :: Scientific/Engineering :: Image Recognition",
     "Programming Language :: Python :: 3",
@@ -20,6 +21,8 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 keywords = ["opencl", "pyopencl", "thunk", "ocl", "image", "gpu", "computing", "metal", "cuda", "numba"]
 requires-python = ">=3.10"
@@ -42,6 +45,14 @@ dependencies = [
     "certifi>=2024.7.4",
     "idna>=3.7",
 ]
+
+[project.urls]
+Homepage = "https://github.com/seantrue/Yapocis3/"
+Documentation = "https://yapocis.readthedocs.io/"
+Repository = "https://github.com/seantrue/Yapocis3.git"
+"Bug Tracker" = "https://github.com/seantrue/Yapocis3/issues"
+Changelog = "https://github.com/seantrue/Yapocis3/blob/main/CHANGELOG.md"
+
 
 [project.optional-dependencies]
 # Backend-specific dependencies
@@ -105,11 +116,6 @@ docs = [
     "recommonmark>=0.7.0",
 ]
 
-[project.urls]
-Homepage = "https://github.com/seantrue/Yapocis/"
-Documentation = "https://yapocis.readthedocs.io/"
-Repository = "https://github.com/seantrue/Yapocis.git"
-"Bug Tracker" = "https://github.com/seantrue/Yapocis/issues"
 
 # [project.scripts]
 # Note: Scripts are executable via python -m scripts.script_name or directly as scripts/script_name.py
@@ -227,14 +233,15 @@ omit = [
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
-    "if self.debug:",
-    "if settings.DEBUG",
     "raise AssertionError",
     "raise NotImplementedError",
+    "if self.debug:",
+    "if settings.DEBUG",
     "if 0:",
     "if __name__ == .__main__.:",
     "class .*\\bProtocol\\):",
     "@(abc\\.)?abstractmethod",
+    "if TYPE_CHECKING:",
 ]
 
 [tool.isort]

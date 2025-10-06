@@ -17,6 +17,8 @@
 .libs
 __pycache__
 #*
+/.claude
+.env
 /yapocis/mako_modules
 /queue
 /opencl_cache

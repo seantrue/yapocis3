@@ -30,7 +30,7 @@
 
 We welcome contributions! Here's how you can help:
 
-1. **Report Issues**: Use the [GitHub issue tracker](https://github.com/seantrue/Yapocis/issues)
+1. **Report Issues**: Use the [GitHub issue tracker](https://github.com/seantrue/yapocis3/issues)
 2. **Submit Pull Requests**: Fork the repo and submit PRs for bug fixes or features
 3. **Documentation**: Help improve documentation and examples
 4. **Testing**: Add tests for new features or backends
@@ -46,8 +46,8 @@ We welcome contributions! Here's how you can help:
 
 ```bash
 # Clone the repository
-git clone https://github.com/seantrue/Yapocis.git
-cd Yapocis
+git clone https://github.com/seantrue/yapocis3.git
+cd yapocis3
 
 # Install development dependencies
 make install-dev
