@@ -40,6 +40,6 @@
 
 ## Security & Configuration Tips
 - Do not commit secrets or large artifacts. Prefer sample data in `examples/`.
-- Useful env vars: `YAPOCIS_BACKEND` (`ocl`|`cuda`), `YAPOCIS_ENGINE` (device name/index), `YAPOCIS_CACHE` (kernel cache dir), `YAPOCIS_TUNECACHE` (autotune JSON path), `YAPOCIS_PROJECT` (extra asset root), `YAPOCIS_VIEWER` (image viewer).
+- Useful env vars: `YAPOCIS_BACKEND` (`ocl`|`cuda`), `YAPOCIS_DEVICE` (device name/index), `YAPOCIS_CACHE` (kernel cache dir), `YAPOCIS_TUNECACHE` (autotune JSON path), `YAPOCIS_PROJECT` (extra asset root), `YAPOCIS_VIEWER` (image viewer).
 - See `OVERVIEW.md` for architecture details and asset lookup behavior.
 

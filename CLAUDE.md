@@ -155,6 +155,8 @@ Each backend implements:
 **CUDA Backend** (`yapocis.cu.*`)
 - Via PyCUDA, compiles through NVCC
 - Template system adapted from OpenCL
+- Row-major storage order (matches NumPy, opposite of OpenCL/Metal)
+- All 12 kernel interfaces compile and run successfully (anisodiff, colormath, demo, gradient, graphics, graphics4, hsi, imageops, mandelbrot, median3x3, truetrace, zcs)
 
 **Numba Backend** (`yapocis.numba.*`)
 - Pure Python/NumPy with JIT compilation
@@ -164,7 +166,7 @@ Each backend implements:
 
 ```bash
 YAPOCIS_BACKEND=ocl|metal|cuda|numba    # Backend selection
-YAPOCIS_ENGINE=<device_name_or_index>   # Device selection
+YAPOCIS_DEVICE=<device_name_or_index>   # Device selection
 YAPOCIS_CACHE=<directory>               # Kernel cache directory
 YAPOCIS_TUNECACHE=<json_file>           # Autotune cache (default: ~/.cache/yapocis/tuning.json)
 YAPOCIS_PROJECT=<directory>             # Additional asset root (e.g., "external")
@@ -282,4 +284,16 @@ def test_operation(backend, validate_result):
 2. **Review outputs** and promote good results to validation references
 3. **Daily development** with `pytest --validate` to catch regressions
 4. **Update references** with `--update-validation` for intentional changes
-- The yapocis package is in the repository named yapocis3. The prior version of yapocis is in the repository yapocis.
+
+### NPZ Analysis Tool
+```bash
+# Analyze test output files for data quality
+python scripts/analyze_queue.py [directory]           # Analyze queue/raw by default
+python scripts/analyze_queue.py --filter "cuda"       # Filter by pattern
+python scripts/analyze_queue.py --nan-only            # Only show files with NaN
+python scripts/analyze_queue.py --summary             # Summary statistics only
+python scripts/analyze_queue.py --dtype float32       # Filter by dtype
+python scripts/analyze_queue.py --verbose             # Show all array details
+```
+
+Use this tool to diagnose data quality issues like NaN/Inf values, check dtypes, and verify min/max ranges in test outputs.

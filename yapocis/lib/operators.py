@@ -9,7 +9,7 @@ from yapocis.utils.stereo_typing import *
 
 class Operators(BoundKernels):
     INTERFACE = "operators"
-    OPERATORS = [("add", "+"), ("sub", "-"), ("mul", "*"), ("div", "/")]
+    OPERATORS = [("add", "+"), ("sub", "-"), ("mul", "*"), ("divop", "/")]
 
     def __init__(self, *args, **kwargs):
         super(Operators, self).__init__(*args, operators=self.OPERATORS, **kwargs)

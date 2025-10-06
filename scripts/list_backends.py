@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """List all available backends and their devices."""
 
+import os
 import sys
 from typing import Dict, Any
 
@@ -29,12 +30,12 @@ def get_backend_info() -> Dict[str, Any]:
 
             elif backend == "cuda":
                 try:
-                    import cupy as cp
+                    from yapocis.cu.device import get_available_devices
 
-                    n_devices = cp.cuda.runtime.getDeviceCount()
+                    devices = get_available_devices()
+                    # Filter out numeric keys (indices) to get only device names
                     backend_info[backend]["devices"] = [
-                        f"CUDA Device {i}: {cp.cuda.Device(i).attributes['Name'].decode('utf-8')}"
-                        for i in range(n_devices)
+                        name for name in devices.keys() if isinstance(name, str)
                     ]
                 except Exception as e:
                     backend_info[backend]["error"] = str(e)
@@ -62,25 +63,47 @@ def print_backend_info(backend_info: Dict[str, Any], verbose: bool = False):
     print("=" * 80)
     print()
     current_backend = get_backend()
+    selected_device = os.environ.get("YAPOCIS_DEVICE", None)
+
     for backend, info in backend_info.items():
         status = "✓" if info["available"] else "✗"
-        if backend == current_backend:
-            status += "*"
-        print(f"{status} {backend.upper()}")
+        is_current_backend = backend == current_backend
+        backend_marker = " ←" if is_current_backend else ""
+        print(f"{status} {backend.upper()}{backend_marker}")
 
         if info["available"] and info["devices"]:
             for i, device in enumerate(info["devices"]):
-                print(f"  [{i}] {device}")
+                # Mark selected device for current backend
+                device_marker = ""
+                if is_current_backend:
+                    if selected_device is not None:
+                        # Check if device matches by index
+                        if selected_device.isdigit() and int(selected_device) == i:
+                            device_marker = " ←"
+                        # Or if the device name matches exactly
+                        elif not selected_device.isdigit() and selected_device == device:
+                            device_marker = " ←"
+                    else:
+                        # No explicit device selection, default to device 0
+                        if i == 0:
+                            device_marker = " ←"
+                print(f"  [{i}] {device}{device_marker}")
         elif info["error"]:
             print(f"  Error: {info['error']}")
         else:
             print(f"  No devices found")
         print()
 
+    print("Legend:")
+    print("  ✓  = Backend available")
+    print("  ✗  = Backend not available")
+    print("  ← = Currently selected (backend or device)")
+    print()
+
     if verbose:
         print("Environment Variables:")
         print("  YAPOCIS_BACKEND - Select backend (ocl, metal, cuda, numba)")
-        print("  YAPOCIS_ENGINE  - Select device by name or index")
+        print("  YAPOCIS_DEVICE  - Select device by name or index")
         print()
 
 

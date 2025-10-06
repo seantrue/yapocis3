@@ -21,7 +21,7 @@ def render_program(base_filename: str, **context: Context) -> str:
     """
     tfilename = find_kernel(base_filename)
     template_directories = [os.path.dirname(tfilename)]
-    mako_modules = os.path.join(get_yapocis_dir(), "mako_modules")
+    mako_modules = os.path.join(get_yapocis_dir(), "mako_modules", "ocl")
     mylookup = TemplateLookup(directories=template_directories, module_directory=mako_modules)
     filename = os.path.split(tfilename)[-1]
     t = mylookup.get_template(filename)
