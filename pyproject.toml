@@ -51,9 +51,9 @@ opencl = [
 metal = [
       "pymetallic",
 ]
-#cuda = [
-#    "pycuda>=2024.1",
-#]
+cuda = [
+    "pycuda>=2024.1",
+]
 numba = [
     "numba>=0.59.0",
 ]
