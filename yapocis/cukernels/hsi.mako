@@ -76,7 +76,7 @@ static __device__ __inline__ float3 _xyz2lab(float3 xyz) {
 }
 
 
-__kernel
+extern "C" __kernel
 void rgb2hsi(float *ra, float *ga, float *ba, float *ha, float *sa, float *ia) {
     size_t i = get_global_id(0);
     float3 c = make_float3(ra[i], ba[i], ga[i]);
@@ -87,7 +87,7 @@ void rgb2hsi(float *ra, float *ga, float *ba, float *ha, float *sa, float *ia) {
 }
 
 
-__kernel	
+extern "C" __kernel
 void hsi2rgb(float *ha, float *sa, float *ia, float *ra, float *ga, float *ba) {
 	size_t i = get_global_id(0);
 	float3 hsi = make_float3(ha[i],sa[i],ia[i]);
@@ -99,7 +99,7 @@ void hsi2rgb(float *ha, float *sa, float *ia, float *ra, float *ga, float *ba) {
 
 
 
-__kernel
+extern "C" __kernel
 void rgb2hsi3(int depth, float *input, float *output) {
     size_t i = get_global_id(0) * depth;
     float3 c = make_float3(input[i], input[i+2],input[i+1]);
@@ -110,7 +110,7 @@ void rgb2hsi3(int depth, float *input, float *output) {
 }
 
 
-__kernel
+extern "C" __kernel
 void hsi2rgb3(int depth, float *input, float *output) {
 	size_t i = get_global_id(0)*depth;
 	float3 hsi = make_float3(input[i],input[i+1],input[i+2]);
@@ -120,7 +120,7 @@ void hsi2rgb3(int depth, float *input, float *output) {
     output[i+2] = c.z;
 }
 
-__kernel
+extern "C" __kernel
 void rgb2lab3(int depth, float *input, float *output) {
     size_t i = get_global_id(0) * depth;
     float3 c = make_float3(input[i], input[i+2],input[i+1]);

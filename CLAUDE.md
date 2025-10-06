@@ -155,6 +155,8 @@ Each backend implements:
 **CUDA Backend** (`yapocis.cu.*`)
 - Via PyCUDA, compiles through NVCC
 - Template system adapted from OpenCL
+- Row-major storage order (matches NumPy, opposite of OpenCL/Metal)
+- All 12 kernel interfaces compile and run successfully (anisodiff, colormath, demo, gradient, graphics, graphics4, hsi, imageops, mandelbrot, median3x3, truetrace, zcs)
 
 **Numba Backend** (`yapocis.numba.*`)
 - Pure Python/NumPy with JIT compilation
@@ -282,3 +284,16 @@ def test_operation(backend, validate_result):
 2. **Review outputs** and promote good results to validation references
 3. **Daily development** with `pytest --validate` to catch regressions
 4. **Update references** with `--update-validation` for intentional changes
+
+### NPZ Analysis Tool
+```bash
+# Analyze test output files for data quality
+python scripts/analyze_queue.py [directory]           # Analyze queue/raw by default
+python scripts/analyze_queue.py --filter "cuda"       # Filter by pattern
+python scripts/analyze_queue.py --nan-only            # Only show files with NaN
+python scripts/analyze_queue.py --summary             # Summary statistics only
+python scripts/analyze_queue.py --dtype float32       # Filter by dtype
+python scripts/analyze_queue.py --verbose             # Show all array details
+```
+
+Use this tool to diagnose data quality issues like NaN/Inf values, check dtypes, and verify min/max ranges in test outputs.

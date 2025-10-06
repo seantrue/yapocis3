@@ -19,7 +19,7 @@ static __device__ __inline__ float median9(float *a, int n) {
 }
 
 
-__kernel
+extern "C" __kernel
 void median3x3(int width, int height, float* a, float* ret )
 {
     float aa[9];

@@ -4,7 +4,7 @@
 /* Separable convolution kernels for OpenCL, with kernel names and constants determined at compile time */
 % for name, conv in convs:
 <% margin = len(conv)//2 %>
-__kernel
+extern "C" __kernel
 void ${name}(int vertical, int width, int height, float* a, float* ret )
 {
     size_t i = get_global_id(0);
@@ -25,7 +25,7 @@ void ${name}(int vertical, int width, int height, float* a, float* ret )
     ret[i] = sum;
     return;
 }
-__kernel
+extern "C" __kernel
 void ${name}_h(int width, int height, float* a, float* ret )
 {
     size_t i = get_global_id(0);
@@ -40,7 +40,7 @@ void ${name}_h(int width, int height, float* a, float* ret )
     ret[i] = sum;
     return;
 }
-__kernel
+extern "C" __kernel
 void ${name}_v(int width, int height, float* a, float* ret )
 {
     size_t i = get_global_id(0);

@@ -85,11 +85,9 @@ def get_device_manager(device_name: Optional[str] = None) -> DeviceManager:
     Takes the identifier for a CUDA device
     and returns a DeviceManager with buffer management
     """
-    try:
-        dmgr = _device_managers[device_name]
-    except KeyError:
-        _device_managers[device_name] = dmgr = DeviceManager(device_name)
-    return dmgr
+    # Disable caching - create fresh DeviceManager each time
+    # This avoids context issues when switching between backends
+    return DeviceManager(device_name)
 
 
 def display_stats():

@@ -11,7 +11,7 @@
 #define ONES ONE4
 #define ZEROS ZERO4
 
-__kernel void lines(int width, int height, READWRITE float4 *a, int nelements,
+extern "C" __kernel void lines(int width, int height, READWRITE float4 *a, int nelements,
                     READONLY float2 *coords, READONLY float *rdist,
                     READONLY float4 *colors) {
   size_t i = get_global_id(0);
@@ -41,7 +41,7 @@ __kernel void lines(int width, int height, READWRITE float4 *a, int nelements,
   barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-__kernel void rects(int width, int height, READWRITE float4 *a, int nelements,
+extern "C" __kernel void rects(int width, int height, READWRITE float4 *a, int nelements,
                     READONLY float4 *coords, READONLY float4 *colors) {
   size_t i = get_global_id(0);
   float4 pixel = a[i];
@@ -65,7 +65,7 @@ __kernel void rects(int width, int height, READWRITE float4 *a, int nelements,
   barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-__kernel void circles(int width, int height, READWRITE float4 *a, int nelements,
+extern "C" __kernel void circles(int width, int height, READWRITE float4 *a, int nelements,
                       READONLY float *coords, READONLY float4 *colors) {
   size_t i = get_global_id(0);
   float4 pixel = a[i];
@@ -93,7 +93,7 @@ __kernel void circles(int width, int height, READWRITE float4 *a, int nelements,
 #define signex(p1, p2, p3)                                                     \
   ((p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y))
 
-__kernel void triangles(int width, int height, READWRITE float4 *a, int nelements,
+extern "C" __kernel void triangles(int width, int height, READWRITE float4 *a, int nelements,
                         READONLY float2 *coords, READONLY float4 *colors) {
   size_t i = get_global_id(0);
   float4 pixel = a[i];
@@ -122,7 +122,7 @@ __kernel void triangles(int width, int height, READWRITE float4 *a, int nelement
 }
 
 // (x-h)^2/a^2 + (y-k)^2/b^2 <= 1
-__kernel void ellipses(int width, int height, READWRITE float4 *a, int nelements,
+extern "C" __kernel void ellipses(int width, int height, READWRITE float4 *a, int nelements,
                        READONLY float4 *coords, READONLY float4 *colors) {
   size_t i = get_global_id(0);
   float4 pixel = a[i];
@@ -145,7 +145,7 @@ __kernel void ellipses(int width, int height, READWRITE float4 *a, int nelements
   barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-__kernel void composite(int width, int height, READWRITE float4 *a, int nelements,
+extern "C" __kernel void composite(int width, int height, READWRITE float4 *a, int nelements,
                         READONLY int4 *coords, READWRITE float4 *pixels,
                         READONLY int *ipixels, int npixels) {
   size_t i = get_global_id(0);
@@ -164,7 +164,8 @@ __kernel void composite(int width, int height, READWRITE float4 *a, int nelement
     // Is the current xy inside the destination area?
     int outside = ANYISLESS(xy,lb) + ANYISGTE(xy,yt);
     int2 source_location = xy - lb;
-    int source_offset = (source_location.x * coord.z) + source_location.y;
+    // CUDA uses row-major order, so Y varies along outer dimension
+    int source_offset = (source_location.y * coord.z) + source_location.x;
     int ipixel_source = ipixel + source_offset;
     int inside = !outside && 0 <= ipixel_source && ipixel_source < npixels;
 

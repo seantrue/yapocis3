@@ -5,7 +5,7 @@
 
 % for name, conv in convs:
 <% left = len(conv)//2 %>
-__kernel
+extern "C" __kernel
 void ${name}(int width, float* a, float* ret )
 {
     size_t i;

@@ -5,7 +5,7 @@
 
 <% left = len(conv)//2 %>
 #define FAST 1000
-__kernel
+extern "C" __kernel
 void ${name}(int width,  float* a, float* ret )
 {
     size_t i = get_global_id(0);
@@ -21,7 +21,7 @@ void ${name}(int width,  float* a, float* ret )
     return;
 }
 
-__kernel void ${name}_fast(int width,  float* a, float* ret, int chunk)
+extern "C" __kernel void ${name}_fast(int width,  float* a, float* ret, int chunk)
 {
     size_t i = get_global_id(0) * chunk;
     float sum;

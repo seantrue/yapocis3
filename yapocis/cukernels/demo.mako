@@ -3,7 +3,7 @@
 
 /* Test kernel that sums elements of two arrays into a third array. */
 
-__kernel void sum(const float *a, const float *b, float *c)
+extern "C" __kernel void sum(const float *a, const float *b, float *c)
     {
       int gid = get_global_id(0);
       c[gid] = a[gid] + b[gid];

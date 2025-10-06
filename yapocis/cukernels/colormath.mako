@@ -205,7 +205,7 @@ __constant float transforms[] =
 
 //#define TRANSPOSE
 
-__kernel void transform(float *input, int transform_id, float *output) {
+extern "C" __kernel void transform(float *input, int transform_id, float *output) {
     size_t i = get_global_id(0)*3;
     size_t tid  = transform_id*9;
 #ifndef TRANSPOSE
@@ -227,7 +227,7 @@ __kernel void transform(float *input, int transform_id, float *output) {
 // x = X/(X+Y+Z)
 // y = Y/(X+Y+Z)
 // y = y
-__kernel void xyz2xyY(float *input, float *output) {
+extern "C" __kernel void xyz2xyY(float *input, float *output) {
     size_t i = get_global_id(0)*3;
     float x = input[i];
     float y = input[i+1];
@@ -241,7 +241,7 @@ __kernel void xyz2xyY(float *input, float *output) {
 // X = x*Y/y
 // Y = Y
 // Z = ((1−x−y)*Y)/y
-__kernel void xyY2xyz(float *input, float *output) {
+extern "C" __kernel void xyY2xyz(float *input, float *output) {
     size_t i = get_global_id(0)*3;
     float x = input[i];
     float y = input[i+1];

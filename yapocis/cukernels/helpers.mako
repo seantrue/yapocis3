@@ -4,10 +4,10 @@
 /* Helpful macros and in-line functions */
 
 // Address macros
-#define ADDRESS(xx,yy) (((xx)*height)+(yy))
+#define ADDRESS(xx,yy) (((yy)*height)+(xx))
 
-#define X(addr) ((addr)/height)
-#define Y(addr) ((addr)%height)
+#define X(addr) ((addr)%height)
+#define Y(addr) ((addr)/height)
 
 #define SWAPINT(xxx,yyy) {int tmp = xxx; xxx=yyy; yyy=tmp;}
 #define SWAPFLOAT(xxx,yyy) {float tmp = xxx; xxx=yyy; yyy=tmp;}

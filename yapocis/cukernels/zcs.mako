@@ -7,13 +7,15 @@
 %for planes in [1,2,3,4]:
 #define ADDRESS${planes}(xx,yy) (ADDRESS(xx,yy))*${planes}
 
-__kernel
+extern "C" __kernel
 void zcs${planes}(int width, int height, float threshold, float* input, float* zcs )
 {
     size_t i = get_global_id(0)*${planes};
-    int x = max((size_t)1,X(i));
-    x = min(x,width-2);
-    int y = max((size_t)1,Y(i));
+    // CUDA: X/Y macros expect pixel index, not plane-multiplied index
+    size_t pixel_id = get_global_id(0);
+    int x = max(1, (int)(pixel_id % width));
+    x = min(x, width-2);
+    int y = max(1, (int)(pixel_id / width));
     y = min(y, height-2);
     float zclt;
     float v, below, left, above, right;
@@ -36,7 +38,7 @@ void zcs${planes}(int width, int height, float threshold, float* input, float* z
 }
 %endfor
 
-__kernel
+extern "C" __kernel
 void sub(float* input1, float* input2, float *output)
 {
     size_t i;

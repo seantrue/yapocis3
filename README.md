@@ -13,7 +13,7 @@ Memorable. Easy to pronounce and spell. Clearly related to the semantics of the 
 
 Or not, all the good names are used and I am not in marketing.
 
-It includes easy-to-call-from-Python, reasonably performing implementations of kernels such as Mandelbrot, 3x3 median, image gradients, HSI <-> RGB conversions, color math, 2D graphics primitives, and signed distance field path tracing. I use it to develop much less generally useful implementations of bizarre numerical processing ideas.
+It includes easy-to-call-from-Python, reasonably performing implementations of kernels such as Mandelbrot, 3x3 median, image gradients, HSI <-> RGB conversions, color math, 2D graphics primitives (lines, circles, rectangles, text), and signed distance field path tracing with Jump Flood Algorithm. I use it to develop much less generally useful implementations of bizarre numerical processing ideas.
 
 ## Why this happened?
 
@@ -98,9 +98,11 @@ High-level wrappers (e.g., `yapocis.lib.*`) route through `yapocis.core.manager`
 
 **CUDA backend notes:**
 - Uses PyCUDA for CUDA kernel compilation and execution
-- All 11 kernel interfaces compile successfully (100% compatibility)
+- All 12 kernel interfaces compile and run successfully (100% compatibility)
+- Includes graphics, image processing, color conversion, and SDF path tracing kernels
 - Supports NVIDIA GPUs with CUDA capability
 - Device selection via `YAPOCIS_DEVICE` (numeric index or device name)
+- Row-major storage order matches NumPy (opposite of OpenCL/Metal)
 
 **Numba backend notes:**
 - Provides CPU fallback when GPU backends are unavailable

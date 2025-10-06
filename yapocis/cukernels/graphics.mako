@@ -21,7 +21,7 @@
  */
 #define DXDY2
 
-__kernel
+extern "C" __kernel
 void lines(int width, int height,  READWRITE float *a, int nelements, READONLY float2 *coords, READONLY float *rdist, READONLY float2 *colors)
 {
     size_t i =  get_global_id(0);
@@ -50,7 +50,7 @@ void lines(int width, int height,  READWRITE float *a, int nelements, READONLY f
     barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-__kernel
+extern "C" __kernel
 void rects(int width, int height,  READWRITE float *a, int nlines, READONLY float4 *coords, READONLY float2 *colors)
 {
     size_t i =  get_global_id(0);
@@ -74,7 +74,7 @@ void rects(int width, int height,  READWRITE float *a, int nlines, READONLY floa
     barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
-__kernel
+extern "C" __kernel
 void circles(int width, int height,  READWRITE float *a, int nlines, READONLY float *coords, READONLY float2 *colors)
 {
     size_t i =  get_global_id(0);
@@ -98,7 +98,7 @@ void circles(int width, int height,  READWRITE float *a, int nlines, READONLY fl
 
 #define signex(p1,p2,p3) ((p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y))
 
-__kernel
+extern "C" __kernel
 void triangles(int width, int height,  READWRITE float *a, int nlines, READONLY float2 *coords, READONLY float2 *colors)
 {
     size_t i =  get_global_id(0);
@@ -126,7 +126,7 @@ void triangles(int width, int height,  READWRITE float *a, int nlines, READONLY 
 }
 
 // (x-h)^2/a^2 + (y-k)^2/b^2 <= 1
-__kernel
+extern "C" __kernel
 void ellipses(int width, int height,  READWRITE float *a, int nlines, READONLY float2 *coords, READONLY float2 *colors)
 {
     size_t i =  get_global_id(0);
@@ -149,7 +149,7 @@ void ellipses(int width, int height,  READWRITE float *a, int nlines, READONLY f
 
 
 //#define DEBUG
-__kernel
+extern "C" __kernel
 void composite(int width, int height,  READWRITE float *a, int n, READONLY int4 *coords,
                 READWRITE float2 *pixels, READONLY int *ipixels, int npixels)
 {
@@ -168,7 +168,8 @@ void composite(int width, int height,  READWRITE float *a, int n, READONLY int4 
         // Is the current xy inside the destination area?
         int outside = ANYISLESS(xy,lb) + ANYISGTE(xy,yt);
         int2 source_location = xy-lb;
-        int source_offset = (source_location.x*coord.z)+source_location.y;
+        // CUDA uses row-major order, so Y varies along outer dimension
+        int source_offset = (source_location.y*coord.z)+source_location.x;
         int ipixel_source = ipixel + source_offset;
         int inside = !outside && 0<=ipixel_source && ipixel_source < npixels;
         float2 color_alpha = inside ? pixels[ipixel_source] : make_float2(0.0f,0.0f);

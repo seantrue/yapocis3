@@ -32,7 +32,7 @@ Explanation by chatGPT 2023-02-15
 /* Perona-Malik filter for 1,2,3,4 channel images*/
 %for planes in ["",2,3,4]:
 
-__kernel 
+extern "C" __kernel
 void filterImage${planes}(int width, int height, FLOAT${planes} *input, float scale, float step_size, FLOAT${planes} *output)
 {
     size_t i = get_global_id(0);

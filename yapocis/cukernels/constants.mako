@@ -1,7 +1,7 @@
 /* Auto-translated from OpenCL to CUDA (Mako kept intact). */
 #ifndef YAPOCIS_CUDA_SHIMS_H
 #define YAPOCIS_CUDA_SHIMS_H
-#define __kernel extern "C" __global__
+#define __kernel __global__
 #define __local  __shared__
 #define __constant __constant__
 #define barrier(x) __syncthreads()

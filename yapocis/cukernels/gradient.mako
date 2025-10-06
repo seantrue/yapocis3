@@ -6,7 +6,7 @@
 /* Compute gradient for images with 1,2,3,4 channels per pixel. */
 
 %for planes in ["",2,3,4]:
-__kernel
+extern "C" __kernel
 void gradient${planes}(int width, int height, FLOAT${planes}* input, int reach, FLOAT${planes}* grad, FLOAT${planes} *theta )
 {
     size_t i = get_global_id(0);

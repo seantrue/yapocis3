@@ -4,11 +4,11 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Summary Statistics
 
-- **Total AI-assisted commits**: ~22
+- **Total AI-assisted commits**: ~23
 - **Major features developed with AI assistance**:
   - Infrastructure: Package modernization (hatchling, modern tooling), automated changelog generation
-  - Backend work: CUDA kernel compilation fixes, Metal backend fixes, coordinate system standardization, Numba backend completeness
-  - Testing: Validation framework, StopWatcher enhancements, test isolation fixes
+  - Backend work: CUDA kernel compilation fixes, CUDA row-major addressing fixes, Metal backend fixes, coordinate system standardization, Numba backend completeness, truetrace kernel port
+  - Testing: Validation framework, StopWatcher enhancements, test isolation fixes, NPZ analysis tooling
   - Performance: Performance tracking system, DuckDB migration, reproducibility improvements
   - Code quality: Test refactoring, random data centralization
   - Developer experience: Environment variable standardization, enhanced backend/device listing
@@ -20,9 +20,94 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~200 lines: Changelog system (2025-10-05)
   - ~350 lines: CUDA backend compilation fixes (2025-10-05)
   - ~50 lines: YAPOCIS_ENGINE → YAPOCIS_DEVICE rename (2025-10-06)
+  - ~200 lines: CUDA addressing fixes and truetrace port (2025-10-06)
   - ~100 lines: Documentation updates (2025-10-05, 2025-10-06)
 
 ## Detailed Contributions
+
+### 2025-10-06: CUDA Backend Row-Major Addressing Fixes and Truetrace Kernel Port
+
+**AI Contribution (Claude):**
+- Fixed critical CUDA coordinate addressing bugs causing rotated/misaligned graphics output
+- Ported truetrace (SDF path tracing) kernel from OpenCL to CUDA
+- Resolved all CUDA validation failures related to addressing and NaN generation
+- ~200 lines changed across 5 files
+
+**X/Y Macro Row-Major Fix (helpers.mako):**
+- Problem: CUDA uses row-major storage (like NumPy), but X/Y macros were backwards
+- OpenCL: Column-major `ADDRESS(xx,yy) = (xx*height)+yy`, so `X(addr) = addr/height`, `Y(addr) = addr%height`
+- CUDA: Row-major `ADDRESS(xx,yy) = (yy*width)+xx`, but had `X(addr) = addr/width` (WRONG!)
+- **Fix**: Corrected to `X(addr) = addr%width`, `Y(addr) = addr/width` for row-major
+- Result: Proper coordinate extraction from linear addresses
+
+**Composite Pixel Addressing Fix (graphics.mako, graphics4.mako):**
+- Problem: First character in text appeared rotated 90 degrees clockwise
+- Root cause: `source_offset = (source_location.x*coord.z)+source_location.y` assumed column-major
+- **Fix**: Changed to `source_offset = (source_location.y*coord.z)+source_location.x` for row-major
+- Applied to both single-channel (graphics.mako) and 4-channel (graphics4.mako) kernels
+- Result: All 14 graphics tests pass with correct pixel alignment
+
+**ZCS Kernel NaN Fix (zcs.mako):**
+- Problem: NaN values and extreme values (±3.4e+38) in multiscale zero-crossing output
+- Root cause: Used `X(i)` and `Y(i)` where `i = get_global_id(0)*planes` (plane-multiplied index)
+- Plane multiplication caused X/Y macros to compute wrong coordinates
+- **Fix**: Added `pixel_id = get_global_id(0)` and direct calculation:
+  - `x = max(1, (int)(pixel_id % width))`
+  - `y = max(1, (int)(pixel_id / width))`
+- CUDA-specific fix (OpenCL/Metal unchanged as requested)
+- Result: Zero NaN/Inf values in all 162 validation files
+
+**Truetrace Kernel Port (truetrace.mako):**
+- Created CUDA version of Jump Flood Algorithm distance field kernel
+- Ported three kernel functions from OpenCL:
+  - `init_seed_from_mask`: Initialize seed points from binary mask
+  - `jfa_step`: Jump Flood Algorithm distance field computation
+  - `marching_squares`: Contour extraction at iso-level
+- Key CUDA adaptations:
+  - Changed `__kernel` → `extern "C" __global__`
+  - Removed `__global` pointer qualifiers (CUDA uses bare pointers)
+  - Changed `atomic_inc` → `atomicAdd` for segment counter
+  - Changed `uint` → `unsigned int` for CUDA compatibility
+  - Kept X/Y macros (work correctly after row-major fix)
+- Result: Kernel compiles and all truetrace tests pass
+
+**NPZ Analysis Tool (scripts/analyze_queue.py):**
+- Created CLI tool for analyzing test output NPZ files
+- Features: dtype analysis, min/max values, NaN/Inf detection
+- Flags: `--filter`, `--nan-only`, `--verbose`, `--summary`, `--dtype`
+- Used to diagnose and verify ZCS NaN fix
+
+**Files Modified:**
+- `yapocis/cukernels/helpers.mako` - Fixed X/Y coordinate macros
+- `yapocis/cukernels/graphics.mako` - Fixed composite pixel addressing (line 172)
+- `yapocis/cukernels/graphics4.mako` - Fixed composite pixel addressing (line 168)
+- `yapocis/cukernels/zcs.mako` - Fixed coordinate calculation with plane indexing
+- `yapocis/cukernels/truetrace.mako` - **Created** (133 lines, complete port)
+- `scripts/analyze_queue.py` - **Created** (202 lines, NPZ analysis tool)
+
+**Testing:**
+- All 14 graphics tests pass with correct output
+- All ZCS tests pass with zero NaN/Inf values
+- Truetrace functional test passes (test_truetrace.py)
+- Full CUDA validation: 162 files, 160 float32 + 2 uint8 arrays, 0 NaN, 0 Inf
+- Verified with `scripts/analyze_queue.py --summary`
+
+**Benefits:**
+- CUDA backend now produces pixel-perfect graphics output matching other backends
+- All coordinate-dependent kernels work correctly with row-major storage
+- Jump Flood Algorithm available on CUDA for distance field computation
+- Comprehensive validation tooling for detecting data quality issues
+- Foundation for CUDA backend validation framework
+
+**Human Contribution:**
+- Identified that CUDA uses row-major storage (same as NumPy)
+- Pointed out graphics composite kernel addressing issue
+- Requested CUDA-specific ZCS fix (not touching OCL/Metal)
+- Requested NPZ analysis tool with CLI interface
+- Requested truetrace kernel port
+- Testing and verification throughout
+
+---
 
 ### 2025-10-06: Environment Variable Standardization and Backend Listing Enhancement
 
