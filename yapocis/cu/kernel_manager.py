@@ -1,79 +1,186 @@
-from __future__ import annotations
-import cupy as cp
-from pathlib import Path
-from typing import Any
-from yapocis.core.interface import load_interface, get_interface
-from yapocis.core.mako_utils import render_template, resolve_template
-from yapocis.core.autopad import pad_sizes
-from yapocis.core.tunecache import get_local_size
-from yapocis.core.devbuf import ensure_device, empty_like_device
-class CUDAProgram:
-    def __init__(self, name: str, raw_module: cp.RawModule, iface, stream: cp.cuda.Stream, default_local=(16,16)):
-        self.name=name; self.mod=raw_module; self.iface=iface; self.stream=stream; self.default_local=default_local
-    def _grid_block(self, gs, ls):
-        def cd(a,b): return (a + b - 1)//b
-        if isinstance(gs, int):
-            tx = (ls or (256,))[0]; return (cd(gs,tx),1,1),(tx,1,1)
-        dims = list(gs or (1,)) + [1,1]; dims=dims[:3]
-        lsz  = list(ls or (16,16,1)) + [1,1]; lsz=lsz[:3]
-        grid = tuple(cd(dims[i], lsz[i]) for i in range(3))
-        block= tuple(lsz); return grid, block
-    def __getattr__(self, kname: str):
-        cached_ls = get_local_size(self.name, kname, backend='cuda')
-        kern = self.mod.get_function(kname)
-        kspec = next((k for k in self.iface.kernels if k.name == kname), None)
-        aspecs = getattr(kspec, "args", None)
-        def call(*args: Any, global_size=None, local_size=None, **kwargs: Any):
-            dev_args = list(args); out_idxs=[]
-            if aspecs is not None and len(aspecs)==len(args):
-                dev_args=[]; 
-                for i,(aval,spec) in enumerate(zip(args, aspecs)):
-                    q = getattr(spec, "qualifier", "in")
-                    if q == "in":
-                        dev_args.append(ensure_device(aval))
-                    elif q in ("out","inout"):
-                        if aval is None:
-                            like_name = getattr(spec, "like", None); ref=None
-                            if like_name is not None:
-                                try:
-                                    ref_idx = next(j for j,s in enumerate(aspecs) if s.name == like_name)
-                                    ref = args[ref_idx]
-                                except StopIteration:
-                                    ref=None
-                            dev = empty_like_device(ref) if ref is not None else ensure_device(aval)
-                            dev_args.append(dev)
-                        else:
-                            dev_args.append(ensure_device(aval))
-                        out_idxs.append(i)
-                    else:
-                        dev_args.append(ensure_device(aval))
-            else:
-                dev_args = [ensure_device(a) for a in args]
-            preferred = cached_ls or self.default_local
-            pg, pl = pad_sizes(global_size, local_size, tuple(args), preferred)
-            gs = pg if pg is not None else global_size
-            ls = pl if pl is not None else local_size
-            grid, block = self._grid_block(gs, ls)
-            kern(grid, block, tuple(dev_args), stream=self.stream)
-            outs = [dev_args[i] for i in out_idxs] if out_idxs else []
-            if not outs: return None
-            return outs[0] if len(outs)==1 else tuple(outs)
-        return call
-class CUDAKernelManager:
-    def __init__(self, templates_dir: str | Path | None = None, default_local=(16,16)):
-        self.templates_dir = Path(templates_dir or Path(__file__).resolve().parents[2] / "cukernels")
-        self.stream = cp.cuda.Stream(non_blocking=True); self.default_local=default_local
-    def load_program(self, name: str, **mako_vars) -> CUDAProgram:
-        tpath = resolve_template(self.templates_dir, name, backend="cuda")
-        code = render_template(tpath, **mako_vars)
-        mod = cp.RawModule(code=code, options=("--std=c++14",))
-        iface_txt = load_interface(name); iface = get_interface(iface_txt)
-        return CUDAProgram(name, mod, iface, self.stream, self.default_local)
-    def import_program(self, name: str, namespace: bool = False, **mako_vars):
-        prog = self.load_program(name, **mako_vars)
-        callables = { k.name: getattr(prog, k.name) for k in prog.iface.kernels }
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
+
+import os
+from typing import Callable, Optional
+
+from mako.lookup import TemplateLookup
+from mako.template import Template
+
+from yapocis.cukernels import find_kernel
+from yapocis.cu.device_manager import get_device_manager
+from yapocis.core.interface import Interface, get_interface, load_interface
+from yapocis.cu.kernel import Kernel
+from yapocis.utils.internals import find_yapocis_file, get_yapocis_dir
+from yapocis.utils.stereo_typing import Context
+
+
+def render_program(base_filename: str, **context: Context) -> str:
+    """
+    Takes the basename of a mako template file, and uses context to generate a CUDA program
+    """
+    tfilename = find_kernel(base_filename)
+    template_directories = [os.path.dirname(tfilename)]
+    mako_modules = os.path.join(get_yapocis_dir(), "mako_modules", "cuda")
+    mylookup = TemplateLookup(directories=template_directories, module_directory=mako_modules)
+    filename = os.path.split(tfilename)[-1]
+    t = mylookup.get_template(filename)
+    source = str(t.render(**context))
+    return source
+
+
+def render_interface(source: str, **context: Context) -> str:
+    """
+    Takes the source for a mako definition of a yapocis.rpc1 interface and generates
+    a parsable definition. Useful when the template can generate multiple parameterized
+    routines.
+    """
+    if not context:
+        return source
+    t = Template(source)
+    return str(t.render(**context))
+
+
+class KernelManager:
+    """
+    Takes a parsed yapocis interface and returns a class/module like structure
+    which supports calling into kernel methods of the interface.
+    Manages buffers on the CUDA device to prevent over-allocation.
+    """
+
+    def __init__(
+        self,
+        interface: Interface,
+        device_name: str,
+        debug: bool = False,
+        async_write: bool = False,
+        options=None,
+        **context: Context,
+    ):
+        self.interface = interface
+        self.dmgr = get_device_manager(device_name=device_name)
+        try:
+            source = render_program(interface.name, **context)
+        except:
+            print(f"Source rendering issue for {interface.name}")
+            print(context)
+            raise
+        self.source = source
+        if debug:
+            print("Source")
+            print(source)
+
+        # Save source to code_cache if YAPOCIS_CACHE is set
+        cache_dir = os.environ.get("YAPOCIS_CACHE")
+        if cache_dir and os.path.isdir(cache_dir):
+            source_file = os.path.join(cache_dir, f"{interface.name}.cu")
+            with open(source_file, "w") as f:
+                f.write(source)
+
+        self.program = self.dmgr.build(source, options=options)
+        self.callable = {}
+        self.calls = 0
+        self.runtime = 0.0
+        self.async_write = async_write
+        for kernel in interface.kernels:
+            name = kernel.alias if kernel.alias else kernel.name
+            kernel_func = self.program.get_function(name)
+            self.callable[kernel.name] = Kernel(
+                name, self, kernel_func, kernel.parameters, async_write=async_write
+            )
+
+    def read(self, a):
+        return self.dmgr.read(a)
+
+    def write(self, a, async_write=None):
+        async_write = self.async_write if async_write is None else async_write
+        return self.dmgr.write(a, wait=async_write)
+
+    def purge(self):
+        self.stats()
+        return self.dmgr.purge()
+
+    def reset(self):
+        self.dmgr.reset()
+        self.runtime = self.calls = 0
+
+    def snapshot(self, **kwargs):
+        d = dict(
+            interfacename=self.interface.name,
+            calls=self.calls,
+            runtime=self.runtime,
+            device=self.dmgr.device_name,
+        )
+        d.update(kwargs)
+        self.dmgr.snapshot(**d)
+
+    def __getattr__(self, attr: str) -> Callable:
+        "Any unbound attribute is checked to see if it is a callable"
+        if attr not in self.callable:
+            print("Kernel %s not found, %s available" % (attr, list(self.callable.keys())))
+            raise KeyError(attr)
+        return self.callable[attr]
+
+    def stats(self):
+        d = dict(
+            interfacename=self.interface.name,
+            calls=self.calls,
+            runtime=self.runtime,
+            device=self.dmgr.device_name,
+        )
+        d.update(self.dmgr.stats())
+        return d
+
+    def __str__(self):
+        s = " ".join([f"{key}: {value}" for key, value in self.stats().items()])
+        return s
+
+    @classmethod
+    def load_program(
+        cls,
+        interface_spec: str,
+        device_name: Optional[str] = None,
+        debug: bool = False,
+        options=None,
+        **context: Context,
+    ):
+        """
+        Factory returning runnable interface based on a interface specification.
+        """
+        assert device_name is None or isinstance(device_name, (str, int, bytes)), device_name
+        source = load_interface(interface_spec)
+        source = render_interface(source, **context)
+        interface = get_interface(source)
+        if debug:
+            print("Interface", interface)
+        return KernelManager(interface, device_name, debug=debug, options=options, **context)
+
+    @classmethod
+    def import_program(
+        cls,
+        interface_spec: str,
+        device_name: Optional[str] = None,
+        namespace: bool = False,
+        debug: bool = False,
+        import_kernels=None,
+        options=None,
+        **context: Context,
+    ):
+        program = cls.load_program(
+            interface_spec, device_name=device_name, debug=debug, options=options, **context
+        )
+        import inspect
+
+        caller = inspect.currentframe().f_back
+        target = inspect.getmodule(caller.f_code)
+        for name, callable in program.callable.items():
+            if import_kernels == "*" or name in context:
+                name_as = context.get(name, name)
+                setattr(target, name_as, callable)
         if namespace:
-            import inspect, sys
-            mod = sys.modules[inspect.getmodule(self.import_program).__name__]
-            for n, fn in callables.items(): setattr(mod, n, fn)
-        return prog, callables
+            return program, program.callable
+        else:
+            return program, list(program.callable.values())
+
+
+import_program = KernelManager.import_program
+load_program = KernelManager.load_program

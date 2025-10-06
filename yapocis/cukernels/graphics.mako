@@ -1,21 +1,5 @@
-/* Auto-translated from OpenCL to CUDA (Mako kept intact). */
-#ifndef YAPOCIS_CUDA_SHIMS_H
-#define YAPOCIS_CUDA_SHIMS_H
-#define __kernel extern "C" __global__
-#define __local  __shared__
-#define barrier(x) __syncthreads()
-__device__ __forceinline__ int get_global_id_x(){return blockIdx.x*blockDim.x+threadIdx.x;}
-__device__ __forceinline__ int get_global_id_y(){return blockIdx.y*blockDim.y+threadIdx.y;}
-__device__ __forceinline__ int get_global_id_z(){return blockIdx.z*blockDim.z+threadIdx.z;}
-#define get_global_id(N) ( (N)==0 ? get_global_id_x() : ( (N)==1 ? get_global_id_y() : get_global_id_z() ) )
-__device__ __forceinline__ int clampi(int v,int lo,int hi){return max(lo,min(hi,v));}
-__device__ __forceinline__ float clampf(float v,float lo,float hi){return fminf(hi,fmaxf(lo,v));}
-#define clamp(V,L,H) _Generic((V), float:clampf, double:clampf, default:clampi)((V),(L),(H))
-template<typename V> __device__ __forceinline__ V  vload(int off, const void* base){return reinterpret_cast<const V*>(base)[off];}
-template<typename V> __device__ __forceinline__ void vstore(V v, int off, void* base){reinterpret_cast<V*>(base)[off]=v;}
-#define vload4(OFF,PTR)       vload<float4>((OFF),(const void*)(PTR))
-#define vstore4(VAL,OFF,PTR)  vstore<float4>((VAL),(OFF),(void*)(PTR))
-#endif
+<%include file="constants.mako"/>
+<%include file="helpers.mako"/>
 
 /* Kernels that implement graphics primitives against a float array.
  * The float array is assumed to be a 2D array of floats, with the
@@ -35,9 +19,7 @@ template<typename V> __device__ __forceinline__ void vstore(V v, int off, void* 
  * colors.  The coordinates are in the same coordinate system as the
  * float array, and the colors are in the range [0,1].
  */
-<%include file="constants.mako" />
 #define DXDY2
-<%include file="helpers.mako" />
 
 __kernel
 void lines(int width, int height,  READWRITE float *a, int nelements, READONLY float2 *coords, READONLY float *rdist, READONLY float2 *colors)
@@ -46,15 +28,15 @@ void lines(int width, int height,  READWRITE float *a, int nelements, READONLY f
     float color = a[i];
     int x = X(i);
     int y = Y(i);
-    float2 point = (float2)((float)x, (float)y);
+    float2 point = make_float2((float)x, (float)y);
     for (int ielement = 0; ielement < nelements; ielement++) {
         float threshold2 = ((*rdist++ * .5) + .5);
         threshold2 = threshold2*threshold2;
         float2 linestart = *coords++;
         float2 lineend = *coords++;
         float2 value_alpha = *colors++;
-        float value = value_alpha.s0;
-        float alpha = value_alpha.s1;
+        float value = value_alpha.x;
+        float alpha = value_alpha.y;
         float linemag2 = dxdy2(lineend, linestart);
         float2 delta = lineend - linestart;
         float2 u2 = (point - linestart) * (delta);
@@ -99,7 +81,7 @@ void circles(int width, int height,  READWRITE float *a, int nlines, READONLY fl
     float color = a[i];
     int x = X(i);;
     int y = Y(i);
-    float2 point = (float2)((float)x,(float)y);
+    float2 point = make_float2((float)x,(float)y);
     for (int iline=0; iline < nlines; iline++) {
         float x = *coords++;
         float y = *coords++;
@@ -107,7 +89,7 @@ void circles(int width, int height,  READWRITE float *a, int nlines, READONLY fl
         float2 rc = *colors++;
         float clr = (rc.x*rc.y)+(color*(1.0-rc.y));
         radius *= radius;
-        float2 center = (float2) (x,y);
+        float2 center = make_float2(x,y);
         color = dxdy2(center,point) <= radius ? clr : color;
     }
     a[i] = color;
@@ -123,7 +105,7 @@ void triangles(int width, int height,  READWRITE float *a, int nlines, READONLY 
     float color = a[i];
     int x = X(i);;
     int y = Y(i);
-    float2 point = (float2)((float)x,(float)y);
+    float2 point = make_float2((float)x,(float)y);
     for (int iline=0; iline < nlines; iline++) {
         float2 v1 = *coords++;
         float2 v2 = *coords++;
@@ -151,7 +133,7 @@ void ellipses(int width, int height,  READWRITE float *a, int nlines, READONLY f
     float color = a[i];
     int x = X(i);;
     int y = Y(i);
-    float2 point = (float2)((float)x,(float)y);
+    float2 point = make_float2((float)x,(float)y);
     for (int iline=0; iline < nlines; iline++) {
         float2 center = *coords++;
         float2 axes = *coords++;
@@ -175,22 +157,22 @@ void composite(int width, int height,  READWRITE float *a, int n, READONLY int4 
     float color = a[i];
     int x = X(i);;
     int y = Y(i);
-    int2 xy = (int2) (x,y);
+    int2 xy = make_int2(x,y);
     for (int j=0; j < n; j++) {
         // Get the x,y,w,h of the destination
         int4 coord = coords[j];
         // Get the first pixel location in the pixel buffer
         int ipixel = ipixels[j];
-        int2 lb = coord.s10;
-        int2 yt = coord.s10 + coord.s32;
+        int2 lb = make_int2(coord.x, coord.y);
+        int2 yt = make_int2(coord.x, coord.y) + make_int2(coord.z, coord.w);
         // Is the current xy inside the destination area?
         int outside = ANYISLESS(xy,lb) + ANYISGTE(xy,yt);
         int2 source_location = xy-lb;
-        int source_offset = (source_location.x*coord.s2)+source_location.y;
+        int source_offset = (source_location.x*coord.z)+source_location.y;
         int ipixel_source = ipixel + source_offset;
         int inside = !outside && 0<=ipixel_source && ipixel_source < npixels;
-        float2 color_alpha = inside ? pixels[ipixel_source] : (float2)(0.0f,0.0f);
-        float clr = (color_alpha.s0*color_alpha.s1)+(color*(1.0-color_alpha.s1));
+        float2 color_alpha = inside ? pixels[ipixel_source] : make_float2(0.0f,0.0f);
+        float clr = (color_alpha.x*color_alpha.y)+(color*(1.0-color_alpha.y));
         color = inside ? clr : color;
     }
     a[i] = color;
