@@ -23,7 +23,7 @@ Core helpers (CPU)
 Notes
 - Shapes for GPU interface use (W,H) order internally; the wrapper transposes
   the input HxW mask and uses contiguous arrays to avoid extra allocations.
-- Backends: honors `YAPOCIS_BACKEND` and `YAPOCIS_ENGINE`; you may also pass
+- Backends: honors `YAPOCIS_BACKEND` and `YAPOCIS_DEVICE`; you may also pass
   `backend=` and `device_name=` when constructing the wrapper.
 """
 

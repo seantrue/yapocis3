@@ -4,7 +4,7 @@ Metal Backend (PyMetallic)
 - Templates: place Metal Shader Language templates in `yapocis/metalkernels/<name>.mako`.
   - The loader falls back to `yapocis/kernels/<name>.mako` if a Metal-specific template is not present.
   - OpenCL templates are unlikely to compile as-is on Metal; use only for early bring-up.
-- Device selection: optionally set `YAPOCIS_ENGINE` to a device name or index as reported by `pymetallic.get_devices()`.
+- Device selection: optionally set `YAPOCIS_DEVICE` to a device name or index as reported by `pymetallic.get_devices()`.
 - Build cache: `YAPOCIS_CACHE` points to a directory used for compiled program caching if supported by PyMetallic.
 
 Requirements

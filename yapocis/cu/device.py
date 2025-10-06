@@ -54,7 +54,7 @@ def get_device(device_name: Optional[str] = None) -> tuple[str, cuda.Device]:
 
     """
     device_name = (
-        os.environ.get("YAPOCIS_ENGINE", None) if device_name is None else device_name
+        os.environ.get("YAPOCIS_DEVICE", None) if device_name is None else device_name
     )
     devices = get_available_devices()
     if not devices:

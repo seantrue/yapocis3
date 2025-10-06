@@ -61,6 +61,6 @@ pytest -q -m cuda    # only CUDA tests
 ## Device Selection
 
 - OpenCL device selection is handled by the OpenCL backend config
-- Metal device can be set via `YAPOCIS_ENGINE` (name or index as reported by `pymetallic`)
+- Metal device can be set via `YAPOCIS_DEVICE` (name or index as reported by `pymetallic`)
 - CUDA uses the default CuPy device unless overridden via standard CuPy environment variables
 

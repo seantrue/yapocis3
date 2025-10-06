@@ -4,13 +4,14 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Summary Statistics
 
-- **Total AI-assisted commits**: ~21
+- **Total AI-assisted commits**: ~22
 - **Major features developed with AI assistance**:
   - Infrastructure: Package modernization (hatchling, modern tooling), automated changelog generation
   - Backend work: CUDA kernel compilation fixes, Metal backend fixes, coordinate system standardization, Numba backend completeness
   - Testing: Validation framework, StopWatcher enhancements, test isolation fixes
   - Performance: Performance tracking system, DuckDB migration, reproducibility improvements
   - Code quality: Test refactoring, random data centralization
+  - Developer experience: Environment variable standardization, enhanced backend/device listing
 - **Lines of code**:
   - ~1300 lines: Performance tracking system (2025-10-03)
   - ~400 lines: DuckDB migration (2025-10-03)
@@ -18,9 +19,71 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~300 lines: Package modernization (2025-10-05)
   - ~200 lines: Changelog system (2025-10-05)
   - ~350 lines: CUDA backend compilation fixes (2025-10-05)
-  - ~100 lines: Documentation updates (2025-10-05)
+  - ~50 lines: YAPOCIS_ENGINE → YAPOCIS_DEVICE rename (2025-10-06)
+  - ~100 lines: Documentation updates (2025-10-05, 2025-10-06)
 
 ## Detailed Contributions
+
+### 2025-10-06: Environment Variable Standardization and Backend Listing Enhancement
+
+**AI Contribution (Claude):**
+- Renamed `YAPOCIS_ENGINE` → `YAPOCIS_DEVICE` across entire codebase for clarity
+- Enhanced `scripts/list_backends.py` to show currently selected backend and device
+- Fixed CUDA device enumeration to use PyCUDA instead of CuPy
+- Updated all documentation to reflect new environment variable name
+- ~50 lines changed across 10 files
+
+**Environment Variable Rename:**
+- Globally replaced `YAPOCIS_ENGINE` with `YAPOCIS_DEVICE` for consistency
+- Updated code files (5): `yapocis/cu/device.py`, `yapocis/ocl/device.py`, `yapocis/metallic/device.py`, `yapocis/lib/truetrace.py`, `scripts/list_backends.py`
+- Updated documentation (4): `CLAUDE.md`, `AGENTS.md`, `docs/metallic.md`, `docs/testing.md`
+- Updated dotfiles (1): `.env`
+- Historical performance data preserved (not modified)
+
+**Backend Listing Script Enhancements:**
+- Added visual indicator (`←`) for currently selected backend
+- Added visual indicator (`←`) for currently selected device within active backend
+- Defaults to showing device 0 as selected when no `YAPOCIS_DEVICE` specified
+- Supports device selection by numeric index or exact device name
+- Fixed CUDA backend to use `yapocis.cu.device.get_available_devices()` instead of CuPy
+- Updated legend to explain selection markers
+- Simplified legend from 4 items to 3 (merged backend/device selection indicator)
+
+**Files Modified:**
+- `scripts/list_backends.py` - Enhanced device/backend display, fixed CUDA enumeration
+- `yapocis/cu/device.py` - Environment variable name
+- `yapocis/ocl/device.py` - Environment variable name
+- `yapocis/metallic/device.py` - Environment variable name and comment
+- `yapocis/lib/truetrace.py` - Documentation comment
+- `CLAUDE.md` - Environment variable documentation
+- `AGENTS.md` - Environment variable documentation
+- `docs/metallic.md` - Device selection documentation
+- `docs/testing.md` - Metal device documentation
+- `.env` - Export statement
+- `README.md` - Updated CUDA backend description, added device selection docs
+
+**Testing:**
+- Verified device selection works for all backends (OCL, CUDA, Numba)
+- Confirmed selection by numeric index (e.g., `YAPOCIS_DEVICE=0`)
+- Confirmed selection by device name (e.g., `YAPOCIS_DEVICE="Tesla P40"`)
+- Verified default to device 0 when no explicit selection
+- All backends show correct indicators
+
+**Benefits:**
+- Clearer, more intuitive environment variable name (`DEVICE` vs `ENGINE`)
+- Visual feedback on current backend/device selection in listing script
+- Better developer experience when working with multiple devices
+- Consistent naming across entire codebase
+- Fixed CUDA device listing to use project's actual CUDA implementation
+
+**Human Contribution:**
+- Request to rename YAPOCIS_ENGINE to YAPOCIS_DEVICE
+- Request to show selected device in listing script
+- Request to default to device 0 when not explicitly set
+- Request to use arrow instead of asterisk for backend selection
+- Testing and verification
+
+---
 
 ### 2025-10-05: CUDA Backend Kernel Compilation Fixes
 

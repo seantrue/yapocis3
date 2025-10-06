@@ -164,7 +164,7 @@ Each backend implements:
 
 ```bash
 YAPOCIS_BACKEND=ocl|metal|cuda|numba    # Backend selection
-YAPOCIS_ENGINE=<device_name_or_index>   # Device selection
+YAPOCIS_DEVICE=<device_name_or_index>   # Device selection
 YAPOCIS_CACHE=<directory>               # Kernel cache directory
 YAPOCIS_TUNECACHE=<json_file>           # Autotune cache (default: ~/.cache/yapocis/tuning.json)
 YAPOCIS_PROJECT=<directory>             # Additional asset root (e.g., "external")
