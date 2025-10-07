@@ -141,7 +141,9 @@ yapocis-analyze-queue --nan-only
 yapocis-performance-report
 
 # Watch image directory for changes
-yapocis-imagewatcher queue/rendered
+yapocis-imagewatcher --queue queue/rendered
+yapocis-imagewatcher --validation-failed  # Show only failed validations
+yapocis-imagewatcher graphics  # Filter by name substring
 
 # Generate Python stubs from C headers
 yapocis-stubgen input.h

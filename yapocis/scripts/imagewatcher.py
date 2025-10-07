@@ -7,6 +7,7 @@ Not efficient.
 
 import os
 import sys
+from argparse import ArgumentParser
 
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 backends = ["metal", "ocl", "numba", "cuda", "ref", "test"]
@@ -586,7 +587,10 @@ def promote_current_image(font, force_overwrite=False, backend_specific=False):
 
         # Try to promote using the validation framework, passing the actual source file
         success = promote_to_validation(
-            test_name, backend, source_file=Path(npz_path), backend_specific=backend_specific
+            test_name,
+            backend,
+            source_file=Path(npz_path),
+            backend_specific=backend_specific,
         )
         if success:
             status = (
@@ -899,7 +903,59 @@ HEIGHT = 800
 
 
 def main():
-    global WIDTH, HEIGHT, status_message
+    global WIDTH, HEIGHT, status_message, queue, RAW_QUEUE, VALIDATION_PATH
+    global filter_strings, show_validation_failed, show_no_validation
+
+    # Parse command-line arguments
+    parser = ArgumentParser(description="Monitor a directory for new images")
+    parser.add_argument(
+        "--queue",
+        default=VIEWING_QUEUE,
+        help=f"Queue directory to watch (default: {VIEWING_QUEUE})"
+    )
+    parser.add_argument(
+        "--validation-failed",
+        action="store_true",
+        help="Show only images that failed validation"
+    )
+    parser.add_argument(
+        "--no-validation",
+        action="store_true",
+        help="Show only images without validation references"
+    )
+    parser.add_argument(
+        "filters",
+        nargs="*",
+        help="Filter images by name (substring match)"
+    )
+    args = parser.parse_args()
+
+    # Update global variables based on arguments
+    queue = args.queue
+    RAW_QUEUE = os.path.join(queue, "raw")
+    VALIDATION_PATH = os.path.join(queue, "validation")
+    os.makedirs(RAW_QUEUE, exist_ok=True)
+    os.makedirs(VALIDATION_PATH, exist_ok=True)
+
+    filter_strings = args.filters
+    show_validation_failed = args.validation_failed
+    show_no_validation = args.no_validation
+
+    # Print initial status
+    status_parts = []
+    if filter_strings:
+        status_parts.append(f"name filters: {', '.join(filter_strings)}")
+
+    if show_validation_failed:
+        status_parts.append("validation: failed only")
+
+    if show_no_validation:
+        status_parts.append("validation: none only")
+
+    if status_parts:
+        print(f"Filtering images by: {' | '.join(status_parts)}")
+
+    print(f"Watching directory: {queue}")
 
     # Set up file system monitoring
     setup_file_monitoring()
@@ -976,10 +1032,10 @@ def main():
             if event.type == pygame.USEREVENT:
                 image, label_info = step_image()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_q:
-                    pygame.quit()
                 # Stop tailing the directory
                 pygame.time.set_timer(pygame.USEREVENT, 0)
+                if event.key == pygame.K_q:
+                    pygame.quit()
                 if event.key == pygame.K_F12:
                     # Check for Shift modifier for force overwrite
                     force_overwrite = bool(event.mod & pygame.KMOD_SHIFT)
@@ -1031,50 +1087,6 @@ def main():
 
 
 if __name__ == "__main__":
-    # Enhanced arg handling to support filtering
-    args = sys.argv[1:]
-    if any(arg in ("--help", "-h") for arg in args):
-        print_help()
-        sys.exit(0)
-
-    # Parse validation filter flags
-    if "--validation-failed" in args:
-        show_validation_failed = True
-        args.remove("--validation-failed")
-
-    if "--no-validation" in args:
-        show_no_validation = True
-        args.remove("--no-validation")
-
-    # Parse arguments: first arg might be queue directory, rest are filter strings
-    if args:
-        # Check if first arg is a directory path (contains / or is an existing directory)
-        if ("/" in args[0] or os.path.isdir(args[0])) and args[0] not in (
-            "--help",
-            "-h",
-        ):
-            queue = args[0]
-            filter_strings = args[1:]  # Remaining args are filter strings
-        else:
-            # No directory specified, all args are filter strings
-            filter_strings = args
-
-    # Print initial status
-    status_parts = []
-    if filter_strings:
-        status_parts.append(f"name filters: {', '.join(filter_strings)}")
-
-    if show_validation_failed:
-        status_parts.append("validation: failed only")
-
-    if show_no_validation:
-        status_parts.append("validation: none only")
-
-    if status_parts:
-        print(f"Filtering images by: {' | '.join(status_parts)}")
-
-    print(f"Watching directory: {queue}")
-
     try:
         main()
     except (pygame.error, KeyboardInterrupt):
