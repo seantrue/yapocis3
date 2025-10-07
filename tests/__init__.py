@@ -214,6 +214,19 @@ class StopWatcher:
                 # Get backend from environment
                 backend = os.environ.get("YAPOCIS_BACKEND", "unknown")
 
+                # Get device information
+                device_name = None
+                driver_version = None
+                try:
+                    from yapocis.core.manager import get_manager
+                    mgr = get_manager(backend)
+                    if hasattr(mgr, 'device') and hasattr(mgr.device, 'name'):
+                        device_name = mgr.device.name
+                    if hasattr(mgr, 'device') and hasattr(mgr.device, 'driver_version'):
+                        driver_version = mgr.device.driver_version
+                except Exception:
+                    pass  # Device info is optional
+
                 # Save the data
                 save_performance_data(
                     test_name=self._test_name,
@@ -221,6 +234,8 @@ class StopWatcher:
                     backend=backend,
                     timing_data=self.checkpoints.copy(),
                     test_start_time=self.t,
+                    device_name=device_name,
+                    driver_version=driver_version,
                 )
             except Exception as e:
                 # Don't fail the test if performance tracking fails

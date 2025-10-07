@@ -40,6 +40,8 @@ def _get_connection():
             test_name VARCHAR NOT NULL,
             test_file VARCHAR NOT NULL,
             backend VARCHAR NOT NULL,
+            device_name VARCHAR,
+            driver_version VARCHAR,
             branch VARCHAR NOT NULL,
             commit VARCHAR NOT NULL,
             file_status VARCHAR NOT NULL,
@@ -53,6 +55,17 @@ def _get_connection():
             fastest_operation VARCHAR
         )
     """)
+
+    # Migrate existing schema: add device_name and driver_version columns if they don't exist
+    try:
+        conn.execute("ALTER TABLE performance_runs ADD COLUMN device_name VARCHAR")
+    except Exception:
+        pass  # Column already exists
+
+    try:
+        conn.execute("ALTER TABLE performance_runs ADD COLUMN driver_version VARCHAR")
+    except Exception:
+        pass  # Column already exists
 
     conn.execute("""
         CREATE TABLE IF NOT EXISTS performance_checkpoints (
@@ -155,7 +168,9 @@ def save_performance_data(
     backend: str,
     timing_data: Dict[str, float],
     metadata: Optional[Dict] = None,
-    test_start_time: Optional[float] = None
+    test_start_time: Optional[float] = None,
+    device_name: Optional[str] = None,
+    driver_version: Optional[str] = None
 ) -> int:
     """
     Save performance data to DuckDB.
@@ -167,6 +182,8 @@ def save_performance_data(
         timing_data: Dictionary of checkpoint names to elapsed times
         metadata: Optional additional metadata
         test_start_time: Unix timestamp when test started (optional, defaults to now)
+        device_name: Optional device name (e.g., "Apple M1 Pro")
+        driver_version: Optional driver version string
 
     Returns:
         Run ID of the inserted record
@@ -200,15 +217,18 @@ def save_performance_data(
     # Insert run
     result = conn.execute("""
         INSERT INTO performance_runs (
-            test_name, test_file, backend, branch, commit, file_status,
+            test_name, test_file, backend, device_name, driver_version,
+            branch, commit, file_status,
             timestamp, timestamp_unix, total_time, min_time, max_time,
             mean_time, slowest_operation, fastest_operation
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         RETURNING id
     """, [
         test_name,
         os.path.basename(file_path),
         backend,
+        device_name,
+        driver_version,
         git_info["branch"],
         git_info["commit"],
         git_info["file_status"],
@@ -262,8 +282,8 @@ def load_performance_data(
     # Build query
     query = """
         SELECT
-            r.id, r.test_name, r.test_file, r.backend, r.branch, r.commit,
-            r.file_status, r.timestamp, r.timestamp_unix, r.total_time,
+            r.id, r.test_name, r.test_file, r.backend, r.device_name, r.driver_version,
+            r.branch, r.commit, r.file_status, r.timestamp, r.timestamp_unix, r.total_time,
             r.min_time, r.max_time, r.mean_time, r.slowest_operation, r.fastest_operation
         FROM performance_runs r
         WHERE 1=1
@@ -317,22 +337,24 @@ def load_performance_data(
                 "test_name": row[1],
                 "test_file": row[2],
                 "backend": row[3],
-                "branch": row[4],
-                "commit": row[5],
-                "file_status": row[6],
-                "timestamp": row[7].isoformat(),
-                "timestamp_unix": row[8],
+                "device_name": row[4],
+                "driver_version": row[5],
+                "branch": row[6],
+                "commit": row[7],
+                "file_status": row[8],
+                "timestamp": row[9].isoformat(),
+                "timestamp_unix": row[10],
             },
             "timing": {
                 "checkpoints": checkpoints,
-                "total": row[9],
+                "total": row[11],
             },
             "stats": {
-                "min": row[10],
-                "max": row[11],
-                "mean": row[12],
-                "slowest_operation": row[13],
-                "fastest_operation": row[14],
+                "min": row[12],
+                "max": row[13],
+                "mean": row[14],
+                "slowest_operation": row[15],
+                "fastest_operation": row[16],
             }
         }
 
