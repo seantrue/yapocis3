@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
 """
-Interpret interfaces in a readable way.
+Interpret interfaces in a readable way - generate documentation and stubs
 """
 from argparse import ArgumentParser
 from io import StringIO
@@ -31,7 +31,8 @@ def as_bullet(s, level=0):
     print(f"{indent}* {s}")
 
 
-if __name__ == '__main__':
+def main():
+    """Main entry point for yapocis-interface-spec command."""
     parser = ArgumentParser()
     parser.add_argument('--python', action="store_true")
     parser.add_argument('--opencl', action="store_true")
@@ -89,3 +90,7 @@ if __name__ == '__main__':
         if acted == 0:
             as_header("Interface specification",1)
             as_code(source)
+
+
+if __name__ == '__main__':
+    main()

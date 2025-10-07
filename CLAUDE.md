@@ -110,6 +110,43 @@ make publish
 export YAPOCIS_PROJECT=external
 ```
 
+### CLI Tools
+```bash
+# List available OpenCL/Metal devices
+yapocis-devices --list
+
+# Manage assets (images, icons, fonts, kernels, interfaces)
+yapocis-assets --list --all
+yapocis-assets --list interfaces
+yapocis-assets image test.jpg
+
+# Generate interface documentation and stubs
+yapocis-interface-spec --list
+yapocis-interface-spec mandelbrot --all
+yapocis-interface-spec graphics4 --python --opencl
+
+# List available backends
+yapocis-list-backends
+
+# Manage validation references
+yapocis-manage-validation info
+yapocis-manage-validation list
+yapocis-manage-validation promote "test_name"
+
+# Analyze test output quality
+yapocis-analyze-queue queue/raw
+yapocis-analyze-queue --nan-only
+
+# Generate performance reports
+yapocis-performance-report
+
+# Watch image directory for changes
+yapocis-imagewatcher queue/rendered
+
+# Generate Python stubs from C headers
+yapocis-stubgen input.h
+```
+
 ## Architecture Overview
 
 ### Core Components

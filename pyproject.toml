@@ -117,9 +117,16 @@ docs = [
 ]
 
 
-# [project.scripts]
-# Note: Scripts are executable via python -m scripts.script_name or directly as scripts/script_name.py
-# Consider adding main() wrapper functions to scripts for proper entry points if needed
+[project.scripts]
+yapocis-analyze-queue = "yapocis.scripts.analyze_queue:main"
+yapocis-assets = "yapocis.scripts.assets:main"
+yapocis-devices = "yapocis.scripts.devices:main"
+yapocis-imagewatcher = "yapocis.scripts.imagewatcher:main"
+yapocis-interface-spec = "yapocis.scripts.interface_spec:main"
+yapocis-list-backends = "yapocis.scripts.list_backends:main"
+yapocis-manage-validation = "yapocis.scripts.manage_validation:main"
+yapocis-performance-report = "yapocis.scripts.performance_report:main"
+yapocis-stubgen = "yapocis.scripts.stubgen:main"
 
 [build-system]
 requires = ["hatchling>=1.13"]
