@@ -8,7 +8,6 @@ and buffer manager. Also provides program build.
 import os
 import sys
 import yaml
-from typing import Dict, Optional
 
 try:
     import pymetallic as pm  # type: ignore

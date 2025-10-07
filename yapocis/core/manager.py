@@ -58,7 +58,7 @@ def get_manager(backend: str | None = None):
         from yapocis.cu import kernel_manager as km
 
         return km
-    elif backend == "ocl":
+    elif backend in ("ocl", "opencl"):
         # Return the OpenCL kernel_manager module (has load_program/import_program)
         from yapocis.ocl import kernel_manager as km
 
@@ -74,6 +74,11 @@ def get_manager(backend: str | None = None):
 
         return km
     raise ValueError(f"Unknown backend: {backend}")
+
+
+def get_device(backend: str | None):
+    manager = get_manager(backend)
+    return manager.get_device()
 
 
 def load_program(interface: str, backend: str | None = None, **mako_vars):

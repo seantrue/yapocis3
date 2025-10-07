@@ -15,7 +15,7 @@ except Exception as e:  # pragma: no cover
     raise RuntimeError("PyMetallic is required for the metallic backend") from e
 
 from yapocis.utils.stereo_typing import Array
-from yapocis.core.autopad import infer_wh_from_args
+from yapocis.core import infer_wh_from_args
 
 
 class Kernel:

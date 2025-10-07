@@ -336,3 +336,4 @@ python scripts/analyze_queue.py --verbose             # Show all array details
 ```
 
 Use this tool to diagnose data quality issues like NaN/Inf values, check dtypes, and verify min/max ranges in test outputs.
+- Never delete the performance database. Update the schema instead.

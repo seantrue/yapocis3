@@ -911,22 +911,20 @@ def main():
     parser.add_argument(
         "--queue",
         default=VIEWING_QUEUE,
-        help=f"Queue directory to watch (default: {VIEWING_QUEUE})"
+        help=f"Queue directory to watch (default: {VIEWING_QUEUE})",
     )
     parser.add_argument(
         "--validation-failed",
         action="store_true",
-        help="Show only images that failed validation"
+        help="Show only images that failed validation",
     )
     parser.add_argument(
         "--no-validation",
         action="store_true",
-        help="Show only images without validation references"
+        help="Show only images without validation references",
     )
     parser.add_argument(
-        "filters",
-        nargs="*",
-        help="Filter images by name (substring match)"
+        "filters", nargs="*", help="Filter images by name (substring match)"
     )
     args = parser.parse_args()
 
@@ -1036,6 +1034,7 @@ def main():
                 pygame.time.set_timer(pygame.USEREVENT, 0)
                 if event.key == pygame.K_q:
                     pygame.quit()
+                    return
                 if event.key == pygame.K_F12:
                     # Check for Shift modifier for force overwrite
                     force_overwrite = bool(event.mod & pygame.KMOD_SHIFT)
