@@ -131,24 +131,24 @@ yapocis-assets --list interfaces
 yapocis-assets image test.jpg
 
 # Generate interface documentation and stubs
-yapocis-interface-spec --list
-yapocis-interface-spec mandelbrot --all
-yapocis-interface-spec graphics4 --python --opencl
+yapocis-interfaces --list
+yapocis-interfaces mandelbrot --all
+yapocis-interfaces graphics4 --python --opencl
 
 # List available backends
-yapocis-list-backends
+yapocis-backends
 
 # Manage validation references
-yapocis-manage-validation info
-yapocis-manage-validation list
-yapocis-manage-validation promote "test_name"
+yapocis-validate info
+yapocis-validate list
+yapocis-validate promote "test_name"
 
 # Analyze test output quality
-yapocis-analyze-queue queue/raw
-yapocis-analyze-queue --nan-only
+yapocis-queue queue/raw
+yapocis-queue --nan-only
 
 # Generate performance reports
-yapocis-performance-report
+yapocis-report
 
 # Watch image directory for changes
 yapocis-imagewatcher --queue queue/rendered
@@ -156,7 +156,7 @@ yapocis-imagewatcher --validation-failed  # Show only failed validations
 yapocis-imagewatcher graphics  # Filter by name substring
 
 # Generate Python stubs from C headers
-yapocis-stubgen input.h
+yapocis-stubs input.h
 ```
 
 ## Architecture Overview
@@ -329,10 +329,10 @@ The validation system uses stored test results for regression testing:
 
 ```bash
 # Manage validation references
-python scripts/manage_validation.py info              # System status
-python scripts/manage_validation.py list             # List references  
-python scripts/manage_validation.py promote "test"   # Promote test result
-python scripts/manage_validation.py promote all      # Bulk promote
+python yapocis/scripts/validate.py info              # System status
+python yapocis/scripts/validate.py list             # List references
+python yapocis/scripts/validate.py promote "test"   # Promote test result
+python yapocis/scripts/validate.py promote all      # Bulk promote
 
 # Run tests with validation
 pytest --validate                    # Compare against references
@@ -363,12 +363,12 @@ def test_operation(backend, validate_result):
 
 ```bash
 # Analyze test output files for data quality
-python scripts/analyze_queue.py [directory]           # Analyze queue/raw by default
-python scripts/analyze_queue.py --filter "cuda"       # Filter by pattern
-python scripts/analyze_queue.py --nan-only            # Only show files with NaN
-python scripts/analyze_queue.py --summary             # Summary statistics only
-python scripts/analyze_queue.py --dtype float32       # Filter by dtype
-python scripts/analyze_queue.py --verbose             # Show all array details
+python yapocis/scripts/queue.py [directory]           # Analyze queue/raw by default
+python yapocis/scripts/queue.py --filter "cuda"       # Filter by pattern
+python yapocis/scripts/queue.py --nan-only            # Only show files with NaN
+python yapocis/scripts/queue.py --summary             # Summary statistics only
+python yapocis/scripts/queue.py --dtype float32       # Filter by dtype
+python yapocis/scripts/queue.py --verbose             # Show all array details
 ```
 
 Use this tool to diagnose data quality issues like NaN/Inf values, check dtypes, and verify min/max ranges in test

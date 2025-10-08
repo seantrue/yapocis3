@@ -118,15 +118,15 @@ docs = [
 
 
 [project.scripts]
-yapocis-analyze-queue = "yapocis.scripts.analyze_queue:main"
 yapocis-assets = "yapocis.scripts.assets:main"
+yapocis-backends = "yapocis.scripts.backends:main"
 yapocis-devices = "yapocis.scripts.devices:main"
 yapocis-imagewatcher = "yapocis.scripts.imagewatcher:main"
-yapocis-interface-spec = "yapocis.scripts.interface_spec:main"
-yapocis-list-backends = "yapocis.scripts.list_backends:main"
-yapocis-manage-validation = "yapocis.scripts.manage_validation:main"
-yapocis-performance-report = "yapocis.scripts.performance_report:main"
-yapocis-stubgen = "yapocis.scripts.stubgen:main"
+yapocis-interfaces = "yapocis.scripts.interfaces:main"
+yapocis-queue = "yapocis.scripts.queue:main"
+yapocis-report = "yapocis.scripts.report:main"
+yapocis-stubs = "yapocis.scripts.stubs:main"
+yapocis-validate = "yapocis.scripts.validate:main"
 
 [build-system]
 requires = ["hatchling>=1.13"]
