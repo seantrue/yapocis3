@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+
 import numpy as np
 
 try:
@@ -80,18 +81,19 @@ def gradient(
         theta[:, :] = 0.0
         r = int(reach)
         if r > 0:
-            gx = img[:, r:] - img[:, :-r]
-            gy = img[r:, :] - img[:-r, :]
+            gx = img[:, r:] - img[:, :-r]  # shape: (h, w-r)
+            gy = img[r:, :] - img[:-r, :]  # shape: (h-r, w)
             g = np.zeros_like(img)
             t = np.zeros_like(img)
             g[:, :] = 0.0
             t[:, :] = 0.0
-            g[:, r:-r] = np.sqrt(gx[:, :-r] ** 2 + gy[:-r, :] ** 2)
-            t[:, r:-r] = (-np.arctan2(gy[:-r, :], gx[:, :-r]) / np.pi) + 0.5
+            # Need to align the slices - use the intersection region [r:h-r, r:w-r]
+            g[r:-r, r:-r] = np.sqrt(gx[r:-r, :-r] ** 2 + gy[:-r, r:-r] ** 2)
+            t[r:-r, r:-r] = (-np.arctan2(gy[:-r, r:-r], gx[r:-r, :-r]) / np.pi) + 0.5
             t[t > 1.0] -= 2.0
             t[t < -1.0] += 2.0
-            mask_zero = (gx[:, :-r] == 0.0) & (gy[:-r, :] == 0.0)
-            t[:, r:-r][mask_zero] = 0.0
+            mask_zero = (gx[r:-r, :-r] == 0.0) & (gy[:-r, r:-r] == 0.0)
+            t[r:-r, r:-r][mask_zero] = 0.0
             t[t < -0.9999995] = 1.0
             grad[:, :] = g
             theta[:, :] = t

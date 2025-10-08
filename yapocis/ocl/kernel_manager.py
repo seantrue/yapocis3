@@ -1,7 +1,7 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 import os
-from typing import Callable, Optional
+from typing import Any, Callable
 
 import pyopencl
 from mako.lookup import TemplateLookup
@@ -119,7 +119,7 @@ class KernelManager:
         return s
 
     @classmethod
-    def load_program(cls, interface_spec: str, device_name: Optional[str] = None, debug: bool = False,
+    def load_program(cls, interface_spec: str, device_name: str | None = None, debug: bool = False,
                      options=None,
                      **context: Context):
         """
@@ -134,7 +134,7 @@ class KernelManager:
         return KernelManager(interface, device_name, debug=debug, options=options, **context)
 
     @classmethod
-    def import_program(cls, interface_spec: str, device_name: Optional[str] = None,
+    def import_program(cls, interface_spec: str, device_name: str | None = None,
                        namespace: bool = False, debug: bool = False, import_kernels=None,
                        options=None, **context: Context):
         program = cls.load_program(interface_spec, device_name=device_name, debug=debug, options=options, **context)

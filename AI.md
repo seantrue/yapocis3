@@ -4,13 +4,13 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Summary Statistics
 
-- **Total AI-assisted commits**: ~23
+- **Total AI-assisted commits**: ~24
 - **Major features developed with AI assistance**:
-  - Infrastructure: Package modernization (hatchling, modern tooling), automated changelog generation
+  - Infrastructure: Package modernization (hatchling, modern tooling), automated changelog generation, type annotation modernization
   - Backend work: CUDA kernel compilation fixes, CUDA row-major addressing fixes, Metal backend fixes, coordinate system standardization, Numba backend completeness, truetrace kernel port
   - Testing: Validation framework, StopWatcher enhancements, test isolation fixes, NPZ analysis tooling
   - Performance: Performance tracking system, DuckDB migration, reproducibility improvements
-  - Code quality: Test refactoring, random data centralization
+  - Code quality: Test refactoring, random data centralization, Python 3.9+ type modernization
   - Developer experience: Environment variable standardization, enhanced backend/device listing
 - **Lines of code**:
   - ~1300 lines: Performance tracking system (2025-10-03)
@@ -21,9 +21,71 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~350 lines: CUDA backend compilation fixes (2025-10-05)
   - ~50 lines: YAPOCIS_ENGINE → YAPOCIS_DEVICE rename (2025-10-06)
   - ~200 lines: CUDA addressing fixes and truetrace port (2025-10-06)
-  - ~100 lines: Documentation updates (2025-10-05, 2025-10-06)
+  - ~350 lines: Type annotation modernization (2025-10-08)
+  - ~100 lines: Documentation updates (2025-10-05, 2025-10-06, 2025-10-08)
 
 ## Detailed Contributions
+
+### 2025-10-08: Type Annotation Modernization to Python 3.9+ Native Types
+
+**AI Contribution (Claude):**
+- Modernized all type annotations to use Python 3.9+ native type syntax
+- Phase 1: Converted `Optional[X]` to `X | None` (PEP 604)
+  - 120 replacements across 37 files
+  - Removed unused Optional imports from 18 files
+- Phase 2: Replaced typing module types with native types (PEP 585)
+  - `List[X]` → `list[X]`
+  - `Dict[K,V]` → `dict[K,V]`
+  - `Tuple[X,Y]` → `tuple[X,Y]`
+  - `Set[X]` → `set[X]`
+  - `FrozenSet[X]` → `frozenset[X]`
+  - 163 replacements in 27 files (bracketed forms)
+  - 63 replacements in 23 files (standalone capitalized types)
+  - Total: 226 typing module replacements
+  - Removed typing imports from 35 files
+- Total impact: 346 type annotation modernizations across 50+ files
+- Lines changed: ~350 modifications
+
+**Key Files Modified:**
+- `yapocis/utils/stereo_typing.py` - Added backward compatibility exports (later removed)
+- `yapocis/utils/performance.py` - 16 Dict/List replacements
+- `yapocis/utils/validation.py` - 4 Dict/List replacements
+- `yapocis/scripts/imagewatcher.py` - 5 replacements
+- `yapocis/scripts/performance_report.py` - 5 replacements
+- `yapocis/scripts/manage_validation.py` - 2 replacements
+- `yapocis/lib/typeset.py` - 2 Tuple replacements
+- `yapocis/lib/channels.py` - 2 replacements
+- `yapocis/lib/gaussian.py`, `yapocis/lib/truetrace.py` - Type annotation updates
+- All backend kernel implementations (`yapocis/ocl/kernel.py`, `yapocis/cu/kernel.py`, `yapocis/metallic/kernel.py`, `yapocis/numbax/kernel.py`) - Updated params type from `list[Tuple]` to `list[tuple]`
+
+**Error Resolution:**
+- Fixed NameError issues where capitalized typing types (Tuple, Dict) were used without imports
+- Initial approach: Added backward compatibility aliases to stereo_typing.py
+- Final solution: Replaced ALL capitalized typing types with lowercase native types throughout codebase
+- Result: All modules now import successfully with zero NameError issues
+
+**Testing:**
+- All backend smoke tests pass (48 tests)
+- All backend runtime tests pass (3 tests, 1 skipped)
+- All validation tests pass (5 tests)
+- Comprehensive import tests verify all key modules load correctly
+- `python3 -m compileall` confirms all files compile successfully
+
+**Benefits:**
+- Modern, idiomatic Python 3.9+ type syntax
+- Improved readability and maintainability
+- Follows PEP 585 (Type Hinting Generics In Standard Collections)
+- Follows PEP 604 (Allow writing union types as X | Y)
+- Reduced imports from typing module
+- Aligns with Python community best practices for 2025
+
+**Human Contribution:**
+- Request for Optional → union type conversion
+- Request to replace typing module types with native types
+- Clarification to replace ALL references including standalone capitalized types
+- Testing and verification
+
+---
 
 ### 2025-10-06: CUDA Backend Row-Major Addressing Fixes and Truetrace Kernel Port
 

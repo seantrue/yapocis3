@@ -7,19 +7,25 @@
 
 # What is Yapocis?
 
-Yapocis is "Yet another Python OpenCL interface specification" — now with multiple backends: OpenCL, CUDA, Metal, and Numba.
+Yapocis is "Yet another Python OpenCL interface specification" — now with multiple backends: OpenCL, CUDA, Metal, and
+Numba.
 
 Memorable. Easy to pronounce and spell. Clearly related to the semantics of the project.
 
 Or not, all the good names are used and I am not in marketing.
 
-It includes easy-to-call-from-Python, reasonably performing implementations of kernels such as Mandelbrot, 3x3 median, image gradients, HSI <-> RGB conversions, color math, 2D graphics primitives, and signed distance field path tracing. I use it to develop much less generally useful implementations of bizarre numerical processing ideas.
+It includes easy-to-call-from-Python, reasonably performing implementations of kernels such as Mandelbrot, 3x3 median,
+image gradients, HSI <-> RGB conversions, color math, 2D graphics primitives, and signed distance field path tracing. I
+use it to develop much less generally useful implementations of bizarre numerical processing ideas.
 
 ## Why this happened?
 
 *Some brief history, "living backwards" order:*
 
-I'm putting this code up on Github to be used or snickered at. Both can be helpful. It has been used on macOS and Linux with a 64-bit Python, and assumes NumPy and Matplotlib for examples/demos. It supports OpenCL (PyOpenCL), CUDA (CuPy), Metal (via a thin `pymetallic` shim), and Numba (CPU fallback with JIT compilation). I can't help resolve issues on dependencies; it's hard enough to make new ones happen.
+I'm putting this code up on Github to be used or snickered at. Both can be helpful. It has been used on macOS and Linux
+with a 64-bit Python, and assumes NumPy and Matplotlib for examples/demos. It supports OpenCL (PyOpenCL), CUDA (CuPy),
+Metal (via a thin `pymetallic` shim), and Numba (CPU fallback with JIT compilation). I can't help resolve issues on
+dependencies; it's hard enough to make new ones happen.
 
 *This in response to a note I got back from the pyopencl list:*
 
@@ -29,11 +35,15 @@ Andreas
 
 *Which was in response to the following inquiry I sent to the list:*
 
-I'm wondering if yet-another-python-opencl-interface-layer would be of interest. This layer is built on top of pyopencl, and is intended to use familiar RPC definitions to ease the special joys of talking to opencl.
+I'm wondering if yet-another-python-opencl-interface-layer would be of interest. This layer is built on top of pyopencl,
+and is intended to use familiar RPC definitions to ease the special joys of talking to opencl.
 
-I've implemented this on OS/X and it is working for me and has been stable, oh, for several days (insert smiley face here). It eliminates the need for routine glue code, and can be extended to minimize movement of data between host and opencl service.
+I've implemented this on OS/X and it is working for me and has been stable, oh, for several days (insert smiley face
+here). It eliminates the need for routine glue code, and can be extended to minimize movement of data between host and
+opencl service.
 
-This code is currently private, and I will be happy to either fork pyopencl and submit a pull after integration, or a separate github project.
+This code is currently private, and I will be happy to either fork pyopencl and submit a pull after integration, or a
+separate github project.
 
 -- Sean
 
@@ -41,7 +51,8 @@ This code is currently private, and I will be happy to either fork pyopencl and 
 > Swapwizard Consulting  
 > *Not my day job*
 
-I've been trying to make these algorithms run fast enough to be useful and easy to use enough to make more core ideas testable for, oh, 25 years. Now I can work on camera resolution images in relatively quick turn around.
+I've been trying to make these algorithms run fast enough to be useful and easy to use enough to make more core ideas
+testable for, oh, 25 years. Now I can work on camera resolution images in relatively quick turn around.
 
 ## Presumed highlights
 
@@ -88,14 +99,17 @@ __kernel void mandelbrot(__global float2 *q,  __global short *output, int const 
 - You can also select explicitly in code:
 
 ```python
-from yapocis.core.manager import get_manager
+import core
+from core import get_manager
+
 mgr = get_manager("metal")  # or "ocl"/"cuda"/"numba"
-prog = mgr.load_program("demo")
+prog = core.load_program("demo")
 ```
 
 High-level wrappers (e.g., `yapocis.lib.*`) route through `yapocis.core.manager` and honor `YAPOCIS_BACKEND`.
 
 **Numba backend notes:**
+
 - Provides CPU fallback when GPU backends are unavailable
 - Uses Numba's JIT compilation for Python/NumPy code
 - Automatically selected when no GPU backend is available
@@ -140,22 +154,23 @@ Backend test markers and dependencies:
 
 - Markers exist for each backend: `-m ocl`, `-m metal`, `-m cuda`, `-m numba`.
 - Tests will skip cleanly if the backend runtime isn't installed:
-  - OpenCL tests require `pyopencl`.
-  - Metal tests require a working `pymetallic` runtime and an Apple GPU.
-  - CUDA tests require `cupy` for the core CUDA runtime tests; the PyCUDA legacy test requires `pycuda`.
-  - Numba tests require `numba` (usually available in most environments).
+    - OpenCL tests require `pyopencl`.
+    - Metal tests require a working `pymetallic` runtime and an Apple GPU.
+    - CUDA tests require `cupy` for the core CUDA runtime tests; the PyCUDA legacy test requires `pycuda`.
+    - Numba tests require `numba` (usually available in most environments).
 - Useful invocations:
-  - `pytest -q -m metal` to run only Metal tests.
-  - `pytest -q -m ocl` to run only OpenCL tests.
-  - `pytest -q -m cuda` to run only CUDA tests.
-  - `pytest -q -m numba` to run only Numba tests.
-  - `pytest -q tests/test_backend_smoke.py` to smoke‑compile all interfaces across available backends.
-  - `pytest -q tests/test_backend_runtime.py` to run a tiny runtime sanity call per backend.
+    - `pytest -q -m metal` to run only Metal tests.
+    - `pytest -q -m ocl` to run only OpenCL tests.
+    - `pytest -q -m cuda` to run only CUDA tests.
+    - `pytest -q -m numba` to run only Numba tests.
+    - `pytest -q tests/test_backend_smoke.py` to smoke‑compile all interfaces across available backends.
+    - `pytest -q tests/test_backend_runtime.py` to run a tiny runtime sanity call per backend.
 
 CUDA/PyCUDA notes:
 
 - The CUDA demo/runtime tests use CuPy and do not require PyCUDA.
-- The legacy PyCUDA test at `yapocis/cukernels/test_convolve.py` is auto‑skipped if `pycuda` isn’t installed, so you can still run the rest of the suite.
+- The legacy PyCUDA test at `yapocis/cukernels/test_convolve.py` is auto‑skipped if `pycuda` isn’t installed, so you can
+  still run the rest of the suite.
 
 ## Known misfeatures
 
@@ -179,10 +194,16 @@ See [RENOVATE.md](RENOVATE.md) for details on the modernization improvements.
 
 ## Changes and new features
 
+- **v0.3.2** (unreleased): Type annotation modernization to Python 3.9+ native types
+  - Migrated from `Optional[X]` to `X | None` syntax (PEP 604)
+  - Replaced typing module types with native types: `List` → `list`, `Dict` → `dict`, `Tuple` → `tuple`, `Set` → `set`, `FrozenSet` → `frozenset` (PEP 585)
+  - Removed 35 files worth of unnecessary typing imports
+  - Total: 346 type annotation modernizations across 50+ files
 - **v0.3.1**: Performance tracking system with DuckDB, validation framework, comprehensive backend testing
 - **v0.3.0**: Modern packaging infrastructure, automated changelog, Python 3.13 support
 - **v0.2.2**: Reduced data movement with resident buffers and alias keywords
-- Framework for dealing with two-dimensional arrays auto-magically. New buffer hints: sizeof, widthof, heightof for setting arguments invisibly.
+- Framework for dealing with two-dimensional arrays auto-magically. New buffer hints: sizeof, widthof, heightof for
+  setting arguments invisibly.
 - The OpenCL engine to use is configured in `rpc.kernels`. Developer has choice of `CPU_ENGINE` and `GPU_ENGINE`.
 
 ## Future features

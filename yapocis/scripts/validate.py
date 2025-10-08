@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 """
 Validation management script for yapocis test results.
@@ -24,9 +25,8 @@ from yapocis.utils.validation import (
     VALIDATION_DIR,
     RAW_DIR,
 )
-from yapocis.core.manager import get_backends
+from yapocis.core import get_backends
 import re
-
 
 def parse_test_name(filename):
     """
@@ -55,7 +55,6 @@ def parse_test_name(filename):
     test_name = test_name.strip()
 
     return test_name, backend
-
 
 def promote_command(args):
     """Handle promote subcommand."""
@@ -101,7 +100,6 @@ def promote_command(args):
             else:
                 print(f"✗ Failed to promote {args.test_name}")
 
-
 def list_command(args):
     """Handle list subcommand."""
     if args.backends:
@@ -122,7 +120,6 @@ def list_command(args):
         else:
             print("  (none)")
 
-
 def clean_command(args):
     """Handle clean subcommand."""
     backends = args.backends or [None]
@@ -137,7 +134,6 @@ def clean_command(args):
         total_deleted += deleted
 
     print(f"Total deleted: {total_deleted}")
-
 
 def info_command(args):
     """Handle info subcommand."""
@@ -167,7 +163,6 @@ def info_command(args):
             if len(references) > 10:
                 print(f"    ... and {len(references) - 10} more")
         print()
-
 
 def inspect_command(args):
     """Handle inspect subcommand."""
@@ -202,7 +197,6 @@ def inspect_command(args):
         else:
             print(f"  No raw file found")
         print()
-
 
 def validate_command(args):
     """Handle validate subcommand - systematically check all test results against validation references."""
@@ -347,7 +341,6 @@ def validate_command(args):
     # Return status code for CI/CD
     return 0 if validation_failed == 0 and len(results["errors"]) == 0 else 1
 
-
 def main():
     parser = argparse.ArgumentParser(description="Manage yapocis validation references")
 
@@ -375,8 +368,8 @@ def main():
     )
     promote_parser.set_defaults(func=promote_command)
 
-    # List command
-    list_parser = subparsers.add_parser("list", help="List validation references")
+    # list command
+    list_parser = subparsers.add_parser("list", help="list validation references")
     list_parser.set_defaults(func=list_command)
 
     # Clean command
@@ -426,7 +419,6 @@ def main():
         return 1
 
     return args.func(args)
-
 
 if __name__ == "__main__":
     sys.exit(main() or 0)

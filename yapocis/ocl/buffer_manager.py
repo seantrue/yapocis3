@@ -111,7 +111,7 @@ class BufferManager:
         # pyopencl.enqueue_barrier(self.queue)
         return buf
 
-    def find_buffer(self, a:Array, op:int) -> Optional[pyopencl.Buffer]:
+    def find_buffer(self, a:Array, op:int) -> pyopencl.Buffer | None:
         "Find an appropriate buffer. Tricky."
         assert op in (self.READ, self.WRITE)
         buffer_id = id(a)

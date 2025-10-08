@@ -3,6 +3,7 @@
 import yaml
 from yaml.dumper import SafeDumper
 import pyopencl
+
 if hasattr(pyopencl._cl,"NameVersion"):
     def nameversion_representer(dumper, data):
       return dumper.represent_scalar('!nameversion', f'{data.name}@v:{data.version}')
@@ -13,7 +14,7 @@ from yapocis.ocl.device import get_available_device_names, get_device
 from yapocis.utils.stereo_typing import *
 
 DEPRECATED_OPENCL_ATTRIBUTES = {"persistent_unique_id"}
-def get_device_config(device_name:Optional[str]=None) -> Config:
+def get_device_config(device_name:str | None=None) -> Config:
     cfg:Config = {}
     _,device = get_device(device_name)
     for attr in dir(device):
@@ -36,7 +37,7 @@ def get_device_config(device_name:Optional[str]=None) -> Config:
     cfg["__name__"] = cfg["name"]
     return cfg
 
-def get_platform_config() -> Dict[str,Config]:
+def get_platform_config() -> dict[str,Config]:
     device_names  = get_available_device_names()
     config = {}
     for name in device_names:
@@ -46,7 +47,7 @@ def get_platform_config() -> Dict[str,Config]:
 def dump_config(config):
     return dump(config,default_flow_style=None)
 
-def print_config(name:Optional[str]=None):
+def print_config(name:str | None=None):
     if name is None:
         config = get_platform_config()
     else:

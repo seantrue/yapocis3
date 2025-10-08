@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 """\
@@ -7,6 +8,7 @@ Not efficient.
 
 import os
 import sys
+from argparse import ArgumentParser
 
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 backends = ["metal", "ocl", "numba", "cuda", "ref", "test"]
@@ -61,7 +63,6 @@ KEYBOARD_HELP = {
     "h": "Show this help",
 }
 
-
 def print_help(prog: str = None) -> None:
     """Print usage and keyboard-to-action mapping."""
     prog = prog or os.path.basename(sys.argv[0])
@@ -85,7 +86,6 @@ def print_help(prog: str = None) -> None:
         details.append(f"  {k:16s} -> {v}")
     print(usage + "\n".join(details))
     sys.exit(0)
-
 
 def parse_image_name(image_path):
     """
@@ -122,7 +122,6 @@ def parse_image_name(image_path):
 
     return test_name, backend
 
-
 def get_npz_path(image_path, target_dir=None):
     """Get corresponding .npz file path for an image."""
     if not image_path:
@@ -137,9 +136,7 @@ def get_npz_path(image_path, target_dir=None):
         # Default to raw directory
         return os.path.join(RAW_QUEUE, npz_name)
 
-
 status_message = status_color = status_time = None
-
 
 def show_status_message(font, message, color=(255, 255, 0)):
     """Show a temporary status message (will be displayed by main loop)."""
@@ -148,7 +145,6 @@ def show_status_message(font, message, color=(255, 255, 0)):
     status_color = color
     status_timer = pygame.time.get_ticks()
     print(f"Status: {message}")  # Also print to console
-
 
 # Global variables for status display
 status_message = None
@@ -159,19 +155,18 @@ STATUS_DISPLAY_TIME = 3000  # 3 seconds in milliseconds
 # Global variable for validation view toggle
 showing_validation_reference = False
 
-
 def get_images(filter_strings=None, force_refresh=False):
     """
     Get list of images, optionally filtered by name strings and validation status.
     Uses caching to improve performance when validation filters are active.
 
     Args:
-        filter_strings: List of strings. Only show images whose names contain ALL of these strings.
+        filter_strings: list of strings. Only show images whose names contain ALL of these strings.
                        If None or empty, show all images.
         force_refresh: If True, ignore cache and rebuild the image list.
 
     Returns:
-        List of (creation_time, path) tuples sorted by creation time
+        list of (creation_time, path) tuples sorted by creation time
     """
     global cached_images, images_cache_dirty, last_filter_strings, last_validation_filters
     global show_validation_failed, show_no_validation
@@ -262,12 +257,10 @@ def get_images(filter_strings=None, force_refresh=False):
     print(f"Found {len(images)} images matching filters")
     return images
 
-
 def invalidate_image_cache():
     """Mark the image cache as dirty to force refresh on next access."""
     global images_cache_dirty
     images_cache_dirty = True
-
 
 most_recent = None
 image_index = -1
@@ -287,7 +280,6 @@ last_validation_filters = (False, False)
 
 # Watchdog file system observer
 file_observer = None
-
 
 class ImageWatcherFileHandler(FileSystemEventHandler):
     """Handle file system events for automatic cache invalidation."""
@@ -337,9 +329,8 @@ class ImageWatcherFileHandler(FileSystemEventHandler):
         """Check if file is a validation file."""
         return path.endswith(".npz") and self.validation_dir in path
 
-
 def setup_file_monitoring():
-    """Set up file system monitoring using watchdog."""
+    """set up file system monitoring using watchdog."""
     global file_observer
 
     if not WATCHDOG_AVAILABLE:
@@ -347,7 +338,7 @@ def setup_file_monitoring():
         return
 
     try:
-        # Set up file system observer
+        # set up file system observer
         file_observer = Observer()
         event_handler = ImageWatcherFileHandler(queue, VALIDATION_PATH)
 
@@ -365,7 +356,6 @@ def setup_file_monitoring():
         print(f"Failed to start file monitoring: {e}")
         file_observer = None
 
-
 def stop_file_monitoring():
     """Stop file system monitoring."""
     global file_observer
@@ -375,7 +365,6 @@ def stop_file_monitoring():
         file_observer.join()
         file_observer = None
         print("File monitoring stopped")
-
 
 def image_path(i=None):
     global image_index, images
@@ -396,7 +385,6 @@ def image_path(i=None):
 
     created, path = images[i]
     return created, path
-
 
 def get_validation_status(image_path):
     """
@@ -444,7 +432,6 @@ def get_validation_status(image_path):
     except Exception as e:
         return f"[validation error: {str(e)[:20]}]", (255, 0, 0)  # Red
 
-
 def fetch_image(i):
     global image_index
     global most_recent
@@ -485,18 +472,15 @@ def fetch_image(i):
     else:
         return image, (base_label, (255, 255, 255))
 
-
 def next_image():
     global showing_validation_reference
     showing_validation_reference = False  # Reset to test image when navigating
     return fetch_image(image_index + 1)
 
-
 def previous_image():
     global showing_validation_reference
     showing_validation_reference = False  # Reset to test image when navigating
     return fetch_image(image_index - 1)
-
 
 def last_image():
     global showing_validation_reference, images
@@ -509,12 +493,10 @@ def last_image():
         return None, None
     return fetch_image(len(images) - 1)
 
-
 def first_image():
     global showing_validation_reference
     showing_validation_reference = False  # Reset to test image when navigating
     return fetch_image(0)
-
 
 def step_image():
     global showing_validation_reference, images
@@ -536,7 +518,6 @@ def step_image():
     # Stay on the true last image; if new images arrived, this will advance to the new last
     return fetch_image(len(images) - 1)
 
-
 def delete_image(i=None):
     global most_recent
     if i is None:
@@ -547,7 +528,6 @@ def delete_image(i=None):
     if path and os.path.exists(path):
         os.unlink(path)
     # Cache invalidation now handled automatically by watchdog
-
 
 def promote_current_image(font, force_overwrite=False, backend_specific=False):
     """
@@ -586,7 +566,10 @@ def promote_current_image(font, force_overwrite=False, backend_specific=False):
 
         # Try to promote using the validation framework, passing the actual source file
         success = promote_to_validation(
-            test_name, backend, source_file=Path(npz_path), backend_specific=backend_specific
+            test_name,
+            backend,
+            source_file=Path(npz_path),
+            backend_specific=backend_specific,
         )
         if success:
             status = (
@@ -599,7 +582,6 @@ def promote_current_image(font, force_overwrite=False, backend_specific=False):
 
     except Exception as e:
         show_status_message(font, f"Error promoting: {str(e)[:50]}", (255, 0, 0))
-
 
 def compare_with_validation_reference(font):
     """Compare current image with its validation reference."""
@@ -650,7 +632,6 @@ def compare_with_validation_reference(font):
     except Exception as e:
         show_status_message(font, f"Compare error: {str(e)[:40]}", (255, 0, 0))
 
-
 def show_validation_info(font):
     """Show validation information for current image."""
     global most_recent
@@ -676,7 +657,6 @@ def show_validation_info(font):
 
     except Exception as e:
         show_status_message(font, f"Info error: {str(e)[:40]}", (255, 0, 0))
-
 
 def view_validation_reference(font):
     """Load and display the validation reference as an image."""
@@ -769,7 +749,6 @@ def view_validation_reference(font):
         )
         return None, None
 
-
 def toggle_validation_view(font):
     """Toggle between showing test image and validation reference."""
     global showing_validation_reference
@@ -789,7 +768,6 @@ def toggle_validation_view(font):
         showing_validation_reference = False
         show_status_message(font, "Showing test image", (0, 255, 0))
         return fetch_current_test_image()
-
 
 def fetch_current_test_image():
     """Fetch current test image without triggering image list refresh."""
@@ -823,7 +801,6 @@ def fetch_current_test_image():
     else:
         # Fall back to regular fetch if no current image
         return fetch_image(image_index)
-
 
 def delete_validation_reference(font):
     """Delete the validation reference for the current image."""
@@ -882,7 +859,6 @@ def delete_validation_reference(font):
         )
         return False
 
-
 def show_help_overlay(font):
     """Show keyboard help overlay."""
     show_status_message(font, "Help: Check console for full shortcuts", (0, 255, 255))
@@ -893,15 +869,63 @@ def show_help_overlay(font):
         print(f"  {key:16s} -> {desc}")
     print("=" * 50 + "\n")
 
-
 WIDTH = 1024
 HEIGHT = 800
 
-
 def main():
-    global WIDTH, HEIGHT, status_message
+    global WIDTH, HEIGHT, status_message, queue, RAW_QUEUE, VALIDATION_PATH
+    global filter_strings, show_validation_failed, show_no_validation
 
-    # Set up file system monitoring
+    # Parse command-line arguments
+    parser = ArgumentParser(description="Monitor a directory for new images")
+    parser.add_argument(
+        "--queue",
+        default=VIEWING_QUEUE,
+        help=f"Queue directory to watch (default: {VIEWING_QUEUE})",
+    )
+    parser.add_argument(
+        "--validation-failed",
+        action="store_true",
+        help="Show only images that failed validation",
+    )
+    parser.add_argument(
+        "--no-validation",
+        action="store_true",
+        help="Show only images without validation references",
+    )
+    parser.add_argument(
+        "filters", nargs="*", help="Filter images by name (substring match)"
+    )
+    args = parser.parse_args()
+
+    # Update global variables based on arguments
+    queue = args.queue
+    RAW_QUEUE = os.path.join(queue, "raw")
+    VALIDATION_PATH = os.path.join(queue, "validation")
+    os.makedirs(RAW_QUEUE, exist_ok=True)
+    os.makedirs(VALIDATION_PATH, exist_ok=True)
+
+    filter_strings = args.filters
+    show_validation_failed = args.validation_failed
+    show_no_validation = args.no_validation
+
+    # Print initial status
+    status_parts = []
+    if filter_strings:
+        status_parts.append(f"name filters: {', '.join(filter_strings)}")
+
+    if show_validation_failed:
+        status_parts.append("validation: failed only")
+
+    if show_no_validation:
+        status_parts.append("validation: none only")
+
+    if status_parts:
+        print(f"Filtering images by: {' | '.join(status_parts)}")
+
+    print(f"Watching directory: {queue}")
+
+    # set up file system monitoring
     setup_file_monitoring()
 
     pygame.init()
@@ -976,10 +1000,11 @@ def main():
             if event.type == pygame.USEREVENT:
                 image, label_info = step_image()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_q:
-                    pygame.quit()
                 # Stop tailing the directory
                 pygame.time.set_timer(pygame.USEREVENT, 0)
+                if event.key == pygame.K_q:
+                    pygame.quit()
+                    return
                 if event.key == pygame.K_F12:
                     # Check for Shift modifier for force overwrite
                     force_overwrite = bool(event.mod & pygame.KMOD_SHIFT)
@@ -1029,52 +1054,7 @@ def main():
                         image, label_info = next_image()
         pygame.display.update()
 
-
 if __name__ == "__main__":
-    # Enhanced arg handling to support filtering
-    args = sys.argv[1:]
-    if any(arg in ("--help", "-h") for arg in args):
-        print_help()
-        sys.exit(0)
-
-    # Parse validation filter flags
-    if "--validation-failed" in args:
-        show_validation_failed = True
-        args.remove("--validation-failed")
-
-    if "--no-validation" in args:
-        show_no_validation = True
-        args.remove("--no-validation")
-
-    # Parse arguments: first arg might be queue directory, rest are filter strings
-    if args:
-        # Check if first arg is a directory path (contains / or is an existing directory)
-        if ("/" in args[0] or os.path.isdir(args[0])) and args[0] not in (
-            "--help",
-            "-h",
-        ):
-            queue = args[0]
-            filter_strings = args[1:]  # Remaining args are filter strings
-        else:
-            # No directory specified, all args are filter strings
-            filter_strings = args
-
-    # Print initial status
-    status_parts = []
-    if filter_strings:
-        status_parts.append(f"name filters: {', '.join(filter_strings)}")
-
-    if show_validation_failed:
-        status_parts.append("validation: failed only")
-
-    if show_no_validation:
-        status_parts.append("validation: none only")
-
-    if status_parts:
-        print(f"Filtering images by: {' | '.join(status_parts)}")
-
-    print(f"Watching directory: {queue}")
-
     try:
         main()
     except (pygame.error, KeyboardInterrupt):

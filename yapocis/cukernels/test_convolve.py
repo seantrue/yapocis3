@@ -31,7 +31,7 @@ d_ret = cuda.mem_alloc(h_ret.nbytes)
 # Copy input data to device
 cuda.memcpy_htod(d_a, h_a)
 
-# Set up grid and block dimensions
+# set up grid and block dimensions
 block_size = 256
 grid_size = (width + block_size - 1) // block_size
 

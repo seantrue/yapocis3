@@ -8,7 +8,6 @@ and buffer manager. Also provides program build.
 import os
 import sys
 import yaml
-from typing import Dict, Optional
 
 try:
     import pymetallic as pm  # type: ignore
@@ -24,14 +23,13 @@ if YAPOCIS_CACHE and not os.path.isdir(YAPOCIS_CACHE):
     print(f"YAPOCIS_CACHE={YAPOCIS_CACHE} is not a directory", file=sys.stderr)
     sys.exit(1)
 
-
 class DeviceManager(BufferManager):
     """
     Coordinates a Metal device with a queue, a context, and a buffer manager.
     """
 
     def __init__(
-        self, device_name: Optional[str | int] = None, timed: bool = False, **kwargs
+        self, device_name: str | int | None = None, timed: bool = False, **kwargs
     ):
         assert device_name is None or isinstance(
             device_name, (str, int, bytes)
@@ -58,22 +56,18 @@ class DeviceManager(BufferManager):
     def ensure(self, a: Array):
         return self.ensure_buffer(a)
 
+_device_managers: dict[str | int, DeviceManager] = {}
 
-_device_managers: Dict[str | int, DeviceManager] = {}
-
-
-def get_device_manager(device_name: Optional[str | int] = None) -> DeviceManager:
+def get_device_manager(device_name: str | int | None = None) -> DeviceManager:
     try:
         dmgr = _device_managers[device_name]
     except KeyError:
         _device_managers[device_name] = dmgr = DeviceManager(device_name)
     return dmgr
 
-
 def display_stats():
     device_stats = {str(dn): dmgr.stats for dn, dmgr in _device_managers.items()}
     print(yaml.safe_dump(device_stats))
-
 
 def display_snapshots():
     print()

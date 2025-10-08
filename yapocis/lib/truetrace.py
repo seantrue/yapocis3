@@ -29,19 +29,16 @@ Notes
 
 from __future__ import annotations
 
-from typing import Tuple, Optional, List, Dict
-
 import numpy as np
 
 from .bound_kernels import BoundKernels
-
 
 class TrueTrace(BoundKernels):
     INTERFACE = "truetrace"
 
     def trace_segments(
         self, mask_u8: np.ndarray, iso: float = 0.0
-    ) -> Tuple[np.ndarray, Tuple[int, int]]:
+    ) -> tuple[np.ndarray, tuple[int, int]]:
         """Run JFA + Marching Squares on a binary mask.
 
         Args:
@@ -98,14 +95,12 @@ class TrueTrace(BoundKernels):
         )
         return segs, (W, H)
 
-
 # ----------------------------- Helpers (CPU + I/O) ----------------------------
 
 INF32 = np.float32(1e30)
 
-
 def load_mask_from_image(
-    path: str, invert: bool = False, threshold: Optional[float] = None
+    path: str, invert: bool = False, threshold: float | None = None
 ) -> np.ndarray:
     """Load an image and produce a binary mask.
 
@@ -140,7 +135,6 @@ def load_mask_from_image(
         mask = 1 - mask
     return mask
 
-
 def otsu_threshold_u8(gray: np.ndarray) -> float:
     hist = np.bincount(gray.ravel(), minlength=256).astype(np.float64)
     total = gray.size
@@ -151,7 +145,6 @@ def otsu_threshold_u8(gray: np.ndarray) -> float:
     sigma_b2 = (mu_t * omega - mu) ** 2 / (omega * (1.0 - omega) + 1e-20)
     idx = np.nanargmax(sigma_b2)
     return float(idx)
-
 
 def edt_1d(f: np.ndarray) -> np.ndarray:
     n = f.shape[0]
@@ -179,7 +172,6 @@ def edt_1d(f: np.ndarray) -> np.ndarray:
         g[q] = dq * dq + f[v[k]]
     return g
 
-
 def edt_2d(mask_bool: np.ndarray) -> np.ndarray:
     inf = 1e12
     f = np.where(mask_bool, 0.0, inf).astype(np.float64)
@@ -192,7 +184,6 @@ def edt_2d(mask_bool: np.ndarray) -> np.ndarray:
     out = np.sqrt(out, dtype=np.float64)
     return out
 
-
 def sdf_from_mask_cpu(mask_u8: np.ndarray) -> np.ndarray:
     mask_bool = mask_u8.astype(bool)
     d_true = edt_2d(mask_bool)  # distance to foreground (True)
@@ -201,10 +192,9 @@ def sdf_from_mask_cpu(mask_u8: np.ndarray) -> np.ndarray:
     sdf = d_false - d_true
     return sdf.astype(np.float32)
 
-
 def marching_squares_cpu(dist: np.ndarray, iso: float = 0.0) -> np.ndarray:
     h, w = dist.shape
-    segs: List[Tuple[float, float, float, float]] = []
+    segs: list[tuple[float, float, float, float]] = []
     for y in range(h - 1):
         drow0 = dist[y]
         drow1 = dist[y + 1]
@@ -274,7 +264,6 @@ def marching_squares_cpu(dist: np.ndarray, iso: float = 0.0) -> np.ndarray:
         return np.empty((0, 4), dtype=np.float32)
     return np.asarray(segs, dtype=np.float32)
 
-
 def write_svg_segments(path: str, segs: np.ndarray, w: int, h: int):
     from xml.etree.ElementTree import Element, SubElement, ElementTree
 
@@ -292,24 +281,23 @@ def write_svg_segments(path: str, segs: np.ndarray, w: int, h: int):
         SubElement(g, "line", x1=f"{x1}", y1=f"{h-1-y1}", x2=f"{x0}", y2=f"{h-1-y0}")
     ElementTree(svg).write(path)
 
-
 def chain_segments_to_polylines(
     segs: np.ndarray, tol: float = 1e-3
-) -> List[np.ndarray]:
+) -> list[np.ndarray]:
     if segs.size == 0:
         return []
 
     def q2(p):
         return (round(float(p[0]) / tol) * tol, round(float(p[1]) / tol) * tol)
 
-    pts: Dict[Tuple[float, float], List[Tuple[float, float]]] = {}
+    pts: dict[tuple[float, float], list[tuple[float, float]]] = {}
     for x0, y0, x1, y1 in segs:
         a = q2((x0, y0))
         b = q2((x1, y1))
         pts.setdefault(a, []).append(b)
         pts.setdefault(b, []).append(a)
-    visited_edges: Dict[Tuple[Tuple[float, float], Tuple[float, float]], bool] = {}
-    polylines: List[np.ndarray] = []
+    visited_edges: dict[tuple[tuple[float, float], tuple[float, float]], bool] = {}
+    polylines: list[np.ndarray] = []
 
     def pop_edge(u):
         lst = pts.get(u)
@@ -359,7 +347,6 @@ def chain_segments_to_polylines(
 
     return polylines
 
-
 def douglas_peucker(poly: np.ndarray, tol: float) -> np.ndarray:
     if poly.shape[0] <= 2 or tol <= 0:
         return poly
@@ -371,7 +358,7 @@ def douglas_peucker(poly: np.ndarray, tol: float) -> np.ndarray:
     keep = np.zeros(poly.shape[0], dtype=bool)
     keep[0] = True
     keep[-1] = True
-    stack: List[Tuple[int, int]] = [(0, poly.shape[0] - 1)]
+    stack: list[tuple[int, int]] = [(0, poly.shape[0] - 1)]
     while stack:
         i0, i1 = stack.pop()
         if i1 <= i0 + 1:
@@ -401,14 +388,12 @@ def douglas_peucker(poly: np.ndarray, tol: float) -> np.ndarray:
         out = np.vstack([out, out[0]])
     return out
 
-
 douglas_peuker = douglas_peucker
 
-
 def close_and_filter_polylines(
-    polys: List[np.ndarray], close_tol_px: float = 1.0, min_area_px2: float = 0.0
-) -> List[np.ndarray]:
-    out: List[np.ndarray] = []
+    polys: list[np.ndarray], close_tol_px: float = 1.0, min_area_px2: float = 0.0
+) -> list[np.ndarray]:
+    out: list[np.ndarray] = []
     for poly in polys:
         if poly.shape[0] < 2:
             continue
@@ -422,14 +407,12 @@ def close_and_filter_polylines(
         out.append(poly)
     return out
 
-
 def polygon_area(poly: np.ndarray) -> float:
     x = poly[:, 0]
     y = poly[:, 1]
     return 0.5 * float(np.dot(x[:-1], y[1:]) - np.dot(y[:-1], x[1:]))
 
-
-def point_in_polygon(pt: Tuple[float, float], poly: np.ndarray) -> bool:
+def point_in_polygon(pt: tuple[float, float], poly: np.ndarray) -> bool:
     x, y = pt
     cnt = 0
     for i in range(poly.shape[0] - 1):
@@ -442,18 +425,17 @@ def point_in_polygon(pt: Tuple[float, float], poly: np.ndarray) -> bool:
                 cnt ^= 1
     return bool(cnt)
 
-
-def build_regions_with_holes(rings: List[np.ndarray]) -> List[dict]:
+def build_regions_with_holes(rings: list[np.ndarray]) -> list[dict]:
     """Group closed rings into nested regions, assigning holes.
 
     - Normalizes ring orientation to CCW for outers and CW for holes.
     - Uses centroid-in-polygon tests to find the smallest containing outer.
 
     Args:
-        rings: List of closed rings (Nx2 float arrays, last point == first).
+        rings: list of closed rings (Nx2 float arrays, last point == first).
 
     Returns:
-        List of dicts: { 'outer': ring, 'holes': [ring, ...] }, sorted by area.
+        list of dicts: { 'outer': ring, 'holes': [ring, ...] }, sorted by area.
     """
     if not rings:
         return []
@@ -478,7 +460,7 @@ def build_regions_with_holes(rings: List[np.ndarray]) -> List[dict]:
                 best = j
                 best_area = recs[j]["area"]
         parents[i] = best
-    regions: Dict[int, dict] = {}
+    regions: dict[int, dict] = {}
     for i, p in enumerate(parents):
         if p == -1:
             regions[i] = {"outer": recs[i]["ring"], "holes": []}
@@ -495,10 +477,9 @@ def build_regions_with_holes(rings: List[np.ndarray]) -> List[dict]:
     )
     return [regions[k] for k in ordered_keys]
 
-
 def _ring_to_cubic_beziers(
     ring: np.ndarray, tension: float = 0.0
-) -> List[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
+) -> list[tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
     pts = ring[:-1]
     n = pts.shape[0]
     if n < 2:
@@ -515,14 +496,13 @@ def _ring_to_cubic_beziers(
         beziers.append((p1, c1, c2, p2))
     return beziers
 
-
 def write_svg_regions(
     path: str,
-    regions: List[dict],
+    regions: list[dict],
     w: int,
     h: int,
     stroke_width: float = 1.0,
-    fill: Optional[str] = None,
+    fill: str | None = None,
     curve: str = "none",
     tension: float = 0.0,
 ):
@@ -542,7 +522,7 @@ def write_svg_regions(
     """
     from xml.etree.ElementTree import Element, SubElement, ElementTree
 
-    def _fmt_xy(xy: np.ndarray) -> Tuple[float, float]:
+    def _fmt_xy(xy: np.ndarray) -> tuple[float, float]:
         return float(xy[0]), float(h - 1 - xy[1])
 
     def path_from_ring_poly(r: np.ndarray) -> str:
@@ -596,13 +576,12 @@ def write_svg_regions(
     ElementTree(svg).write(path)
     return path
 
-
 def trace_bitmap(
     mask_u8: np.ndarray,
     simplify_tol_px: float = 0.75,
     min_area_px2: float = 4.0,
     chain_tol_px: float = 0.25,
-) -> List[np.ndarray]:
+) -> list[np.ndarray]:
     """Extract closed rings from a binary mask fully on CPU.
 
     Pipeline: Marching Squares (iso=0.5 on mask) → chain segments → simplify
@@ -615,7 +594,7 @@ def trace_bitmap(
         chain_tol_px: Endpoint snapping tolerance when chaining segments.
 
     Returns:
-        List of closed rings, each an (N,2) float32 array (last == first).
+        list of closed rings, each an (N,2) float32 array (last == first).
     """
     segs = marching_squares_cpu(mask_u8.astype(np.float32), iso=0.5)
     polys = chain_segments_to_polylines(segs, tol=chain_tol_px)
@@ -628,7 +607,6 @@ def trace_bitmap(
         simp, close_tol_px=1.0, min_area_px2=min_area_px2
     )
     return rings
-
 
 def build_circle_mask(w: int, h: int, r: int) -> np.ndarray:
     yy, xx = np.mgrid[0:h, 0:w]

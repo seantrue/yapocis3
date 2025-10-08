@@ -7,23 +7,35 @@
 
 ## Overview
 
-Yapocis is a multi-backend GPU/CPU computing framework for image processing and graphics operations. It provides a unified Python interface to OpenCL, CUDA, Metal, and Numba backends through an IDL-like interface definition language and Mako template system.
+Yapocis is a multi-backend GPU/CPU computing framework for image processing and graphics operations. It provides a
+unified Python interface to OpenCL, CUDA, Metal, and Numba backends through an IDL-like interface definition language
+and Mako template system.
 
-The framework enables developers to write compute kernels once and execute them across different hardware platforms without code modification. Backend selection occurs at runtime through environment variables or programmatic configuration, proving that Write Once, Run Anywhere™ can actually work if you squint hard enough and control all the variables.
+The framework enables developers to write compute kernels once and execute them across different hardware platforms
+without code modification. Backend selection occurs at runtime through environment variables or programmatic
+configuration, proving that Write Once, Run Anywhere™ can actually work if you squint hard enough and control all the
+variables.
 
 For the archaeological record of how this came to be, see [HISTORY.md](HISTORY.md).
 
-It includes easy-to-call-from-Python, reasonably performing implementations of kernels such as Mandelbrot, 3x3 median, image gradients, HSI <-> RGB conversions, color math, 2D graphics primitives (lines, circles, rectangles, text), and signed distance field path tracing with Jump Flood Algorithm. I use it to develop much less generally useful implementations of bizarre numerical processing ideas.
+It includes easy-to-call-from-Python, reasonably performing implementations of kernels such as Mandelbrot, 3x3 median,
+image gradients, HSI <-> RGB conversions, color math, 2D graphics primitives (lines, circles, rectangles, text), and
+signed distance field path tracing with Jump Flood Algorithm. I use it to develop much less generally useful
+implementations of bizarre numerical processing ideas.
 
 **Version 0.3.x Development Focus:**
 
-1. **Performance Infrastructure**: Comprehensive performance tracking system with DuckDB storage, cross-backend comparison, and longitudinal analysis. Because if you can't measure it, you can't optimize it. And if you can measure it, you'll discover it's slower than you thought.
+1. **Performance Infrastructure**: Comprehensive performance tracking system with DuckDB storage, cross-backend
+   comparison, and longitudinal analysis. Because if you can't measure it, you can't optimize it. And if you can measure
+   it, you'll discover it's slower than you thought.
 
-2. **Validation Framework**: Automated regression testing with pixel-exact validation across backends. 
+2. **Validation Framework**: Automated regression testing with pixel-exact validation across backends.
 
-3. **Modern Packaging**: Migration to hatchling, modern tooling (ruff, isort, mypy), and Python 3.13 support. The good news: Python packaging has been solved. The bad news: it was solved again. And again.
+3. **Modern Packaging**: Migration to hatchling, modern tooling (ruff, isort, mypy), and Python 3.13 support. The good
+   news: Python packaging has been solved. The bad news: it was solved again. And again.
 
-4. **Backend Maturity**: Complete feature parity across OpenCL, Metal, and Numba backends with extensive test coverage. Write once, debug everywhere, ship when ready.
+4. **Backend Maturity**: Complete feature parity across OpenCL, Metal, and Numba backends with extensive test coverage.
+   Write once, debug everywhere, ship when ready.
 
 **Future Roadmap:**
 
@@ -37,7 +49,8 @@ It includes easy-to-call-from-Python, reasonably performing implementations of k
 
 ### IDL-Based Interface System
 
-Define kernel interfaces once using an intuitive interface definition language loosely inspired by Apollo NCS/OSF DCE/Microsoft IDL, which is to say, inspired by every RPC system ever designed and none of them:
+Define kernel interfaces once using an intuitive interface definition language loosely inspired by Apollo NCS/OSF
+DCE/Microsoft IDL, which is to say, inspired by every RPC system ever designed and none of them:
 
 ```idl
 interface mandelbrot {
@@ -46,6 +59,7 @@ interface mandelbrot {
 ```
 
 The framework automatically handles:
+
 - Memory allocation and management (the hard parts)
 - Data transfer between host and device (the slow parts)
 - Type marshaling and buffer hints (the error-prone parts)
@@ -58,11 +72,12 @@ In other words, it does everything except write the kernel for you. We're workin
 Execute the same code across different compute platforms:
 
 ```python
-from yapocis.core.manager import get_manager
+import core
+from core import get_manager
 
 # Select backend programmatically
 mgr = get_manager("metal")  # or "ocl", "cuda", "numba"
-prog = mgr.load_program("mandelbrot")
+prog = core.load_program("mandelbrot")
 result = prog.mandelbrot(input_data, maxiter=1000)
 
 # Or use environment variable
@@ -70,6 +85,7 @@ result = prog.mandelbrot(input_data, maxiter=1000)
 ```
 
 **Supported Backends:**
+
 - **OpenCL** (via PyOpenCL): Cross-platform GPU/CPU support, runs everywhere except where it doesn't
 - **Metal** (via PyMetallic): Apple GPU acceleration, because some of us chose the shiny hardware
 - **CUDA** (via CuPy): NVIDIA GPU support, for those who prefer green LEDs
@@ -78,6 +94,7 @@ result = prog.mandelbrot(input_data, maxiter=1000)
 ### High-Level Graphics Libraries
 
 Pre-built implementations for common operations:
+
 - 2D graphics primitives (lines, circles, rectangles, text rendering in multiple fonts and rotations)
 - Image processing (convolution, gradients, histogram operations)
 - Color space conversions (RGB, HSI, color math)
@@ -88,10 +105,11 @@ Pre-built implementations for common operations:
 ## Installation
 
 **Requirements:**
+
 - Python 3.10+ (Python 3.13 recommended for development)
 - NumPy 2.1+ (because NumPy 1.x is so 2020)
 - Backend-specific dependencies (PyOpenCL, PyMetallic, CuPy, or Numba)
-- Sufficient RAM 
+- Sufficient RAM
 
 **Basic Installation:**
 
@@ -133,20 +151,22 @@ pip install yapocis[cuda]
 pip install yapocis[all-backends]
 ```
 
-- Backends: `ocl` (OpenCL via PyOpenCL), `cuda` (CUDA via PyCUDA), `metal` (PyMetallic shim), and `numba` (CPU with JIT).
+- Backends: `ocl` (OpenCL via PyOpenCL), `cuda` (CUDA via PyCUDA), `metal` (PyMetallic shim), and `numba` (CPU with
+  JIT).
 - Select backend via env: `export YAPOCIS_BACKEND=ocl|cuda|metal|numba`.
 - Select device via env: `export YAPOCIS_DEVICE=0` (or device name).
 - You can also select explicitly in code:
 
 ```python
-from yapocis.core.manager import get_manager
+import core
+from core import get_manager
 import numpy as np
 
 # Initialize backend
 mgr = get_manager("ocl")  # OpenCL backend
 
 # Load and execute kernel
-prog = mgr.load_program("mandelbrot")
+prog = core.load_program("mandelbrot")
 grid = np.mgrid[-2:2:1024j, -2:2:1024j].astype(np.complex64)
 result = prog.mandelbrot(grid, maxiter=256)
 
@@ -156,6 +176,7 @@ result = prog.mandelbrot(grid, maxiter=256)
 ### Graphics Example
 
 **CUDA backend notes:**
+
 - Uses PyCUDA for CUDA kernel compilation and execution
 - All 12 kernel interfaces compile and run successfully (100% compatibility)
 - Includes graphics, image processing, color conversion, and SDF path tracing kernels
@@ -164,23 +185,28 @@ result = prog.mandelbrot(grid, maxiter=256)
 - Row-major storage order matches NumPy (opposite of OpenCL/Metal)
 
 **Numba backend notes:**
+
 - Provides CPU fallback when GPU backends are unavailable
 - Uses Numba's JIT compilation for Python/NumPy code
 - Automatically selected when no GPU backend is available
 - Useful for testing and development without GPU hardware
 
 # Create graphics context
+
 g = Graphics4()
 canvas = np.zeros((512, 512, 4), dtype=np.float32)
 
 # Draw primitives
+
 circles = [(256, 256, 100), (128, 128, 50)]
 g.circles(canvas, circles, color=[1.0, 0.0, 0.0, 1.0])
 
 # Retrieve result
+
 result = g.read(canvas)
 
 # Profit (not guaranteed)
+
 ```
 
 ## Development
@@ -227,26 +253,31 @@ make publish
 ### Core Components
 
 **Backend Manager** (`yapocis.core.manager`)
+
 - Device enumeration and selection
 - Backend-specific kernel compilation
 - Runtime backend switching (because flexibility)
 
 **Interface Parser** (`yapocis.core.interface_parser`)
+
 - PyParsing-based IDL parser
 - Automatic parameter marshaling
 - Buffer hint processing (in, out, inout, out_like, resident)
 
 **Template System** (`yapocis.kernels/`, `yapocis.metalkernels/`, etc.)
+
 - Mako templates for kernel code generation
 - Backend-specific optimizations
 - Automatic coordinate system handling (column-major vs row-major, forever debated)
 
 **Validation Framework** (`yapocis/utils/validation.py`)
+
 - Pixel-exact regression testing (because "close enough" isn't)
 - Cross-backend output comparison
 - Automated test promotion
 
 **Performance Tracking** (`yapocis/utils/performance.py`)
+
 - DuckDB-backed performance database
 - Cross-backend comparison
 - Longitudinal trend analysis
@@ -276,6 +307,7 @@ See [RENOVATE.md](RENOVATE.md) for detailed modernization documentation.
 Contributions are welcome. Please see [CONTRIBUTORS.md](CONTRIBUTORS.md) for guidelines.
 
 **Development workflow:**
+
 1. Fork the repository
 2. Create a feature branch
 3. Write tests for new functionality (test-driven development, not test-eventually development)

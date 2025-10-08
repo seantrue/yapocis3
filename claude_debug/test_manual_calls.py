@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 """Manually call histogram kernel twice with different buffer sizes."""
 import os
-os.environ['YAPOCIS_BACKEND'] = 'cuda'
-os.environ['YAPOCIS_DEBUG_KERNEL'] = '1'
+
+import core
+
+os.environ["YAPOCIS_BACKEND"] = "cuda"
+os.environ["YAPOCIS_DEBUG_KERNEL"] = "1"
 
 import numpy as np
 from yapocis.cu.kernel_manager import CUDAKernelManager
 
 mgr = CUDAKernelManager()
-prog = mgr.load_program("imageops", FASTBINS=0)
+prog = core.load_program("imageops", FASTBINS=0)
 
 a = np.random.uniform(0.1, 0.9, (2000, 2000)).astype(np.float32)
 

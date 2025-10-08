@@ -3,9 +3,9 @@
 import pyopencl
 import pytest
 
+from yapocis.core.interface import get_interface
 from yapocis.ocl.device import get_available_device_names, get_device
 from yapocis.ocl.device_manager import DeviceManager
-from yapocis.core.interface import get_interface
 from yapocis.ocl.kernel_manager import import_program, load_program
 from yapocis.utils.stereo_typing import *
 
@@ -93,17 +93,22 @@ def test_compiling():
         ("convolve", dict(name="convolve", conv=[1, 2, 3, 4, 3, 2, 1])),
         ("median3x3", dict(steps=[9], width=9)),
         ("gradient", {}),
-        ("convolves", dict(convs=[("boxone", [1, 1, 1]), ("triangle", [.5, 1, .5])])),
+        ("convolves", dict(convs=[("boxone", [1, 1, 1]), ("triangle", [0.5, 1, 0.5])])),
         ("mandelbrot", {}),
         ("demo", {}),
         ("hsi", {}),
-        ("operators", dict(operators=[("add", "+"), ("sub", "-"), ("mul", "*"), ("div", "/")]))
+        (
+            "operators",
+            dict(operators=[("add", "+"), ("sub", "-"), ("mul", "*"), ("divop", "/")]),
+        ),
     ]
 
     for device_name in get_available_device_names():
         for itest, (interface, context) in enumerate(interfaces):
             print(device_name, interface)
-            program = load_program(interface, device_name=device_name, debug=False, **context)
+            program = load_program(
+                interface, device_name=device_name, debug=False, **context
+            )
             print("Interface", program.interface.name)
             print(f"Kernels: {len(program.interface.kernels)}")
 
@@ -155,6 +160,7 @@ def test_import():
     import_program("demo", sum="frabjous_day")
     assert callable(frabjous_day)
 
+
 def test_interface_tiled_propagates_to_kernels():
     interface = get_interface(
         """\
@@ -182,7 +188,6 @@ def test_kernel_level_tiled_only_one():
     assert len(interface.kernels) == 2
     assert interface.kernels[0].tiled is True
     assert interface.kernels[1].tiled is False
-
 
 
 def test_devices():

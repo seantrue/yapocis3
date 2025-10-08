@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
 """
-Asset management
+Asset management - find and list yapocis assets
 """
 import sys
 from argparse import ArgumentParser
@@ -13,7 +13,9 @@ from yapocis.images import find_image, images
 from yapocis.interfaces import find_interface, interfaces
 from yapocis.kernels import find_kernel, kernels
 
-if __name__ == '__main__':
+
+def main():
+    """Main entry point for yapocis-assets command."""
     parser = ArgumentParser()
     parser.add_argument('--images', action="store_true")
     parser.add_argument('--icons', action="store_true")
@@ -66,4 +68,8 @@ if __name__ == '__main__':
                 print(f"{asset_finder[5:]:10s} {asset:10s} {finder(asset)}")
             except ValueError:
                 print(f"{asset_finder[5:]:10s} {asset:10s} not found")
+
+
+if __name__ == '__main__':
+    main()
 

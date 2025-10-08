@@ -1,13 +1,12 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
 """Performance tracking and reporting for yapocis tests using DuckDB."""
 
-import json
 import os
 import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional, Type
 
 import duckdb
 
@@ -19,7 +18,6 @@ DB_PATH = PERFORMANCE_DIR / "performance.duckdb"
 # Ensure directories exist
 PERFORMANCE_DIR.mkdir(parents=True, exist_ok=True)
 REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-
 
 def _get_connection():
     """Get a DuckDB connection and ensure schema exists."""
@@ -40,6 +38,8 @@ def _get_connection():
             test_name VARCHAR NOT NULL,
             test_file VARCHAR NOT NULL,
             backend VARCHAR NOT NULL,
+            device_name VARCHAR,
+            driver_version VARCHAR,
             branch VARCHAR NOT NULL,
             commit VARCHAR NOT NULL,
             file_status VARCHAR NOT NULL,
@@ -53,6 +53,17 @@ def _get_connection():
             fastest_operation VARCHAR
         )
     """)
+
+    # Migrate existing schema: add device_name and driver_version columns if they don't exist
+    try:
+        conn.execute("ALTER TABLE performance_runs ADD COLUMN device_name VARCHAR")
+    except Exception:
+        pass  # Column already exists
+
+    try:
+        conn.execute("ALTER TABLE performance_runs ADD COLUMN driver_version VARCHAR")
+    except Exception:
+        pass  # Column already exists
 
     conn.execute("""
         CREATE TABLE IF NOT EXISTS performance_checkpoints (
@@ -77,8 +88,7 @@ def _get_connection():
 
     return conn
 
-
-def get_git_info(file_path: str) -> Dict[str, str]:
+def get_git_info(file_path: str) -> dict[str, str]:
     """
     Extract git information for the current repository state.
 
@@ -148,14 +158,15 @@ def get_git_info(file_path: str) -> Dict[str, str]:
 
     return info
 
-
 def save_performance_data(
     test_name: str,
     file_path: str,
     backend: str,
-    timing_data: Dict[str, float],
-    metadata: Optional[Dict] = None,
-    test_start_time: Optional[float] = None
+    timing_data: dict[str, float],
+    metadata: dict | None = None,
+    test_start_time: float | None = None,
+    device_name: str | None = None,
+    driver_version: str | None = None
 ) -> int:
     """
     Save performance data to DuckDB.
@@ -163,10 +174,12 @@ def save_performance_data(
     Args:
         test_name: Full test name (e.g., "test_graphics4.TestClass.test_method")
         file_path: Absolute path to test file
-        backend: Backend name (ocl, metal, numba, cuda)
+        backend: Backend name (ocl, metal, numbax, cuda)
         timing_data: Dictionary of checkpoint names to elapsed times
         metadata: Optional additional metadata
         test_start_time: Unix timestamp when test started (optional, defaults to now)
+        device_name: Optional device name (e.g., "Apple M1 Pro")
+        driver_version: Optional driver version string
 
     Returns:
         Run ID of the inserted record
@@ -200,15 +213,18 @@ def save_performance_data(
     # Insert run
     result = conn.execute("""
         INSERT INTO performance_runs (
-            test_name, test_file, backend, branch, commit, file_status,
+            test_name, test_file, backend, device_name, driver_version,
+            branch, commit, file_status,
             timestamp, timestamp_unix, total_time, min_time, max_time,
             mean_time, slowest_operation, fastest_operation
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         RETURNING id
     """, [
         test_name,
         os.path.basename(file_path),
         backend,
+        device_name,
+        driver_version,
         git_info["branch"],
         git_info["commit"],
         git_info["file_status"],
@@ -234,20 +250,19 @@ def save_performance_data(
     conn.close()
     return run_id
 
-
 def load_performance_data(
-    backend: Optional[str] = None,
-    test_name: Optional[str] = None,
-    branch: Optional[str] = None,
-    file_status: Optional[str] = None,
-    limit: Optional[int] = None,
+    backend: str | None = None,
+    test_name: str | None = None,
+    branch: str | None = None,
+    file_status: str | None = None,
+    limit: int | None = None,
     exact_match: bool = False
-) -> List[Dict]:
+) -> list[dict]:
     """
     Load and filter performance data from DuckDB.
 
     Args:
-        backend: Filter by backend (ocl, metal, numba, cuda)
+        backend: Filter by backend (ocl, metal, numbax, cuda)
         test_name: Filter by test name (supports partial match unless exact_match=True)
         branch: Filter by git branch
         file_status: Filter by file status (clean, modified)
@@ -255,15 +270,15 @@ def load_performance_data(
         exact_match: If True, test_name must match exactly (default: False for partial match)
 
     Returns:
-        List of performance data dictionaries, sorted by timestamp (newest first)
+        list of performance data dictionaries, sorted by timestamp (newest first)
     """
     conn = _get_connection()
 
     # Build query
     query = """
         SELECT
-            r.id, r.test_name, r.test_file, r.backend, r.branch, r.commit,
-            r.file_status, r.timestamp, r.timestamp_unix, r.total_time,
+            r.id, r.test_name, r.test_file, r.backend, r.device_name, r.driver_version,
+            r.branch, r.commit, r.file_status, r.timestamp, r.timestamp_unix, r.total_time,
             r.min_time, r.max_time, r.mean_time, r.slowest_operation, r.fastest_operation
         FROM performance_runs r
         WHERE 1=1
@@ -317,22 +332,24 @@ def load_performance_data(
                 "test_name": row[1],
                 "test_file": row[2],
                 "backend": row[3],
-                "branch": row[4],
-                "commit": row[5],
-                "file_status": row[6],
-                "timestamp": row[7].isoformat(),
-                "timestamp_unix": row[8],
+                "device_name": row[4],
+                "driver_version": row[5],
+                "branch": row[6],
+                "commit": row[7],
+                "file_status": row[8],
+                "timestamp": row[9].isoformat(),
+                "timestamp_unix": row[10],
             },
             "timing": {
                 "checkpoints": checkpoints,
-                "total": row[9],
+                "total": row[11],
             },
             "stats": {
-                "min": row[10],
-                "max": row[11],
-                "mean": row[12],
-                "slowest_operation": row[13],
-                "fastest_operation": row[14],
+                "min": row[12],
+                "max": row[13],
+                "mean": row[14],
+                "slowest_operation": row[15],
+                "fastest_operation": row[16],
             }
         }
 
@@ -341,13 +358,12 @@ def load_performance_data(
     conn.close()
     return data
 
-
 def purge_performance_data(
-    older_than_days: Optional[int] = None,
-    backend: Optional[str] = None,
-    test_name: Optional[str] = None,
+    older_than_days: int | None = None,
+    backend: str | None = None,
+    test_name: str | None = None,
     dry_run: bool = False
-) -> Tuple[int, List[str]]:
+) -> tuple[int, list[str]]:
     """
     Delete old performance data from DuckDB.
 
@@ -358,7 +374,7 @@ def purge_performance_data(
         dry_run: If True, don't actually delete, just return what would be deleted
 
     Returns:
-        Tuple of (count_deleted, list_of_descriptions)
+        tuple of (count_deleted, list_of_descriptions)
     """
     conn = _get_connection()
 
@@ -404,13 +420,12 @@ def purge_performance_data(
     conn.close()
     return len(results), deleted_descriptions
 
-
-def generate_summary_table(data: List[Dict]) -> str:
+def generate_summary_table(data: list[dict]) -> str:
     """
     Generate a summary table of performance data using tabulate.
 
     Args:
-        data: List of performance data dictionaries
+        data: list of performance data dictionaries
 
     Returns:
         Formatted table string
@@ -423,32 +438,46 @@ def generate_summary_table(data: List[Dict]) -> str:
     if not data:
         return "No performance data found."
 
-    # Build table rows
-    headers = ["Test Name", "Backend", "Branch", "Commit", "Status", "Total (s)", "Timestamp"]
+    # Build table rows with unique combinations only
+    headers = ["Test Name", "Backend", "Device", "Branch", "Commit", "Status", "Total (ms)", "Timestamp"]
     rows = []
+    seen = set()
 
     for entry in data:
         meta = entry["metadata"]
         timing = entry["timing"]
+
+        # Create a unique key for deduplication
+        key = (
+            meta["test_name"],
+            meta["backend"],
+            meta.get("device_name", "N/A"),
+            meta["timestamp"]
+        )
+
+        if key in seen:
+            continue
+        seen.add(key)
+
         rows.append([
             meta["test_name"],
             meta["backend"],
+            meta.get("device_name", "N/A"),
             meta["branch"],
             meta["commit"][:7],  # Short commit hash
             meta["file_status"],
-            f"{timing['total']:.3f}",
+            f"{timing['total'] * 1000:.2f}",  # Convert to milliseconds
             datetime.fromisoformat(meta["timestamp"]).strftime("%Y-%m-%d %H:%M")
         ])
 
     return tabulate(rows, headers=headers, tablefmt="github")
 
-
-def generate_checkpoint_comparison_table(data: List[Dict]) -> str:
+def generate_checkpoint_comparison_table(data: list[dict]) -> str:
     """
     Generate a table comparing checkpoints across multiple runs.
 
     Args:
-        data: List of performance data dictionaries (should be same test, different runs)
+        data: list of performance data dictionaries (should be same test, different runs)
 
     Returns:
         Formatted table string
@@ -490,17 +519,16 @@ def generate_checkpoint_comparison_table(data: List[Dict]) -> str:
 
     return tabulate(rows, headers=headers, tablefmt="github")
 
-
 def plot_backend_comparison(
-    data: List[Dict],
-    output_path: Optional[Path] = None,
-    checkpoint_name: Optional[str] = None
-) -> Optional[Path]:
+    data: list[dict],
+    output_path: Path | None = None,
+    checkpoint_name: str | None = None
+) -> Path | None:
     """
     Generate a bar chart comparing performance across backends.
 
     Args:
-        data: List of performance data dictionaries
+        data: list of performance data dictionaries
         output_path: Path to save the plot (default: REPORTS_DIR/backend_comparison.png)
         checkpoint_name: Specific checkpoint to compare (default: total time)
 
@@ -518,7 +546,7 @@ def plot_backend_comparison(
         print("No data to plot")
         return None
 
-    # Set style
+    # set style
     sns.set_style("whitegrid")
 
     # Group data by backend
@@ -586,17 +614,16 @@ def plot_backend_comparison(
 
     return output_path
 
-
 def plot_longitudinal_trend(
-    data: List[Dict],
-    output_path: Optional[Path] = None,
-    checkpoint_name: Optional[str] = None
-) -> Optional[Path]:
+    data: list[dict],
+    output_path: Path | None = None,
+    checkpoint_name: str | None = None
+) -> Path | None:
     """
     Generate a line graph showing performance trends over time.
 
     Args:
-        data: List of performance data dictionaries (sorted by time)
+        data: list of performance data dictionaries (sorted by time)
         output_path: Path to save the plot (default: REPORTS_DIR/longitudinal_trend.png)
         checkpoint_name: Specific checkpoint to track (default: total time)
 
@@ -615,7 +642,7 @@ def plot_longitudinal_trend(
         print("No data to plot")
         return None
 
-    # Set style
+    # set style
     sns.set_style("whitegrid")
 
     # Group data by backend and sort by timestamp
@@ -668,12 +695,11 @@ def plot_longitudinal_trend(
 
     return output_path
 
-
 def plot_checkpoint_breakdown(
-    data: Dict,
-    output_path: Optional[Path] = None,
+    data: dict,
+    output_path: Path | None = None,
     plot_type: str = "bar"
-) -> Optional[Path]:
+) -> Path | None:
     """
     Generate a breakdown chart of checkpoint times for a single test run.
 
@@ -697,7 +723,7 @@ def plot_checkpoint_breakdown(
         print("No checkpoint data to plot")
         return None
 
-    # Set style
+    # set style
     sns.set_style("whitegrid")
 
     # Sort checkpoints by time
@@ -758,10 +784,9 @@ def plot_checkpoint_breakdown(
 
     return output_path
 
-
 def generate_backend_comparison_report(
     test_name: str,
-    output_path: Optional[Path] = None
+    output_path: Path | None = None
 ) -> Path:
     """
     Generate a comprehensive markdown report comparing backend performance.
@@ -847,11 +872,10 @@ def generate_backend_comparison_report(
 
     return output_path
 
-
 def generate_longitudinal_report(
     test_name: str,
-    backend: Optional[str] = None,
-    output_path: Optional[Path] = None
+    backend: str | None = None,
+    output_path: Path | None = None
 ) -> Path:
     """
     Generate a markdown report showing performance trends over time.
@@ -950,10 +974,9 @@ def generate_longitudinal_report(
 
     return output_path
 
-
 def generate_comprehensive_report(
-    test_name: Optional[str] = None,
-    output_path: Optional[Path] = None
+    test_name: str | None = None,
+    output_path: Path | None = None
 ) -> Path:
     """
     Generate a comprehensive performance report with all available data.

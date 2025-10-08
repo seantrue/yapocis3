@@ -5,7 +5,7 @@ Callable wrapper for PyMetallic kernels, mirroring the OpenCL Kernel wrapper.
 """
 
 import time
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, Callable, Union
 
 import numpy as np
 
@@ -15,8 +15,7 @@ except Exception as e:  # pragma: no cover
     raise RuntimeError("PyMetallic is required for the metallic backend") from e
 
 from yapocis.utils.stereo_typing import Array
-from yapocis.core.autopad import infer_wh_from_args
-
+from yapocis.core import infer_wh_from_args
 
 class Kernel:
     def __init__(
@@ -24,7 +23,7 @@ class Kernel:
         name,
         kernel_manager: "KernelManager",
         kernel: "pm.Kernel",
-        params: List[Tuple],
+        params: list[tuple],
         async_write: bool = False,
         local_size: tuple | None = None,
     ):
@@ -60,7 +59,7 @@ class Kernel:
         self.posbyname = posbyname
 
     def prepare_arguments(
-        self, args: List[Any], resident_arrays: Optional[List[str]] = None
+        self, args: list[Any], resident_arrays: list[str] | None = None
     ):
         assert len(self.posbyname) == len(
             args
@@ -166,7 +165,7 @@ class Kernel:
         buf = self.ensure(arg)
         return buf
 
-    def __call__(self, *args: Tuple[Any], **kwargs):
+    def __call__(self, *args: tuple[Any], **kwargs):
         self.kernel_manager.calls += 1
         t = time.time()
         self.global_size = kwargs.pop("global_size", None)
@@ -252,7 +251,7 @@ class Kernel:
         self.kernel_manager.runtime += time.time() - t
         return rval
 
-    def prepare_return(self) -> Union[Any, Tuple[Any], None]:
+    def prepare_return(self) -> Union[Any, tuple[Any], None]:
         """Takes the return value buffers (out and outlike) and prepares proper Numpy arrays"""
         rvals = []
         for arg, buf in self.returns:

@@ -11,7 +11,7 @@ This module provides utilities for:
 import os
 import numpy as np
 from pathlib import Path
-from typing import Optional, Dict, List, Tuple, Union
+from typing import Optional, Union
 import shutil
 from .basic import _current_backend
 
@@ -20,9 +20,8 @@ QUEUE_DIR = Path(__file__).parent.parent.parent / "queue"
 RAW_DIR = QUEUE_DIR / "raw"
 VALIDATION_DIR = QUEUE_DIR / "validation"
 
-
 def get_validation_key(
-    test_name: str, backend: Optional[str] = None, backend_specific: bool = False
+    test_name: str, backend: str | None = None, backend_specific: bool = False
 ) -> str:
     """
     Generate a standardized validation key for test results.
@@ -39,11 +38,10 @@ def get_validation_key(
         return f"{test_name} [{backend}]"
     return test_name
 
-
 def save_validation_reference(
     test_name: str,
     array: np.ndarray,
-    backend: Optional[str] = None,
+    backend: str | None = None,
     backend_specific: bool = False,
     overwrite: bool = False,
 ) -> Path:
@@ -75,10 +73,9 @@ def save_validation_reference(
     print(f"Saved validation reference: {validation_file}")
     return validation_file
 
-
 def load_validation_reference(
-    test_name: str, backend: Optional[str] = None
-) -> Optional[np.ndarray]:
+    test_name: str, backend: str | None = None
+) -> np.ndarray | None:
     """
     Load a validation reference array.
 
@@ -110,14 +107,13 @@ def load_validation_reference(
 
     return None
 
-
 def compare_with_validation(
     test_name: str,
     result: np.ndarray,
-    backend: Optional[str] = None,
+    backend: str | None = None,
     atol: float = 1e-5,
     rtol: float = 1e-5,
-) -> Tuple[bool, Dict]:
+) -> tuple[bool, dict]:
     """
     Compare test result with stored validation reference.
 
@@ -129,7 +125,7 @@ def compare_with_validation(
         rtol: Relative tolerance for comparison (default: 1e-5 for ~5 significant digits)
 
     Returns:
-        Tuple of (matches, info_dict) where info_dict contains comparison details
+        tuple of (matches, info_dict) where info_dict contains comparison details
     """
     reference = load_validation_reference(test_name, backend)
 
@@ -170,12 +166,11 @@ def compare_with_validation(
 
     return matches, info
 
-
 def promote_to_validation(
     test_name: str,
-    backend: Optional[str] = None,
-    source_dir: Optional[Path] = None,
-    source_file: Optional[Path] = None,
+    backend: str | None = None,
+    source_dir: Path | None = None,
+    source_file: Path | None = None,
     backend_specific: bool = False,
 ) -> bool:
     """
@@ -247,16 +242,15 @@ def promote_to_validation(
         print(f"Failed to promote {test_name}: {e}")
         return False
 
-
-def list_validation_references(backend: Optional[str] = None) -> List[str]:
+def list_validation_references(backend: str | None = None) -> list[str]:
     """
-    List available validation references.
+    list available validation references.
 
     Args:
         backend: Filter by backend, or None for all
 
     Returns:
-        List of test names with validation references
+        list of test names with validation references
     """
     if not VALIDATION_DIR.exists():
         return []
@@ -274,9 +268,8 @@ def list_validation_references(backend: Optional[str] = None) -> List[str]:
 
     return sorted(references)
 
-
 def cleanup_validation_references(
-    backend: Optional[str] = None, confirm: bool = True
+    backend: str | None = None, confirm: bool = True
 ) -> int:
     """
     Clean up validation references.
@@ -318,14 +311,13 @@ def cleanup_validation_references(
 
     return deleted
 
-
 class ValidationContext:
     """Context manager for validation testing."""
 
     def __init__(
         self,
         test_name: str,
-        backend: Optional[str] = None,
+        backend: str | None = None,
         auto_promote: bool = False,
         atol: float = 1e-5,
         rtol: float = 1e-5,

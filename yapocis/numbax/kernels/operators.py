@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 try:
+    import numba
     from numba import njit
 
     HAVE_NUMBA = True
@@ -130,3 +131,8 @@ def div_res(input1: np.ndarray, input2: np.ndarray, output: np.ndarray) -> None:
         )
     else:
         np.divide(input1, input2, out=output)
+
+
+# Alias divop -> div for consistency with interface
+divop = div
+divop_res = div_res

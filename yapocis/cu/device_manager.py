@@ -1,3 +1,4 @@
+
 """
 Helpers around the PyCUDA wrappers for CUDA
 """
@@ -20,13 +21,12 @@ if YAPOCIS_CACHE and not os.path.isdir(YAPOCIS_CACHE):
     print(f"YAPOCIS_CACHE={YAPOCIS_CACHE} is not a directory", file=sys.stderr)
     sys.exit(1)
 
-
 class DeviceManager(BufferManager):
     """
     Coordinates a CUDA device with a stream, a context, and a buffer manager
     """
 
-    def __init__(self, device_name: Optional[str] = None, timed: bool = False, **kwargs):
+    def __init__(self, device_name: str | None = None, timed: bool = False, **kwargs):
         assert device_name is None or isinstance(device_name, (str, int, bytes)), device_name
         self.device_name, self.device = get_device(device_name=device_name)
 
@@ -76,11 +76,9 @@ class DeviceManager(BufferManager):
         except:
             pass
 
+_device_managers: dict[str, DeviceManager] = {}
 
-_device_managers: Dict[str, DeviceManager] = {}
-
-
-def get_device_manager(device_name: Optional[str] = None) -> DeviceManager:
+def get_device_manager(device_name: str | None = None) -> DeviceManager:
     """
     Takes the identifier for a CUDA device
     and returns a DeviceManager with buffer management
@@ -89,11 +87,9 @@ def get_device_manager(device_name: Optional[str] = None) -> DeviceManager:
     # This avoids context issues when switching between backends
     return DeviceManager(device_name)
 
-
 def display_stats():
     device_stats = {dn: dmgr.stats for dn, dmgr in _device_managers.items()}
     print(yaml.safe_dump(device_stats))
-
 
 def display_snapshots():
     print()
@@ -101,7 +97,6 @@ def display_snapshots():
     for dn, dmgr in _device_managers.items():
         print(f"Device: {dn}")
         print(yaml.safe_dump(dmgr.snapshots))
-
 
 def cleanup_contexts():
     """Clean up all CUDA contexts on exit"""
@@ -111,7 +106,6 @@ def cleanup_contexts():
                 dmgr.ctx.pop()
         except:
             pass
-
 
 import atexit
 atexit.register(cleanup_contexts)

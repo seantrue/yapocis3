@@ -54,8 +54,8 @@ Backend overrides:
 IR model:
   InterfaceSpec { name, meta: dict, kernels: [Kernel] }
   Kernel { name, params: [Param], shapes: dict(str->str), traits: dict,
-           backend_overrides: dict(str->dict), alias_of: Optional[str], extends: Optional[str] }
-  Param  { role, dtype, name, shape: Optional[str], layout: Optional[str], qualifiers: dict }
+           backend_overrides: dict(str->dict), alias_of: str | None, extends: str | None }
+  Param  { role, dtype, name, shape: str | None, layout: str | None, qualifiers: dict }
 
 Author: OpenCL↔Metal stub generator project
 """
@@ -63,7 +63,7 @@ Author: OpenCL↔Metal stub generator project
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Tuple, Any
+from typing import Any, Literal, Optional
 
 from pyparsing import (
     Word, alphas, alphanums, nums,
@@ -79,35 +79,35 @@ from pyparsing import (
 @dataclass
 class KernelParamSpec:
     name: str
-    role: Optional[str] = None
-    dtype: Optional[str] = None
-    shape: Optional[str] = None           # e.g., "[9]"
-    layout: Optional[str] = None          # e.g., "planar"
-    qualifiers: Dict[str, str] = field(default_factory=dict)  # {"constant":"true","local":"bytes_of(...)","texture2d":"true"}
+    role: str | None = None
+    dtype: str | None = None
+    shape: str | None = None           # e.g., "[9]"
+    layout: str | None = None          # e.g., "planar"
+    qualifiers: dict[str, str] = field(default_factory=dict)  # {"constant":"true","local":"bytes_of(...)","texture2d":"true"}
 
 @dataclass
 class KernelSpec:
     name: str
-    params: List[KernelParamSpec]
-    shapes: Dict[str, str]                        # (reserved for width_of/height_of normalization if needed)
-    traits: Dict[str, Any]
-    backend_overrides: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    params: list[KernelParamSpec]
+    shapes: dict[str, str]                        # (reserved for width_of/height_of normalization if needed)
+    traits: dict[str, Any]
+    backend_overrides: dict[str, dict[str, Any]] = field(default_factory=dict)
     # Provenance (not used by generator, but useful for tooling)
-    alias_of: Optional[str] = None
-    extends: Optional[str] = None
+    alias_of: str | None = None
+    extends: str | None = None
 
 @dataclass
 class InterfaceSpec:
     name: str
-    meta: Dict[str, Any]
-    kernels: List[KernelSpec]
+    meta: dict[str, Any]
+    kernels: list[KernelSpec]
 
 # ---------------------------------------------------------------------------
 # Utilities
 # ---------------------------------------------------------------------------
 
-def _items_to_dict(items: List[Tuple[str, Any]]) -> Dict[str, Any]:
-    d: Dict[str, Any] = {}
+def _items_to_dict(items: list[tuple[str, Any]]) -> dict[str, Any]:
+    d: dict[str, Any] = {}
     for k, v in items:
         if isinstance(v, list):
             v = tuple(v)
@@ -120,10 +120,10 @@ def _norm_bool(v: Any, default: bool=False) -> bool:
     s = str(v).lower()
     return s in ("on", "true", "yes", "1")
 
-def _pp_to_param_list(pp_params) -> List[KernelParamSpec]:
-    out: List[KernelParamSpec] = []
+def _pp_to_param_list(pp_params) -> list[KernelParamSpec]:
+    out: list[KernelParamSpec] = []
     for p in (pp_params or []):
-        quals: Dict[str, str] = {}
+        quals: dict[str, str] = {}
         for q in (p.quals or []):
             if "bytes" in q:
                 quals["local"] = f"bytes_of({q.bytes})"
@@ -253,7 +253,7 @@ interfaces_grammar.ignore(pythonStyleComment)
 # Parse → IR
 # ---------------------------------------------------------------------------
 
-def parse_interface_text(src: str) -> List[InterfaceSpec]:
+def parse_interface_text(src: str) -> list[InterfaceSpec]:
     """
     Parse `.interface` text and return an InterfaceSpec with all kernels,
     including aliases and extensions **materialized** into concrete kernels.
@@ -266,13 +266,13 @@ def parse_interface_text(src: str) -> List[InterfaceSpec]:
         raise ParseException(f"[interface_parser] Parse error at line {e.lineno}, col {e.col}: {e.msg}\n{e.line}") from e
     for res in reses:
         # ---- meta
-        meta_items: List[Tuple[str, Any]] = []
+        meta_items: list[tuple[str, Any]] = []
         if "meta" in res and res.meta and "items" in res.meta:
             for kv in res.meta["items"]:
                 v = kv.v.asList() if hasattr(kv.v, "asList") else kv.v
                 meta_items.append((kv.k, v))
         md = _items_to_dict(meta_items)
-        meta: Dict[str, Any] = {
+        meta: dict[str, Any] = {
             "layout":   md.get("layout", "planar"),
             "dtype":    md.get("dtype", "float32"),
             "fast_math": _norm_bool(md.get("fast_math", "on"), True),
@@ -287,18 +287,18 @@ def parse_interface_text(src: str) -> List[InterfaceSpec]:
                 meta[k] = md[k]
 
         # ---- first pass: collect base kernels; defer alias/extension
-        kernels: List[KernelSpec] = []
-        kernel_by_name: Dict[str, KernelSpec] = {}
-        pending_aliases: List[Tuple[str, str, Optional[List[KernelParamSpec]]]] = []
-        pending_exts: List[Tuple[str, str, List[KernelParamSpec], Dict[str,Any], Dict[str,Dict[str,Any]]]] = []
+        kernels: list[KernelSpec] = []
+        kernel_by_name: dict[str, KernelSpec] = {}
+        pending_aliases: list[tuple[str, str, list[KernelParamSpec] | None]] = []
+        pending_exts: list[tuple[str, str, list[KernelParamSpec], dict[str,Any], dict[str,dict[str,Any]]]] = []
 
         for item in res["items"]:
             # Kernel
             if "sig" in item:
                 sig = item.sig
                 params = _pp_to_param_list(item.params)
-                traits: Dict[str, Any] = {}
-                backends: Dict[str, Dict[str, Any]] = {}
+                traits: dict[str, Any] = {}
+                backends: dict[str, dict[str, Any]] = {}
 
                 if "withs" in item and item.withs:
                     wt = item.withs
@@ -340,8 +340,8 @@ def parse_interface_text(src: str) -> List[InterfaceSpec]:
             if "new" in item and "base" in item and "params" in item:
                 new, base = item.new, item.base
                 ex_params = _pp_to_param_list(item.params)
-                traits: Dict[str, Any] = {}
-                backends: Dict[str, Dict[str, Any]] = {}
+                traits: dict[str, Any] = {}
+                backends: dict[str, dict[str, Any]] = {}
                 if "traits" in item and item.traits:
                     for kv in item.traits:
                         v = kv.v.asList() if hasattr(kv.v, "asList") else kv.v
@@ -373,7 +373,7 @@ def parse_interface_text(src: str) -> List[InterfaceSpec]:
             kernel_by_name[new_name] = kcopy
 
         # ---- resolve extensions
-        def _merge_traits(base_traits: Dict[str,Any], add_traits: Dict[str,Any]) -> Dict[str,Any]:
+        def _merge_traits(base_traits: dict[str,Any], add_traits: dict[str,Any]) -> dict[str,Any]:
             out = dict(base_traits)
             out.update(add_traits or {})
             return out

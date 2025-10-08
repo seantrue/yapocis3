@@ -1,13 +1,12 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 import time
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Any, Callable, Union
 
 import numpy as np
 import pyopencl
 
 from yapocis.utils.stereo_typing import Array
-
 
 class Kernel:
     """
@@ -19,7 +18,7 @@ class Kernel:
         name,
         kernel_manager: "KernelManager",
         kernel: Callable,
-        params: List[Tuple],
+        params: list[tuple],
         async_write: bool = False,
     ):
         self.name = name
@@ -57,7 +56,7 @@ class Kernel:
         self.posbyname = posbyname
 
     def prepare_arguments(
-        self, args: List[Any], resident_arrays: Optional[List[str]] = None
+        self, args: list[Any], resident_arrays: list[str] | None = None
     ):
         "Takes the actual arguments and maps to the arguments needed by the kernel"
         assert len(self.posbyname) == len(
@@ -165,7 +164,7 @@ class Kernel:
         buf = self.ensure(arg)
         return buf
 
-    def __call__(self, *args: Tuple[Any], **kwargs):
+    def __call__(self, *args: tuple[Any], **kwargs):
         """Call a kernel, prepare arguments, and track performance"""
         self.kernel_manager.calls += 1
         t = time.time()
@@ -218,7 +217,7 @@ class Kernel:
         self.kernel_manager.runtime += time.time() - t
         return rval
 
-    def prepare_return(self) -> Union[Any, Tuple[Any], None]:
+    def prepare_return(self) -> Union[Any, tuple[Any], None]:
         """Takes the return value buffers (out and outlike) and prepares proper Numpy arrays"""
         rvals = []
         for arg, buf in self.returns:

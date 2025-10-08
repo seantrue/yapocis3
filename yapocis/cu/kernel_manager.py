@@ -1,7 +1,7 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
 
 import os
-from typing import Callable, Optional
+from typing import Any, Callable
 
 from mako.lookup import TemplateLookup
 from mako.template import Template
@@ -138,7 +138,7 @@ class KernelManager:
     def load_program(
         cls,
         interface_spec: str,
-        device_name: Optional[str] = None,
+        device_name: str | None = None,
         debug: bool = False,
         options=None,
         **context: Context,
@@ -158,7 +158,7 @@ class KernelManager:
     def import_program(
         cls,
         interface_spec: str,
-        device_name: Optional[str] = None,
+        device_name: str | None = None,
         namespace: bool = False,
         debug: bool = False,
         import_kernels=None,

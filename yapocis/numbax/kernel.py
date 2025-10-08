@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, List, Tuple, Optional
+from typing import Any, Callable
 
 import numpy as np
-
 
 class Kernel:
     """Callable wrapper for a Python/Numba kernel.
@@ -12,7 +11,7 @@ class Kernel:
     for out_like and handling derived dims.
     """
 
-    def __init__(self, name: str, func, params: List[Tuple]):
+    def __init__(self, name: str, func, params: list[tuple]):
         self.name = name
         self.func = func
         self.params = params  # list of KernelParamSpec-like tuples/objects
@@ -30,9 +29,9 @@ class Kernel:
         # No-op for in-memory arrays
         return a
 
-    def __call__(self, *args: Tuple[Any], **kwargs):
-        prepared_args: List[Any] = [None] * len(self._norm)
-        returns: List[np.ndarray] = []
+    def __call__(self, *args: tuple[Any], **kwargs):
+        prepared_args: list[Any] = [None] * len(self._norm)
+        returns: list[np.ndarray] = []
         # Build map from logical arg name to user-supplied arg position
         posbyname = {}
         iarg = 0

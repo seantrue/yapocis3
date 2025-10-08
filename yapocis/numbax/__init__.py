@@ -8,5 +8,5 @@ semantics from the interface language:
 - out_like allocates an output array like a referenced input and returns it
 - size_of/width_of/height_of/depth_of derive integers from array shapes
 
-Implementations live under yapocis.numba.kernels.<interface>.py
+Implementations live under yapocis.numbax.kernels.<interface>.py
 """

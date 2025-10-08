@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 """Analyze NPZ files in queue/raw for dtype, min/max, and NaN status"""
 
@@ -91,7 +92,7 @@ def main():
         try:
             data = np.load(npz_file)
 
-            # List all arrays in the file
+            # list all arrays in the file
             array_names = list(data.keys())
 
             # Check for NaN/Inf first and collect dtype stats

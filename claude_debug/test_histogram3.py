@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Debug histogram buffer initialization."""
 import os
-os.environ['YAPOCIS_BACKEND'] = 'cuda'
+
+import core
+
+os.environ["YAPOCIS_BACKEND"] = "cuda"
 
 import numpy as np
 import cupy as cp
@@ -9,7 +12,7 @@ from yapocis.cu.kernel_manager import CUDAKernelManager
 
 print("Creating manager and loading program...")
 mgr = CUDAKernelManager()
-prog = mgr.load_program('imageops')
+prog = core.load_program("imageops")
 
 print("\nCreating test data...")
 a = np.random.uniform(0.1, 0.9, 1000).astype(np.float32)

@@ -1,10 +1,8 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
 
 import os
-from typing import Dict, Optional, List
 
 import pycuda.driver as cuda
-
 
 def get_available_device_names():
     """Get names of all available CUDA devices"""
@@ -15,8 +13,7 @@ def get_available_device_names():
         device_names.append(device.name())
     return device_names
 
-
-def get_available_devices(aliases: bool = True) -> Dict[str, cuda.Device]:
+def get_available_devices(aliases: bool = True) -> dict[str, cuda.Device]:
     """
     Get the names of the available CUDA devices.
 
@@ -33,16 +30,14 @@ def get_available_devices(aliases: bool = True) -> Dict[str, cuda.Device]:
             devices[i] = device
     return devices
 
-
-def pick_default_device(device_names: List[str]) -> str:
+def pick_default_device(device_names: list[str]) -> str:
     """Pick the default CUDA device - prefer first GPU found"""
     if not device_names:
         raise RuntimeError("No CUDA devices found")
     # Just pick the first device for CUDA
     return device_names[0]
 
-
-def get_device(device_name: Optional[str] = None) -> tuple[str, cuda.Device]:
+def get_device(device_name: str | None = None) -> tuple[str, cuda.Device]:
     """
     Get a device that is an exact or approximate match for device name, which can also be a numeric index,
     and if None, will be the first device found.

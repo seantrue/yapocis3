@@ -23,12 +23,10 @@ from .random_data import (
     image_sprites,
 )
 
-
-def setup_test(device_name: Optional[str] = None) -> Tuple[Image1, Graphics1]:
+def setup_test(device_name: str | None = None) -> tuple[Image1, Graphics1]:
     return np.zeros((ASIZE, ASIZE)).astype(np.float32), Graphics1(
         device_name=device_name
     )
-
 
 def test_lines():
     canvas, grph = setup_test()
@@ -53,7 +51,6 @@ def test_lines():
             )
         sw.show(canvas)
 
-
 def test_rects():
     canvas, grph = setup_test()
     random_coords = random_lines()
@@ -70,7 +67,6 @@ def test_rects():
             )
         sw.show(canvas)
 
-
 def test_circles():
     canvas, grph = setup_test()
     random_coords = random_circles()
@@ -85,7 +81,6 @@ def test_circles():
         )
         sw.checkpoint("circles")
         sw.show(canvas)
-
 
 def test_triangles():
     canvas, grph = setup_test()
@@ -102,7 +97,6 @@ def test_triangles():
                 canvas, random_coords, colors=random_colors(), alphas=random_alpha()
             )
         sw.show(canvas)
-
 
 def test_ellipses():
     canvas, grph = setup_test()
@@ -126,7 +120,6 @@ def test_ellipses():
             )
         sw.show(canvas)
 
-
 def test_composite():
     canvas, grph = setup_test()
     random_coords, random_blocks = random_composites()
@@ -135,7 +128,6 @@ def test_composite():
             grph.composite(canvas, random_coords, random_blocks)
         sw.show(canvas)
 
-
 def test_composite_sprites():
     canvas, grph = setup_test()
     random_coords, random_sprites_ = random_sprites()
@@ -143,7 +135,6 @@ def test_composite_sprites():
         with sw.checkpoint("random"):
             grph.sprites(canvas, random_coords, random_sprites_)
         sw.show(canvas)
-
 
 def test_composite_mosaic():
     from random import shuffle
@@ -168,7 +159,6 @@ def test_composite_mosaic():
             grph.composite(canvas, coords, blocks)
         sw.show(canvas)
 
-
 def test_simple_texts():
     from . import interesting_words, double_shuffle
 
@@ -185,7 +175,6 @@ def test_simple_texts():
             )
         sw.show(canvas)
 
-
 def test_text_rotation_centered():
     canvas, grph = setup_test()
     rotations = list(range(-180, 180, 30))
@@ -200,7 +189,6 @@ def test_text_rotation_centered():
         with sw.checkpoint("circles"):
             grph.circles(canvas, [(center, center, 20)], color=0.5)
     sw.show(canvas)
-
 
 def test_text_rotation():
     canvas, grph = setup_test()
@@ -228,7 +216,6 @@ def test_text_rotation():
             grph.circles(canvas, locations[:-1], color=0.5)
         sw.show(canvas)
 
-
 def test_texts():
     canvas, grph = setup_test()
     locations, strings, fonts, sizes, rotations, alphas = random_texts(300)
@@ -238,7 +225,6 @@ def test_texts():
                 canvas, locations, strings, fonts=fonts, sizes=sizes, alphas=alphas
             )
         sw.show(canvas)
-
 
 def test_stressed_texts():
     canvas, grph = setup_test()
@@ -255,7 +241,6 @@ def test_stressed_texts():
                 alpha="mask",
             )
         sw.show(canvas)
-
 
 def test_one():
     canvas, grph = setup_test()

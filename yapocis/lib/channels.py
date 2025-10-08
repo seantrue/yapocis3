@@ -1,3 +1,4 @@
+
 """
 Accommodate the differences between PIL, Numpy, and convenient programming models for OpenCL
 HWC <-> CHW ordering, conceptually.
@@ -8,7 +9,6 @@ HWC <-> CHW ordering, conceptually.
 import numpy as np
 
 from yapocis.utils.stereo_typing import *
-
 
 def histeq(im:Image1, nbr_bins:int =2 ** 16) -> Image1:
     """
@@ -31,8 +31,7 @@ def histeq(im:Image1, nbr_bins:int =2 ** 16) -> Image1:
     im2 = np.interp(im.flatten(), bins[:-1], cdf)
     return np.array(im2, np.float32).reshape(im.shape)
 
-
-def split_channels(rgb:Image3) -> Tuple[Image1,Image1,Image1]:
+def split_channels(rgb:Image3) -> tuple[Image1,Image1,Image1]:
     """
     Split a WxHx3 array into WxH, WxH, WxH
 
@@ -40,7 +39,7 @@ def split_channels(rgb:Image3) -> Tuple[Image1,Image1,Image1]:
         rgb: 3D array
 
     Returns:
-        Tuple of 2D arrays that are copies of the original data
+        tuple of 2D arrays that are copies of the original data
     """
     channels =  np.dsplit(rgb, indices_or_sections=3)
     return [np.ascontiguousarray(np.squeeze(channel)) for channel in channels]
@@ -61,7 +60,7 @@ def join_channels(r: Image1, g: Image1, b: Image1) -> Image3:
     rgb = np.ascontiguousarray(np.dstack((r,g,b)))
     return rgb
 
-def split_planes(image: Image1234) -> Tuple:
+def split_planes(image: Image1234) -> tuple:
     if len(image.shape) == 2:
         return image.copy()
     planes = [np.ascontiguousarray(np.squeeze(plane)) for plane in np.dsplit(image, indices_or_sections=image.shape[-1])]
@@ -70,5 +69,4 @@ def split_planes(image: Image1234) -> Tuple:
 def join_planes(*planes) -> Image1234:
     image = np.ascontiguousarray(np.dstack(planes))
     return image
-
 
