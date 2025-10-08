@@ -8,8 +8,7 @@ test runs, ensuring validation images match their references.
 import os
 import numpy as np
 from contextlib import contextmanager
-from typing import Optional, Union, Tuple, List
-
+from typing import Type, Union
 
 # Default seed from environment or fixed value
 DEFAULT_SEED = int(os.environ.get("YAPOCIS_RANDOM_SEED", 42))
@@ -17,21 +16,18 @@ DEFAULT_SEED = int(os.environ.get("YAPOCIS_RANDOM_SEED", 42))
 # Global random state for deterministic generation
 _global_rng = np.random.RandomState(DEFAULT_SEED)
 
-
 def set_global_seed(seed: int) -> None:
-    """Set the global random seed for all deterministic operations."""
+    """set the global random seed for all deterministic operations."""
     global _global_rng
     _global_rng = np.random.RandomState(seed)
-    print(f"Set global random seed to {seed}")
-
+    print(f"set global random seed to {seed}")
 
 def get_global_seed() -> int:
     """Get the current global random seed."""
     return DEFAULT_SEED
 
-
 @contextmanager
-def deterministic_context(seed: Optional[int] = None):
+def deterministic_context(seed: int | None = None):
     """
     Context manager for deterministic random generation.
 
@@ -53,7 +49,6 @@ def deterministic_context(seed: Optional[int] = None):
     finally:
         _global_rng.set_state(old_state)
 
-
 class DeterministicRandom:
     """
     Deterministic random number generator for test data.
@@ -61,19 +56,19 @@ class DeterministicRandom:
     Provides numpy-compatible random generation with fixed seeds.
     """
 
-    def __init__(self, seed: Optional[int] = None):
+    def __init__(self, seed: int | None = None):
         """Initialize with given seed or global default."""
         self.seed = seed if seed is not None else DEFAULT_SEED
         self.rng = np.random.RandomState(self.seed)
 
     def random(
-        self, size: Union[int, Tuple[int, ...]] = None
+        self, size: Union[int, tuple[int, ...]] = None
     ) -> Union[float, np.ndarray]:
         """Generate random floats in [0, 1)."""
         return self.rng.random(size)
 
     def randint(
-        self, low: int, high: int, size: Union[int, Tuple[int, ...]] = None
+        self, low: int, high: int, size: Union[int, tuple[int, ...]] = None
     ) -> Union[int, np.ndarray]:
         """Generate random integers in [low, high)."""
         return self.rng.randint(low, high, size)
@@ -82,7 +77,7 @@ class DeterministicRandom:
         self,
         low: float = 0.0,
         high: float = 1.0,
-        size: Union[int, Tuple[int, ...]] = None,
+        size: Union[int, tuple[int, ...]] = None,
     ) -> Union[float, np.ndarray]:
         """Generate random floats from uniform distribution."""
         return self.rng.uniform(low, high, size)
@@ -91,7 +86,7 @@ class DeterministicRandom:
         self,
         loc: float = 0.0,
         scale: float = 1.0,
-        size: Union[int, Tuple[int, ...]] = None,
+        size: Union[int, tuple[int, ...]] = None,
     ) -> Union[float, np.ndarray]:
         """Generate random floats from normal distribution."""
         return self.rng.normal(loc, scale, size)
@@ -99,9 +94,9 @@ class DeterministicRandom:
     def choice(
         self,
         a: Union[int, np.ndarray],
-        size: Union[int, Tuple[int, ...]] = None,
+        size: Union[int, tuple[int, ...]] = None,
         replace: bool = True,
-        p: Optional[np.ndarray] = None,
+        p: np.ndarray | None = None,
     ) -> Union[int, np.ndarray]:
         """Generate random samples from given array."""
         return self.rng.choice(a, size, replace, p)
@@ -114,10 +109,8 @@ class DeterministicRandom:
         """Return shuffled copy of array."""
         return self.rng.permutation(x)
 
-
 # Global deterministic random instance
 deterministic_random = DeterministicRandom(DEFAULT_SEED)
-
 
 def get_test_seed(test_name: str) -> int:
     """
@@ -132,7 +125,6 @@ def get_test_seed(test_name: str) -> int:
     # Use hash of test name for deterministic but unique seeds
     return abs(hash(test_name)) % (2**31)
 
-
 def create_test_rng(test_name: str) -> DeterministicRandom:
     """
     Create a deterministic random generator for a specific test.
@@ -146,36 +138,31 @@ def create_test_rng(test_name: str) -> DeterministicRandom:
     seed = get_test_seed(test_name)
     return DeterministicRandom(seed)
 
-
 # Convenience functions using global RNG
-def random(size: Union[int, Tuple[int, ...]] = None) -> Union[float, np.ndarray]:
+def random(size: Union[int, tuple[int, ...]] = None) -> Union[float, np.ndarray]:
     """Global deterministic random floats in [0, 1)."""
     return deterministic_random.random(size)
 
-
 def randint(
-    low: int, high: int, size: Union[int, Tuple[int, ...]] = None
+    low: int, high: int, size: Union[int, tuple[int, ...]] = None
 ) -> Union[int, np.ndarray]:
     """Global deterministic random integers in [low, high)."""
     return deterministic_random.randint(low, high, size)
 
-
 def uniform(
-    low: float = 0.0, high: float = 1.0, size: Union[int, Tuple[int, ...]] = None
+    low: float = 0.0, high: float = 1.0, size: Union[int, tuple[int, ...]] = None
 ) -> Union[float, np.ndarray]:
     """Global deterministic random floats from uniform distribution."""
     return deterministic_random.uniform(low, high, size)
 
-
 def choice(
     a: Union[int, np.ndarray],
-    size: Union[int, Tuple[int, ...]] = None,
+    size: Union[int, tuple[int, ...]] = None,
     replace: bool = True,
-    p: Optional[np.ndarray] = None,
+    p: np.ndarray | None = None,
 ) -> Union[int, np.ndarray]:
     """Global deterministic random samples from given array."""
     return deterministic_random.choice(a, size, replace, p)
-
 
 # Deterministic test data patterns
 def generate_test_colors(n_colors: int, test_name: str) -> np.ndarray:
@@ -191,7 +178,6 @@ def generate_test_colors(n_colors: int, test_name: str) -> np.ndarray:
     """
     rng = create_test_rng(f"{test_name}_colors")
     return rng.uniform(0.0, 1.0, (n_colors, 3))
-
 
 def generate_test_positions(
     n_positions: int, width: int, height: int, test_name: str
@@ -211,7 +197,6 @@ def generate_test_positions(
     rng = create_test_rng(f"{test_name}_positions")
     return rng.uniform(0, [width, height], (n_positions, 2))
 
-
 def generate_test_sizes(
     n_sizes: int, min_size: float, max_size: float, test_name: str
 ) -> np.ndarray:
@@ -230,9 +215,8 @@ def generate_test_sizes(
     rng = create_test_rng(f"{test_name}_sizes")
     return rng.uniform(min_size, max_size, n_sizes)
 
-
 def generate_test_field(
-    shape: Union[int, Tuple[int, ...]],
+    shape: Union[int, tuple[int, ...]],
     dtype: np.dtype = np.float32,
     test_name: str = "default",
     distribution: str = "uniform",

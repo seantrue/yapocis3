@@ -1,3 +1,4 @@
+from typing import Iterator
 """
 Higher level wrapper for anisotropic filter (Perona/Malik).
 """
@@ -21,7 +22,7 @@ from .hsi import HSI
 class Anisodiff(BoundKernels):
     INTERFACE = "anisodiff"
     filter_by_depth = ["filterImage", "filterImage2", "filterImage3", "filterImage4"]
-    def __init__(self, device_name:Optional[str]=None, **kwargs):
+    def __init__(self, device_name:str | None=None, **kwargs):
         super().__init__(device_name=device_name,  **kwargs)
         self.hsi = HSI(device_name=device_name)
     def select_by_depth(self, image, suffix=""):

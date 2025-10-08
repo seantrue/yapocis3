@@ -1,5 +1,6 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 import numpy as np
+from typing import Optional
 
 from .random_data import (
     random_alpha,
@@ -12,12 +13,12 @@ from .random_data import (
     random_triangles,
 )
 from yapocis.lib.kerneldraw3 import KernelDraw3
-from yapocis.utils.stereo_typing import Optional, Image3
+from yapocis.utils.stereo_typing import Image3
 
 from . import ASIZE, StopWatcher, show_snapshots, snapshow
 
 
-def setup_test(device_name: Optional[str] = None, chunk_size: Optional[int] = None) -> tuple[Image3, KernelDraw3]:
+def setup_test(device_name: str | None = None, chunk_size: int | None = None) -> tuple[Image3, KernelDraw3]:
     device_name = device_name if isinstance(device_name,str) else None
     canvas = np.zeros((ASIZE, ASIZE, 3), dtype=np.float32)
     return canvas, KernelDraw3(canvas, chunk_size=chunk_size, device_name=device_name)

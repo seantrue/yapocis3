@@ -9,9 +9,11 @@ Smoke-compile every interface across available backends (OCL, Metal, CUDA).
 from __future__ import annotations
 
 import os
+
 import pytest
+
+from yapocis.core import get_backends, get_manager, load_program
 from yapocis.interfaces import interfaces as list_interfaces, find_interface
-from yapocis.core.manager import get_backends
 
 
 def _list_interface_names() -> list[str]:
@@ -23,7 +25,7 @@ def _context_for_interface(name: str) -> dict:
     """Return minimal mako variables to render parameterized interfaces."""
     if name == "operators":
         # define a couple operators
-        return {"operators": [("add", "+"), ("sub", "-")]}
+        return {"operators": [("add", "+"), ("sub", "-"), ("divop", "/")]}
     if name == "convolves":
         # define a couple 1D kernels
         return {"convs": [("conv3", [0.25, 0.5, 0.25]), ("edge3", [-1.0, 0.0, 1.0])]}
@@ -39,7 +41,6 @@ def _context_for_interface(name: str) -> dict:
 @pytest.mark.parametrize("iname", _list_interface_names())
 def test_compile_interfaces_all_backends(backend: str, iname: str, monkeypatch):
     monkeypatch.setenv("YAPOCIS_BACKEND", backend)
-    from yapocis.core.manager import get_manager
 
     mgr = get_manager(backend)
     ctx = _context_for_interface(iname)
@@ -49,7 +50,7 @@ def test_compile_interfaces_all_backends(backend: str, iname: str, monkeypatch):
     # Skip interfaces that don't have templates or fail due to missing context
     try:
         # load_program compiles per-backend sources
-        prog = mgr.load_program(iname, **ctx)
+        prog = load_program(iname, **ctx)
         assert getattr(prog, "source", None) is not None or backend == "cuda"
         # CUDA path does not expose source attribute in the same way
     except (FileNotFoundError, Exception) as e:

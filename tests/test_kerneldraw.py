@@ -1,6 +1,7 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 import time
 import pytest
+from typing import Optional
 
 import numpy as np
 
@@ -16,7 +17,7 @@ from .random_data import (
     random_texts,
 )
 from yapocis.lib.kerneldraw1 import KernelDraw1
-from yapocis.utils.stereo_typing import Optional, Image1
+from yapocis.utils.stereo_typing import Image1
 
 from . import ASIZE, StopWatcher
 
@@ -26,7 +27,7 @@ def just_canvas() -> Image1:
     return canvas
 
 
-def setup_test(device_name: Optional[str] = None, chunk_size: Optional[int] = None):
+def setup_test(device_name: str | None = None, chunk_size: int | None = None):
     canvas = just_canvas()
     return canvas, KernelDraw1(canvas, device_name=device_name, chunk_size=chunk_size)
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 try:
+    import numba
     from numba import njit
 
     HAVE_NUMBA = True

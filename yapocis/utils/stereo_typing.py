@@ -3,23 +3,28 @@ Python typing
 """
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
-from typing import (Any, Callable, Dict, Iterable, Iterator, List, Optional,
-                    Set, Tuple, Union)
+from typing import Any, Union
 
+import PIL.Image
 import numpy as np
 import numpy.typing as npt
-import PIL.Image
+
+# Re-export for backward compatibility
+dict = dict
+list = list
+tuple = tuple
+set = set
+
 PILImage = PIL.Image.Image
 
 Array = npt.NDArray
-Context = Dict[str, Any]
-EngineID = Union[str, int]
+Context = dict[str, Any]
+DeviceID = Union[str, int]
 
 Coords = npt.NDArray
-SimpleType = Union[str, int, float, bool, List, Tuple, Dict]
-Config = Dict[str, SimpleType]
+SimpleType = Union[str, int, float, bool, list, tuple, dict]
+Config = dict[str, SimpleType]
 PixelType = Union[np.uint8,np.float32]
-
 
 Image1 = npt.NDArray[PixelType]
 Image2 = npt.NDArray[PixelType]

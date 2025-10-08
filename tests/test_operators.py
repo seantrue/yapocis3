@@ -5,8 +5,8 @@
 import numpy as np
 import pytest
 
+from yapocis.core import get_backends
 from yapocis.lib.operators import Operators
-from yapocis.core.manager import get_backends
 from . import StopWatcher
 
 
@@ -14,6 +14,7 @@ from . import StopWatcher
 def test_add(backend):
     """Test addition operator"""
     import os
+
     os.environ["YAPOCIS_BACKEND"] = backend
 
     ops = Operators()
@@ -32,6 +33,7 @@ def test_add(backend):
 def test_sub(backend):
     """Test subtraction operator"""
     import os
+
     os.environ["YAPOCIS_BACKEND"] = backend
 
     ops = Operators()
@@ -50,6 +52,7 @@ def test_sub(backend):
 def test_mul(backend):
     """Test multiplication operator"""
     import os
+
     os.environ["YAPOCIS_BACKEND"] = backend
 
     ops = Operators()
@@ -68,6 +71,7 @@ def test_mul(backend):
 def test_divop(backend):
     """Test division operator"""
     import os
+
     os.environ["YAPOCIS_BACKEND"] = backend
 
     ops = Operators()
@@ -86,6 +90,7 @@ def test_divop(backend):
 def test_div_alias(backend):
     """Test div alias (backward compatibility for divop)"""
     import os
+
     os.environ["YAPOCIS_BACKEND"] = backend
 
     ops = Operators()
@@ -104,6 +109,7 @@ def test_div_alias(backend):
 def test_add_resident(backend):
     """Test addition with resident buffers"""
     import os
+
     os.environ["YAPOCIS_BACKEND"] = backend
 
     ops = Operators()
@@ -131,6 +137,7 @@ def test_add_resident(backend):
 def test_div_resident(backend):
     """Test division with resident buffers"""
     import os
+
     os.environ["YAPOCIS_BACKEND"] = backend
 
     ops = Operators()

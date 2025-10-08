@@ -1,16 +1,17 @@
 import importlib
-import pytest
-import numpy as np
 import os
 import sys
 from pathlib import Path
 from typing import Optional
 
+import numpy as np
+import pytest
+
 # Add yapocis to path if needed
 if str(os.path.dirname(os.path.dirname(__file__))) not in sys.path:
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from yapocis.utils.validation import ValidationContext, compare_with_validation
+from yapocis.utils.validation import compare_with_validation
 
 
 def pytest_ignore_collect(path: str, config):
@@ -82,7 +83,7 @@ def validate_result(
             validate_result("test_something", result)
     """
 
-    def _validate(test_name: str, result: np.ndarray, backend: Optional[str] = None):
+    def _validate(test_name: str, result: np.ndarray, backend: str | None = None):
         if not validation_enabled and not update_validation:
             # Validation not requested, skip silently
             return True
@@ -125,7 +126,7 @@ class ValidationHelper:
         self.tolerance = tolerance
 
     def check(
-        self, test_name: str, result: np.ndarray, backend: Optional[str] = None
+        self, test_name: str, result: np.ndarray, backend: str | None = None
     ) -> bool:
         """Check result against validation reference."""
         if not self.enabled and not self.update_mode:
@@ -143,7 +144,7 @@ class ValidationHelper:
             return matches
 
     def assert_valid(
-        self, test_name: str, result: np.ndarray, backend: Optional[str] = None
+        self, test_name: str, result: np.ndarray, backend: str | None = None
     ):
         """Assert that result matches validation reference."""
         if not self.check(test_name, result, backend):
@@ -207,7 +208,6 @@ def pytest_configure(config):
 def perf_tracker(request):
     """Automatic performance tracking for test functions."""
     from . import PerformanceTracker
-    import time
 
     test_name = request.node.name
     backend = os.environ.get("YAPOCIS_BACKEND", "unknown")
@@ -242,7 +242,7 @@ def backend_comparison(request):
     available_backends = []
 
     try:
-        from yapocis.core.manager import get_backends
+        from yapocis.core import get_backends
 
         available_backends = get_backends()
     except ImportError:

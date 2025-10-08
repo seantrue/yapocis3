@@ -8,7 +8,7 @@ and exposes callable kernel functions mirroring the OpenCL KernelManager API.
 """
 
 import os
-from typing import Callable, Optional
+from typing import Callable
 
 try:
     import pymetallic as pm  # type: ignore
@@ -152,7 +152,7 @@ class KernelManager:
     def load_program(
         cls,
         interface_spec: str,
-        device_name: Optional[str | int] = None,
+        device_name: str | int | None = None,
         debug: bool = False,
         options=None,
         **context: Context,
@@ -170,7 +170,7 @@ class KernelManager:
     def import_program(
         cls,
         interface_spec: str,
-        device_name: Optional[str | int] = None,
+        device_name: str | int | None = None,
         namespace: bool = False,
         debug: bool = False,
         import_kernels=None,

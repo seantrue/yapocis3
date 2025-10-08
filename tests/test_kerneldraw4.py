@@ -1,6 +1,7 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 import time
+from typing import Optional
 
 import numpy as np
 
@@ -16,7 +17,7 @@ from .random_data import (
     random_triangles,
 )
 from yapocis.lib.kerneldraw4 import KernelDraw4
-from yapocis.utils.stereo_typing import Optional, Image4
+from yapocis.utils.stereo_typing import Image4
 
 from . import ASIZE, StopWatcher, snapshot, snapshow
 
@@ -25,7 +26,7 @@ def just_canvas() -> Image4:
     return np.zeros((ASIZE, ASIZE, 4), dtype=np.float32)
 
 
-def setup_test(device_name: Optional[str] = None, chunk_size: Optional[int] = None) -> tuple[Image4, KernelDraw4]:
+def setup_test(device_name: str | None = None, chunk_size: int | None = None) -> tuple[Image4, KernelDraw4]:
     canvas = just_canvas()
     return canvas, KernelDraw4(canvas, device_name=device_name, chunk_size=chunk_size)
 

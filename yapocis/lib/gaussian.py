@@ -8,11 +8,9 @@ from yapocis.utils.stereo_typing import *
 
 from .bound_kernels import BoundKernels
 
-
 def are_close(a: float, b: float) -> bool:
     eps = 0.00001
     return abs(a - b) <= eps
-
 
 class GaussianWeights:
     def __init__(self, max_width=150, **kwargs):
@@ -26,8 +24,8 @@ class GaussianWeights:
         max_width: int = 100,
         scale: float = 1.6,
         limit: float = 0.001,
-        sigmas: Optional[List[float]] = None,
-    ) -> List[Array]:
+        sigmas: list[float] | None = None,
+    ) -> list[Array]:
         """
         Generate a list of gaussian kernels with size less than max_width
         Args:
@@ -37,7 +35,7 @@ class GaussianWeights:
             sigmas:
 
         Returns:
-            List of numpy arrays as a 1D gaussian
+            list of numpy arrays as a 1D gaussian
         """
         sigma = 1.0
         gws = []
@@ -97,7 +95,6 @@ class GaussianWeights:
     def get_gaussian_width(self, scale: int) -> int:
         return len(self.get_gaussian_weight(scale))
 
-
 # noinspection PyUnresolvedReferences
 class Gaussian(BoundKernels):
     INTERFACE = "convolvesep"
@@ -105,8 +102,8 @@ class Gaussian(BoundKernels):
 
     def __init__(
         self,
-        device_name: Optional[str] = None,
-        gaussian_weights: Optional[List[np.ndarray]] = None,
+        device_name: str | None = None,
+        gaussian_weights: list[np.ndarray] | None = None,
     ):
         self.gaussian_weights = (
             GaussianWeights() if gaussian_weights is None else gaussian_weights
@@ -122,7 +119,7 @@ class Gaussian(BoundKernels):
         self.grad = Gradient(device_name=device_name)
         self.ops = Operators(device_name=device_name)
         # Avoid importing OpenCL-specific Kernel class here; keep backend-agnostic
-        self.gaussian_kernels: List[object] = [
+        self.gaussian_kernels: list[object] = [
             getattr(kmgr, name) for (name, conv) in convs
         ]
         for i, (name, conv) in enumerate(convs):
@@ -168,7 +165,7 @@ class Gaussian(BoundKernels):
         clear_margin: bool = True,
         frame: bool = True,
         res: bool = True,
-    ) -> Tuple[Image1, Image1, Image1]:
+    ) -> tuple[Image1, Image1, Image1]:
         threshold = self.threshold if threshold is None else threshold
         if res:
             g = self.get_gaussian_kernel(scale)

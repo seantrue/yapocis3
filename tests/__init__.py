@@ -15,6 +15,7 @@ import pytest
 
 from yapocis.images import find_image
 from yapocis.utils.basic import imread, show_array
+from yapocis.core import get_backend, get_manager, get_backend_device
 
 ASIZE = 980
 
@@ -211,21 +212,10 @@ class StopWatcher:
             try:
                 from yapocis.utils.performance import save_performance_data
 
-                # Get backend from environment
-                backend = os.environ.get("YAPOCIS_BACKEND", "unknown")
-
-                # Get device information
-                device_name = None
+                backend = get_backend()
+                mgr = get_manager(backend)
+                device_index, device_name = get_backend_device()
                 driver_version = None
-                try:
-                    from yapocis.core.manager import get_manager
-                    mgr = get_manager(backend)
-                    if hasattr(mgr, 'device') and hasattr(mgr.device, 'name'):
-                        device_name = mgr.device.name
-                    if hasattr(mgr, 'device') and hasattr(mgr.device, 'driver_version'):
-                        driver_version = mgr.device.driver_version
-                except Exception:
-                    pass  # Device info is optional
 
                 # Save the data
                 save_performance_data(
@@ -753,7 +743,7 @@ def backend_comparison(request):
     """Run the same test across multiple backends for comparison."""
     available_backends = []
 
-    from yapocis.core.manager import get_backends
+    from yapocis.core import get_backends
 
     try:
         available_backends = get_backends()

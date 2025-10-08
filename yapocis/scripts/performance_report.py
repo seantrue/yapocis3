@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
 """
@@ -32,9 +33,8 @@ from yapocis.utils.performance import (
     plot_longitudinal_trend,
 )
 
-
 def cmd_list(args):
-    """List performance data matching filters."""
+    """list performance data matching filters."""
     data = load_performance_data(
         backend=args.backend,
         test_name=args.test,
@@ -47,7 +47,6 @@ def cmd_list(args):
 
     print(f"Found {len(data)} performance records:\n")
     print(generate_summary_table(data))
-
 
 def cmd_stats(args):
     """Show performance statistics."""
@@ -118,7 +117,6 @@ def cmd_stats(args):
 
     print("\n" + "=" * 90)
 
-
 def cmd_compare(args):
     """Generate backend comparison report for a test."""
     try:
@@ -128,7 +126,6 @@ def cmd_compare(args):
     except ValueError as e:
         print(f"Error: {e}")
         sys.exit(1)
-
 
 def cmd_trend(args):
     """Generate longitudinal trend report for a test."""
@@ -143,7 +140,6 @@ def cmd_trend(args):
         print(f"Error: {e}")
         sys.exit(1)
 
-
 def cmd_comprehensive(args):
     """Generate comprehensive performance report."""
     try:
@@ -153,7 +149,6 @@ def cmd_comprehensive(args):
     except ValueError as e:
         print(f"Error: {e}")
         sys.exit(1)
-
 
 def cmd_purge(args):
     """Purge old performance data."""
@@ -175,17 +170,16 @@ def cmd_purge(args):
     elif count > 0:
         print(f"  (use --verbose to see filenames)")
 
-
 def main():
     parser = argparse.ArgumentParser(
         description="Manage yapocis performance data and reports",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # List all performance data
+  # list all performance data
   python scripts/performance_report.py list
 
-  # List data for specific backend
+  # list data for specific backend
   python scripts/performance_report.py list --backend=metal
 
   # Show statistics
@@ -210,8 +204,8 @@ Examples:
 
     subparsers = parser.add_subparsers(dest="command", help="Command to execute")
 
-    # List command
-    list_parser = subparsers.add_parser("list", help="List performance data")
+    # list command
+    list_parser = subparsers.add_parser("list", help="list performance data")
     list_parser.add_argument("--backend", help="Filter by backend")
     list_parser.add_argument("--test", help="Filter by test name (partial match)")
     list_parser.add_argument("--limit", type=int, default=50, help="Maximum results (default: 50)")
@@ -259,7 +253,6 @@ Examples:
     }
 
     commands[args.command](args)
-
 
 if __name__ == "__main__":
     main()

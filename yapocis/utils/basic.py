@@ -1,6 +1,7 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 import os
 import sys
+from typing import Iterable, Iterator, Union
 
 import skimage
 from PIL import Image, ImageDraw, ImageFont
@@ -25,7 +26,6 @@ if not os.path.isdir(VIEWING_QUEUE):
 DEBUG = False
 BENCHMARKING = os.environ.get('BENCHMARKING', None)
 
-
 def _current_backend() -> str:
     """Return the active backend name for labeling output images.
 
@@ -34,11 +34,10 @@ def _current_backend() -> str:
     b = os.environ.get("YAPOCIS_BACKEND")
     return (b or "ocl").lower()
 
-
 # bytescale, toimage borrowed from scipy.misc
 # Used under the liberal BSD license
 # Returns a byte-scaled image
-def byte_scale(data: Array, cmin: Optional[float] = None, cmax: Optional[float] = None, high: int = 255,
+def byte_scale(data: Array, cmin: float | None = None, cmax: float | None = None, high: int = 255,
                low: int = 0) -> Array:
     if data.dtype == np.uint8:
         return data
@@ -49,13 +48,11 @@ def byte_scale(data: Array, cmin: Optional[float] = None, cmax: Optional[float] 
     bytedata = ((data * 1.0 - cmin) * scale + 0.4999).astype(np.uint8)
     return bytedata + np.uint8(low)
 
-
 _errstr = "Mode is unknown or incompatible with input array shape."
 
-
-def to_image(arr: Array, high: int = 255, low: int = 0, cmin: Optional[float] = None, cmax: Optional[float] = None,
-             pal: Optional[Array] = None, mode: Optional[str] = None,
-             channel_axis: Optional[int] = None, newaxis: Optional[int] = None) -> PILImage:
+def to_image(arr: Array, high: int = 255, low: int = 0, cmin: float | None = None, cmax: float | None = None,
+             pal: Array | None = None, mode: str | None = None,
+             channel_axis: int | None = None, newaxis: int | None = None) -> PILImage:
     """Takes a numpy array and returns a PIL image.  The mode of the
     PIL image depends on the array shape, the pal keyword, and the mode
     keyword.
@@ -161,8 +158,7 @@ def to_image(arr: Array, high: int = 255, low: int = 0, cmin: Optional[float] = 
     image = Image.frombytes(mode, shape, strdata)
     return image
 
-
-def newsize(width: int, height: int, longest: int) -> Tuple[bool, int, int]:
+def newsize(width: int, height: int, longest: int) -> tuple[bool, int, int]:
     if longest is not None:
         resize = False
         if width > height and width > longest:
@@ -176,8 +172,7 @@ def newsize(width: int, height: int, longest: int) -> Tuple[bool, int, int]:
         return resize, width, height
     return False, width, height
 
-
-def imread(filename: str, longest: Optional[int] = None, keep_alpha: bool = False) -> Union[
+def imread(filename: str, longest: int | None = None, keep_alpha: bool = False) -> Union[
     Image1, Image3]:
     img = skimage.io.imread(filename)
     img_dtype = img.dtype
@@ -197,7 +192,6 @@ def imwrite(filename: str, img: Union[Image1, Image3, Image4]):
 
 import time
 
-
 class Stage:
     def __init__(self):
         self.t = None
@@ -215,9 +209,7 @@ class Stage:
         else:
             self.t = self.stage = None
 
-
 stage = Stage()
-
 
 def sign(title: str, img: Union[Image1, PILImage]) -> PILImage:
     if hasattr(img, "dtype"):
@@ -252,9 +244,7 @@ def sign(title: str, img: Union[Image1, PILImage]) -> PILImage:
     draw.draw_string((10, height - 75), title, ink, font=font)
     return img
 
-
 _showArrayCounter = 0
-
 
 def array_to_image(array):
     if len(array.shape) == 3 and array.shape[2] == 4:
@@ -272,8 +262,7 @@ def array_to_image(array):
         img = img.convert("RGB")
     return img
 
-
-def sign_array(*args, **kwargs) -> Tuple[str, PILImage]:
+def sign_array(*args, **kwargs) -> tuple[str, PILImage]:
     global _showArrayCounter
     _showArrayCounter += 1
     array = args[-1]
@@ -306,7 +295,6 @@ def sign_array(*args, **kwargs) -> Tuple[str, PILImage]:
     draw.text((10, 10), title + caption, ink, font=font)
     return title, img
 
-
 def show_array(array: np.ndarray, *args, checkzero=True, **kwargs) -> None:
     if BENCHMARKING:
         print(args, file=sys.stderr)
@@ -323,7 +311,7 @@ def show_array(array: np.ndarray, *args, checkzero=True, **kwargs) -> None:
     if VIEWER:
         os.system(f'{VIEWER} "{os.path.abspath(os.path.join(VIEWING_QUEUE, name))}"&')
 
-def show_arraygrad(title: str, image: Image1, theta: Image1, grad: Optional[Image1] = None) -> None:
+def show_arraygrad(title: str, image: Image1, theta: Image1, grad: Image1 | None = None) -> None:
     """
     Show an array with gradient orientation and optional magnitude
     Args:
@@ -371,7 +359,6 @@ def show_arraygrad(title: str, image: Image1, theta: Image1, grad: Optional[Imag
             draw.line([(x1, y1), (x2, y2)], fill=color)
     show_array(np.array(img), title)
 
-
 class Shaper:
     def __init__(self, data: Array):
         assert len(data.shape) == 2, "Shaper requires 2-d data"
@@ -409,7 +396,6 @@ class Shaper:
             self.data = self.data.reshape(-1, order=self.order)
         return self.data
 
-
 def histeq_large(im: Image1, nbr_bins=2 ** 16) -> Array:
     """
     Histogram equalization of a 2D array
@@ -434,8 +420,7 @@ def histeq_large(im: Image1, nbr_bins=2 ** 16) -> Array:
     im2 = np.interp(im.ravel(), bins[:-1], cdf)
     return np.array(im2, np.float32).reshape(im.shape)
 
-
-def histeq(im: Image1, nbr_bins: int = 256, max_value=255) -> Tuple[Array, Array]:
+def histeq(im: Image1, nbr_bins: int = 256, max_value=255) -> tuple[Array, Array]:
     """
     Histogram equalization quantized to 8 bits. Appropriate for 8 bit images.
     Args:
@@ -451,9 +436,7 @@ def histeq(im: Image1, nbr_bins: int = 256, max_value=255) -> Tuple[Array, Array
     im2 = np.interp(im.ravel(), bins[:-1], cdf)
     return im2.reshape(im.shape), cdf
 
-
 ALIGNMENT = 4
-
 
 def align_image(image: Image1, alignment: int = ALIGNMENT) -> Image1:
     """
@@ -480,7 +463,6 @@ def align_image(image: Image1, alignment: int = ALIGNMENT) -> Image1:
         aligned[:, :, :] = image[:evenw, :evenh, :]
     return aligned
 
-
 def normalize(a: Array) -> Array:
     """
     Ensures that array contents are in range 0 <= elem <= 1.0
@@ -494,10 +476,9 @@ def normalize(a: Array) -> Array:
     a = a / a.max()
     return a
 
-
-def set_margin(a: Image1, margin: int, value: Optional[float] = 0.0) -> None:
+def set_margin(a: Image1, margin: int, value: float | None = 0.0) -> None:
     """
-    Set the edges of a 2D array to a constant value
+    set the edges of a 2D array to a constant value
     Args:
         a: a 2D array
         margin: width of margin
@@ -511,10 +492,9 @@ def set_margin(a: Image1, margin: int, value: Optional[float] = 0.0) -> None:
     a[-margin:, :] = value
     a[:margin, :] = value
 
-
-def set_frame(a: Image1, width: int, frame: Optional[float] = 1.0, margin: Optional[float] = 0.0) -> None:
+def set_frame(a: Image1, width: int, frame: float | None = 1.0, margin: float | None = 0.0) -> None:
     """
-    Set the margin and then set the outer most pixels.
+    set the margin and then set the outer most pixels.
 
     Args:
         a: 2D Image
@@ -531,15 +511,13 @@ def set_frame(a: Image1, width: int, frame: Optional[float] = 1.0, margin: Optio
     a[-1, :] = frame
     a[:, -1] = frame
 
-
 def compute_360_to_180(rotation: float) -> float:
     rotation = rotation % 360
     if rotation > 180:
         rotation = -180 + (rotation - 180)
     return rotation
 
-
-def chunker(data: Iterable, chunk_size: int = 100) -> Iterator[List]:
+def chunker(data: Iterable, chunk_size: int = 100) -> Iterator[list]:
     """
     Chop an iterable into a digestable chunks
     Args:
@@ -551,7 +529,6 @@ def chunker(data: Iterable, chunk_size: int = 100) -> Iterator[List]:
     """
     for i in range(0, len(data), chunk_size):
         yield data[i:i + chunk_size]
-
 
 def get_image_depth(image):
     if len(image.shape) in (2, 3):

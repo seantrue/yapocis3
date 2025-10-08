@@ -13,6 +13,7 @@ import pytest
 
 from tests import StopWatcher
 from yapocis.core import get_backends
+
 # Import library classes that we'll test
 from yapocis.lib.anisodiff import Anisodiff
 from yapocis.lib.gaussian import Gaussian

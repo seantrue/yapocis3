@@ -96,7 +96,7 @@ class BufferManager:
             self.stream.synchronize()
         return buf
 
-    def find_buffer(self, a: Array, op: int) -> Optional[gpuarray.GPUArray]:
+    def find_buffer(self, a: Array, op: int) -> gpuarray.GPUArray | None:
         "Find an appropriate buffer. Tricky."
         assert op in (self.READ, self.WRITE)
         buffer_id = id(a)

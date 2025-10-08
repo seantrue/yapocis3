@@ -1,6 +1,7 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
-from yapocis.core.manager import load_program
+from yapocis.core import load_program
 from yapocis.utils.stereo_typing import *
+from typing import Any, Callable
 
 
 class BoundKernels:
@@ -16,11 +17,15 @@ class BoundKernels:
     INTERFACE = None
     load_program_config = {}
 
-    def __init__(self,
-                 device_name: Optional[EngineID] = None,
-                 backend: Optional[str] = None,
-                 **kwargs):
-        assert device_name is None or isinstance(device_name, (int, str, bytes)), device_name
+    def __init__(
+        self,
+        device_name: DeviceID | None = None,
+        backend: str | None = None,
+        **kwargs,
+    ):
+        assert device_name is None or isinstance(
+            device_name, (int, str, bytes)
+        ), device_name
         # Pass backend through so callers can force Metal/CUDA/OCL per instance.
         self.kmgr = load_program(
             self.INTERFACE,
@@ -33,10 +38,12 @@ class BoundKernels:
     def __getattr__(self, attr: str) -> Callable:
         "Any unbound attribute is checked to see if it is a kernel"
         if attr not in self.kmgr.callable:
-            print("BoundKernel %s not found, %s available" % (attr, list(self.kmgr.callable.keys())))
+            print(
+                "BoundKernel %s not found, %s available"
+                % (attr, list(self.kmgr.callable.keys()))
+            )
             raise KeyError(attr)
         return self.kmgr.callable[attr]
-
 
     def write(self, a):
         self.kmgr.write(a)

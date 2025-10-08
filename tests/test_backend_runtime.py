@@ -9,6 +9,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from yapocis.core import load_program, get_manager
+
 
 @pytest.mark.ocl
 def test_runtime_demo_ocl(monkeypatch):
@@ -17,10 +19,10 @@ def test_runtime_demo_ocl(monkeypatch):
     except Exception as e:
         pytest.skip(f"pyopencl not available: {e}")
     monkeypatch.setenv("YAPOCIS_BACKEND", "ocl")
-    from yapocis.core.manager import get_manager
+    from yapocis.core import get_manager
 
     mgr = get_manager("ocl")
-    prog = mgr.load_program("demo")
+    prog = load_program("demo")
     a = np.arange(16, dtype=np.float32)
     b = np.ones_like(a) * 5
     out = prog.sum(a, b, global_size=a.size)
@@ -35,10 +37,10 @@ def test_runtime_demo_metal(monkeypatch):
     except Exception as e:
         pytest.skip(f"pymetallic not available: {e}")
     monkeypatch.setenv("YAPOCIS_BACKEND", "metal")
-    from yapocis.core.manager import get_manager
+    from yapocis.core import get_manager
 
     mgr = get_manager("metal")
-    prog = mgr.load_program("demo")
+    prog = load_program("demo")
     a = np.arange(16, dtype=np.float32)
     b = np.ones_like(a) * 7
     out = prog.sum(a, b, global_size=a.size)
@@ -54,10 +56,9 @@ def test_runtime_demo_cuda(monkeypatch):
     except Exception as e:
         pytest.skip(f"pycuda not available: {e}")
     monkeypatch.setenv("YAPOCIS_BACKEND", "cuda")
-    from yapocis.core.manager import get_manager
 
     mgr = get_manager("cuda")
-    prog = mgr.load_program("demo")
+    prog = load_program("demo")
 
     # Use numpy arrays; CUDA wrapper will stage to device and return host array
     a = np.arange(16, dtype=np.float32)
@@ -73,11 +74,11 @@ def test_runtime_demo_numba(monkeypatch):
         import numba  # noqa: F401
     except Exception as e:
         pytest.skip(f"numba not available: {e}")
-    monkeypatch.setenv("YAPOCIS_BACKEND", "numba")
-    from yapocis.core.manager import get_manager
+    monkeypatch.setenv("YAPOCIS_BACKEND", "numbax")
+    from yapocis.core import get_manager, load_program
 
-    mgr = get_manager("numba")
-    prog = mgr.load_program("demo")
+    mgr = get_manager("numbax")
+    prog = load_program("demo")
     a = np.arange(16, dtype=np.float32)
     b = np.ones_like(a) * 3
     out = prog.sum(a, b, global_size=a.size)

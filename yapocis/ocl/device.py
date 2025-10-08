@@ -1,10 +1,8 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 import os
-from typing import Dict, Optional, List
 
 from pyopencl._cl import get_platforms
-
 
 def get_available_device_names():
     platforms = get_platforms()
@@ -17,8 +15,7 @@ def get_available_device_names():
                 device_names.append(f"{platform.name}:{device.name}")
     return device_names
 
-
-def get_available_devices(aliases: bool = True) -> Dict[str, "Device"]:
+def get_available_devices(aliases: bool = True) -> dict[str, "Device"]:
     """
     Get the names of the available OpenCL platforms and devices. Name is device name,
     with an alias of platform:device name.
@@ -40,8 +37,7 @@ def get_available_devices(aliases: bool = True) -> Dict[str, "Device"]:
             i += 1
     return devices
 
-
-def pick_default_device(device_names: List[str]) -> str:
+def pick_default_device(device_names: list[str]) -> str:
     dns = {dn.lower(): dn for dn in device_names if isinstance(dn, str)}
     preferences = ("nvidia", "amd", "intel")
     for preference in preferences:
@@ -54,8 +50,7 @@ def pick_default_device(device_names: List[str]) -> str:
                 return dns[dn]
     return device_names[-1]
 
-
-def get_device(device_name: Optional[str] = None) -> "Device":
+def get_device(device_name: str | None = None) -> "Device":
     """
     Get a device that is an exact or approximate match for device name, which can also be an numeric index,
     and if None, will be the first device found.

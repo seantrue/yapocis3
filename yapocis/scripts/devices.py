@@ -1,7 +1,8 @@
+
 #!/usr/bin/env python
 #  Copyright Sean D. True & SwapWizard dba (c) 2011-2025.
 """
-List OpenCL devices and their configurations
+list OpenCL devices and their configurations
 """
 import sys
 from argparse import ArgumentParser
@@ -9,11 +10,10 @@ from argparse import ArgumentParser
 from yapocis.ocl.device import get_available_device_names
 from yapocis.utils.config import print_config
 
-
 def main():
     """Main entry point for yapocis-devices command."""
-    parser = ArgumentParser(description="List OpenCL devices and configurations")
-    parser.add_argument('--list', action="store_true", help="List device names only")
+    parser = ArgumentParser(description="list OpenCL devices and configurations")
+    parser.add_argument('--list', action="store_true", help="list device names only")
     parser.add_argument("devices", nargs="*", help="Specific devices to query")
     args = parser.parse_args()
 
@@ -29,7 +29,6 @@ def main():
     for device_name in device_names:
         print(device_name)
         print_config(device_name)
-
 
 if __name__ == '__main__':
     main()

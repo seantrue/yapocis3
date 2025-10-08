@@ -34,9 +34,10 @@ simple Mandelbrot example in the README demonstrates the RPC-style approach for 
 
 ## Architectural notes
 
-### AssetManager 
+### AssetManager
 
-`AssetManager` centralizes how Yapocis discovers files such as interfaces, kernel templates, fonts, or icons across multiple directories.  
+`AssetManager` centralizes how Yapocis discovers files such as interfaces, kernel templates, fonts, or icons across
+multiple directories.  
 When initialized, it scans:
 
 - The installed `yapocis` package path
@@ -59,27 +60,32 @@ AssetManager(
 ```
 
 ### Interface specs
-The `.interface` files in Yapocis define kernel signatures in a lightweight, IDL-like syntax. Each file describes the callable functions, their parameters, and metadata (e.g., const qualifiers, buffer types, and dimensions) without embedding the actual GPU source code.
+
+The `.interface` files in Yapocis define kernel signatures in a lightweight, IDL-like syntax. Each file describes the
+callable functions, their parameters, and metadata (e.g., const qualifiers, buffer types, and dimensions) without
+embedding the actual GPU source code.
 
 ### Interface Syntax Support
+
 - Comments: `// line`, `# line`, and `/* block */` comments are ignored by the parser.
 - Roles and hints:
-  - `in`, `out`, `inout`/`in_out`, `resident`, `READWRITE` map to buffer semantics.
-  - `out_like <name>` allocates a device buffer shaped like the referenced parameter.
+    - `in`, `out`, `inout`/`in_out`, `resident`, `READWRITE` map to buffer semantics.
+    - `out_like <name>` allocates a device buffer shaped like the referenced parameter.
 - Dimension symbols (derived ints): `size_of`, `width_of`/`widthof`, `height_of`/`heightof`, `depth_of`/`depthof`.
 - Parameter forms:
-  - Role-only: `out_like a`, `width_of a` (dtype optional for size/width/height/depth).
-  - Typed with role: `in float a`, `out float c`, `inout float a`.
-  - Bare scalars: `int chunk`.
+    - Role-only: `out_like a`, `width_of a` (dtype optional for size/width/height/depth).
+    - Typed with role: `in float a`, `out float c`, `inout float a`.
+    - Bare scalars: `int chunk`.
 - Modifiers:
-  - `interface tiled Foo { ... }` propagates tiled to all kernels unless overridden.
-  - `kernel tiled bar(...)` marks only that kernel as tiled.
+    - `interface tiled Foo { ... }` propagates tiled to all kernels unless overridden.
+    - `kernel tiled bar(...)` marks only that kernel as tiled.
 - Aliases and extensions:
-  - Alias: `alias new_name as base_name(<params>);`
-  - Extension: `extension new_name of base_name(<params>);` or `extension new_name as base_name(<params>);`
-  - Extensions are exposed as `<base>_<new>` names in Python and call the base kernel on-device.
+    - Alias: `alias new_name as base_name(<params>);`
+    - Extension: `extension new_name of base_name(<params>);` or `extension new_name as base_name(<params>);`
+    - Extensions are exposed as `<base>_<new>` names in Python and call the base kernel on-device.
 
 ## Structure
+
 A typical `.interface` file contains one or more kernel declarations:
 
 ```text
@@ -91,57 +97,72 @@ kernel_name(
 ```
 
 ### Key elements:
+
 * Parameter direction: in, out, or inout indicates how buffers are transferred.
 * Data types: float, int, etc., may include vector or array notation (float[]).
 * Qualifiers: const, shapes, and optional metadata describe how data flows.
 * Multiple kernels: One .interface file can declare several kernels sharing common assets.
 
 ### Usage in Yapocis
+
 * Parse & Bind: The interface is parsed (via pyparsing) to produce a structured representation of kernel signatures.
-* Template Coupling: The corresponding .mako template holds the actual OpenCL/CUDA/Metal source. KernelManager.load_program pairs the interface with the template, rendering source code with appropriate definitions.
-* Generated Wrappers: Python wrappers are created automatically. When invoked, they handle buffer transfers, type conversions, and dimension checks based on the interface declarations.
-* Runtime Checks: If arguments don’t match the declared types or directions, the wrapper raises informative errors before launching the kernel.
+* Template Coupling: The corresponding .mako template holds the actual OpenCL/CUDA/Metal source.
+  KernelManager.load_program pairs the interface with the template, rendering source code with appropriate definitions.
+* Generated Wrappers: Python wrappers are created automatically. When invoked, they handle buffer transfers, type
+  conversions, and dimension checks based on the interface declarations.
+* Runtime Checks: If arguments don’t match the declared types or directions, the wrapper raises informative errors
+  before launching the kernel.
 
 ### Comparison with Alternative Approaches
+
 | Approach                                         | Advantages                                                                                                             | Drawbacks                                                                              |
-| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+|--------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
 | **Yapocis `.interface` files**                   | - Clear separation of interface & implementation<br>- Automatic wrapper generation<br>- Early validation of parameters | - Requires learning IDL syntax<br>- Coupled to Yapocis tooling                         |
 | **Hand-written wrappers (PyOpenCL / CuPy)**      | - Full flexibility in Python/CUDA/OpenCL code<br>- No custom IDL to learn                                              | - Manual buffer transfers<br>- Error-prone parameter handling                          |
 | **Docstrings or Decorators**                     | - Keeps metadata close to Python functions<br>- Leverages standard Python tooling                                      | - Less expressive for low-level memory semantics<br>- Harder to validate at parse time |
 | **Language-specific DSLs (e.g., Numba, Triton)** | - High-level, Pythonic kernel definitions<br>- JIT compilation and optimization                                        | - May be less portable between backends<br>- Often tied to specific runtime frameworks |
 
-
-
 #### When to Use .interface Files
+
 - You want a formal description of kernel APIs that’s independent of the implementation.
 - You need automated glue code for parameter handling and buffer management.
-- Multiple kernels share a consistent interface style across OpenCL, CUDA, and Metal backends. 
+- Multiple kernels share a consistent interface style across OpenCL, CUDA, and Metal backends.
 
 #### When Alternatives Make Sense
-- Direct control: Writing low-level wrappers yourself is preferable if you require fine-grained control over memory and kernel invocation.
-- Python-only kernels: Frameworks like Numba or Triton may be better when staying entirely in Python and targeting specific hardware.
+
+- Direct control: Writing low-level wrappers yourself is preferable if you require fine-grained control over memory and
+  kernel invocation.
+- Python-only kernels: Frameworks like Numba or Triton may be better when staying entirely in Python and targeting
+  specific hardware.
 
 ## Metal Backend Notes
 
-The Metal backend mirrors OpenCL/CUDA structure but generates Metal Shading Language (MSL) kernels from Mako templates in `yapocis/metalkernels`. The Metal KernelManager prefers `metalkernels/<name>.mako` and falls back to OpenCL templates if not available.
+The Metal backend mirrors OpenCL/CUDA structure but generates Metal Shading Language (MSL) kernels from Mako templates
+in `yapocis/metalkernels`. The Metal KernelManager prefers `metalkernels/<name>.mako` and falls back to OpenCL templates
+if not available.
 
 Key points:
 
 - Compatibility layer: `metalkernels/constants.mako` maps common OpenCL constructs to MSL:
-  - Qualifiers: `__kernel`→`kernel`, `__global`→`device`, `__local`→`threadgroup`.
-  - Builtins: `get_global_id(0)` becomes `uint gid [[ thread_position_in_grid ]]`.
-  - Barriers: `barrier(CLK_GLOBAL_MEM_FENCE)` becomes `threadgroup_barrier(mem_flags::mem_device)`.
-  - Atomics: wrapper around `atomic_fetch_add_explicit` for `atomic_inc` on `device atomic_int*`.
-- Argument binding: scalars are passed as `constant T &arg [[ buffer(i) ]]`; buffers use `device T* [[ buffer(i) ]]`. The Python wrapper keeps OpenCL-like call semantics via a PyMetallic shim.
-- Global/local sizes: The same Python auto-padding/tiling logic applies; the shim accepts `(queue, global_size, local_size, *args)` like PyOpenCL.
-- Limitations: For additional atomics or memory scopes, extend `constants.mako`. Some OpenCL intrinsics may not have a one-to-one MSL equivalent; prefer core math functions or add shims in `constants.mako`/`helpers.mako`.
+    - Qualifiers: `__kernel`→`kernel`, `__global`→`device`, `__local`→`threadgroup`.
+    - Builtins: `get_global_id(0)` becomes `uint gid [[ thread_position_in_grid ]]`.
+    - Barriers: `barrier(CLK_GLOBAL_MEM_FENCE)` becomes `threadgroup_barrier(mem_flags::mem_device)`.
+    - Atomics: wrapper around `atomic_fetch_add_explicit` for `atomic_inc` on `device atomic_int*`.
+- Argument binding: scalars are passed as `constant T &arg [[ buffer(i) ]]`; buffers use `device T* [[ buffer(i) ]]`.
+  The Python wrapper keeps OpenCL-like call semantics via a PyMetallic shim.
+- Global/local sizes: The same Python auto-padding/tiling logic applies; the shim accepts
+  `(queue, global_size, local_size, *args)` like PyOpenCL.
+- Limitations: For additional atomics or memory scopes, extend `constants.mako`. Some OpenCL intrinsics may not have a
+  one-to-one MSL equivalent; prefer core math functions or add shims in `constants.mako`/`helpers.mako`.
 
 Backend selection:
 
 ```python
-from yapocis.core.manager import get_manager
+import core
+from core import get_manager
+
 mgr = get_manager("metal")  # or "ocl" / "cuda"
-prog = mgr.load_program("imageops")
+prog = core.load_program("imageops")
 ```
 
 Set `YAPOCIS_BACKEND=metal` to route high-level wrappers to Metal automatically.

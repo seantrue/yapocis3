@@ -4,32 +4,29 @@ from __future__ import annotations
 Device enumeration and selection for PyMetallic (Apple Metal) backend.
 
 Assumes a PyOpenCL-like API surface provided by `pymetallic`:
-  - `get_devices()` -> List[Device]
+  - `get_devices()` -> list[Device]
   - Each device has a `.name` attribute
 """
 
 import os
-from typing import Dict, Optional, List, Tuple
 
 try:
     import pymetallic as pm  # type: ignore
 except Exception as e:  # pragma: no cover
     raise RuntimeError("PyMetallic is required for the metallic backend") from e
 
-
-def get_available_device_names() -> List[str]:
+def get_available_device_names() -> list[str]:
     devices = pm.Device.get_all_devices()
     return [getattr(d, "name", str(d)) for d in devices]
 
-
-def get_available_devices(aliases: bool = True) -> Dict[str | int, "pm.Device"]:
+def get_available_devices(aliases: bool = True) -> dict[str | int, "pm.Device"]:
     """
     Build a mapping of device identifiers to Device objects.
 
     Keys include the device name (string) and, if `aliases` is True, numeric indices.
     """
     devices = pm.Device.get_all_devices()
-    out: Dict[str | int, "pm.Device"] = {}
+    out: dict[str | int, "pm.Device"] = {}
     for i, dev in enumerate(devices):
         name = getattr(dev, "name", None) or f"metal:{i}"
         out[name] = dev
@@ -37,8 +34,7 @@ def get_available_devices(aliases: bool = True) -> Dict[str | int, "pm.Device"]:
             out[i] = dev
     return out
 
-
-def pick_default_device(device_names: List[str | int]) -> str | int:
+def pick_default_device(device_names: list[str | int]) -> str | int:
     # Prefer discrete GPU names if present; otherwise pick the last item.
     lowercase = {str(n).lower(): n for n in device_names if isinstance(n, (str, int))}
     preferences = ("radeon", "amd", "apple", "gpu")
@@ -48,10 +44,9 @@ def pick_default_device(device_names: List[str | int]) -> str | int:
                 return lowercase[dn]
     return device_names[-1]
 
-
 def get_device(
-    device_name: Optional[str | int] = None,
-) -> Tuple[str | int, "pm.Device"]:
+    device_name: str | int | None = None,
+) -> tuple[str | int, "pm.Device"]:
     """
     Resolve a Metal device by name or index. If not provided, uses `YAPOCIS_DEVICE`
     or chooses a default via `pick_default_device`.

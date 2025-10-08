@@ -9,19 +9,21 @@
 import math
 
 import numpy as np
+from typing import Optional
+
 from freetype import (FT_LOAD_RENDER, Face, FT_Matrix, FT_Set_Transform,
                       FT_Vector, byref)
 
 from yapocis.fonts import font
 from yapocis.utils.basic import set_margin
-from yapocis.utils.stereo_typing import Image1, Optional, Tuple
+from yapocis.utils.stereo_typing import Image1
 
 # These are performance boosts except when size, font, or rotation are changing randomly
 _glyph_cache = {}
 _kerning_cache = {}
 _extent_cache = {}
 
-def extent_freetype(text, filename: str, size: float = 12, angle: float = 0) -> Tuple:
+def extent_freetype(text, filename: str, size: float = 12, angle: float = 0) -> tuple:
     """
     Parameters:
     -----------
@@ -176,10 +178,9 @@ def render_freetype(text, filename: str, size: float = 12, angle: float = 0):
 
     return L
 
-
-def render_text(text: str, font_name: str = "default", size: int = 32, rotation: Optional[float] = None,
+def render_text(text: str, font_name: str = "default", size: int = 32, rotation: float | None = None,
                 debug_bbox=False) \
-        -> Tuple[Tuple, Image1]:
+        -> tuple[tuple, Image1]:
     rotation = rotation % 360
     if rotation > 180:
         rotation = -180 + (rotation - 180)
@@ -196,7 +197,6 @@ def render_text(text: str, font_name: str = "default", size: int = 32, rotation:
     if debug_bbox:
         set_margin(rendered, 2, 255)
     return [0, 0, *rendered.shape], rendered.astype(np.float32) / 255.0
-
 
 def compute_offset(angle, h, w):
     dx = dy = 0

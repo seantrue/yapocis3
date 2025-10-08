@@ -1,24 +1,25 @@
 from __future__ import annotations
 
 import importlib
-from typing import Any, Callable, List, Optional
+from typing import Callable, Optional
 
 from mako.template import Template
+from yapocis.numbax.kernel import Kernel
+
 from yapocis.core.interface import Interface, get_interface, load_interface
-from yapocis.numba.kernel import Kernel
 
 
 class KernelManager:
     """KernelManager for Numba backend.
 
     Binds interface kernels to Python/Numba functions in
-    `yapocis.numba.kernels.<interface>` module.
+    `yapocis.numbax.kernels.<interface>` module.
     """
 
     def __init__(
         self,
         interface: Interface,
-        device_name: Optional[str] = None,
+        device_name: str | None = None,
         debug: bool = False,
         **context,
     ):
@@ -29,7 +30,7 @@ class KernelManager:
         self.context = context
         self.snapshots = []
         # Load module with Python implementations
-        mod_name = f"yapocis.numba.kernels.{interface.name}"
+        mod_name = f"yapocis.numbax.kernels.{interface.name}"
         try:
             mod = importlib.import_module(mod_name)
         except ModuleNotFoundError:
@@ -67,7 +68,7 @@ class KernelManager:
         alias = getattr(kernel, "alias", None)
         ctx = self.context
         if iface_name == "convolve":
-            from yapocis.numba.kernels.convolve import make_convolve_functions
+            from yapocis.numbax.kernels.convolve import make_convolve_functions
 
             base = (alias or name).replace("_fast", "")
             kmain, kfast = make_convolve_functions(base, ctx.get("conv"))
@@ -76,7 +77,7 @@ class KernelManager:
             # Return function matching the requested callable name
             return getattr(mod, alias or name)
         if iface_name == "convolvesep":
-            from yapocis.numba.kernels.convolvesep import make_sep_functions
+            from yapocis.numbax.kernels.convolvesep import make_sep_functions
 
             convs_list = ctx.get("convs", [])
             convs = {n: v for (n, v) in convs_list}
@@ -131,7 +132,7 @@ class KernelManager:
     def load_program(
         cls,
         interface_spec: str,
-        device_name: Optional[str] = None,
+        device_name: str | None = None,
         debug: bool = False,
         **context,
     ):
@@ -159,7 +160,7 @@ class KernelManager:
     def import_program(
         cls,
         interface_spec: str,
-        device_name: Optional[str] = None,
+        device_name: str | None = None,
         namespace: bool = False,
         debug: bool = False,
         import_kernels=None,

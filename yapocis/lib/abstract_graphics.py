@@ -145,7 +145,7 @@ class AbstractKernelDraw:
     COLOR_WIDTH=None
     GRAPHICS=None
 
-    def __init__(self, a, device_name:Optional[str]=None, graphics:Optional[AbstractGraphics]=None, chunk_size: Optional[int]=500):
+    def __init__(self, a, device_name:str | None=None, graphics:AbstractGraphics | None=None, chunk_size: int | None=500):
         self.a = a
         graphics =self.GRAPHICS if graphics is None else graphics
         self.graphics = graphics(device_name=device_name) if graphics else graphics
@@ -171,7 +171,7 @@ class AbstractKernelDraw:
         return coords, colors, widths
 
 
-    def coerce_colors(self, n:int, color:Optional[float]=None, colors=None, alpha=None, **kwargs):
+    def coerce_colors(self, n:int, color:float | None=None, colors=None, alpha=None, **kwargs):
         # a tuple, list, array of COLOR_WIDTH floats
         # a list or tuple of array/list/tuple of COLOR_WIDTH floats
         # an array of nxCOLOR_WIDTH floats

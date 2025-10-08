@@ -4,11 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Yapocis is a multi-backend GPU/CPU computing framework for image processing and graphics operations. It provides a unified Python interface to OpenCL, CUDA, Metal, and Numba backends through an IDL-like interface definition language and Mako template system.
+Yapocis is a multi-backend GPU/CPU computing framework for image processing and graphics operations. It provides a
+unified Python interface to OpenCL, CUDA, Metal, and Numba backends through an IDL-like interface definition language
+and Mako template system.
 
 ## Key Commands
 
 ### Environment Setup
+
 ```bash
 # Using make (recommended)
 make install-dev
@@ -23,6 +26,7 @@ make install-backends
 ```
 
 ### Code Quality & Formatting
+
 ```bash
 # Format code with isort and black
 make format
@@ -48,6 +52,7 @@ make license-check
 ```
 
 ### Testing
+
 ```bash
 # Run all tests across available backends
 make test
@@ -72,6 +77,7 @@ pytest tests/test_graphics_pixel_exact.py::test_graphics_pixel_exact_backend -v
 ```
 
 ### Benchmarking
+
 ```bash
 # Separable Gaussian convolution benchmark
 python scripts/bench_convolvesep_numba.py --sizes 512,1024 --repeats 3 --backends auto
@@ -81,6 +87,7 @@ python scripts/bench_median3x3.py --sizes 512,1024 --backends auto
 ```
 
 ### Changelog Management
+
 ```bash
 # Generate CHANGELOG.md from git history
 make changelog
@@ -90,6 +97,7 @@ make changelog-unreleased
 ```
 
 ### Building & Distribution
+
 ```bash
 # Build distribution packages
 make build
@@ -105,12 +113,14 @@ make publish
 ```
 
 ### Asset Configuration
+
 ```bash
 # Enable external assets (icons, images, interfaces)
 export YAPOCIS_PROJECT=external
 ```
 
 ### CLI Tools
+
 ```bash
 # List available OpenCL/Metal devices
 yapocis-devices --list
@@ -154,22 +164,27 @@ yapocis-stubgen input.h
 ### Core Components
 
 **Backend Management (`yapocis.core.manager`)**
+
 - `get_backends()`: Detect available backends (ocl, metal, cuda, numba)
 - `get_manager(backend)`: Get backend-specific kernel manager
 - Backends controlled by `YAPOCIS_BACKEND` environment variable
 
 **Interface Definition Language**
+
 - IDL-like syntax in `yapocis/interfaces/*.interface` files
 - Parsed by `yapocis.core.interface_parser` (PyParsing-based)
 - Key keywords: `in`, `out`, `inout`, `out_like`, `resident`, `width_of`, `height_of`
 - Extensions allow alternate signatures (e.g., `res` for resident buffers)
 
 **Template System**
-- Mako templates per backend: `yapocis/kernels/*.mako` (OpenCL), `yapocis/metalkernels/*.mako` (Metal), `yapocis/cukernels/*.mako` (CUDA)
+
+- Mako templates per backend: `yapocis/kernels/*.mako` (OpenCL), `yapocis/metalkernels/*.mako` (Metal),
+  `yapocis/cukernels/*.mako` (CUDA)
 - Backend-specific KernelManagers resolve and compile templates
 - Template resolution via `yapocis.core.mako_utils`
 
 **High-Level Libraries (`yapocis.lib.*`)**
+
 - `graphics.py`, `graphics4.py`: 2D graphics primitives (lines, circles, text)
 - `convolve.py`: Image convolution operations
 - `colormath.py`, `hsi.py`: Color space conversions
@@ -179,25 +194,31 @@ yapocis-stubgen input.h
 ### Backend Architecture
 
 Each backend implements:
+
 - **Device Management**: Enumerate and select compute devices
-- **Buffer Management**: Allocate/manage GPU/CPU memory 
+- **Buffer Management**: Allocate/manage GPU/CPU memory
 - **Kernel Management**: Compile and execute kernels with unified `load_program`/`import_program` API
 
 **OpenCL Backend** (`yapocis.ocl.*`)
+
 - Via PyOpenCL, supports CPU/GPU devices
 - 2D tiled dispatch for large arrays
 
 **Metal Backend** (`yapocis.metallic.*`)
+
 - Via pymetallic shim, Apple GPU only
 - Falls back to OpenCL templates when Metal-specific unavailable
 
 **CUDA Backend** (`yapocis.cu.*`)
+
 - Via PyCUDA, compiles through NVCC
 - Template system adapted from OpenCL
 - Row-major storage order (matches NumPy, opposite of OpenCL/Metal)
-- All 12 kernel interfaces compile and run successfully (anisodiff, colormath, demo, gradient, graphics, graphics4, hsi, imageops, mandelbrot, median3x3, truetrace, zcs)
+- All 12 kernel interfaces compile and run successfully (anisodiff, colormath, demo, gradient, graphics, graphics4, hsi,
+  imageops, mandelbrot, median3x3, truetrace, zcs)
 
 **Numba Backend** (`yapocis.numba.*`)
+
 - Pure Python/NumPy with JIT compilation
 - Used for CPU fallback and testing
 
@@ -215,17 +236,20 @@ YAPOCIS_VIEWER=<command>                # Image viewer for debugging
 ## Testing Architecture
 
 **Backend Coverage**
+
 - Tests automatically skip when backend dependencies unavailable
 - Pytest markers: `@pytest.mark.ocl`, `@pytest.mark.metal`, etc.
 - Cross-backend validation via `test_backend_crosscheck.py`
 
 **Key Test Files**
+
 - `test_backend_smoke.py`: Compile all interfaces across backends
 - `test_backend_runtime.py`: Basic execution sanity checks
 - `test_graphics_pixel_exact.py`: Pixel-perfect validation (most important for graphics)
 - `test_backend_crosscheck.py`: Cross-backend output comparison
 
 **Asset Testing**
+
 - Set `YAPOCIS_PROJECT=external` to access full test asset library
 - Icons, images, and additional interfaces in `external/` directory
 
@@ -243,6 +267,7 @@ interface tiled graphics4 {
 ```
 
 **Parameter Hints**
+
 - `in`, `out`, `inout`: Data flow direction
 - `out_like <param>`: Allocate output with same shape as parameter
 - `resident`: Use buffer in-place (reduce copies)
@@ -252,14 +277,18 @@ interface tiled graphics4 {
 ## Common Development Patterns
 
 **Loading and Using Kernels**
+
 ```python
-from yapocis.core.manager import get_manager
+import core
+from core import get_manager
+
 mgr = get_manager("ocl")  # or honor YAPOCIS_BACKEND
-prog = mgr.load_program("mandelbrot")
+prog = core.load_program("mandelbrot")
 result = prog.mandelbrot(input_array, maxiter=1000)
 ```
 
 **High-Level Graphics**
+
 ```python
 from yapocis.lib.graphics4 import Graphics4
 g = Graphics4()
@@ -269,6 +298,7 @@ result = g.read(canvas)
 ```
 
 **Backend Testing**
+
 ```python
 @pytest.mark.parametrize("backend", get_backends())
 def test_operation(backend):
@@ -279,8 +309,9 @@ def test_operation(backend):
 ## Asset Management
 
 Asset lookup searches: `[yapocis_package, cwd, YAPOCIS_PROJECT]`
+
 - Icons: `yapocis.icons.icon(name, size=64)`
-- Images: `yapocis.images.image(name)`  
+- Images: `yapocis.images.image(name)`
 - Interfaces: `yapocis.interfaces.find_interface(name)`
 - Kernels: Resolved per backend via AssetManager
 
@@ -289,11 +320,13 @@ Asset lookup searches: `[yapocis_package, cwd, YAPOCIS_PROJECT]`
 The validation system uses stored test results for regression testing:
 
 ### Test Output Storage
+
 - All `show_array()` calls automatically save arrays to `queue/raw/*.npz`
 - Both raw arrays (.npz) and rendered images (.png) are saved
 - Files named with format: `"test_name [backend].npz"`
 
 ### Validation Commands
+
 ```bash
 # Manage validation references
 python scripts/manage_validation.py info              # System status
@@ -309,6 +342,7 @@ pytest -m validation                # Only validation-marked tests
 ```
 
 ### Test Integration
+
 ```python
 @pytest.mark.validation
 @pytest.mark.parametrize("backend", get_backends())
@@ -319,12 +353,14 @@ def test_operation(backend, validate_result):
 ```
 
 ### Validation Workflow
+
 1. **Run tests** to generate `queue/raw/*.npz` files
 2. **Review outputs** and promote good results to validation references
 3. **Daily development** with `pytest --validate` to catch regressions
 4. **Update references** with `--update-validation` for intentional changes
 
 ### NPZ Analysis Tool
+
 ```bash
 # Analyze test output files for data quality
 python scripts/analyze_queue.py [directory]           # Analyze queue/raw by default
@@ -335,5 +371,7 @@ python scripts/analyze_queue.py --dtype float32       # Filter by dtype
 python scripts/analyze_queue.py --verbose             # Show all array details
 ```
 
-Use this tool to diagnose data quality issues like NaN/Inf values, check dtypes, and verify min/max ranges in test outputs.
+Use this tool to diagnose data quality issues like NaN/Inf values, check dtypes, and verify min/max ranges in test
+outputs.
+
 - Never delete the performance database. Update the schema instead.

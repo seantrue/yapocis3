@@ -28,7 +28,7 @@ Interface metadata honored:
 
 import argparse, os
 from pathlib import Path
-from typing import Dict, Any, List, Tuple
+from typing import Any
 from yapocis.i import parse_interface_text, InterfaceSpec, Kernel, Param
 
 # ---------- Backend type maps ----------
@@ -73,7 +73,7 @@ def header(backend: str, fast_math: bool) -> str:
     return "// AUTO-GENERATED STUB — Metal (MSL)\n#include <metal_stdlib>\nusing namespace metal;\n"
 
 # ---------- ABI helpers ----------
-def pack_params_order(k: Kernel, backend: str) -> Tuple[str, List[str]]:
+def pack_params_order(k: Kernel, backend: str) -> tuple[str, list[str]]:
     """
     Construct the function signature for a kernel.
     - Maps 'resident' in/out to device pointers
@@ -139,7 +139,7 @@ def pack_params_order(k: Kernel, backend: str) -> Tuple[str, List[str]]:
 
 # ---------- Emitters ----------
 
-def emit_elementwise(k: Kernel, meta: Dict[str,Any], backend: str) -> str:
+def emit_elementwise(k: Kernel, meta: dict[str,Any], backend: str) -> str:
     sig, _ = pack_params_order(k, backend)
     h = header(backend, meta.get("fast_math", True))
     body_index = {
@@ -175,7 +175,7 @@ kernel void {k.name}({sig})
 def _boundary_clamp_expr(x, lo, hi):  # code string
     return f"({x} < {lo} ? {lo} : ({x} >= {hi} ? ({hi}-1) : {x}))"
 
-def emit_stencil2d(k: Kernel, meta: Dict[str,Any], backend: str) -> str:
+def emit_stencil2d(k: Kernel, meta: dict[str,Any], backend: str) -> str:
     # traits
     rx, ry = (0,0)
     if "radius" in k.traits:
@@ -234,7 +234,7 @@ def emit_stencil2d(k: Kernel, meta: Dict[str,Any], backend: str) -> str:
 }}
 """
 
-def emit_separable2d(k: Kernel, meta: Dict[str,Any], backend: str) -> str:
+def emit_separable2d(k: Kernel, meta: dict[str,Any], backend: str) -> str:
     # traits
     rx, ry = (0,0)
     if "radius" in k.traits:
@@ -300,7 +300,7 @@ dst[idx] = acc;"""
 """
     return code_h  # Keep 1:1 with spec (you'll have separate _v entry too)
 
-def emit_reduction(k: Kernel, meta: Dict[str,Any], backend: str) -> str:
+def emit_reduction(k: Kernel, meta: dict[str,Any], backend: str) -> str:
     op = k.traits.get("op", "sum")
     identity = k.traits.get("identity", 0.0)
     deterministic = str(k.traits.get("deterministic","off")).lower() in ("on","true","1")
@@ -386,7 +386,7 @@ kernel void {k.name}({sig}, constant int& length [[ buffer({len(k.params)}) ]], 
 }}
 """
 
-def emit_graphics2d(k: Kernel, meta: Dict[str,Any], backend: str) -> str:
+def emit_graphics2d(k: Kernel, meta: dict[str,Any], backend: str) -> str:
     blend = k.traits.get("blend", meta.get("blend", None))
     if not blend:
         # fallback: infer: float -> alpha, float4 -> src_over
@@ -421,7 +421,7 @@ def emit_graphics2d(k: Kernel, meta: Dict[str,Any], backend: str) -> str:
 """
 
 # Dispatcher
-def emit_kernel(k: Kernel, meta: Dict[str,Any], backend: str) -> str:
+def emit_kernel(k: Kernel, meta: dict[str,Any], backend: str) -> str:
     # Resolve effective class
     klass = k.traits.get("class", meta.get("class", None))
     # Graphics family interfaces default to graphics_2d by name

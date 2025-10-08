@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Test CUDA kernel through yapocis wrapper."""
 import os
-os.environ['YAPOCIS_BACKEND'] = 'cuda'
+
+import core
+
+os.environ["YAPOCIS_BACKEND"] = "cuda"
 
 import numpy as np
 import cupy as cp
 from yapocis.cu.kernel_manager import CUDAKernelManager
-from yapocis.core.interface import load_interface, get_interface
 
 print("Creating CUDAKernelManager...")
 mgr = CUDAKernelManager()
@@ -14,7 +16,7 @@ print(f"Templates dir: {mgr.templates_dir}")
 print()
 
 print("Loading imageops program...")
-prog = mgr.load_program('imageops')
+prog = core.load_program("imageops")
 print(f"Program: {prog}")
 print(f"Program name: {prog.name}")
 print(f"Callable keys: {list(prog.callable.keys())}")
@@ -22,7 +24,9 @@ print()
 
 print("Creating test data...")
 a = np.random.random(100).astype(np.float32)
-print(f"Input shape: {a.shape}, dtype: {a.dtype}, range: [{a.min():.3f}, {a.max():.3f}]")
+print(
+    f"Input shape: {a.shape}, dtype: {a.dtype}, range: [{a.min():.3f}, {a.max():.3f}]"
+)
 print()
 
 print("Calling prog.clamp_pixels via __getattr__...")
@@ -43,7 +47,7 @@ try:
     print(f"SUCCESS! Result: {result}")
     if result is not None:
         print(f"Result type: {type(result)}")
-        if hasattr(result, 'shape'):
+        if hasattr(result, "shape"):
             print(f"Result shape: {result.shape}")
             print(f"Result dtype: {result.dtype}")
             # Get back to CPU
@@ -55,4 +59,5 @@ try:
 except Exception as e:
     print(f"FAILED: {e}")
     import traceback
+
     traceback.print_exc()

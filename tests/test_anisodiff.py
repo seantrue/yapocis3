@@ -1,6 +1,6 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
-from yapocis.core.manager import get_backend
+from yapocis.core import get_backend
 from yapocis.lib.anisodiff import Anisodiff
 from yapocis.lib.channels import join_planes, split_planes
 from yapocis.lib.hsi import HSI
@@ -19,7 +19,7 @@ def get_available_device_names():
     return [""]
 
 
-def setup_test(device_name: Optional[str] = None):
+def setup_test(device_name: str | None = None):
     image = image_test()
     # Ensure that we don't have fortunate addressing!
     assert image.shape[0] != image.shape[1]
@@ -90,7 +90,6 @@ def test_2plane():
 
 
 def test_3plane():
-    from yapocis.core.manager import get_backend
 
     device_names = get_available_device_names()
     backend = get_backend()
