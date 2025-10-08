@@ -61,43 +61,62 @@ def cmd_stats(args):
         print("No performance data found.")
         return
 
-    # Group by test and backend
-    test_backend_times = {}
+    # Group by test, backend, and device (removing duplicates)
+    test_backend_device_times = {}
+    seen_runs = set()
+
     for entry in data:
         test = entry["metadata"]["test_name"]
         backend = entry["metadata"]["backend"]
+        device = entry["metadata"].get("device_name", "N/A")
         total_time = entry["timing"]["total"]
+        timestamp = entry["metadata"]["timestamp"]
 
-        key = (test, backend)
-        if key not in test_backend_times:
-            test_backend_times[key] = []
-        test_backend_times[key].append(total_time)
+        # Deduplicate by timestamp
+        run_key = (test, backend, device, timestamp)
+        if run_key in seen_runs:
+            continue
+        seen_runs.add(run_key)
+
+        key = (test, backend, device)
+        if key not in test_backend_device_times:
+            test_backend_device_times[key] = []
+        test_backend_device_times[key].append(total_time)
 
     # Display statistics
-    print(f"Performance Statistics ({len(data)} total runs)\n")
-    print("=" * 80)
+    unique_runs = len(seen_runs)
+    print(f"Performance Statistics ({unique_runs} unique runs)\n")
+    print("=" * 90)
 
     current_test = None
-    for (test, backend), times in sorted(test_backend_times.items()):
+    for (test, backend, device), times in sorted(test_backend_device_times.items()):
         if test != current_test:
             if current_test is not None:
                 print()
             print(f"\n{test}")
-            print("-" * 80)
+            print("-" * 90)
             current_test = test
 
         mean = sum(times) / len(times)
+        backend_device = f"{backend} ({device})" if device != "N/A" else backend
+
+        # Convert to milliseconds
+        mean_ms = mean * 1000
+
         if len(times) > 1:
             variance = sum((t - mean) ** 2 for t in times) / len(times)
             std = variance ** 0.5
             min_time = min(times)
             max_time = max(times)
-            print(f"  {backend:10s}: {mean:.3f}s ± {std:.3f}s  "
-                  f"(min: {min_time:.3f}s, max: {max_time:.3f}s, runs: {len(times)})")
+            std_ms = std * 1000
+            min_ms = min_time * 1000
+            max_ms = max_time * 1000
+            print(f"  {backend_device:35s}: {mean_ms:.2f}ms ± {std_ms:.2f}ms  "
+                  f"(min: {min_ms:.2f}ms, max: {max_ms:.2f}ms, runs: {len(times)})")
         else:
-            print(f"  {backend:10s}: {mean:.3f}s (1 run)")
+            print(f"  {backend_device:35s}: {mean_ms:.2f}ms (1 run)")
 
-    print("\n" + "=" * 80)
+    print("\n" + "=" * 90)
 
 
 def cmd_compare(args):

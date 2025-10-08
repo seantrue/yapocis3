@@ -1,7 +1,6 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
 """Performance tracking and reporting for yapocis tests using DuckDB."""
 
-import json
 import os
 import subprocess
 import time
@@ -178,7 +177,7 @@ def save_performance_data(
     Args:
         test_name: Full test name (e.g., "test_graphics4.TestClass.test_method")
         file_path: Absolute path to test file
-        backend: Backend name (ocl, metal, numba, cuda)
+        backend: Backend name (ocl, metal, numbax, cuda)
         timing_data: Dictionary of checkpoint names to elapsed times
         metadata: Optional additional metadata
         test_start_time: Unix timestamp when test started (optional, defaults to now)
@@ -267,7 +266,7 @@ def load_performance_data(
     Load and filter performance data from DuckDB.
 
     Args:
-        backend: Filter by backend (ocl, metal, numba, cuda)
+        backend: Filter by backend (ocl, metal, numbax, cuda)
         test_name: Filter by test name (supports partial match unless exact_match=True)
         branch: Filter by git branch
         file_status: Filter by file status (clean, modified)
@@ -445,20 +444,35 @@ def generate_summary_table(data: List[Dict]) -> str:
     if not data:
         return "No performance data found."
 
-    # Build table rows
-    headers = ["Test Name", "Backend", "Branch", "Commit", "Status", "Total (s)", "Timestamp"]
+    # Build table rows with unique combinations only
+    headers = ["Test Name", "Backend", "Device", "Branch", "Commit", "Status", "Total (ms)", "Timestamp"]
     rows = []
+    seen = set()
 
     for entry in data:
         meta = entry["metadata"]
         timing = entry["timing"]
+
+        # Create a unique key for deduplication
+        key = (
+            meta["test_name"],
+            meta["backend"],
+            meta.get("device_name", "N/A"),
+            meta["timestamp"]
+        )
+
+        if key in seen:
+            continue
+        seen.add(key)
+
         rows.append([
             meta["test_name"],
             meta["backend"],
+            meta.get("device_name", "N/A"),
             meta["branch"],
             meta["commit"][:7],  # Short commit hash
             meta["file_status"],
-            f"{timing['total']:.3f}",
+            f"{timing['total'] * 1000:.2f}",  # Convert to milliseconds
             datetime.fromisoformat(meta["timestamp"]).strftime("%Y-%m-%d %H:%M")
         ])
 
