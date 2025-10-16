@@ -1,0 +1,17 @@
+# Kernels
+
+## `operators`
+* operators.interface has unprocessed template markup.
+
+```
+interface operators {
+%for name, operator in operators:
+    kernel ${name}(in float input1, in float input2, out_like input1);
+    extension res of ${name}(resident float input1, resident float input2, resident float output);
+%endfor
+    # Alias for backward compatibility: div -> divop
+    alias div as divop(in float input1, in float input2, out_like input1);
+    alias div_res as divop(resident float input1, resident float input2, resident float output);
+};
+```
+

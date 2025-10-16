@@ -59,6 +59,7 @@ KEYBOARD_HELP = {
     "F11":       "Compare with validation reference",
     "F10":       "Show validation info for current image",
     "F9":        "Toggle between test image and validation reference",
+    "F8":        "Toggle 3-panel difference view (current|validation|diff)",
     "h":         "Show this help",
 }
 
@@ -159,6 +160,7 @@ STATUS_DISPLAY_TIME = 3000  # 3 seconds in milliseconds
 
 # Global variable for validation view toggle
 showing_validation_reference = False
+showing_difference_view = False
 
 
 def get_images(filter_strings=None, force_refresh=False):
@@ -510,38 +512,68 @@ def fetch_image(i):
 
 
 def next_image():
-    global showing_validation_reference
-    showing_validation_reference = False  # Reset to test image when navigating
-    return fetch_image(image_index + 1)
+    global showing_validation_reference, showing_difference_view
+    # Keep current view mode when navigating
+    if showing_difference_view:
+        new_img, new_label = fetch_image(image_index + 1)
+        # Re-apply difference view to new image
+        return create_difference_visualization(None) if new_img else (new_img, new_label)
+    elif showing_validation_reference:
+        new_img, new_label = fetch_image(image_index + 1)
+        return view_validation_reference(None) if new_img else (new_img, new_label)
+    else:
+        return fetch_image(image_index + 1)
 
 
 def previous_image():
-    global showing_validation_reference
-    showing_validation_reference = False  # Reset to test image when navigating
-    return fetch_image(image_index - 1)
+    global showing_validation_reference, showing_difference_view
+    # Keep current view mode when navigating
+    if showing_difference_view:
+        new_img, new_label = fetch_image(image_index - 1)
+        # Re-apply difference view to new image
+        return create_difference_visualization(None) if new_img else (new_img, new_label)
+    elif showing_validation_reference:
+        new_img, new_label = fetch_image(image_index - 1)
+        return view_validation_reference(None) if new_img else (new_img, new_label)
+    else:
+        return fetch_image(image_index - 1)
 
 
 def last_image():
-    global showing_validation_reference, images
-    showing_validation_reference = False  # Reset to test image when navigating
+    global showing_validation_reference, showing_difference_view, images
 
     # Ensure we compute the current last index without relying on negative indexing
     current_images = get_images(filter_strings)
     images[:] = current_images
     if not images:
         return None, None
-    return fetch_image(len(images) - 1)
+
+    # Keep current view mode when navigating
+    if showing_difference_view:
+        new_img, new_label = fetch_image(len(images) - 1)
+        return create_difference_visualization(None) if new_img else (new_img, new_label)
+    elif showing_validation_reference:
+        new_img, new_label = fetch_image(len(images) - 1)
+        return view_validation_reference(None) if new_img else (new_img, new_label)
+    else:
+        return fetch_image(len(images) - 1)
 
 
 def first_image():
-    global showing_validation_reference
-    showing_validation_reference = False  # Reset to test image when navigating
-    return fetch_image(0)
+    global showing_validation_reference, showing_difference_view
+    # Keep current view mode when navigating
+    if showing_difference_view:
+        new_img, new_label = fetch_image(0)
+        return create_difference_visualization(None) if new_img else (new_img, new_label)
+    elif showing_validation_reference:
+        new_img, new_label = fetch_image(0)
+        return view_validation_reference(None) if new_img else (new_img, new_label)
+    else:
+        return fetch_image(0)
 
 
 def step_image():
-    global showing_validation_reference, images, image_index, tailing_advance_needed
-    showing_validation_reference = False  # Reset to test image when auto-advancing
+    global showing_validation_reference, showing_difference_view, images, image_index, tailing_advance_needed
 
     # Only proceed if watchdog detected a new file
     if not tailing_advance_needed:
@@ -559,17 +591,28 @@ def step_image():
         # Nothing to show
         return None, None
 
+    # Determine which image to show
+    new_img = None
+    new_label = None
+
     # If new images arrived, advance to the next one
     if len(images) > old_length:
         # New images detected - move to the next image after our current position
-        return fetch_image(image_index + 1)
-
+        new_img, new_label = fetch_image(image_index + 1)
     # If there are more images ahead in the current list, move forward by one
-    if image_index < len(images) - 1:
-        return fetch_image(image_index + 1)
+    elif image_index < len(images) - 1:
+        new_img, new_label = fetch_image(image_index + 1)
+    else:
+        # Stay on the current image (shouldn't normally reach here since we only call when new files arrive)
+        new_img, new_label = fetch_image(image_index)
 
-    # Stay on the current image (shouldn't normally reach here since we only call when new files arrive)
-    return fetch_image(image_index)
+    # Apply current view mode to the new image
+    if showing_difference_view and new_img:
+        return create_difference_visualization(None)
+    elif showing_validation_reference and new_img:
+        return view_validation_reference(None)
+    else:
+        return new_img, new_label
 
 
 def delete_image(i=None):
@@ -716,16 +759,18 @@ def show_validation_info(font):
         show_status_message(font, f"Info error: {str(e)[:40]}", (255, 0, 0))
 
 
-def view_validation_reference(font):
+def view_validation_reference(font=None):
     """Load and display the validation reference as an image."""
     global most_recent, image_index, images
     if not most_recent:
-        show_status_message(font, "No current image", (255, 0, 0))
+        if font:
+            show_status_message(font, "No current image", (255, 0, 0))
         return None, None
 
     test_name, backend = parse_image_name(most_recent)
     if not test_name:
-        show_status_message(font, "Cannot parse image name", (255, 0, 0))
+        if font:
+            show_status_message(font, "Cannot parse image name", (255, 0, 0))
         return None, None
 
     try:
@@ -734,7 +779,8 @@ def view_validation_reference(font):
 
         reference = load_validation_reference(test_name, backend)
         if reference is None:
-            show_status_message(font, "No validation reference found", (255, 165, 0))
+            if font:
+                show_status_message(font, "No validation reference found", (255, 165, 0))
             return None, None
 
         # Convert numpyx array to pygame surface
@@ -757,14 +803,16 @@ def view_validation_reference(font):
                 # RGBA - use RGB channels only for display
                 ref_rgb = reference[:, :, :3]
             else:
+                if font:
+                    show_status_message(
+                        font, f"Unsupported array shape: {reference.shape}", (255, 0, 0)
+                    )
+                return None, None
+        else:
+            if font:
                 show_status_message(
                     font, f"Unsupported array shape: {reference.shape}", (255, 0, 0)
                 )
-                return None, None
-        else:
-            show_status_message(
-                font, f"Unsupported array shape: {reference.shape}", (255, 0, 0)
-            )
             return None, None
 
         # Normalize to 0-255 range if needed
@@ -795,22 +843,27 @@ def view_validation_reference(font):
             else f"[{backend}]"
         )
         label = f"VALIDATION REF ({ref_type}): {test_name}"
-        show_status_message(
-            font, f"Showing validation reference ({ref_type})", (0, 255, 255)
-        )
+        if font:
+            show_status_message(
+                font, f"Showing validation reference ({ref_type})", (0, 255, 255)
+            )
 
         return validation_surface, label
 
     except Exception as e:
-        show_status_message(
-            font, f"Error loading validation: {str(e)[:40]}", (255, 0, 0)
-        )
+        if font:
+            show_status_message(
+                font, f"Error loading validation: {str(e)[:40]}", (255, 0, 0)
+            )
         return None, None
 
 
 def toggle_validation_view(font):
     """Toggle between showing test image and validation reference."""
-    global showing_validation_reference
+    global showing_validation_reference, showing_difference_view
+
+    # Disable difference view if active
+    showing_difference_view = False
 
     if not showing_validation_reference:
         # Switch to validation reference
@@ -825,6 +878,30 @@ def toggle_validation_view(font):
     else:
         # Switch back to test image
         showing_validation_reference = False
+        show_status_message(font, "Showing test image", (0, 255, 0))
+        return fetch_current_test_image()
+
+
+def toggle_difference_view(font):
+    """Toggle between showing test image and 3-panel difference view."""
+    global showing_difference_view, showing_validation_reference
+
+    # Disable validation view if active
+    showing_validation_reference = False
+
+    if not showing_difference_view:
+        # Switch to difference view
+        diff_image, diff_label = create_difference_visualization(font)
+        if diff_image is not None:
+            showing_difference_view = True
+            return diff_image, diff_label
+        else:
+            # Failed to create diff view, stay with test image
+            showing_difference_view = False
+            return fetch_current_test_image()
+    else:
+        # Switch back to test image
+        showing_difference_view = False
         show_status_message(font, "Showing test image", (0, 255, 0))
         return fetch_current_test_image()
 
@@ -861,6 +938,248 @@ def fetch_current_test_image():
     else:
         # Fall back to regular fetch if no current image
         return fetch_image(image_index)
+
+
+def create_difference_visualization(font=None):
+    """
+    Create a 3-panel visualization showing: original, validation, and difference map.
+
+    Args:
+        font: Pygame font for status messages (optional)
+
+    Returns:
+        tuple: (surface, label) or (None, None) if error
+    """
+    global most_recent
+    import numpy as np
+
+    if not most_recent:
+        if font:
+            show_status_message(font, "No current image", (255, 0, 0))
+        return None, None
+
+    test_name, backend = parse_image_name(most_recent)
+    if not test_name:
+        if font:
+            show_status_message(font, "Cannot parse image name", (255, 0, 0))
+        return None, None
+
+    try:
+        # Load validation reference
+        reference = load_validation_reference(test_name, backend)
+        if reference is None:
+            if font:
+                show_status_message(font, "No validation reference found", (255, 165, 0))
+            return None, None
+
+        # Load current test result
+        npz_path = get_npz_path(most_recent)
+        if not os.path.exists(npz_path):
+            if font:
+                show_status_message(font, "No .npz file found", (255, 0, 0))
+            return None, None
+
+        current_data = np.load(npz_path)
+        current_array = (
+            current_data["arr_0"]
+            if "arr_0" in current_data
+            else current_data[list(current_data.keys())[0]]
+        )
+
+        # Ensure arrays have the same shape
+        if current_array.shape != reference.shape:
+            if font:
+                show_status_message(
+                    font,
+                    f"Shape mismatch: {current_array.shape} vs {reference.shape}",
+                    (255, 0, 0)
+                )
+            return None, None
+
+        # Normalize arrays to 0-255 uint8 for visualization
+        def normalize_to_uint8(arr):
+            """Normalize array to 0-255 uint8 range."""
+            if arr.dtype == np.float32 or arr.dtype == np.float64:
+                if arr.max() <= 1.0 and arr.min() >= 0.0:
+                    # Values in 0-1 range
+                    return (arr * 255).astype(np.uint8)
+                else:
+                    # Values in arbitrary range - normalize
+                    arr_min, arr_max = arr.min(), arr.max()
+                    if arr_max > arr_min:
+                        return ((arr - arr_min) / (arr_max - arr_min) * 255).astype(np.uint8)
+                    else:
+                        return np.zeros_like(arr, dtype=np.uint8)
+            else:
+                return np.clip(arr, 0, 255).astype(np.uint8)
+
+        # Convert to RGB if needed
+        def to_rgb(arr):
+            """Convert array to RGB format."""
+            if len(arr.shape) == 2:
+                # 2D grayscale
+                return np.stack([arr, arr, arr], axis=-1)
+            elif len(arr.shape) == 3:
+                if arr.shape[2] == 1:
+                    # Single channel
+                    return np.repeat(arr, 3, axis=2)
+                elif arr.shape[2] == 2:
+                    # 2 channels - use first as grayscale
+                    channel_0 = arr[:, :, 0]
+                    return np.stack([channel_0, channel_0, channel_0], axis=-1)
+                elif arr.shape[2] == 3:
+                    # Already RGB
+                    return arr
+                elif arr.shape[2] == 4:
+                    # RGBA - take RGB channels
+                    return arr[:, :, :3]
+            return arr
+
+        # Prepare current and reference images
+        current_rgb = to_rgb(normalize_to_uint8(current_array))
+        reference_rgb = to_rgb(normalize_to_uint8(reference))
+
+        # Compute absolute difference
+        diff = np.abs(current_array.astype(np.float32) - reference.astype(np.float32))
+
+        # Create difference visualization with color mapping
+        # Use a heat map: blue (no diff) -> green -> yellow -> red (max diff)
+        max_diff = diff.max()
+        if len(diff.shape) == 3 and diff.shape[2] > 1:
+            # For multi-channel, use max across channels
+            diff_magnitude = diff.max(axis=2)
+        else:
+            diff_magnitude = diff.squeeze() if len(diff.shape) == 3 else diff
+
+        # Normalize difference to 0-1
+        if max_diff > 0:
+            diff_normalized = diff_magnitude / max_diff
+        else:
+            diff_normalized = np.zeros_like(diff_magnitude)
+
+        # Create heat map visualization
+        # Blue -> Cyan -> Green -> Yellow -> Red
+        diff_vis = np.zeros((*diff_normalized.shape, 3), dtype=np.uint8)
+
+        # Use a smooth color gradient
+        for i in range(diff_normalized.shape[0]):
+            for j in range(diff_normalized.shape[1]):
+                val = diff_normalized[i, j]
+                if val < 0.25:
+                    # Blue to Cyan (0.0 - 0.25)
+                    t = val / 0.25
+                    diff_vis[i, j] = [0, int(255 * t), 255]
+                elif val < 0.5:
+                    # Cyan to Green (0.25 - 0.5)
+                    t = (val - 0.25) / 0.25
+                    diff_vis[i, j] = [0, 255, int(255 * (1 - t))]
+                elif val < 0.75:
+                    # Green to Yellow (0.5 - 0.75)
+                    t = (val - 0.5) / 0.25
+                    diff_vis[i, j] = [int(255 * t), 255, 0]
+                else:
+                    # Yellow to Red (0.75 - 1.0)
+                    t = (val - 0.75) / 0.25
+                    diff_vis[i, j] = [255, int(255 * (1 - t)), 0]
+
+        # Create 3-panel layout
+        h, w = current_rgb.shape[:2]
+
+        # Calculate panel size to fit in window
+        panel_width = min(WIDTH // 3 - 10, w)
+        panel_height = min(HEIGHT - 100, h)
+
+        # Scale images if needed
+        if panel_width < w or panel_height < h:
+            scale = min(panel_width / w, panel_height / h)
+            new_w = int(w * scale)
+            new_h = int(h * scale)
+
+            # Resize using PIL for better quality
+            from PIL import Image
+            current_pil = Image.fromarray(current_rgb).resize((new_w, new_h), Image.LANCZOS)
+            reference_pil = Image.fromarray(reference_rgb).resize((new_w, new_h), Image.LANCZOS)
+            diff_pil = Image.fromarray(diff_vis).resize((new_w, new_h), Image.LANCZOS)
+
+            current_rgb = np.array(current_pil)
+            reference_rgb = np.array(reference_pil)
+            diff_vis = np.array(diff_pil)
+
+        # Create pygame surfaces
+        current_surf = pygame.surfarray.make_surface(current_rgb.swapaxes(0, 1))
+        reference_surf = pygame.surfarray.make_surface(reference_rgb.swapaxes(0, 1))
+        diff_surf = pygame.surfarray.make_surface(diff_vis.swapaxes(0, 1))
+
+        # Get actual dimensions
+        surf_w, surf_h = current_surf.get_size()
+
+        # Create composite surface
+        composite_width = surf_w * 3 + 40
+        composite_height = surf_h + 80
+        composite = pygame.Surface((composite_width, composite_height))
+        composite.fill((50, 50, 50))
+
+        # Add labels
+        label_font = pygame.font.Font(font.get_fonts()[0] if hasattr(font, 'get_fonts') else None, 16)
+        current_label = label_font.render("Current", True, (255, 255, 255))
+        reference_label = label_font.render("Validation", True, (255, 255, 255))
+        diff_label = label_font.render(f"Difference (max: {max_diff:.2e})", True, (255, 255, 255))
+
+        # Position panels
+        x_positions = [10, surf_w + 20, surf_w * 2 + 30]
+        y_pos = 30
+
+        # Blit labels
+        composite.blit(current_label, (x_positions[0], 5))
+        composite.blit(reference_label, (x_positions[1], 5))
+        composite.blit(diff_label, (x_positions[2], 5))
+
+        # Blit images
+        composite.blit(current_surf, (x_positions[0], y_pos))
+        composite.blit(reference_surf, (x_positions[1], y_pos))
+        composite.blit(diff_surf, (x_positions[2], y_pos))
+
+        # Add color scale legend for difference map
+        legend_height = 20
+        legend_width = surf_w
+        legend_y = y_pos + surf_h + 10
+
+        # Draw color scale
+        for i in range(legend_width):
+            val = i / legend_width
+            if val < 0.25:
+                t = val / 0.25
+                color = (0, int(255 * t), 255)
+            elif val < 0.5:
+                t = (val - 0.25) / 0.25
+                color = (0, 255, int(255 * (1 - t)))
+            elif val < 0.75:
+                t = (val - 0.5) / 0.25
+                color = (int(255 * t), 255, 0)
+            else:
+                t = (val - 0.75) / 0.25
+                color = (255, int(255 * (1 - t)), 0)
+            pygame.draw.line(composite, color, (x_positions[2] + i, legend_y), (x_positions[2] + i, legend_y + legend_height))
+
+        # Add scale labels
+        scale_label_font = pygame.font.Font(None, 14)
+        min_label = scale_label_font.render("0", True, (255, 255, 255))
+        max_label = scale_label_font.render(f"{max_diff:.2e}", True, (255, 255, 255))
+        composite.blit(min_label, (x_positions[2], legend_y + legend_height + 2))
+        composite.blit(max_label, (x_positions[2] + legend_width - 40, legend_y + legend_height + 2))
+
+        label = f"DIFFERENCE VIEW: {test_name}"
+        if font:
+            show_status_message(font, f"Showing difference visualization (max diff: {max_diff:.2e})", (0, 255, 255))
+
+        return composite, (label, (0, 255, 255))
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        if font:
+            show_status_message(font, f"Error creating diff view: {str(e)[:40]}", (255, 0, 0))
+        return None, None
 
 
 def delete_validation_reference(font):
@@ -1088,6 +1407,9 @@ def main():
                 elif event.key == pygame.K_F9:
                     # Toggle between test image and validation reference
                     image, label_info = toggle_validation_view(font)
+                elif event.key == pygame.K_F8:
+                    # Toggle 3-panel difference view
+                    image, label_info = toggle_difference_view(font)
                 elif event.key == pygame.K_h:
                     # Show help overlay
                     show_help_overlay(font)
