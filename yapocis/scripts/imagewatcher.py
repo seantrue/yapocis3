@@ -1,5 +1,4 @@
-
-#!/usr/bin/env python
+# !/usr/bin/env python
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 """\
 Monitor a directory for new images.
@@ -47,21 +46,22 @@ os.makedirs(VALIDATION_PATH, exist_ok=True)
 
 # Keyboard help mapping
 KEYBOARD_HELP = {
-    "q / Esc": "Quit",
-    "a": "Previous image",
-    "d": "Next image",
-    "w": "First image (beginning)",
-    "e": "Last image (end)",
-    "s": "Start tailing directory (auto-advance)",
+    "q / Esc":   "Quit",
+    "a":         "Previous image",
+    "d":         "Next image",
+    "w":         "First image (beginning)",
+    "e":         "Last image (end)",
+    "s":         "Toggle tailing mode (auto-advance on new files)",
     "Backspace": "Delete current image (or validation if viewing validation)",
-    "F12": "Promote to validation reference (agnostic)",
+    "F12":       "Promote to validation reference (agnostic)",
     "Shift+F12": "Force promote to validation (agnostic overwrite)",
-    "Ctrl+F12": "Promote to backend-specific validation",
-    "F11": "Compare with validation reference",
-    "F10": "Show validation info for current image",
-    "F9": "Toggle between test image and validation reference",
-    "h": "Show this help",
+    "Ctrl+F12":  "Promote to backend-specific validation",
+    "F11":       "Compare with validation reference",
+    "F10":       "Show validation info for current image",
+    "F9":        "Toggle between test image and validation reference",
+    "h":         "Show this help",
 }
+
 
 def print_help(prog: str = None) -> None:
     """Print usage and keyboard-to-action mapping."""
@@ -86,6 +86,7 @@ def print_help(prog: str = None) -> None:
         details.append(f"  {k:16s} -> {v}")
     print(usage + "\n".join(details))
     sys.exit(0)
+
 
 def parse_image_name(image_path):
     """
@@ -122,6 +123,7 @@ def parse_image_name(image_path):
 
     return test_name, backend
 
+
 def get_npz_path(image_path, target_dir=None):
     """Get corresponding .npz file path for an image."""
     if not image_path:
@@ -136,7 +138,9 @@ def get_npz_path(image_path, target_dir=None):
         # Default to raw directory
         return os.path.join(RAW_QUEUE, npz_name)
 
+
 status_message = status_color = status_time = None
+
 
 def show_status_message(font, message, color=(255, 255, 0)):
     """Show a temporary status message (will be displayed by main loop)."""
@@ -146,6 +150,7 @@ def show_status_message(font, message, color=(255, 255, 0)):
     status_timer = pygame.time.get_ticks()
     print(f"Status: {message}")  # Also print to console
 
+
 # Global variables for status display
 status_message = None
 status_color = (255, 255, 0)
@@ -154,6 +159,7 @@ STATUS_DISPLAY_TIME = 3000  # 3 seconds in milliseconds
 
 # Global variable for validation view toggle
 showing_validation_reference = False
+
 
 def get_images(filter_strings=None, force_refresh=False):
     """
@@ -177,15 +183,15 @@ def get_images(filter_strings=None, force_refresh=False):
 
     # Check if we need to refresh the cache
     filters_changed = (
-        current_filter_strings != last_filter_strings
-        or current_validation_filters != last_validation_filters
+            current_filter_strings != last_filter_strings
+            or current_validation_filters != last_validation_filters
     )
 
     if (
-        not force_refresh
-        and not images_cache_dirty
-        and not filters_changed
-        and cached_images
+            not force_refresh
+            and not images_cache_dirty
+            and not filters_changed
+            and cached_images
     ):
         # Return cached results if valid
         return cached_images
@@ -210,8 +216,8 @@ def get_images(filter_strings=None, force_refresh=False):
             filename = os.path.basename(path)
             # Check if filename contains ALL filter strings (case-insensitive)
             if all(
-                filter_str.lower() in filename.lower()
-                for filter_str in current_filter_strings
+                    filter_str.lower() in filename.lower()
+                    for filter_str in current_filter_strings
             ):
                 filtered_images.append(path)
         images = filtered_images
@@ -237,8 +243,8 @@ def get_images(filter_strings=None, force_refresh=False):
             if show_no_validation:
                 # Include if no validation reference exists (orange color)
                 if (
-                    validation_color == (255, 165, 0)
-                    and validation_text == "[no validation]"
+                        validation_color == (255, 165, 0)
+                        and validation_text == "[no validation]"
                 ):
                     validation_filtered.append(path)
 
@@ -257,10 +263,12 @@ def get_images(filter_strings=None, force_refresh=False):
     print(f"Found {len(images)} images matching filters")
     return images
 
+
 def invalidate_image_cache():
     """Mark the image cache as dirty to force refresh on next access."""
     global images_cache_dirty
     images_cache_dirty = True
+
 
 most_recent = None
 image_index = -1
@@ -280,6 +288,9 @@ last_validation_filters = (False, False)
 
 # Watchdog file system observer
 file_observer = None
+# Flag to signal when tailing mode should advance to next image
+tailing_advance_needed = False
+
 
 class ImageWatcherFileHandler(FileSystemEventHandler):
     """Handle file system events for automatic cache invalidation."""
@@ -291,35 +302,55 @@ class ImageWatcherFileHandler(FileSystemEventHandler):
 
     def on_created(self, event):
         """Handle file creation events."""
+        global tailing_advance_needed
         if not event.is_directory:
             if self._is_image_file(event.src_path) or self._is_validation_file(
-                event.src_path
+                    event.src_path
             ):
                 print(f"File created: {os.path.basename(event.src_path)}")
                 invalidate_image_cache()
+                # Signal that tailing mode should advance
+                if self._is_image_file(event.src_path):
+                    tailing_advance_needed = True
+                    # Post a pygame event to trigger step_image in the main loop
+                    try:
+                        pygame.event.post(pygame.event.Event(pygame.USEREVENT))
+                    except pygame.error:
+                        # pygame might not be initialized yet
+                        pass
 
     def on_deleted(self, event):
         """Handle file deletion events."""
         if not event.is_directory:
             if self._is_image_file(event.src_path) or self._is_validation_file(
-                event.src_path
+                    event.src_path
             ):
                 print(f"File deleted: {os.path.basename(event.src_path)}")
                 invalidate_image_cache()
 
     def on_moved(self, event):
         """Handle file move/rename events."""
+        global tailing_advance_needed
         if not event.is_directory:
             if (
-                self._is_image_file(event.src_path)
-                or self._is_image_file(event.dest_path)
-                or self._is_validation_file(event.src_path)
-                or self._is_validation_file(event.dest_path)
+                    self._is_image_file(event.src_path)
+                    or self._is_image_file(event.dest_path)
+                    or self._is_validation_file(event.src_path)
+                    or self._is_validation_file(event.dest_path)
             ):
                 print(
                     f"File moved: {os.path.basename(event.src_path)} -> {os.path.basename(event.dest_path)}"
                 )
                 invalidate_image_cache()
+                # Signal that tailing mode should advance if moving TO an image file
+                if self._is_image_file(event.dest_path):
+                    tailing_advance_needed = True
+                    # Post a pygame event to trigger step_image in the main loop
+                    try:
+                        pygame.event.post(pygame.event.Event(pygame.USEREVENT))
+                    except pygame.error:
+                        # pygame might not be initialized yet
+                        pass
 
     def _is_image_file(self, path):
         """Check if file is an image file."""
@@ -328,6 +359,7 @@ class ImageWatcherFileHandler(FileSystemEventHandler):
     def _is_validation_file(self, path):
         """Check if file is a validation file."""
         return path.endswith(".npz") and self.validation_dir in path
+
 
 def setup_file_monitoring():
     """set up file system monitoring using watchdog."""
@@ -356,6 +388,7 @@ def setup_file_monitoring():
         print(f"Failed to start file monitoring: {e}")
         file_observer = None
 
+
 def stop_file_monitoring():
     """Stop file system monitoring."""
     global file_observer
@@ -365,6 +398,7 @@ def stop_file_monitoring():
         file_observer.join()
         file_observer = None
         print("File monitoring stopped")
+
 
 def image_path(i=None):
     global image_index, images
@@ -385,6 +419,7 @@ def image_path(i=None):
 
     created, path = images[i]
     return created, path
+
 
 def get_validation_status(image_path):
     """
@@ -432,6 +467,7 @@ def get_validation_status(image_path):
     except Exception as e:
         return f"[validation error: {str(e)[:20]}]", (255, 0, 0)  # Red
 
+
 def fetch_image(i):
     global image_index
     global most_recent
@@ -472,15 +508,18 @@ def fetch_image(i):
     else:
         return image, (base_label, (255, 255, 255))
 
+
 def next_image():
     global showing_validation_reference
     showing_validation_reference = False  # Reset to test image when navigating
     return fetch_image(image_index + 1)
 
+
 def previous_image():
     global showing_validation_reference
     showing_validation_reference = False  # Reset to test image when navigating
     return fetch_image(image_index - 1)
+
 
 def last_image():
     global showing_validation_reference, images
@@ -493,30 +532,45 @@ def last_image():
         return None, None
     return fetch_image(len(images) - 1)
 
+
 def first_image():
     global showing_validation_reference
     showing_validation_reference = False  # Reset to test image when navigating
     return fetch_image(0)
 
+
 def step_image():
-    global showing_validation_reference, images
+    global showing_validation_reference, images, image_index, tailing_advance_needed
     showing_validation_reference = False  # Reset to test image when auto-advancing
 
-    # If there are more images ahead, move forward by one
-    if image_index < len(images) - 1:
-        return fetch_image(image_index + 1)
+    # Only proceed if watchdog detected a new file
+    if not tailing_advance_needed:
+        return fetch_image(image_index)
 
-    # Force refresh to look for new images (watchdog will handle new files automatically,
-    # but we still need to force refresh for tailing mode)
+    # Clear the flag
+    tailing_advance_needed = False
+
+    # Force refresh to get the new images (cache was invalidated by watchdog)
     current_images = get_images(filter_strings, force_refresh=True)
+    old_length = len(images)
     images[:] = current_images
 
     if not images:
         # Nothing to show
         return None, None
 
-    # Stay on the true last image; if new images arrived, this will advance to the new last
-    return fetch_image(len(images) - 1)
+    # If new images arrived, advance to the next one
+    if len(images) > old_length:
+        # New images detected - move to the next image after our current position
+        return fetch_image(image_index + 1)
+
+    # If there are more images ahead in the current list, move forward by one
+    if image_index < len(images) - 1:
+        return fetch_image(image_index + 1)
+
+    # Stay on the current image (shouldn't normally reach here since we only call when new files arrive)
+    return fetch_image(image_index)
+
 
 def delete_image(i=None):
     global most_recent
@@ -528,6 +582,7 @@ def delete_image(i=None):
     if path and os.path.exists(path):
         os.unlink(path)
     # Cache invalidation now handled automatically by watchdog
+
 
 def promote_current_image(font, force_overwrite=False, backend_specific=False):
     """
@@ -583,6 +638,7 @@ def promote_current_image(font, force_overwrite=False, backend_specific=False):
     except Exception as e:
         show_status_message(font, f"Error promoting: {str(e)[:50]}", (255, 0, 0))
 
+
 def compare_with_validation_reference(font):
     """Compare current image with its validation reference."""
     global most_recent
@@ -632,6 +688,7 @@ def compare_with_validation_reference(font):
     except Exception as e:
         show_status_message(font, f"Compare error: {str(e)[:40]}", (255, 0, 0))
 
+
 def show_validation_info(font):
     """Show validation information for current image."""
     global most_recent
@@ -658,6 +715,7 @@ def show_validation_info(font):
     except Exception as e:
         show_status_message(font, f"Info error: {str(e)[:40]}", (255, 0, 0))
 
+
 def view_validation_reference(font):
     """Load and display the validation reference as an image."""
     global most_recent, image_index, images
@@ -679,7 +737,7 @@ def view_validation_reference(font):
             show_status_message(font, "No validation reference found", (255, 165, 0))
             return None, None
 
-        # Convert numpy array to pygame surface
+        # Convert numpyx array to pygame surface
         # Handle different array shapes and formats
         if len(reference.shape) == 2:
             # 2D array - display as grayscale (use as single channel, replicate to RGB)
@@ -720,7 +778,7 @@ def view_validation_reference(font):
         else:
             ref_rgb = ref_rgb.astype(np.uint8)
 
-        # Create pygame surface from numpy array
+        # Create pygame surface from numpyx array
         validation_surface = pygame.surfarray.make_surface(
             ref_rgb.swapaxes(0, 1)
         )  # pygame expects (width, height)
@@ -749,6 +807,7 @@ def view_validation_reference(font):
         )
         return None, None
 
+
 def toggle_validation_view(font):
     """Toggle between showing test image and validation reference."""
     global showing_validation_reference
@@ -769,6 +828,7 @@ def toggle_validation_view(font):
         show_status_message(font, "Showing test image", (0, 255, 0))
         return fetch_current_test_image()
 
+
 def fetch_current_test_image():
     """Fetch current test image without triggering image list refresh."""
     global most_recent, image_index
@@ -788,7 +848,7 @@ def fetch_current_test_image():
             validation_text, validation_color = get_validation_status(most_recent)
 
             # Include validation status in the label
-            base_label = f"{image_index+1}/{len(images)}@{created}  {image_name}"
+            base_label = f"{image_index + 1}/{len(images)}@{created}  {image_name}"
             if validation_text:
                 full_label = f"{base_label}  {validation_text}"
                 return image, (full_label, validation_color)
@@ -801,6 +861,7 @@ def fetch_current_test_image():
     else:
         # Fall back to regular fetch if no current image
         return fetch_image(image_index)
+
 
 def delete_validation_reference(font):
     """Delete the validation reference for the current image."""
@@ -859,6 +920,7 @@ def delete_validation_reference(font):
         )
         return False
 
+
 def show_help_overlay(font):
     """Show keyboard help overlay."""
     show_status_message(font, "Help: Check console for full shortcuts", (0, 255, 255))
@@ -869,12 +931,14 @@ def show_help_overlay(font):
         print(f"  {key:16s} -> {desc}")
     print("=" * 50 + "\n")
 
+
 WIDTH = 1024
 HEIGHT = 800
 
+
 def main():
     global WIDTH, HEIGHT, status_message, queue, RAW_QUEUE, VALIDATION_PATH
-    global filter_strings, show_validation_failed, show_no_validation
+    global filter_strings, show_validation_failed, show_no_validation, tailing_mode
 
     # Parse command-line arguments
     parser = ArgumentParser(description="Monitor a directory for new images")
@@ -927,6 +991,9 @@ def main():
 
     # set up file system monitoring
     setup_file_monitoring()
+
+    # Track tailing mode state
+    tailing_mode = False
 
     pygame.init()
     font_path = find_font("default")
@@ -998,10 +1065,10 @@ def main():
                 )
                 image, label_info = fetch_image(image_index)
             if event.type == pygame.USEREVENT:
-                image, label_info = step_image()
+                # Only respond to USEREVENT if in tailing mode
+                if tailing_mode:
+                    image, label_info = step_image()
             if event.type == pygame.KEYDOWN:
-                # Stop tailing the directory
-                pygame.time.set_timer(pygame.USEREVENT, 0)
                 if event.key == pygame.K_q:
                     pygame.quit()
                     return
@@ -1027,20 +1094,30 @@ def main():
                 elif event.key == pygame.K_ESCAPE:
                     pygame.quit()
                 elif event.key == pygame.K_a:
-                    # Backup
+                    # Backup - disable tailing when manually navigating
+                    tailing_mode = False
                     image, label_info = previous_image()
                 elif event.key == pygame.K_d:
-                    # Forward
+                    # Forward - disable tailing when manually navigating
+                    tailing_mode = False
                     image, label_info = next_image()
                 elif event.key == pygame.K_e:
-                    # End
+                    # End - disable tailing when manually navigating
+                    tailing_mode = False
                     image, label_info = last_image()
                 elif event.key == pygame.K_w:
-                    # Beginning
+                    # Beginning - disable tailing when manually navigating
+                    tailing_mode = False
                     image, label_info = first_image()
                 elif event.key == pygame.K_s:
-                    # Start tailing the directory
-                    pygame.time.set_timer(pygame.USEREVENT, 100)
+                    # Toggle tailing mode
+                    tailing_mode = not tailing_mode
+                    if tailing_mode:
+                        show_status_message(font, "Tailing enabled - waiting for new files", (0, 255, 0))
+                        print("Tailing mode enabled - will auto-advance when new files are detected")
+                    else:
+                        show_status_message(font, "Tailing disabled", (255, 255, 0))
+                        print("Tailing mode disabled")
                 elif event.key == pygame.K_BACKSPACE:
                     # Delete validation reference if showing validation, otherwise delete test image
                     if showing_validation_reference:
@@ -1053,6 +1130,7 @@ def main():
                         delete_image()
                         image, label_info = next_image()
         pygame.display.update()
+
 
 if __name__ == "__main__":
     try:
