@@ -4,13 +4,13 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Summary Statistics
 
-- **Total AI-assisted commits**: ~24
+- **Total AI-assisted commits**: ~27
 - **Major features developed with AI assistance**:
   - Infrastructure: Package modernization (hatchling, modern tooling), automated changelog generation, type annotation modernization
-  - Backend work: CUDA kernel compilation fixes, CUDA row-major addressing fixes, Metal backend fixes, coordinate system standardization, Numba backend completeness, truetrace kernel port
-  - Testing: Validation framework, StopWatcher enhancements, test isolation fixes, NPZ analysis tooling
+  - Backend work: CUDA kernel compilation fixes, CUDA row-major addressing fixes, Metal backend fixes, coordinate system standardization, Numba backend completeness, truetrace kernel port, separable convolution boundary fix
+  - Testing: Validation framework, StopWatcher enhancements, test isolation fixes, NPZ analysis tooling, test determinism fixes
   - Performance: Performance tracking system, DuckDB migration, reproducibility improvements
-  - Code quality: Test refactoring, random data centralization, Python 3.9+ type modernization
+  - Code quality: Test refactoring, random data centralization, Python 3.9+ type modernization, HSI alpha channel handling
   - Developer experience: Environment variable standardization, enhanced backend/device listing
 - **Lines of code**:
   - ~1300 lines: Performance tracking system (2025-10-03)
@@ -22,7 +22,86 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~50 lines: YAPOCIS_ENGINE → YAPOCIS_DEVICE rename (2025-10-06)
   - ~200 lines: CUDA addressing fixes and truetrace port (2025-10-06)
   - ~350 lines: Type annotation modernization (2025-10-08)
+  - ~5 lines: Test determinism fix (2025-10-16)
+  - ~40 lines: HSI alpha channel handling (2025-10-16)
+  - ~25 lines: Separable convolution boundary fix (2025-10-17)
   - ~100 lines: Documentation updates (2025-10-05, 2025-10-06, 2025-10-08)
+
+## Detailed Contributions
+
+### 2025-10-17: Separable Convolution Boundary Fix
+
+**AI Contribution (Claude):**
+- Fixed asymmetric truncation in Gaussian blur convolution operations
+- Problem: Vertical convolution was truncated by kernel width at top/bottom, horizontal showed different behavior
+- Root cause: Linear index boundary checks didn't properly enforce 2D rectangular margins
+- Solution: Modified OCL, Metal, and CUDA kernel templates to use 2D coordinate-based boundary checks
+- Added `<%include file="helpers.mako"/>` to OpenCL convolvesep.mako
+- Changed boundary logic from linear ranges to explicit 2D bounds: `(x >= margin) && (x < width-margin) && (y >= margin) && (y <= height-margin)`
+- Works correctly for both column-major (OCL/Metal) and row-major (CUDA) layouts
+- ~25 lines changed across 3 files
+- Verification: All Gaussian tests pass with symmetric 9-pixel margins on all sides
+
+**Files Modified:**
+- `yapocis/kernels/convolvesep.mako` - Added helpers include, updated boundary checks in _h and _v kernels
+- `yapocis/metalkernels/convolvesep.mako` - Updated boundary checks in _h and _v kernels
+- `yapocis/cukernels/convolvesep.mako` - Updated boundary checks in _h and _v kernels
+
+**Human Contribution:**
+- Identified the asymmetric truncation issue in test outputs
+- Directed investigation to GPU kernels specifically
+- Made initial Metal kernel fix to demonstrate correct approach
+- Requested application to OpenCL and CUDA
+
+---
+
+### 2025-10-16: HSI Color Space Alpha Channel Handling
+
+**AI Contribution (Claude):**
+- Fixed NaN values appearing in alpha channel during HSI color space conversions
+- Problem: OCL and Metal hsi2rgb kernels produced NaN in alpha channel when processing 4-channel RGBA images
+- Root cause: Kernels only wrote RGB channels (0-2), leaving alpha channel uninitialized in output buffer
+- Solution: Added conditional alpha passthrough when depth > 3 in all backends
+- Modified both rgb2hsi3 and hsi2rgb3 kernels across 4 backends
+- ~40 lines changed across 4 files
+- Avoids performance penalty of zeros_like() by only copying alpha when present
+
+**Files Modified:**
+- `yapocis/kernels/hsi.mako` - Added alpha passthrough in rgb2hsi3 and hsi2rgb3
+- `yapocis/metalkernels/hsi.mako` - Added alpha passthrough in rgb2hsi3 and hsi2rgb3
+- `yapocis/cukernels/hsi.mako` - Added alpha passthrough in rgb2hsi3 and hsi2rgb3
+- `yapocis/numbax/kernels/hsi.py` - Added alpha passthrough in _rgb2hsi_glsl and _hsi2rgb_glsl
+
+**Human Contribution:**
+- Identified NaN values in OCL/Metal HSI conversion output
+- Rejected slower zeros_like() approach, requested direct alpha passthrough
+- Testing and verification
+
+---
+
+### 2025-10-16: Test Data Determinism Fix
+
+**AI Contribution (Claude):**
+- Fixed non-deterministic text test data generation despite YAPOCIS_VALIDATE environment variable
+- Problem: `interesting_words()` in tests/__init__.py used `set()` which has non-deterministic iteration order due to Python's PYTHONHASHSEED
+- Solution: Added `sorted()` wrapper to ensure deterministic ordering before shuffle
+- Changed `words = [word for word in set(s.split()) if len(word) > 2]` to `words = sorted(set(word for word in s.split() if len(word) > 2))`
+- Created comprehensive test suite proving the bug and fix
+- ~5 lines changed in 1 file
+
+**Files Modified:**
+- `tests/__init__.py` - Fixed interesting_words() to use sorted(set(...)) for deterministic output
+
+**Testing:**
+- Created `claude-debug/test_validation_seed.py` demonstrating the non-determinism bug
+- Verified fix produces identical results across multiple processes
+
+**Human Contribution:**
+- Identified the random data issue in stressed text tests
+- Requested bug fix with proof of determinism control
+- Testing and verification
+
+---
 
 ## Detailed Contributions
 
