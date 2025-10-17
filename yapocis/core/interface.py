@@ -5,10 +5,11 @@
 #
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 from yapocis.interfaces import find_interface
 from .interface_parser import parse_interface_text, ParseException
+
 
 @dataclass
 class KernelParamSpec:
@@ -21,6 +22,7 @@ class KernelParamSpec:
     derived: bool
     derived_from: str
 
+
 @dataclass
 class KernelSpec:
     name: str
@@ -29,6 +31,7 @@ class KernelSpec:
     definitions: dict[str, KernelParamSpec]
     tiled: bool
 
+
 @dataclass
 class InterfaceSpec:
     name: str
@@ -36,19 +39,21 @@ class InterfaceSpec:
     kernels: list[KernelSpec]
     aliases: dict[str, str]
 
+
 # Public alias used by other modules
 Interface = InterfaceSpec
 
-# Map from OpenCL datatype to a numpy data type
+# Map from OpenCL datatype to a numpyx data type
 ctype_to_nptype = {
-    "int": "int32",
-    "short": "int16",
-    "long": "int64",
-    "float": "float32",
-    "half": "float16",
+    "int":    "int32",
+    "short":  "int16",
+    "long":   "int64",
+    "float":  "float32",
+    "half":   "float16",
     "double": "float64",
 }
 nptype_to_ctype = {value: key for (key, value) in ctype_to_nptype.items()}
+
 
 def scan_kernel_parameters(kernel):
     definitions = {
@@ -58,7 +63,9 @@ def scan_kernel_parameters(kernel):
     }
     return definitions
 
+
 _interfaces: dict[str, Any] = {}
+
 
 # ... existing code ...
 def get_interfaces(s: str) -> list[InterfaceSpec]:
@@ -124,22 +131,22 @@ def get_interfaces(s: str) -> list[InterfaceSpec]:
                     pointer = "*"
                     dtype = ""  # derive later from like param
                 elif role in (
-                    "size_of",
-                    "sizeof",
-                    "width_of",
-                    "widthof",
-                    "height_of",
-                    "heightof",
-                    "depth_of",
+                        "size_of",
+                        "sizeof",
+                        "width_of",
+                        "widthof",
+                        "height_of",
+                        "heightof",
+                        "depth_of",
                 ):
                     dim = {
-                        "size_of": "size_of",
-                        "sizeof": "sizeof",
-                        "width_of": "width_of",
-                        "widthof": "width_of",
+                        "size_of":   "size_of",
+                        "sizeof":    "sizeof",
+                        "width_of":  "width_of",
+                        "widthof":   "width_of",
                         "height_of": "height_of",
-                        "heightof": "height_of",
-                        "depth_of": "depth_of",
+                        "heightof":  "height_of",
+                        "depth_of":  "depth_of",
                     }[role]
                     dtype = "int"
                 # scalar form: dtype name
@@ -166,22 +173,22 @@ def get_interfaces(s: str) -> list[InterfaceSpec]:
                 name = p.name
                 dtype = (p.dtype or "") if hasattr(p, "dtype") else ""
                 if role in (
-                    "size_of",
-                    "sizeof",
-                    "width_of",
-                    "widthof",
-                    "height_of",
-                    "heightof",
-                    "depth_of",
+                        "size_of",
+                        "sizeof",
+                        "width_of",
+                        "widthof",
+                        "height_of",
+                        "heightof",
+                        "depth_of",
                 ):
                     dim = {
-                        "size_of": "size_of",
-                        "sizeof": "sizeof",
-                        "width_of": "width_of",
-                        "widthof": "width_of",
+                        "size_of":   "size_of",
+                        "sizeof":    "sizeof",
+                        "width_of":  "width_of",
+                        "widthof":   "width_of",
                         "height_of": "height_of",
-                        "heightof": "height_of",
-                        "depth_of": "depth_of",
+                        "heightof":  "height_of",
+                        "depth_of":  "depth_of",
                     }[role]
                     kernel_parameters.append(
                         KernelParamSpec(
@@ -214,12 +221,12 @@ def get_interfaces(s: str) -> list[InterfaceSpec]:
                     hint = ""
                     pointer = ""
                     if role in (
-                        "in",
-                        "out",
-                        "inout",
-                        "in_out",
-                        "resident",
-                        "readwrite",
+                            "in",
+                            "out",
+                            "inout",
+                            "in_out",
+                            "resident",
+                            "readwrite",
                     ):
                         hint = (
                             "inout"
@@ -248,9 +255,9 @@ def get_interfaces(s: str) -> list[InterfaceSpec]:
             }
 
             base_name = (
-                getattr(p_kernel, "name", None)
-                or getattr(p_kernel, "kname", None)
-                or ""
+                    getattr(p_kernel, "name", None)
+                    or getattr(p_kernel, "kname", None)
+                    or ""
             )
             # For extensions, expose as "<base>_<new>" but call underlying base kernel
             if extends:
@@ -284,10 +291,12 @@ def get_interfaces(s: str) -> list[InterfaceSpec]:
     _interfaces[s] = out
     return out
 
+
 # ... existing code ...
 
 def get_interface(s: str) -> InterfaceSpec:
     return get_interfaces(s)[0]
+
 
 def load_interface(interface_spec: str) -> str:
     """

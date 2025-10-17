@@ -1,186 +1,63 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
 
-import os
-from typing import Any, Callable
+"""
+KernelManager for CUDA backend.
 
-from mako.lookup import TemplateLookup
-from mako.template import Template
+Renders Mako templates to CUDA source, builds a program via PyCUDA,
+and exposes callable kernel functions.
 
-from yapocis.cukernels import find_kernel
+This implementation uses KernelManagerBase for common functionality.
+"""
+
+from yapocis.core.kmgr_base import KernelManagerBase
 from yapocis.cu.device_manager import get_device_manager
-from yapocis.core.interface import Interface, get_interface, load_interface
 from yapocis.cu.kernel import Kernel
-from yapocis.utils.internals import find_yapocis_file, get_yapocis_dir
-from yapocis.utils.stereo_typing import Context
 
 
-def render_program(base_filename: str, **context: Context) -> str:
+class KernelManager(KernelManagerBase):
     """
-    Takes the basename of a mako template file, and uses context to generate a CUDA program
-    """
-    tfilename = find_kernel(base_filename)
-    template_directories = [os.path.dirname(tfilename)]
-    mako_modules = os.path.join(get_yapocis_dir(), "mako_modules", "cuda")
-    mylookup = TemplateLookup(directories=template_directories, module_directory=mako_modules)
-    filename = os.path.split(tfilename)[-1]
-    t = mylookup.get_template(filename)
-    source = str(t.render(**context))
-    return source
+    CUDA backend kernel manager using PyCUDA.
 
-
-def render_interface(source: str, **context: Context) -> str:
-    """
-    Takes the source for a mako definition of a yapocis.rpc1 interface and generates
-    a parsable definition. Useful when the template can generate multiple parameterized
-    routines.
-    """
-    if not context:
-        return source
-    t = Template(source)
-    return str(t.render(**context))
-
-
-class KernelManager:
-    """
-    Takes a parsed yapocis interface and returns a class/module like structure
-    which supports calling into kernel methods of the interface.
-    Manages buffers on the CUDA device to prevent over-allocation.
+    CUDA-specific behaviors:
+    - Uses cukernels/*.mako templates
+    - Uses program.get_function() for kernel extraction
+    - Source caching already handled by base class
     """
 
-    def __init__(
-        self,
-        interface: Interface,
-        device_name: str,
-        debug: bool = False,
-        async_write: bool = False,
-        options=None,
-        **context: Context,
-    ):
-        self.interface = interface
-        self.dmgr = get_device_manager(device_name=device_name)
-        try:
-            source = render_program(interface.name, **context)
-        except:
-            print(f"Source rendering issue for {interface.name}")
-            print(context)
-            raise
-        self.source = source
-        if debug:
-            print("Source")
-            print(source)
+    _backend_name = "cuda"
+    _kernel_class = Kernel
 
-        # Save source to code_cache if YAPOCIS_CACHE is set
-        cache_dir = os.environ.get("YAPOCIS_CACHE")
-        if cache_dir and os.path.isdir(cache_dir):
-            source_file = os.path.join(cache_dir, f"{interface.name}.cu")
-            with open(source_file, "w") as f:
-                f.write(source)
+    def get_device_manager(self, device_name: str | int | None):
+        """Return CUDA device manager."""
+        return get_device_manager(device_name=device_name)
 
-        self.program = self.dmgr.build(source, options=options)
-        self.callable = {}
-        self.calls = 0
-        self.runtime = 0.0
-        self.async_write = async_write
-        for kernel in interface.kernels:
-            name = kernel.alias if kernel.alias else kernel.name
-            kernel_func = self.program.get_function(name)
-            self.callable[kernel.name] = Kernel(
-                name, self, kernel_func, kernel.parameters, async_write=async_write
-            )
+    def get_kernel(self, program, kernel_name: str):
+        """
+        Extract kernel from compiled CUDA program.
 
-    def read(self, a):
-        return self.dmgr.read(a)
+        CUDA uses get_function() to access kernels from program object.
 
-    def write(self, a, async_write=None):
-        async_write = self.async_write if async_write is None else async_write
-        return self.dmgr.write(a, wait=async_write)
+        Args:
+            program: Compiled pycuda.driver.Module
+            kernel_name: Name of kernel function
 
-    def purge(self):
-        self.stats()
-        return self.dmgr.purge()
-
-    def reset(self):
-        self.dmgr.reset()
-        self.runtime = self.calls = 0
+        Returns:
+            pycuda.driver.Function object
+        """
+        return program.get_function(kernel_name)
 
     def snapshot(self, **kwargs):
-        d = dict(
-            interfacename=self.interface.name,
-            calls=self.calls,
-            runtime=self.runtime,
-            device=self.dmgr.device_name,
-        )
-        d.update(kwargs)
-        self.dmgr.snapshot(**d)
-
-    def __getattr__(self, attr: str) -> Callable:
-        "Any unbound attribute is checked to see if it is a callable"
-        if attr not in self.callable:
-            print("Kernel %s not found, %s available" % (attr, list(self.callable.keys())))
-            raise KeyError(attr)
-        return self.callable[attr]
-
-    def stats(self):
-        d = dict(
-            interfacename=self.interface.name,
-            calls=self.calls,
-            runtime=self.runtime,
-            device=self.dmgr.device_name,
-        )
-        d.update(self.dmgr.stats())
+        """Add backend='metal' to snapshot metadata."""
+        d = super().snapshot(backend="cuda")
         return d
 
-    def __str__(self):
-        s = " ".join([f"{key}: {value}" for key, value in self.stats().items()])
-        return s
-
-    @classmethod
-    def load_program(
-        cls,
-        interface_spec: str,
-        device_name: str | None = None,
-        debug: bool = False,
-        options=None,
-        **context: Context,
-    ):
-        """
-        Factory returning runnable interface based on a interface specification.
-        """
-        assert device_name is None or isinstance(device_name, (str, int, bytes)), device_name
-        source = load_interface(interface_spec)
-        source = render_interface(source, **context)
-        interface = get_interface(source)
-        if debug:
-            print("Interface", interface)
-        return KernelManager(interface, device_name, debug=debug, options=options, **context)
-
-    @classmethod
-    def import_program(
-        cls,
-        interface_spec: str,
-        device_name: str | None = None,
-        namespace: bool = False,
-        debug: bool = False,
-        import_kernels=None,
-        options=None,
-        **context: Context,
-    ):
-        program = cls.load_program(
-            interface_spec, device_name=device_name, debug=debug, options=options, **context
-        )
-        import inspect
-
-        caller = inspect.currentframe().f_back
-        target = inspect.getmodule(caller.f_code)
-        for name, callable in program.callable.items():
-            if import_kernels == "*" or name in context:
-                name_as = context.get(name, name)
-                setattr(target, name_as, callable)
-        if namespace:
-            return program, program.callable
-        else:
-            return program, list(program.callable.values())
+    def stats(self):
+        """Add backend='metal' to stats."""
+        d = super().stats()
+        d["backend"] = "cuda"
+        return d
 
 
+# Module-level convenience functions for API compatibility
 import_program = KernelManager.import_program
 load_program = KernelManager.load_program

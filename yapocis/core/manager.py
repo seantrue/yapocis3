@@ -69,8 +69,8 @@ def get_manager(backend: str | None = None):
 
         return km
     elif backend in ("numba"):
-        # Return the Metal kernel_manager module (uses pymetallic runtime)
-        from yapocis.numba import kernel_manager as km
+        # Return the Numba kernel_manager module (uses Numba JIT)
+        from yapocis.numbax import kernel_manager as km
 
         return km
     raise ValueError(f"Unknown backend: {backend}")

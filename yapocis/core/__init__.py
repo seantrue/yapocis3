@@ -5,18 +5,22 @@ from typing import Any
 
 import numpy as np
 
+
 def infer_wh_from_args(args: tuple[Any, ...]) -> tuple[int, int] | None:
     for a in args:
         if isinstance(a, np.ndarray):
             return a.shape
     return None
 
+
 _backends = None
 
 ALL_BACKENDS = ("ocl", "metal", "cuda", "numbax")
 
+
 def get_all_backends():
     return ALL_BACKENDS
+
 
 def get_backends() -> list[str]:
     global _backends
@@ -49,6 +53,7 @@ def get_backends() -> list[str]:
         _backends = backends
     return _backends
 
+
 def get_backend():
     # Returns active backend
     backend = os.environ.get("YAPOCIS_BACKEND") or "ocl"
@@ -57,6 +62,7 @@ def get_backend():
     if backend not in backends:
         raise RuntimeError(f"{backend=} is not one of available {backends=}")
     return backend
+
 
 def get_backend_device():
     # Returns device for active backend
@@ -76,6 +82,7 @@ def get_backend_device():
             elif not selected_device.isdigit() and selected_device == devices[i]:
                 return (i, devices[i])
     return (0, devices[0])
+
 
 def get_manager(backend: str | None = None):
     """
@@ -102,11 +109,12 @@ def get_manager(backend: str | None = None):
 
         return km
     elif backend in ("numbax"):
-        # Return the Metal kernel_manager module (uses pymetallic runtime)
+        # Return the Numba kernel_manager module (uses Numba JIT)
         from yapocis.numbax import kernel_manager as km
 
         return km
     raise ValueError(f"Unknown backend: {backend}")
+
 
 def load_program(interface: str, backend: str | None = None, **mako_vars):
     """Backend-agnostic program loader. `interface` is the interface spec/name.
@@ -116,11 +124,14 @@ def load_program(interface: str, backend: str | None = None, **mako_vars):
     mgr = get_manager(backend)
     return mgr.load_program(interface, **mako_vars)
 
+
 def import_program(interface: str, backend: str | None = None, **mako_vars):
     mgr = get_manager(backend)
     return mgr.import_program(interface, **mako_vars)
 
+
 _backend_info = None
+
 
 def get_backend_infos() -> dict[str, Any]:
     """Get information about all available backends and their devices."""
@@ -171,9 +182,16 @@ def get_backend_infos() -> dict[str, Any]:
         _backend_info = backend_info
     return _backend_info
 
+
 def get_backend_info(backend):
     return get_backend_infos()[backend]
+
 
 def get_active_backend():
     backend = get_backend()
     backend_info = get_backend_info(backend)
+
+
+def get_available_devices(backend):
+    info = get_backend_info(backend)
+    return info["devices"]
