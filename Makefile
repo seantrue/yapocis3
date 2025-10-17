@@ -84,11 +84,11 @@ install-backends: venv ## Install with all backend dependencies
 
 .PHONY: install-mac
 install-mac: venv ## Install with OpenCL backend
-	$(UV) pip install -e ".[opencl,dev,metal,numba]"
+	$(UV) pip install -e ".[opencl,dev,metal,numbax]"
 
 .PHONY: install-linux
 install-linux: venv ## Install with OpenCL backend
-	$(UV) pip install -e ".[opencl,dev,cuda,numba]"
+	$(UV) pip install -e ".[opencl,dev,cuda,numbax]"
 
 .PHONY: install-opencl
 install-opencl: venv ## Install with OpenCL backend
@@ -177,10 +177,10 @@ test-metal: venv ## Run tests with Metal backend
 	@echo "$(YELLOW)Running Metal tests...$(NC)"
 	YAPOCIS_BACKEND=metal $(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)
 
-.PHONY: test-numba
-test-numba: venv ## Run tests with Numba backend
+.PHONY: test-numbax
+test-numbax: venv ## Run tests with Numba backend
 	@echo "$(YELLOW)Running Numba tests...$(NC)"
-	YAPOCIS_BACKEND=numba $(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)
+	YAPOCIS_BACKEND=numbax $(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)
 
 .PHONY: test-cuda
 test-cuda: venv ## Run tests with CUDA backend
@@ -188,7 +188,7 @@ test-cuda: venv ## Run tests with CUDA backend
 	YAPOCIS_BACKEND=cuda $(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)
 
 .PHONY: test-all-backends
-test-all-backends: test-ocl test-metal test-numba ## Run tests on all available backends
+test-all-backends: test-ocl test-metal test-numbax ## Run tests on all available backends
 
 .PHONY: test-smoke
 test-smoke: venv ## Run smoke tests (quick backend validation)
@@ -214,7 +214,7 @@ test-coverage: venv ## Run tests with coverage report
 ##@ Cross-validation
 
 .PHONY: crosschecks
-crosschecks: crosscheck-ocl crosscheck-numba ## Run cross-backend validation tests
+crosschecks: crosscheck-ocl crosscheck-numbax ## Run cross-backend validation tests
 
 .PHONY: crosscheck-ocl
 crosscheck-ocl: venv ## Cross-validate OpenCL vs Metal
@@ -222,10 +222,10 @@ crosscheck-ocl: venv ## Cross-validate OpenCL vs Metal
 	YAPOCIS_BACKEND= YAPOCIS_CROSSCHECK_REF=metal YAPOCIS_CROSSCHECK_TEST=ocl \
 		$(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)/test_backend_crosscheck.py
 
-.PHONY: crosscheck-numba
-crosscheck-numba: venv ## Cross-validate Numba vs Metal
+.PHONY: crosscheck-numbax
+crosscheck-numbax: venv ## Cross-validate Numba vs Metal
 	@echo "$(YELLOW)Cross-checking Numba vs Metal...$(NC)"
-	YAPOCIS_BACKEND= YAPOCIS_CROSSCHECK_REF=metal YAPOCIS_CROSSCHECK_TEST=numba \
+	YAPOCIS_BACKEND= YAPOCIS_CROSSCHECK_REF=metal YAPOCIS_CROSSCHECK_TEST=numbax \
 		$(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)/test_backend_crosscheck.py
 
 ##@ Changelog & Version Management
