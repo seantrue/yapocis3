@@ -45,18 +45,28 @@ class KernelManager(KernelManagerBase):
 
     def get_kernel(self, program, kernel_name: str):
         """
-        Extract kernel from compiled OpenCL program.
+        Extract kernel from compiled OpenCL program with caching.
 
-        OpenCL uses attribute access to get kernels from program object.
+        Creates and caches kernel instances to avoid the overhead of repeated
+        kernel retrieval. PyOpenCL's getattr on programs creates new kernel
+        objects each time, which is expensive for frequently-called kernels.
 
         Args:
             program: Compiled pyopencl.Program
             kernel_name: Name of kernel function
 
         Returns:
-            pyopencl.Kernel object
+            pyopencl.Kernel object (cached instance)
         """
-        return getattr(program, kernel_name)
+        # Initialize kernel cache on first use
+        if not hasattr(program, '_kernel_cache'):
+            program._kernel_cache = {}
+
+        # Return cached kernel or create and cache new one
+        if kernel_name not in program._kernel_cache:
+            program._kernel_cache[kernel_name] = pyopencl.Kernel(program, kernel_name)
+
+        return program._kernel_cache[kernel_name]
 
     def snapshot(self, **kwargs):
         """Add backend='metal' to snapshot metadata."""
