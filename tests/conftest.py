@@ -203,6 +203,25 @@ def pytest_configure(config):
     )
 
 
+@pytest.fixture(autouse=True)
+def clean_yapocis_device():
+    """Clean up YAPOCIS_DEVICE environment variable before each test."""
+    # Store original value
+    original_device = os.environ.get("YAPOCIS_DEVICE")
+
+    # Clear YAPOCIS_DEVICE to avoid pollution from previous tests
+    if "YAPOCIS_DEVICE" in os.environ:
+        del os.environ["YAPOCIS_DEVICE"]
+
+    yield
+
+    # Restore original value after test
+    if original_device is not None:
+        os.environ["YAPOCIS_DEVICE"] = original_device
+    elif "YAPOCIS_DEVICE" in os.environ:
+        del os.environ["YAPOCIS_DEVICE"]
+
+
 # Performance tracking fixtures
 @pytest.fixture
 def perf_tracker(request):
