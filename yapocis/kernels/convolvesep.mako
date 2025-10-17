@@ -1,4 +1,5 @@
 /* Separable convolution kernels for OpenCL, with kernel names and constants determined at compile time */
+<%include file="helpers.mako"/>
 % for name, conv in convs:
 <% margin = len(conv)//2 %>
 __kernel
@@ -28,9 +29,11 @@ void ${name}_h(int width, int height, __global float* a, __global float* ret )
     size_t i = get_global_id(0);
     size_t n = width*height;
     float sum = 0.0;
-
+    int x = X(i);
+    int y = Y(i);
     // Horizontal convolution
-    int inside = (((size_t)(${margin}*height) < i) && (i < (n-${margin}*height)));
+    int inside = (x >= ${margin}) && (x<width-${margin}) && (y >= ${margin}) && (y <= height-${margin});
+    //int inside = (((size_t)(${margin}*height) < i) && (i < (n-${margin}*height)));
   	%for j in range(len(conv)):
     sum += inside ? a[i+(${j-margin}*height)] * ${conv[j]} : 0.0f;
 	%endfor
@@ -42,10 +45,12 @@ void ${name}_v(int width, int height, __global float* a, __global float* ret )
 {
     size_t i = get_global_id(0);
     size_t n = width*height;
-
+    int x = X(i);
+    int y = Y(i);
     // Vertical convolution
     float sum = 0.0;
-    int inside = (${margin} < i) && (i < (n-${margin}));
+    int inside = (x >= ${margin}) && (x<width-${margin}) && (y >= ${margin}) && (y <= height-${margin});
+    //int inside = (${margin} < i) && (i < (n-${margin}));
   	%for j in range(len(conv)):
     sum +=  inside ?  a[i+(${j-margin})] * ${conv[j]} : 0.0;
 	%endfor

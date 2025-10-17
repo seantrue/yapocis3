@@ -37,9 +37,11 @@ kernel void ${name}_h(constant int &width [[ buffer(0) ]],
 {
     size_t n = width*height;
     float sum = 0.0f;
-
+    int x = X(i);
+    int y = Y(i);
     // Horizontal convolution
-    int inside = (((size_t)(${margin}*height) < i) && (i < (n-${margin}*height)));
+    int inside = (x >= ${margin}) && (x<width-${margin}) && (y >= ${margin}) && (y <= height-${margin});
+    //int inside = (((size_t)(${margin}*height) < i) && (i < (n-${margin}*height)));
   	%for j in range(len(conv)):
     sum += inside ? a[i+(${j-margin}*height)] * ${conv[j]} : 0.0f;
 	%endfor
@@ -53,10 +55,12 @@ kernel void ${name}_v(constant int &width [[ buffer(0) ]],
                       uint i [[ thread_position_in_grid ]])
 {
     size_t n = width*height;
-
+    int x = X(i);
+    int y = Y(i);
     // Vertical convolution
     float sum = 0.0f;
-    int inside = (${margin} < i) && (i < (n-${margin}));
+    int inside = (x >= ${margin}) && (x<width-${margin}) && (y >= ${margin}) && (y <= height-${margin});
+    //int inside = (${margin} < i) && (i < (n-${margin}));
   	%for j in range(len(conv)):
     sum +=  inside ?  a[i+(${j-margin})] * ${conv[j]} : 0.0f;
 	%endfor
