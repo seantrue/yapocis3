@@ -11,9 +11,7 @@ import os
 import numpy as np
 import pytest
 
-from tests import StopWatcher
-from yapocis.core import get_backends
-
+from yapocis.core import get_backends, get_backend_infos
 # Import library classes that we'll test
 from yapocis.lib.anisodiff import Anisodiff
 from yapocis.lib.gaussian import Gaussian
@@ -25,6 +23,7 @@ from yapocis.lib.median import Median
 from yapocis.lib.operators import Operators
 from yapocis.lib.truetrace import TrueTrace
 from yapocis.lib.zc import ZC
+from . import StopWatcher
 
 # Test data sizes - keep small for fast performance testing
 SMALL_SIZE = 256
@@ -32,13 +31,28 @@ MEDIUM_SIZE = 512
 REPEATS = 3  # Number of times to repeat each operation for consistent timing
 
 
-@pytest.mark.parametrize("backend", get_backends())
-class TestKernelPerformance:
-    """Test raw kernel performance across all interfaces."""
+def get_backend_device_combinations():
+    """Generate all (backend, device) combinations for testing."""
+    combinations = []
+    backend_infos = get_backend_infos()
 
-    def test_operators_performance(self, backend):
+    for backend in get_backends():
+        if backend in backend_infos:
+            devices = backend_infos[backend].get("devices", [])
+            for device_name in devices:
+                combinations.append((backend, device_name))
+
+    return combinations
+
+
+@pytest.mark.parametrize("backend,device", get_backend_device_combinations())
+class TestKernelPerformance:
+    """Test raw kernel performance across all backends and devices."""
+
+    def test_operators_performance(self, backend, device):
         """Test all operator kernels: add, sub, mul, divop."""
         os.environ["YAPOCIS_BACKEND"] = backend
+        os.environ["YAPOCIS_DEVICE"] = device
         ops = Operators()
 
         # Test data
@@ -63,10 +77,11 @@ class TestKernelPerformance:
         result = ops.add(a, b)
         assert result.shape == a.shape
 
-    def test_mandelbrot_performance(self, backend):
+    def test_mandelbrot_performance(self, backend, device):
         """Test mandelbrot kernel."""
         os.environ["YAPOCIS_BACKEND"] = backend
-
+        os.environ["YAPOCIS_DEVICE"] = device
+        os.environ["YAPOCIS_DEVICE"] = device
         mb = Mandelbrot()
 
         # Complex grid
@@ -84,10 +99,11 @@ class TestKernelPerformance:
 
         assert result.shape == q.shape
 
-    def test_median3x3_performance(self, backend):
+    def test_median3x3_performance(self, backend, device):
         """Test median 3x3 kernel."""
         os.environ["YAPOCIS_BACKEND"] = backend
-
+        os.environ["YAPOCIS_DEVICE"] = device
+        os.environ["YAPOCIS_DEVICE"] = device
         median = Median()
 
         # Noisy image
@@ -100,9 +116,10 @@ class TestKernelPerformance:
 
         assert result.shape == img.shape
 
-    def test_gradient_performance(self, backend):
+    def test_gradient_performance(self, backend, device):
         """Test gradient kernels."""
         os.environ["YAPOCIS_BACKEND"] = backend
+        os.environ["YAPOCIS_DEVICE"] = device
 
         grad = Gradient()
 
@@ -117,9 +134,10 @@ class TestKernelPerformance:
         assert gx.shape == img.shape
         assert gy.shape == img.shape
 
-    def test_gaussian_performance(self, backend):
+    def test_gaussian_performance(self, backend, device):
         """Test Gaussian blur at different scales."""
         os.environ["YAPOCIS_BACKEND"] = backend
+        os.environ["YAPOCIS_DEVICE"] = device
 
         gaussian = Gaussian()
 
@@ -135,9 +153,10 @@ class TestKernelPerformance:
 
         assert result.shape == img.shape
 
-    def test_hsi_performance(self, backend):
+    def test_hsi_performance(self, backend, device):
         """Test HSI color space conversion kernels."""
         os.environ["YAPOCIS_BACKEND"] = backend
+        os.environ["YAPOCIS_DEVICE"] = device
 
         hsi = HSI()
 
@@ -155,9 +174,10 @@ class TestKernelPerformance:
 
         assert hsi_img.shape == rgb.shape
 
-    def test_anisodiff_performance(self, backend):
+    def test_anisodiff_performance(self, backend, device):
         """Test anisotropic diffusion kernel."""
         os.environ["YAPOCIS_BACKEND"] = backend
+        os.environ["YAPOCIS_DEVICE"] = device
 
         ad = Anisodiff()
 
@@ -171,9 +191,10 @@ class TestKernelPerformance:
 
         assert result.shape == img.shape
 
-    def test_truetrace_performance(self, backend):
+    def test_truetrace_performance(self, backend, device):
         """Test truetrace segment extraction from binary mask."""
         os.environ["YAPOCIS_BACKEND"] = backend
+        os.environ["YAPOCIS_DEVICE"] = device
         # repeats = 1 if backend.startswith("num") else REPEATS
         repeats = REPEATS
         tt = TrueTrace()
@@ -182,7 +203,7 @@ class TestKernelPerformance:
         y, x = np.ogrid[:SMALL_SIZE, :SMALL_SIZE]
         center = SMALL_SIZE // 2
         radius = SMALL_SIZE // 4
-        mask = ((x - center) ** 2 + (y - center) ** 2 <= radius**2).astype(np.uint8)
+        mask = ((x - center) ** 2 + (y - center) ** 2 <= radius ** 2).astype(np.uint8)
 
         with StopWatcher("truetrace", save_perf=True, kernel=tt) as sw:
             for _ in range(repeats):
@@ -191,9 +212,10 @@ class TestKernelPerformance:
 
         assert segs.shape[1] == 4  # Segments are Nx4
 
-    def test_zcs_performance(self, backend):
+    def test_zcs_performance(self, backend, device):
         """Test zero-crossing detection kernel."""
         os.environ["YAPOCIS_BACKEND"] = backend
+        os.environ["YAPOCIS_DEVICE"] = device
 
         zc = ZC()
 
@@ -207,9 +229,10 @@ class TestKernelPerformance:
 
         assert result.shape == img.shape
 
-    def test_graphics4_performance(self, backend):
+    def test_graphics4_performance(self, backend, device):
         """Test all graphics4 functions: shapes, icons, and rotated text."""
         os.environ["YAPOCIS_BACKEND"] = backend
+        os.environ["YAPOCIS_DEVICE"] = device
         repeats = REPEATS
         # repeats = 1 if backend.startswith("num") else REPEATS
 
