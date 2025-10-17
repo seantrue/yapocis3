@@ -48,7 +48,7 @@ def text_test():
     )
     translator = s.maketrans({c: " " for c in uninteresting})
     s = s.translate(translator)
-    words = [word for word in set(s.split()) if len(word) > 2]
+    words = sorted(set(word for word in s.split() if len(word) > 2))
     return words
 
 

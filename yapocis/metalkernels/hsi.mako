@@ -105,6 +105,9 @@ kernel void rgb2hsi3(constant int &depth [[ buffer(0) ]],
     output[idx] =   hsi.x;
     output[idx+1] = hsi.y;
     output[idx+2]=  hsi.z;
+    if (depth > 3) {
+        output[idx+3] = input[idx+3];  // Copy alpha channel through
+    }
 }
 
 kernel void hsi2rgb3(constant int &depth [[ buffer(0) ]],
@@ -117,6 +120,9 @@ kernel void hsi2rgb3(constant int &depth [[ buffer(0) ]],
     output[idx] =   c.x;
     output[idx+1] = c.y;
     output[idx+2] = c.z;
+    if (depth > 3) {
+        output[idx+3] = input[idx+3];  // Copy alpha channel through
+    }
 }
 
 kernel void rgb2lab3(constant int &depth [[ buffer(0) ]],

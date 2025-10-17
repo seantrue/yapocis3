@@ -104,6 +104,9 @@ void rgb2hsi3(int depth, __global float *input, __global float *output) {
     output[i] =   hsi.x;
     output[i+1] = hsi.y;
     output[i+2]=  hsi.z;
+    if (depth > 3) {
+        output[i+3] = input[i+3];  // Copy alpha channel through
+    }
 }
 
 
@@ -115,6 +118,9 @@ void hsi2rgb3(int depth, __global float *input, __global float *output) {
     output[i] =   c.x;
     output[i+1] = c.y;
     output[i+2] = c.z;
+    if (depth > 3) {
+        output[i+3] = input[i+3];  // Copy alpha channel through
+    }
 }
 
 __kernel

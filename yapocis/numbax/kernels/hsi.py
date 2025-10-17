@@ -104,6 +104,9 @@ def _rgb2hsi_glsl(rgb: np.ndarray) -> np.ndarray:
         s = np.clip(s, 0.0, 1.0 - 1e-10)
         iV = np.clip(iV, 0.0, 1.0 - 1e-10)
         out[..., :3] = np.stack([h, s, iV], axis=-1).astype(np.float32)
+    # Copy alpha channel if present
+    if rgb.shape[-1] > 3:
+        out[..., 3:] = rgb[..., 3:]
     return out
 
 
@@ -168,6 +171,9 @@ def _hsi2rgb_glsl(hsi: np.ndarray) -> np.ndarray:
             1.0 - s[..., None] + s[..., None] * np.clip(p - 1.0, 0.0, 1.0)
         )
         out[..., :3] = c.astype(np.float32)
+    # Copy alpha channel if present
+    if hsi.shape[-1] > 3:
+        out[..., 3:] = hsi[..., 3:]
     return out
 
 
