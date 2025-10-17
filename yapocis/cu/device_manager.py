@@ -137,11 +137,25 @@ _device_managers: dict[str, DeviceManager] = {}
 def get_device_manager(device_name: str | None = None) -> DeviceManager:
     """
     Takes the identifier for a CUDA device
-    and returns a DeviceManager with buffer management
+    and returns a DeviceManager with buffer management.
+
+    Device managers are cached by device name to maintain context stability.
+    CUDA contexts must remain alive for compiled kernels to work, so we
+    keep one DeviceManager per device for the lifetime of the process.
     """
-    # Disable caching - create fresh DeviceManager each time
-    # This avoids context issues when switching between backends
-    return DeviceManager(device_name)
+    # Normalize device_name to string for cache key
+    if device_name is None:
+        cache_key = "default"
+    elif isinstance(device_name, int):
+        cache_key = f"device_{device_name}"
+    else:
+        cache_key = str(device_name)
+
+    # Return cached manager or create new one
+    if cache_key not in _device_managers:
+        _device_managers[cache_key] = DeviceManager(device_name)
+
+    return _device_managers[cache_key]
 
 def display_stats():
     device_stats = {dn: dmgr.stats for dn, dmgr in _device_managers.items()}
