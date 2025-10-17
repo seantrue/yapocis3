@@ -45,14 +45,14 @@ class DeviceManager(DeviceManagerBase):
         try:
             ctx = device.retain_primary_context()
             ctx.push()  # Make this context current
-            stream = cuda.Stream()
-            super().__init__(ctx, stream, device_name_str, device, timed=timed, **kwargs)
+            self.stream = cuda.Stream()
+            super().__init__(ctx, self.stream, device_name_str, device, timed=timed, **kwargs)
         except RuntimeError as e:
             print(f"Failed to initialize `{device_name_str}', trying default")
             device_name_str, device = get_device()
             ctx = device.retain_primary_context()
             ctx.push()  # Make this context current
-            stream = cuda.Stream()
+            self.stream = cuda.Stream()
             super().__init__(ctx, stream, device_name_str, device, timed=timed, **kwargs)
 
     def build(self, source: str, options: list[str] | None = None) -> SourceModule:
