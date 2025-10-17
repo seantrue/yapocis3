@@ -153,9 +153,9 @@ fix: format lint-fix ## Auto-fix code formatting and linting issues
 ##@ Testing
 
 .PHONY: test
-test: venv ## Run tests with default backend detection
+test: venv ## Run tests with default backend detection (excludes performance tests)
 	@echo "$(YELLOW)Running tests...$(NC)"
-	$(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)
+	$(VENV_PYTHON) -m pytest $(PYTEST_ARGS) -m "not performance" $(TESTS_DIR)
 
 .PHONY: test-fast
 test-fast: venv ## Run tests with minimal output
@@ -210,6 +210,26 @@ test-coverage: venv ## Run tests with coverage report
 	@echo "$(YELLOW)Running tests with coverage...$(NC)"
 	$(VENV_PYTHON) -m pytest --cov=$(SRC_DIR) --cov-report=html --cov-report=term $(TESTS_DIR)
 	@echo "$(GREEN)Coverage report generated in htmlcov/$(NC)"
+
+.PHONY: test-perf
+test-perf: venv ## Run performance tests (library and kernel)
+	@echo "$(YELLOW)Running performance tests...$(NC)"
+	$(VENV_PYTHON) -m pytest $(PYTEST_ARGS) -m "performance" $(TESTS_DIR)
+
+.PHONY: test-perf-lib
+test-perf-lib: venv ## Run library performance tests only
+	@echo "$(YELLOW)Running library performance tests...$(NC)"
+	$(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)/test_library_performance.py
+
+.PHONY: test-perf-kernel
+test-perf-kernel: venv ## Run kernel performance tests only
+	@echo "$(YELLOW)Running kernel performance tests...$(NC)"
+	$(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)/test_kernel_performance.py
+
+.PHONY: test-all
+test-all: venv ## Run all tests including performance tests
+	@echo "$(YELLOW)Running all tests (including performance)...$(NC)"
+	$(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)
 
 ##@ Cross-validation
 

@@ -45,6 +45,7 @@ def get_backend_device_combinations():
     return combinations
 
 
+@pytest.mark.performance
 @pytest.mark.parametrize("backend,device", get_backend_device_combinations())
 class TestKernelPerformance:
     """Test raw kernel performance across all backends and devices."""

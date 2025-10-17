@@ -28,6 +28,7 @@ MEDIUM_SIZE = 512
 REPEATS = 3  # Number of times to repeat each operation for consistent timing
 
 
+@pytest.mark.performance
 @pytest.mark.parametrize("backend", get_backends())
 class TestLibraryPerformance:
     """Test high-level library API performance with realistic workflows."""

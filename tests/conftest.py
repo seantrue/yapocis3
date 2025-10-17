@@ -201,6 +201,9 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "track_memory: marks tests that should track memory usage"
     )
+    config.addinivalue_line(
+        "markers", "performance: marks performance tests that should only run when explicitly requested"
+    )
 
 
 @pytest.fixture(autouse=True)
