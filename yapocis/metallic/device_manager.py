@@ -8,53 +8,117 @@ and buffer manager. Also provides program build.
 import os
 import sys
 import yaml
+import numpy as np
 
 try:
-    import pymetallic as pm  # type: ignore
+    import pymetallic  # type: ignore
 except Exception as e:  # pragma: no cover
     raise RuntimeError("PyMetallic is required for the metallic backend") from e
 
-from yapocis.metallic.buffer_manager import BufferManager
+from yapocis.core.device_mgr_base import DeviceManagerBase
 from yapocis.metallic.device import get_device
-from yapocis.utils.stereo_typing import *
+from yapocis.utils.stereo_typing import Array
 
 YAPOCIS_CACHE = os.environ.get("YAPOCIS_CACHE", None)
 if YAPOCIS_CACHE and not os.path.isdir(YAPOCIS_CACHE):
     print(f"YAPOCIS_CACHE={YAPOCIS_CACHE} is not a directory", file=sys.stderr)
     sys.exit(1)
 
-class DeviceManager(BufferManager):
+
+class DeviceManager(DeviceManagerBase):
     """
-    Coordinates a Metal device with a queue, a context, and a buffer manager.
+    Metal device manager - coordinates device, queue, and buffer management.
+
+    Inherits from DeviceManagerBase (which extends BufferManagerBase).
     """
 
     def __init__(
         self, device_name: str | int | None = None, timed: bool = False, **kwargs
     ):
+        """
+        Initialize Metal device manager.
+
+        Args:
+            device_name: Device identifier (None for default)
+            timed: Enable performance timing
+            **kwargs: Additional arguments for BufferManagerBase
+        """
         assert device_name is None or isinstance(
             device_name, (str, int, bytes)
         ), device_name
-        self.device_name, self.device = get_device(device_name=device_name)
-        super(DeviceManager, self).__init__(self.device, None, timed=timed)
-        self.context_meta = {}
+        device_name_str, device = get_device(device_name=device_name)
+        queue = device.make_command_queue()
+        # Metal doesn't have a separate context object; use device as context
+        super().__init__(device, queue, device_name_str, device, timed=timed, **kwargs)
 
-    def build(self, source: str, options=None):
+    def build(self, source: str, options: list[str] | None = None):
+        """
+        Compile Metal source code.
+
+        Metal kernels are compiled on demand and cached by pymetallic,
+        so this is a no-op that returns None.
+
+        Args:
+            source: Metal kernel source code
+            options: Compiler options (unused for Metal)
+
+        Returns:
+            None
+        """
         # No explicit program build step with pymetallic; kernels are compiled
         # from source on demand and cached by pymetallic.kernel_cache.
         return None
 
-    def purge(self):
-        self.purge_buffers()
+    # Implement abstract methods from BufferManagerBase
+    def make_buffer(self, a: Array) -> "pymetallic.Buffer":
+        """Create PyMetallic buffer from numpy array."""
+        # Ensure contiguous data for low-level transfer
+        if not a.flags.c_contiguous:
+            a = np.ascontiguousarray(a)
+        buf = pymetallic.Buffer.from_numpy(self.device, a)
+        buffer_id = id(a)
+        self.arrays[buffer_id] = a
+        self.buffers[buffer_id] = buf
+        return buf
 
-    def write(self, a: Array, wait: bool = True):
-        assert hasattr(a, "dtype")
-        return self.write_buffer(a, wait=wait)
+    def read_buffer(self, a: Array) -> Array:
+        """Read PyMetallic buffer back to numpy array."""
+        buf = self.find_buffer(a, self.READ)
+        view = buf.to_numpy(dtype=a.dtype, shape=a.shape)
+        np.copyto(a, view)
+        return a
 
-    def read(self, a: Array):
-        return self.read_buffer(a)
+    def write_buffer(self, a: Array, wait: bool = True) -> "pymetallic.Buffer":
+        """Write numpy array to PyMetallic buffer."""
+        # For PyMetallic we create/replace the backing buffer from host bytes
+        if not a.flags.c_contiguous:
+            a = np.ascontiguousarray(a)
+        buf = pymetallic.Buffer.from_numpy(self.device, a)
+        buffer_id = id(a)
+        self.arrays[buffer_id] = a
+        self.buffers[buffer_id] = buf
+        return buf
 
-    def ensure(self, a: Array):
-        return self.ensure_buffer(a)
+    def find_buffer(self, a: Array, op: int) -> "pymetallic.Buffer | None":
+        """Find existing PyMetallic buffer for array."""
+        assert op in (
+            self.READ,
+            self.WRITE,
+        ), f"{op=} not one of {self.READ=},{self.WRITE=}"
+        buffer_id = id(a)
+        havea = buffer_id in self.buffers and buffer_id in self.arrays
+        if havea:
+            self.hits += 1
+            return self.buffers[buffer_id]
+        else:
+            self.misses += 1
+        if not havea:
+            if op == self.READ:
+                raise ValueError(
+                    f"Array {buffer_id=} not in yapocis management, you may have written to it, or be using an assigned or .copy"
+                )
+            return None
+        raise RuntimeError(f"Failed to find a buffer for {op} a@{buffer_id=}")
 
 _device_managers: dict[str | int, DeviceManager] = {}
 
