@@ -5,7 +5,7 @@
 # Override PYTHON environment variable with specific version
 PYTHON := python3.13
 UV ?= uv
-PYTEST_ARGS ?= -v
+PYTEST_ARGS ?= -vv
 PACKAGE_NAME = yapocis
 SRC_DIR = yapocis
 SCRIPTS_DIR = scripts
