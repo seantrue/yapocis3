@@ -125,12 +125,13 @@ class DeviceManager(DeviceManagerBase):
         raise RuntimeError(f"Failed to find a buffer for {op} {a}")
 
     def __del__(self):
-        """Clean up context on deletion"""
-        try:
-            if hasattr(self, 'ctx') and self.ctx:
-                self.ctx.pop()
-        except:
-            pass
+        """Clean up context on deletion.
+
+        NOTE: We do NOT call ctx.pop() here because it invalidates the context
+        before PyCUDA can free buffers, modules, and streams, causing
+        "illegal memory access" errors. Let CUDA clean up at process exit.
+        """
+        pass
 
 _device_managers: dict[str, DeviceManager] = {}
 
@@ -167,15 +168,3 @@ def display_snapshots():
     for dn, dmgr in _device_managers.items():
         print(f"Device: {dn}")
         print(yaml.safe_dump(dmgr.snapshots))
-
-def cleanup_contexts():
-    """Clean up all CUDA contexts on exit"""
-    for dmgr in _device_managers.values():
-        try:
-            if hasattr(dmgr, 'ctx') and dmgr.ctx:
-                dmgr.ctx.pop()
-        except:
-            pass
-
-import atexit
-atexit.register(cleanup_contexts)
