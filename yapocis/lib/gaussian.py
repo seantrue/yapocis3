@@ -1,5 +1,6 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
+import os
 from yapocis.lib.gradient import Gradient
 from yapocis.lib.operators import Operators
 from yapocis.lib.zc import ZC
@@ -104,21 +105,81 @@ class Gaussian(BoundKernels):
         self,
         device_name: str | None = None,
         gaussian_weights: list[np.ndarray] | None = None,
+        use_package: bool | None = None,  # Explicit override (True/False/None)
     ):
         self.gaussian_weights = (
             GaussianWeights() if gaussian_weights is None else gaussian_weights
         )
         gws = self.gaussian_weights.gaussian_weights()
         convs = [("gauss%s" % len(a), a) for a in gws]
-        convsres = [("gauss%s_res" % len(a), a) for a in gws]
-        convsh = [("gauss%s_h" % len(a), a) for a in gws]
-        convsv = [("gauss%s_v" % len(a), a) for a in gws]
+
         super(Gaussian, self).__init__(device_name=device_name, convs=convs)
-        kmgr = self.kmgr
+
+        # Determine whether to use compiled kernel package
+        # 1. Explicit parameter overrides everything
+        # 2. Otherwise check YAPOCIS_KERNELPACK environment variable
+        # 3. Default to False (traditional path)
+        if use_package is None:
+            use_package = os.environ.get('YAPOCIS_KERNELPACK', '').lower() in ('1', 'true', 'yes')
+
+        # Attempt to use package if requested
+        self.use_package = False
+        if use_package:
+            try:
+                self._init_with_package(convs)
+                self.use_package = True
+            except (ImportError, AttributeError) as e:
+                # Package not available or incomplete, fall back to traditional path
+                self._init_with_bound_kernels(convs)
+        else:
+            self._init_with_bound_kernels(convs)
+
+        # Rest of initialization unchanged
         self.zc = ZC(device_name=device_name)
         self.grad = Gradient(device_name=device_name)
         self.ops = Operators(device_name=device_name)
-        # Avoid importing OpenCL-specific Kernel class here; keep backend-agnostic
+        self.threshold = 7.5e-06
+
+    def _init_with_package(self, convs):
+        """Initialize using compiled kernel package (fast path)."""
+        # Import package loader and wrapper (may raise ImportError)
+        from yapocis.kernelpack import get_convolvesep_package
+        from yapocis.core.manager import get_backend
+
+        backend = get_backend()
+
+        # Import backend-specific wrapper
+        if backend == "ocl":
+            from yapocis.kernelpack.ocl.convolvesep import GaussianKernelWrapper
+        elif backend == "metal":
+            from yapocis.kernelpack.metal.convolvesep import GaussianKernelWrapper
+        elif backend == "cuda":
+            from yapocis.kernelpack.cuda.convolvesep import GaussianKernelWrapper
+        elif backend == "numba":
+            from yapocis.kernelpack.numba.convolvesep import GaussianKernelWrapper
+        else:
+            raise ImportError(f"No kernel package available for backend: {backend}")
+
+        # Get compiled package for current backend
+        package = get_convolvesep_package(self.kmgr)
+
+        # Load all kernel variants
+        kernel_names = [name for name, _ in convs]
+        package.load(kernel_names)
+
+        # Create wrapper objects that mimic old Kernel interface
+        self.gaussian_kernels: list[object] = [
+            GaussianKernelWrapper(package, name, len(conv))
+            for name, conv in convs
+        ]
+
+    def _init_with_bound_kernels(self, convs):
+        """Initialize using traditional runtime interpretation (slow path)."""
+        convsres = [("gauss%s_res" % len(conv), conv) for (name, conv) in convs]
+        convsh = [("gauss%s_h" % len(conv), conv) for (name, conv) in convs]
+        convsv = [("gauss%s_v" % len(conv), conv) for (name, conv) in convs]
+
+        kmgr = self.kmgr
         self.gaussian_kernels: list[object] = [
             getattr(kmgr, name) for (name, conv) in convs
         ]
@@ -127,7 +188,6 @@ class Gaussian(BoundKernels):
             self.gaussian_kernels[i].h = getattr(kmgr, convsh[i][0])
             self.gaussian_kernels[i].v = getattr(kmgr, convsv[i][0])
             self.gaussian_kernels[i].width = len(conv)
-        self.threshold = 7.5e-06
 
     def get_scales(self):
         return len(self.gaussian_kernels)

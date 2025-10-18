@@ -122,7 +122,7 @@ class KernelManager:
             "calls": self.calls,
             "runtime": self.runtime,
             "device": "cpu",
-            "backend": "numba",
+            "backend": "numbax",
         }
         snap.update(kwargs)
         self.snapshots.append(snap)
