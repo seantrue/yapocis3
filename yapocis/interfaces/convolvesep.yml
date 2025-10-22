@@ -1,0 +1,95 @@
+# Template context for convolvesep interface
+#
+# This interface implements separable convolution kernels, primarily used for
+# Gaussian blur operations. Unlike operators, the convolution kernels are
+# dynamically generated at runtime based on Gaussian weight parameters.
+#
+# Context Structure:
+# ------------------
+# The convolvesep interface expects a 'convs' parameter:
+#   convs: List of (name, weights) tuples
+#     - name: Kernel name (e.g., "gauss9", "gauss13", "gauss21")
+#     - weights: 1D numpy array of convolution weights (float values)
+#
+# The kernel name typically includes the size (e.g., "gauss9" has 9 weights).
+# For each (name, weights) pair, the template generates:
+#   - ${name}(vertical, ...)     - Generic convolution kernel
+#   - ${name}_h(...)             - Horizontal convolution kernel
+#   - ${name}_v(...)             - Vertical convolution kernel
+#   - ${name}_res(...)           - Resident buffer variant
+#
+# Gaussian Weight Generation:
+# ---------------------------
+# Convolution weights are typically generated using GaussianWeights.compute_gaussian_weights()
+# with the following parameters:
+
+# Default parameters for Gaussian weight generation
+gaussian_params:
+  # Maximum kernel width (weights arrays larger than this are excluded)
+  max_width: 150
+
+  # Scale factor for sigma progression (each kernel is scale * previous sigma)
+  # Default 1.6 gives good multi-scale coverage
+  scale: 1.6
+
+  # Limit threshold - weights below this are excluded from kernel
+  # Smaller = larger kernels, more accurate but slower
+  limit: 0.001
+
+  # Optional: Predefined sigma values
+  # If null, sigmas are auto-generated: 1.0, 1.6, 2.56, 4.096, ...
+  # until kernel size exceeds max_width
+  sigmas: null
+
+# Common kernel configurations
+# -----------------------------
+# These are documented examples, not used directly by the interface.
+# The actual kernels are generated at runtime by GaussianWeights class.
+
+# Example: Small kernels for fast processing
+example_small_kernels:
+  description: "Fast Gaussian blur with small kernels"
+  gaussian_params:
+    max_width: 50
+    scale: 1.6
+    limit: 0.01
+  # Typical result: ~5-7 kernels, sizes 3-49
+
+# Example: Large kernels for high-quality blur
+example_large_kernels:
+  description: "High-quality Gaussian blur with large kernels"
+  gaussian_params:
+    max_width: 200
+    scale: 1.5
+    limit: 0.0001
+  # Typical result: ~10-15 kernels, sizes up to 199
+
+# Example: Specific sigma values
+example_custom_sigmas:
+  description: "Custom sigma values for specific scales"
+  gaussian_params:
+    sigmas: [1.0, 2.0, 4.0, 8.0, 16.0]
+    limit: 0.001
+  # Result: Exactly 5 kernels at specified sigma values
+
+# Notes:
+# ------
+# 1. The 'convs' parameter must be generated at runtime because it contains
+#    computed numpy arrays, which cannot be serialized in YAML.
+#
+# 2. The GaussianWeights class (in yapocis.lib.gaussian) handles generation:
+#      gw = GaussianWeights(**gaussian_params)
+#      weights_list = gw.gaussian_weights()
+#      convs = [("gauss%d" % len(w), w) for w in weights_list]
+#
+# 3. Kernel names conventionally include size (e.g., "gauss9" for 9 weights),
+#    but this is not required by the interface.
+#
+# 4. Each generated kernel creates 4 variants:
+#    - Base kernel with vertical parameter
+#    - Horizontal-only (_h suffix)
+#    - Vertical-only (_v suffix)
+#    - Resident buffer variant (_res suffix)
+#
+# 5. Separable convolution is efficient because 2D Gaussian blur can be
+#    implemented as two 1D convolutions (horizontal then vertical).
