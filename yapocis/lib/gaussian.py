@@ -1,6 +1,7 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 import os
+from yapocis.core.interface_context import load_interface_context
 from yapocis.lib.gradient import Gradient
 from yapocis.lib.operators import Operators
 from yapocis.lib.zc import ZC
@@ -14,36 +15,78 @@ def are_close(a: float, b: float) -> bool:
     return abs(a - b) <= eps
 
 class GaussianWeights:
-    def __init__(self, max_width=150, **kwargs):
-        self.gws = self.compute_gaussian_weights(max_width, **kwargs)
+    def __init__(self, max_width=None, **kwargs):
+        # Always load YAML defaults first
+        yaml_context = load_interface_context("convolvesep")
+        yaml_params = yaml_context.get('gaussian_params', {})
+
+        # Use YAML default for max_width if not provided
+        if max_width is None:
+            max_width = yaml_params.get('max_width')
+            if max_width is None:
+                raise ValueError(
+                    "max_width must be provided explicitly or defined in convolvesep.yml"
+                )
+
+        # Merge YAML params with kwargs (kwargs take precedence)
+        final_kwargs = {}
+        for key in ['scale', 'limit', 'sigmas']:
+            if key in kwargs:
+                # Explicit parameter takes precedence
+                final_kwargs[key] = kwargs[key]
+            elif key in yaml_params:
+                # Use YAML default
+                final_kwargs[key] = yaml_params[key]
+            # If neither provided, compute_gaussian_weights will validate
+
+        self.gws = self.compute_gaussian_weights(max_width, **final_kwargs)
 
     def gaussian_weights(self):
         return self.gws
 
     def compute_gaussian_weights(
         self,
-        max_width: int = 100,
-        scale: float = 1.6,
-        limit: float = 0.001,
+        max_width: int,
+        scale: float = None,
+        limit: float = None,
         sigmas: list[float] | None = None,
     ) -> list[Array]:
         """
-        Generate a list of gaussian kernels with size less than max_width
+        Generate a list of gaussian kernels with size less than max_width.
+
+        Parameters must come from convolvesep.yml or be passed explicitly.
+
         Args:
-            max_width:
-            scale:
-            limit:
-            sigmas:
+            max_width: Maximum kernel width (required)
+            scale: Sigma progression factor (required if sigmas not provided)
+            limit: Weight threshold for kernel truncation (required if sigmas not provided)
+            sigmas: Optional predefined sigma values (if provided, scale is ignored)
 
         Returns:
-            list of numpy arrays as a 1D gaussian
+            list of numpy arrays as 1D gaussian kernels
+
+        Raises:
+            ValueError: If required parameters are not provided
         """
         sigma = 1.0
         gws = []
+
         if sigmas:
+            # Using predefined sigmas - only need limit
+            if limit is None:
+                raise ValueError(
+                    "limit parameter is required when using custom sigmas. "
+                    "It should come from convolvesep.yml or be passed explicitly."
+                )
             for sigma in sigmas:
                 gws.append(self.compute_gaussian_weight(sigma, limit=limit))
         else:
+            # Auto-generating sigmas - need both scale and limit
+            if scale is None or limit is None:
+                raise ValueError(
+                    "scale and limit parameters are required when sigmas is not provided. "
+                    "They should come from convolvesep.yml or be passed explicitly."
+                )
             while 1:
                 gw = self.compute_gaussian_weight(sigma, limit=limit)
                 if len(gw) > max_width:
