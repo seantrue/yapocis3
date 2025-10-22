@@ -1,0 +1,21 @@
+# Template context for operators interface
+#
+# This YAML file defines the template variables used in both the operators.interface
+# and operators.mako files. It externalizes configuration that was previously
+# hardcoded in Python source (yapocis/lib/operators.py).
+#
+# Each operator is a [name, symbol] pair where:
+#   - name: Kernel function name (e.g., "add", "sub")
+#   - symbol: C operator symbol (e.g., "+", "-")
+#
+# The operators list is used by Mako templates to generate:
+#   1. Interface specifications (operators.interface)
+#   2. Kernel implementations (operators.mako for each backend)
+
+# List of binary operators to generate
+# Format: [[kernel_name, operator_symbol], ...]
+operators:
+  - [add, "+"]
+  - [sub, "-"]
+  - [mul, "*"]
+  - [divop, "/"]
