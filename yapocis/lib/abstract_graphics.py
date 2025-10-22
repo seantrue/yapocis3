@@ -62,39 +62,63 @@ class AbstractGraphicsSetup:
 
 class AbstractGraphics(BoundKernels):
 
+    def _get_handler(self):
+        """Get kernel handler (package or kmgr)."""
+        return self.package if getattr(self, 'use_package', False) else self.kmgr
+
     def lines(self, image, coords, **kwargs):
         if not coords:
             return
         coords = self.coerce_coords(coords, 4)
         colors = self.coerce_colors(coords, **kwargs)
         widths = self.coerce_widths(coords, **kwargs)
-        self.kmgr.lines(image, coords, widths, colors, global_size=image.size // self.CHANNELS)
+        handler = self._get_handler()
+        if self.use_package:
+            handler.lines(image, coords, widths, colors)
+        else:
+            handler.lines(image, coords, widths, colors, global_size=image.size // self.CHANNELS)
 
     def rects(self, image, coords, **kwargs):
         if not coords:
             return
         coords = self.coerce_coords(coords, 4)
         colors = self.coerce_colors(coords, **kwargs)
-        self.kmgr.rects(image, coords, colors, global_size=image.size // self.CHANNELS)
+        handler = self._get_handler()
+        if self.use_package:
+            handler.rects(image, coords, colors)
+        else:
+            handler.rects(image, coords, colors, global_size=image.size // self.CHANNELS)
 
     def circles(self, image, coords, **kwargs):
         if not coords:
             return
         coords = self.coerce_coords(coords, 3)
         colors = self.coerce_colors(coords, **kwargs)
-        self.kmgr.circles(image, coords, colors, global_size=image.size // self.CHANNELS)
+        handler = self._get_handler()
+        if self.use_package:
+            handler.circles(image, coords, colors)
+        else:
+            handler.circles(image, coords, colors, global_size=image.size // self.CHANNELS)
 
     def triangles(self, image, coords, **kwargs):
         if not coords:
             return
         coords = self.coerce_coords(coords, 6)
         colors = self.coerce_colors(coords, **kwargs)
-        self.kmgr.triangles(image, coords, colors, global_size=image.size // self.CHANNELS)
+        handler = self._get_handler()
+        if self.use_package:
+            handler.triangles(image, coords, colors)
+        else:
+            handler.triangles(image, coords, colors, global_size=image.size // self.CHANNELS)
 
     def ellipses(self, image, coords, **kwargs):
         coords = self.coerce_coords(coords, 4)
         colors = self.coerce_colors(coords, **kwargs)
-        self.kmgr.ellipses(image, coords, colors, global_size=image.size // self.CHANNELS)
+        handler = self._get_handler()
+        if self.use_package:
+            handler.ellipses(image, coords, colors)
+        else:
+            handler.ellipses(image, coords, colors, global_size=image.size // self.CHANNELS)
 
     def composite(self, image, locations, blocks, **kwargs):
         """
@@ -110,7 +134,11 @@ class AbstractGraphics(BoundKernels):
 
         """
         coords, buffer, ipixels = self.setup_composite(locations, blocks, **kwargs)
-        self.kmgr.composite(image, coords, buffer, ipixels, global_size=image.size // self.CHANNELS)
+        handler = self._get_handler()
+        if self.use_package:
+            handler.composite(image, coords, buffer, ipixels)
+        else:
+            handler.composite(image, coords, buffer, ipixels, global_size=image.size // self.CHANNELS)
 
     def sprites(self, image, locations, sprites, alpha=None, alphas=None):
         """
@@ -125,19 +153,26 @@ class AbstractGraphics(BoundKernels):
 
         """
         coords, buffer, ipixels = self.setup_sprites(locations, sprites, alpha=alpha, alphas=alphas)
-        self.kmgr.composite(image, coords, buffer, ipixels, global_size=image.size // self.CHANNELS)
+        handler = self._get_handler()
+        if self.use_package:
+            handler.composite(image, coords, buffer, ipixels)
+        else:
+            handler.composite(image, coords, buffer, ipixels, global_size=image.size // self.CHANNELS)
 
     def draw_strings(self, image, locations, texts, **kwargs):
         locations, blocks, alphas = self.setup_texts(locations, texts, **kwargs)
         self.composite(image, locations, blocks, alphas=alphas)
 
     def read(self, a):
+        # Buffer operations always use kmgr
         return self.kmgr.read(a)
 
     def write(self, a, async_write=False):
+        # Buffer operations always use kmgr
         return self.kmgr.write(a, async_write=async_write)
 
     def snapshot(self, **kwargs):
+        # Snapshot always uses kmgr
         self.kmgr.snapshot(**kwargs)
 
 

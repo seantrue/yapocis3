@@ -122,7 +122,7 @@ class KernelManager:
             "calls": self.calls,
             "runtime": self.runtime,
             "device": "cpu",
-            "backend": "numba",
+            "backend": "numbax",
         }
         snap.update(kwargs)
         self.snapshots.append(snap)
@@ -136,11 +136,15 @@ class KernelManager:
         debug: bool = False,
         **context,
     ):
+        # Load and merge YAML context with programmatic context
+        from yapocis.core.interface_context import get_interface_context
+        merged_context = get_interface_context(interface_spec, **context)
+
         # Load and render interface (expand Mako templates)
         source = load_interface(interface_spec)
-        if context:
+        if merged_context:
             try:
-                source = str(Template(source).render(**context))
+                source = str(Template(source).render(**merged_context))
             except Exception:
                 # If rendering fails, keep original source
                 pass

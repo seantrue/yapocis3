@@ -23,7 +23,7 @@ class Kernel:
     ):
         self.name = name
         self.kernel_manager = kernel_manager
-        self.stream = kernel_manager.dmgr.stream
+        self.stream = kernel_manager.dmgr.queue
         self.kernel = kernel
         self.params = params
         self.autoflatten = kernel_manager.dmgr.autoflatten

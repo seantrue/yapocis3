@@ -183,6 +183,16 @@ yapocis-stubs input.h
 - Backend-specific KernelManagers resolve and compile templates
 - Template resolution via `yapocis.core.mako_utils`
 
+**Compiled Kernel Packages (`yapocis.kernelpack.*`)**
+
+- Pre-compiled Python classes that eliminate runtime interpretation overhead
+- Generated from interface specifications with explicit buffer management
+- Directory structure: `yapocis/kernelpack/{ocl,metal,cuda,numba}/`
+- Enabled via `YAPOCIS_KERNELPACK=1` environment variable or `use_package=True` parameter
+- Automatic fallback to traditional path if package unavailable
+- Currently implemented: `convolvesep` (Gaussian blur operations)
+- Performance improvement: ~20-25% faster than runtime interpretation
+
 **High-Level Libraries (`yapocis.lib.*`)**
 
 - `graphics.py`, `graphics4.py`: 2D graphics primitives (lines, circles, text)
@@ -231,6 +241,7 @@ YAPOCIS_CACHE=<directory>               # Kernel cache directory
 YAPOCIS_TUNECACHE=<json_file>           # Autotune cache (default: ~/.cache/yapocis/tuning.json)
 YAPOCIS_PROJECT=<directory>             # Additional asset root (e.g., "external")
 YAPOCIS_VIEWER=<command>                # Image viewer for debugging
+YAPOCIS_KERNELPACK=1|true|yes           # Enable compiled kernel packages (default: off)
 ```
 
 ## Testing Architecture
@@ -375,3 +386,4 @@ Use this tool to diagnose data quality issues like NaN/Inf values, check dtypes,
 outputs.
 
 - Never delete the performance database. Update the schema instead.
+- Bound kernels do not take arguments via named arguments, except for meta- kernel control. Library methods may take keyword arguments.

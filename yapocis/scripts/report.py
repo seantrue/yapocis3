@@ -150,6 +150,41 @@ def cmd_comprehensive(args):
         print(f"Error: {e}")
         sys.exit(1)
 
+def cmd_compare_backends(args):
+    """Generate cross-backend comparison report."""
+    from yapocis.utils.performance import generate_backend_cross_comparison_report
+
+    try:
+        report_path = generate_backend_cross_comparison_report(
+            test_pattern=args.test,
+            branch=args.branch,
+            limit=args.limit,
+            component=args.component if hasattr(args, 'component') else None
+        )
+        print(f"Backend cross-comparison report generated: {report_path}")
+        print(f"\nView the report: open {report_path}")
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
+def cmd_compare_branches(args):
+    """Generate cross-branch comparison report."""
+    from yapocis.utils.performance import generate_branch_comparison_report
+
+    try:
+        report_path = generate_branch_comparison_report(
+            test_pattern=args.test,
+            backend=args.backend,
+            branches=args.branches,
+            limit=args.limit,
+            component=args.component if hasattr(args, 'component') else None
+        )
+        print(f"Branch comparison report generated: {report_path}")
+        print(f"\nView the report: open {report_path}")
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
 def cmd_purge(args):
     """Purge old performance data."""
     count, files = purge_performance_data(
@@ -176,17 +211,38 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # list all performance data
+  # List all performance data
   python scripts/performance_report.py list
 
-  # list data for specific backend
+  # List data for specific backend
   python scripts/performance_report.py list --backend=metal
 
   # Show statistics
   python scripts/performance_report.py stats --test=graphics
 
-  # Generate backend comparison report
+  # Generate backend comparison report for a specific test
   python scripts/performance_report.py compare test_graphics4.test_batch
+
+  # Generate cross-backend comparison report (all tests)
+  python scripts/performance_report.py compare-backends
+
+  # Compare backends for specific test pattern
+  python scripts/performance_report.py compare-backends --test=graphics
+
+  # Compare backends for component (selects all tests with 'graphics4' in path)
+  python scripts/performance_report.py compare-backends --component=graphics4
+
+  # Compare backends for specific branch
+  python scripts/performance_report.py compare-backends --branch=main
+
+  # Generate cross-branch comparison (all branches)
+  python scripts/performance_report.py compare-branches
+
+  # Compare specific branches for a backend
+  python scripts/performance_report.py compare-branches --backend=metal --branches main feature-x
+
+  # Compare branches for component
+  python scripts/performance_report.py compare-branches --component=graphics4
 
   # Generate trend report for specific backend
   python scripts/performance_report.py trend test_graphics4.test_batch --backend=ocl
@@ -228,6 +284,21 @@ Examples:
     comp_parser = subparsers.add_parser("comprehensive", help="Generate comprehensive report")
     comp_parser.add_argument("--test", help="Filter by test name (partial match)")
 
+    # Compare backends command
+    backends_parser = subparsers.add_parser("compare-backends", help="Generate cross-backend comparison report")
+    backends_parser.add_argument("--test", help="Filter by test name (partial match)")
+    backends_parser.add_argument("--component", help="Filter by component (e.g., 'graphics4' matches all tests with graphics4 in path)")
+    backends_parser.add_argument("--branch", help="Filter by git branch")
+    backends_parser.add_argument("--limit", type=int, default=100, help="Maximum results per backend (default: 100)")
+
+    # Compare branches command
+    branches_parser = subparsers.add_parser("compare-branches", help="Generate cross-branch comparison report")
+    branches_parser.add_argument("--test", help="Filter by test name (partial match)")
+    branches_parser.add_argument("--component", help="Filter by component (e.g., 'graphics4' matches all tests with graphics4 in path)")
+    branches_parser.add_argument("--backend", help="Filter by specific backend (default: compare all backends)")
+    branches_parser.add_argument("--branches", nargs='+', help="Specific branches to compare (default: all branches)")
+    branches_parser.add_argument("--limit", type=int, default=100, help="Maximum results per branch (default: 100)")
+
     # Purge command
     purge_parser = subparsers.add_parser("purge", help="Delete old performance data")
     purge_parser.add_argument("--days", type=int, help="Delete data older than N days")
@@ -249,6 +320,8 @@ Examples:
         "compare": cmd_compare,
         "trend": cmd_trend,
         "comprehensive": cmd_comprehensive,
+        "compare-backends": cmd_compare_backends,
+        "compare-branches": cmd_compare_branches,
         "purge": cmd_purge,
     }
 

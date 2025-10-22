@@ -1,5 +1,6 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
+import os
 from yapocis.lib.bound_kernels import BoundKernels
 
 transform_names = ['adobe1998_d65.rgb2xyz', 'adobe1998_d65.xyz2rgb', 'apple_d65.rgb2xyz', 'apple_d65.xyz2rgb',
@@ -20,9 +21,44 @@ names = {name: i for (i, name) in enumerate(transform_names)}
 class Colormath(BoundKernels):
     INTERFACE = "colormath"
 
+    def __init__(self, *args, use_package: bool | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Determine whether to use compiled kernel package
+        if use_package is None:
+            use_package = os.environ.get('YAPOCIS_KERNELPACK', '').lower() in ('1', 'true', 'yes')
+
+        # Attempt to use package if requested
+        self.use_package = False
+        if use_package:
+            try:
+                self._init_with_package()
+                self.use_package = True
+            except (ImportError, AttributeError):
+                # Package not available, already using traditional path
+                pass
+
+    def _init_with_package(self):
+        """Initialize using compiled kernel package (fast path)."""
+        from yapocis.kernelpack import get_kernelpack, get_kernel_names
+
+        # Get compiled package for current backend
+        self.package = get_kernelpack('colormath', self.kmgr)
+        # Load all colormath kernels
+        kernel_names = get_kernel_names('colormath')
+        self.package.load(kernel_names)
+
     def transform_named(self, name, array):
         return self.transform(array, names[name], global_size=array.size // 3)
+
     def xyz2xyY(self, input):
-        return self.kmgr.xyz2xyY(input,global_size=input.size//3)
+        if self.use_package:
+            return self.package.xyz2xyY(input)
+        else:
+            return self.kmgr.xyz2xyY(input, global_size=input.size//3)
+
     def xyY2xyz(self, input):
-        return self.kmgr.xyY2xyz(input,global_size=input.size//3)
+        if self.use_package:
+            return self.package.xyY2xyz(input)
+        else:
+            return self.kmgr.xyY2xyz(input, global_size=input.size//3)
