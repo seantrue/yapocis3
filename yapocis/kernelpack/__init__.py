@@ -12,253 +12,156 @@ Directory structure:
     numbax/    - Numba compiled packages
 
 Usage:
-    from yapocis.kernelpack import get_convolvesep_package
+    from yapocis.kernelpack import get_kernelpack
 
-    package = get_convolvesep_package(dmgr)
-    result = package.gauss('gauss3', vertical=0, input_array=image)
+    package = get_kernelpack('median3x3', kernel_manager)
+    package.load()
+    result = package.median3x3(input_array)
 """
 
+from typing import Optional
+from pathlib import Path
 from yapocis.core.manager import get_backend
 
 
-def get_convolvesep_package(kmgr):
+def get_kernel_names(interface: str) -> list[str]:
     """
-    Get the compiled ConvolvesepPackage for current backend.
+    Extract kernel names from interface specification.
 
     Args:
-        kmgr: Kernel manager (has dmgr and program attributes)
+        interface: Interface name (e.g., 'median3x3', 'gradient')
 
     Returns:
-        ConvolvesepPackage instance for the appropriate backend
+        List of kernel names defined in the interface
 
-    Raises:
-        ImportError: If package not generated for this backend
-        ValueError: If backend is unknown
+    Example:
+        >>> get_kernel_names('gradient')
+        ['gradient']
+        >>> get_kernel_names('graphics4')
+        ['lines', 'rects', 'circles', 'triangles', 'ellipses', 'composite']
     """
-    backend = get_backend()
+    from yapocis.interfaces import find_interface
+    from yapocis.core.interface_parser import parse_interface_text
 
-    try:
-        if backend == "ocl":
-            from yapocis.kernelpack.ocl.convolvesep import ConvolvesepPackage
-        elif backend == "metal":
-            from yapocis.kernelpack.metal.convolvesep import ConvolvesepPackage
-        elif backend == "cuda":
-            from yapocis.kernelpack.cuda.convolvesep import ConvolvesepPackage
-        elif backend == "numbax":
-            from yapocis.kernelpack.numbax.convolvesep import ConvolvesepPackage
-        else:
-            raise ValueError(f"Unknown backend: {backend}")
-    except ImportError as e:
-        raise ImportError(
-            f"Convolvesep package not generated for backend '{backend}'. "
-            f"Run: yapocis-package convolvesep --backend {backend}"
-        ) from e
+    # Find and read interface file
+    interface_path = Path(find_interface(interface))
+    interface_text = interface_path.read_text()
 
-    return ConvolvesepPackage(kmgr.dmgr, kmgr.program)
+    # Parse interface specification
+    specs = parse_interface_text(interface_text)
+    if not specs:
+        return []
+
+    # Extract kernel names (excluding extensions and aliases, just base kernels)
+    spec = specs[0]
+    kernel_names = []
+    for kernel in spec.kernels:
+        # Skip if this is an extension or alias
+        if kernel.extends or kernel.alias_of:
+            continue
+        kernel_names.append(kernel.name)
+
+    return kernel_names
+
+# Mapping of interface names to package class names
+PACKAGE_CLASS_NAMES = {
+    'convolvesep': 'ConvolvesepPackage',
+    'operators':   'OperatorsPackage',
+    'gradient':    'GradientPackage',
+    'median3x3':   'Median3x3Package',
+    'colormath':   'ColormathPackage',
+    'hsi':         'HsiPackage',
+    'zcs':         'ZcsPackage',
+    'anisodiff':   'AnisodiffPackage',
+    'graphics4':   'Graphics4Package',
+    'truetrace':   'TruetracePackage',
+}
 
 
-def get_operators_package(kmgr):
+def get_kernelpack(interface: str, kernel_manager, backend: Optional[str] = None):
     """
-    Get the compiled OperatorsPackage for current backend.
+    Dynamically load kernel package for given interface and backend.
+
+    This unified API replaces the individual get_X_package() functions.
+    It dynamically imports and instantiates the appropriate package class
+    based on the interface name and backend.
 
     Args:
-        kmgr: Kernel manager (has dmgr and program attributes)
+        interface: Interface name (e.g., 'median3x3', 'gradient', 'operators')
+        kernel_manager: Kernel manager instance (has dmgr and program attributes)
+        backend: Backend name ('ocl', 'metal', 'cuda', 'numbax').
+                If None, uses current backend from environment.
 
     Returns:
-        OperatorsPackage instance for the appropriate backend
+        Package instance for the specified interface and backend.
+        Note: Call package.load() before executing kernels.
 
     Raises:
+        ValueError: If interface or backend is unknown
         ImportError: If package not generated for this backend
-        ValueError: If backend is unknown
+
+    Examples:
+        >>> from yapocis.core import load_program
+        >>> from yapocis.kernelpack import get_kernelpack
+        >>>
+        >>> # Auto-detect backend from environment
+        >>> kmgr = load_program('median3x3')
+        >>> package = get_kernelpack('median3x3', kmgr)
+        >>> package.load()
+        >>> result = package.median3x3(input_array)
+        >>>
+        >>> # Explicit backend specification
+        >>> kmgr = load_program('gradient')
+        >>> package = get_kernelpack('gradient', kmgr, backend='cuda')
+        >>> package.load()
+        >>> grad, theta = package.gradient(image, 3)
+        >>>
+        >>> # Multi-kernel interface with selective loading
+        >>> kmgr = load_program('operators')
+        >>> package = get_kernelpack('operators', kmgr)
+        >>> package.load(['add', 'sub', 'mul'])
+        >>> result = package.add(a, b)
     """
-    backend = get_backend()
+    # Validate interface name
+    if interface not in PACKAGE_CLASS_NAMES:
+        available = ', '.join(sorted(PACKAGE_CLASS_NAMES.keys()))
+        raise ValueError(
+            f"Unknown interface '{interface}'. "
+            f"Available interfaces: {available}"
+        )
 
+    # Get backend (use provided or auto-detect)
+    if backend is None:
+        backend = get_backend()
+
+    # Validate backend
+    if backend not in ('ocl', 'metal', 'cuda', 'numbax'):
+        raise ValueError(
+            f"Unknown backend '{backend}'. "
+            f"Valid backends: ocl, metal, cuda, numbax"
+        )
+
+    # Get package class name
+    class_name = PACKAGE_CLASS_NAMES[interface]
+
+    # Dynamically import package class
+    module_path = f"yapocis.kernelpack.{backend}.{interface}"
     try:
-        if backend == "ocl":
-            from yapocis.kernelpack.ocl.operators import OperatorsPackage
-        elif backend == "metal":
-            from yapocis.kernelpack.metal.operators import OperatorsPackage
-        elif backend == "cuda":
-            from yapocis.kernelpack.cuda.operators import OperatorsPackage
-        elif backend == "numbax":
-            from yapocis.kernelpack.numbax.operators import OperatorsPackage
-        else:
-            raise ValueError(f"Unknown backend: {backend}")
+        module = __import__(module_path, fromlist=[class_name])
+        package_class = getattr(module, class_name)
     except ImportError as e:
         raise ImportError(
-            f"Operators package not generated for backend '{backend}'. "
-            f"Run: yapocis-package operators --backend {backend}"
+            f"{class_name} not generated for backend '{backend}'. "
+            f"Run: yapocis-package {interface} --backend {backend}"
         ) from e
-
-    return OperatorsPackage(kmgr.dmgr, kmgr.program)
-
-
-def get_gradient_package(kmgr):
-    """Get the compiled GradientPackage for current backend."""
-    backend = get_backend()
-
-    try:
-        if backend == "ocl":
-            from yapocis.kernelpack.ocl.gradient import GradientPackage
-        elif backend == "metal":
-            from yapocis.kernelpack.metal.gradient import GradientPackage
-        elif backend == "cuda":
-            from yapocis.kernelpack.cuda.gradient import GradientPackage
-        elif backend == "numbax":
-            from yapocis.kernelpack.numbax.gradient import GradientPackage
-        else:
-            raise ValueError(f"Unknown backend: {backend}")
-    except ImportError as e:
+    except AttributeError as e:
         raise ImportError(
-            f"Gradient package not generated for backend '{backend}'. "
-            f"Run: yapocis-package gradient --backend {backend}"
+            f"Package module exists but {class_name} not found. "
+            f"The package may be corrupted or incompletely generated."
         ) from e
 
-    return GradientPackage(kmgr.dmgr, kmgr.program)
+    # Instantiate and return package
+    return package_class(kernel_manager.dmgr, kernel_manager.program)
 
 
-def get_median3x3_package(kmgr):
-    """Get the compiled Median3x3Package for current backend."""
-    backend = get_backend()
-    try:
-        if backend == "ocl":
-            from yapocis.kernelpack.ocl.median3x3 import Median3x3Package
-        elif backend == "metal":
-            from yapocis.kernelpack.metal.median3x3 import Median3x3Package
-        elif backend == "cuda":
-            from yapocis.kernelpack.cuda.median3x3 import Median3x3Package
-        elif backend == "numbax":
-            from yapocis.kernelpack.numbax.median3x3 import Median3x3Package
-        else:
-            raise ValueError(f"Unknown backend: {backend}")
-    except ImportError as e:
-        raise ImportError(f"Median3x3 package not generated for backend '{backend}'.") from e
-    return Median3x3Package(kmgr.dmgr, kmgr.program)
-
-
-def get_colormath_package(kmgr):
-    """Get the compiled ColormathPackage for current backend."""
-    backend = get_backend()
-    try:
-        if backend == "ocl":
-            from yapocis.kernelpack.ocl.colormath import ColormathPackage
-        elif backend == "metal":
-            from yapocis.kernelpack.metal.colormath import ColormathPackage
-        elif backend == "cuda":
-            from yapocis.kernelpack.cuda.colormath import ColormathPackage
-        elif backend == "numbax":
-            from yapocis.kernelpack.numbax.colormath import ColormathPackage
-        else:
-            raise ValueError(f"Unknown backend: {backend}")
-    except ImportError as e:
-        raise ImportError(f"Colormath package not generated for backend '{backend}'.") from e
-    return ColormathPackage(kmgr.dmgr, kmgr.program)
-
-
-def get_hsi_package(kmgr):
-    """Get the compiled HsiPackage for current backend."""
-    backend = get_backend()
-    try:
-        if backend == "ocl":
-            from yapocis.kernelpack.ocl.hsi import HsiPackage
-        elif backend == "metal":
-            from yapocis.kernelpack.metal.hsi import HsiPackage
-        elif backend == "cuda":
-            from yapocis.kernelpack.cuda.hsi import HsiPackage
-        elif backend == "numbax":
-            from yapocis.kernelpack.numbax.hsi import HsiPackage
-        else:
-            raise ValueError(f"Unknown backend: {backend}")
-    except ImportError as e:
-        raise ImportError(f"HSI package not generated for backend '{backend}'.") from e
-    return HsiPackage(kmgr.dmgr, kmgr.program)
-
-
-def get_zcs_package(kmgr):
-    """Get the compiled ZcsPackage for current backend."""
-    backend = get_backend()
-    try:
-        if backend == "ocl":
-            from yapocis.kernelpack.ocl.zcs import ZcsPackage
-        elif backend == "metal":
-            from yapocis.kernelpack.metal.zcs import ZcsPackage
-        elif backend == "cuda":
-            from yapocis.kernelpack.cuda.zcs import ZcsPackage
-        elif backend == "numbax":
-            from yapocis.kernelpack.numbax.zcs import ZcsPackage
-        else:
-            raise ValueError(f"Unknown backend: {backend}")
-    except ImportError as e:
-        raise ImportError(f"ZCS package not generated for backend '{backend}'.") from e
-    return ZcsPackage(kmgr.dmgr, kmgr.program)
-
-
-def get_anisodiff_package(kmgr):
-    """Get the compiled AnisodiffPackage for current backend."""
-    backend = get_backend()
-    try:
-        if backend == "ocl":
-            from yapocis.kernelpack.ocl.anisodiff import AnisodiffPackage
-        elif backend == "metal":
-            from yapocis.kernelpack.metal.anisodiff import AnisodiffPackage
-        elif backend == "cuda":
-            from yapocis.kernelpack.cuda.anisodiff import AnisodiffPackage
-        elif backend == "numbax":
-            from yapocis.kernelpack.numbax.anisodiff import AnisodiffPackage
-        else:
-            raise ValueError(f"Unknown backend: {backend}")
-    except ImportError as e:
-        raise ImportError(f"Anisodiff package not generated for backend '{backend}'.") from e
-    return AnisodiffPackage(kmgr.dmgr, kmgr.program)
-
-
-def get_graphics4_package(kmgr):
-    """Get the compiled Graphics4Package for current backend."""
-    backend = get_backend()
-    try:
-        if backend == "ocl":
-            from yapocis.kernelpack.ocl.graphics4 import Graphics4Package
-        elif backend == "metal":
-            from yapocis.kernelpack.metal.graphics4 import Graphics4Package
-        elif backend == "cuda":
-            from yapocis.kernelpack.cuda.graphics4 import Graphics4Package
-        elif backend == "numbax":
-            from yapocis.kernelpack.numbax.graphics4 import Graphics4Package
-        else:
-            raise ValueError(f"Unknown backend: {backend}")
-    except ImportError as e:
-        raise ImportError(f"Graphics4 package not generated for backend '{backend}'.") from e
-    return Graphics4Package(kmgr.dmgr, kmgr.program)
-
-
-def get_truetrace_package(kmgr):
-    """Get the compiled TruetracePackage for current backend."""
-    backend = get_backend()
-    try:
-        if backend == "ocl":
-            from yapocis.kernelpack.ocl.truetrace import TruetracePackage
-        elif backend == "metal":
-            from yapocis.kernelpack.metal.truetrace import TruetracePackage
-        elif backend == "cuda":
-            from yapocis.kernelpack.cuda.truetrace import TruetracePackage
-        elif backend == "numbax":
-            from yapocis.kernelpack.numbax.truetrace import TruetracePackage
-        else:
-            raise ValueError(f"Unknown backend: {backend}")
-    except ImportError as e:
-        raise ImportError(f"Truetrace package not generated for backend '{backend}'.") from e
-    return TruetracePackage(kmgr.dmgr, kmgr.program)
-
-
-__all__ = [
-    "get_convolvesep_package",
-    "get_operators_package",
-    "get_gradient_package",
-    "get_median3x3_package",
-    "get_colormath_package",
-    "get_hsi_package",
-    "get_zcs_package",
-    "get_anisodiff_package",
-    "get_graphics4_package",
-    "get_truetrace_package",
-]
+__all__ = ["get_kernelpack", "get_kernel_names", "PACKAGE_CLASS_NAMES"]

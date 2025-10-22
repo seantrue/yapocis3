@@ -186,7 +186,7 @@ class Gaussian(BoundKernels):
     def _init_with_package(self, convs):
         """Initialize using compiled kernel package (fast path)."""
         # Import package loader and wrapper (may raise ImportError)
-        from yapocis.kernelpack import get_convolvesep_package
+        from yapocis.kernelpack import get_kernelpack
         from yapocis.core.manager import get_backend
 
         backend = get_backend()
@@ -204,7 +204,7 @@ class Gaussian(BoundKernels):
             raise ImportError(f"No kernel package available for backend: {backend}")
 
         # Get compiled package for current backend
-        package = get_convolvesep_package(self.kmgr)
+        package = get_kernelpack('convolvesep', self.kmgr)
 
         # Load all kernel variants
         kernel_names = [name for name, _ in convs]

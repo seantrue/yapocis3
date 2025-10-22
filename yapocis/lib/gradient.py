@@ -32,10 +32,10 @@ class Gradient(BoundKernels):
 
     def _init_with_package(self):
         """Initialize using compiled kernel package (fast path)."""
-        from yapocis.kernelpack import get_gradient_package
+        from yapocis.kernelpack import get_kernelpack
 
         # Get compiled package for current backend
-        self.package = get_gradient_package(self.kmgr)
+        self.package = get_kernelpack('gradient', self.kmgr)
         self.package.load()
 
     def gradient(self, a, stride=3):

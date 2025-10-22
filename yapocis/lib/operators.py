@@ -31,7 +31,7 @@ class Operators(BoundKernels):
 
     def _init_with_package(self):
         """Initialize using compiled kernel package (fast path)."""
-        from yapocis.kernelpack import get_operators_package
+        from yapocis.kernelpack import get_kernelpack
         from yapocis.core.interface_context import load_interface_context
 
         # Load operator list from YAML
@@ -39,7 +39,7 @@ class Operators(BoundKernels):
         operators = context.get('operators', [])
 
         # Get compiled package for current backend
-        self.package = get_operators_package(self.kmgr)
+        self.package = get_kernelpack('operators', self.kmgr)
 
         # Load all operator kernels
         kernel_names = [name for name, _ in operators]

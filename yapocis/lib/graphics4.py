@@ -3,6 +3,7 @@ Low level wrappers around the OpenCL graphics kernels.
 """
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
+import os
 import numpy as np
 
 from yapocis.lib.abstract_graphics import (AbstractGraphics,
@@ -188,3 +189,29 @@ class GraphicsSetup4(AbstractGraphicsSetup):
 class Graphics4(AbstractGraphics, GraphicsSetup4):
     INTERFACE="graphics4"
     CHANNELS=4
+
+    def __init__(self, *args, use_package: bool | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Determine whether to use compiled kernel package
+        if use_package is None:
+            use_package = os.environ.get('YAPOCIS_KERNELPACK', '').lower() in ('1', 'true', 'yes')
+
+        # Attempt to use package if requested
+        self.use_package = False
+        if use_package:
+            try:
+                self._init_with_package()
+                self.use_package = True
+            except (ImportError, AttributeError):
+                # Package not available, already using traditional path
+                pass
+
+    def _init_with_package(self):
+        """Initialize using compiled kernel package (fast path)."""
+        from yapocis.kernelpack import get_kernelpack, get_kernel_names
+
+        # Get compiled package for current backend
+        self.package = get_kernelpack('graphics4', self.kmgr)
+        kernel_names = get_kernel_names('graphics4')
+        self.package.load(kernel_names)

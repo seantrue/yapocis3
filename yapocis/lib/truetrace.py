@@ -29,6 +29,7 @@ Notes
 
 from __future__ import annotations
 
+import os
 import numpy as np
 
 from .bound_kernels import BoundKernels
@@ -36,6 +37,32 @@ from .bound_kernels import BoundKernels
 
 class TrueTrace(BoundKernels):
     INTERFACE = "truetrace"
+
+    def __init__(self, *args, use_package: bool | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Determine whether to use compiled kernel package
+        if use_package is None:
+            use_package = os.environ.get('YAPOCIS_KERNELPACK', '').lower() in ('1', 'true', 'yes')
+
+        # Attempt to use package if requested
+        self.use_package = False
+        if use_package:
+            try:
+                self._init_with_package()
+                self.use_package = True
+            except (ImportError, AttributeError):
+                # Package not available, already using traditional path
+                pass
+
+    def _init_with_package(self):
+        """Initialize using compiled kernel package (fast path)."""
+        from yapocis.kernelpack import get_kernelpack, get_kernel_names
+
+        # Get compiled package for current backend
+        self.package = get_kernelpack('truetrace', self.kmgr)
+        kernel_names = get_kernel_names('truetrace')
+        self.package.load(kernel_names)
 
     def trace_segments(
             self, mask_u8: np.ndarray, iso: float = 0.0
@@ -58,14 +85,16 @@ class TrueTrace(BoundKernels):
         # Coerce mask to int32 to match interface type, map nonzero to 1
         m = np.ascontiguousarray((mask_u8 != 0).astype(np.int32).T)  # shape (W,H)
 
-        # Allocate seed buffers as float4 (x,y,_,_)
-        seed_a = np.full((W, H, 4), -1.0, dtype=np.float32)
-        seed_b = np.full((W, H, 4), -1.0, dtype=np.float32)
-        # Distance buffer
-        dist = np.full((W, H), 1e30, dtype=np.float32)
-
-        # Initialize from mask
-        self.kmgr.init_seed_from_mask(m, seed_a, dist)
+        if self.use_package:
+            # Package path: init returns the arrays
+            seed_a, dist = self.package.init_seed_from_mask(m)
+            seed_b = np.full((W, H, 4), -1.0, dtype=np.float32)
+        else:
+            # Traditional path: we allocate and pass as resident
+            seed_a = np.full((W, H, 4), -1.0, dtype=np.float32)
+            seed_b = np.full((W, H, 4), -1.0, dtype=np.float32)
+            dist = np.full((W, H), 1e30, dtype=np.float32)
+            self.kmgr.init_seed_from_mask(m, seed_a, dist)
 
         # Jump Flood loop: largest power-of-two jump <= max(W,H)
         max_dim = max(W, H)
@@ -74,17 +103,29 @@ class TrueTrace(BoundKernels):
             jump <<= 1
         cur_in = seed_a
         cur_out = seed_b
-        while jump >= 1:
-            self.kmgr.jfa_step(np.int32(jump), cur_in, dist, cur_out)
-            cur_in, cur_out = cur_out, cur_in
-            jump >>= 1
+
+        if self.use_package:
+            # Package path: jfa_step returns new seed_out
+            while jump >= 1:
+                cur_out = self.package.jfa_step(cur_in, dist, np.int32(jump))
+                cur_in, cur_out = cur_out, cur_in
+                jump >>= 1
+        else:
+            # Traditional path: jfa_step uses resident buffers
+            while jump >= 1:
+                self.kmgr.jfa_step(np.int32(jump), cur_in, dist, cur_out)
+                cur_in, cur_out = cur_out, cur_in
+                jump >>= 1
 
         # Marching squares: estimate upper bound of segments and allocate
         max_segments = max(0, (W - 1) * (H - 1) * 2)
         seg_counter = np.zeros((1,), dtype=np.uint32)
         segments_out = np.full((max_segments * 4,), np.nan, dtype=np.float32)
 
-        self.kmgr.marching_squares(dist, np.float32(iso), seg_counter, segments_out)
+        if self.use_package:
+            self.package.marching_squares(dist, np.float32(iso), seg_counter, segments_out)
+        else:
+            self.kmgr.marching_squares(dist, np.float32(iso), seg_counter, segments_out)
 
         # Read counter and slice segments
         count = int(seg_counter[0])
