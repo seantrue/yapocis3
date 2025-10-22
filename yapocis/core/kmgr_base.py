@@ -48,6 +48,7 @@ from mako.lookup import TemplateLookup
 from mako.template import Template
 
 from yapocis.core.interface import Interface, get_interface, load_interface
+from yapocis.core.interface_context import get_interface_context
 from yapocis.utils.internals import get_yapocis_dir
 from yapocis.utils.stereo_typing import Context
 
@@ -287,16 +288,26 @@ class KernelManagerBase(ABC):
             device_name: Backend-specific device selector (None = default)
             debug: Print interface and source
             options: Backend-specific compilation options
-            **context: Mako template variables
+            **context: Mako template variables (override YAML context)
 
         Returns:
             KernelManager instance with compiled kernels
+
+        Notes:
+            - Loads template context from <interface>.yml if present
+            - Programmatic context (kwargs) overrides YAML context
+            - Allows externalizing template variables to YAML files
         """
         assert device_name is None or isinstance(
             device_name, (str, int, bytes)
         ), device_name
+
+        # Load and merge YAML context with programmatic context
+        # Programmatic context takes precedence
+        merged_context = get_interface_context(interface_spec, **context)
+
         source = load_interface(interface_spec)
-        source = cls.render_interface(source, **context)
+        source = cls.render_interface(source, **merged_context)
         interface = get_interface(source)
         if debug:
             print("Interface", interface)
@@ -305,7 +316,7 @@ class KernelManagerBase(ABC):
             device_name,
             debug=debug,
             options=options,
-            **context,
+            **merged_context,
         )
 
     @classmethod

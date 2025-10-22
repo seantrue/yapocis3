@@ -108,7 +108,7 @@ def get_manager(backend: str | None = None):
         from yapocis.metallic import kernel_manager as km
 
         return km
-    elif backend in ("numbax"):
+    elif backend in ("numbax","numba"):
         # Return the Numba kernel_manager module (uses Numba JIT)
         from yapocis.numbax import kernel_manager as km
 

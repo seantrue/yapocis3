@@ -17,7 +17,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from mako.template import Template
+
 from yapocis.interfaces import find_interface
+from yapocis.core.interface_context import load_interface_context
 
 
 # Backend-specific imports
@@ -48,6 +51,57 @@ ALL_INTERFACES = [
     "graphics4",
     "truetrace",
 ]
+
+
+def render_interface_with_context(interface_text: str, interface_name: str) -> str:
+    """
+    Render interface template with YAML context if available.
+
+    For interfaces that use Mako templates (operators, convolvesep),
+    this loads the YAML context and renders the template.
+
+    For static interfaces, returns the text unchanged.
+    """
+    # Check if interface uses Mako templates
+    if '%' not in interface_text and '${' not in interface_text:
+        return interface_text
+
+    # Load YAML context
+    context = load_interface_context(interface_name)
+
+    if not context:
+        print(f"Warning: Interface '{interface_name}' uses Mako templates but no YAML context found")
+        print(f"Expected: yapocis/interfaces/{interface_name}.yml")
+        return interface_text
+
+    # Special handling for convolvesep: generate 'convs' from 'gaussian_params'
+    if interface_name == 'convolvesep' and 'gaussian_params' in context:
+        import numpy as np
+        from yapocis.lib.gaussian import GaussianWeights
+
+        print("Generating 'convs' from gaussian_params for convolvesep template")
+        gaussian_params = context['gaussian_params']
+
+        # Generate Gaussian weights using the same logic as Gaussian.__init__
+        gw = GaussianWeights(**gaussian_params)
+        gws = gw.gaussian_weights()
+
+        # Create convs list: [(name, array), ...]
+        convs = [("gauss%s" % len(a), a) for a in gws]
+
+        # Add to context
+        context['convs'] = convs
+        print(f"Generated {len(convs)} Gaussian kernels for package generation")
+
+    # Render template with context
+    try:
+        template = Template(interface_text)
+        rendered = template.render(**context)
+        return rendered
+    except Exception as e:
+        print(f"Error rendering interface template: {e}")
+        print(f"Context keys: {list(context.keys())}")
+        raise
 
 
 def parse_interface_simple(interface_text: str) -> dict[str, Any]:
@@ -443,19 +497,19 @@ def generate_package(interface_name: str, backend: str, output_path: Path | None
     # Read interface text
     interface_text = interface_path.read_text()
 
+    # Render interface with YAML context if it uses Mako templates
+    print(f"Processing interface: {interface_name}")
+    rendered_text = render_interface_with_context(interface_text, interface_name)
+
     # Parse interface (simple parsing for code generation)
-    spec = parse_interface_simple(interface_text)
+    spec = parse_interface_simple(rendered_text)
 
     if not spec['kernels']:
-        print(f"Warning: No kernels found in {interface_name}.interface")
-        print("Note: Mako templates require rendering with context variables.")
-        print("Falling back to manual specification...")
+        print(f"Error: No kernels found in {interface_name}.interface after rendering")
+        print("This may indicate an issue with the interface specification or YAML context.")
+        sys.exit(1)
 
-        # For interfaces that use Mako templates, we need special handling
-        if interface_name == "convolvesep":
-            print("Convolvesep uses Mako templates and cannot be auto-generated.")
-            print("Please use the existing manually-created package.")
-            sys.exit(1)
+    print(f"Found {len(spec['kernels'])} kernels in {interface_name}")
 
     # Generate package code
     package_code = generate_package_class(interface_name, spec, backend)

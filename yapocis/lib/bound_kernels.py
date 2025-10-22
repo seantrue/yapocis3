@@ -1,4 +1,5 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
+import os
 from yapocis.core import load_program
 from yapocis.utils.stereo_typing import *
 from typing import Any, Callable
@@ -58,3 +59,32 @@ class BoundKernels:
 
     def purge(self):
         self.kmgr.purge()
+
+    def __enter__(self):
+        """Context manager entry - return self for use in with statement."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - ensure cleanup on exit."""
+        # Purge buffers when exiting context
+        self.kmgr.purge()
+        return False  # Don't suppress exceptions
+
+    def __del__(self):
+        """
+        Conditionally purge buffers when instance is deleted.
+
+        Automatic purge is controlled by YAPOCIS_AUTO_PURGE environment variable:
+        - Set to '1', 'true', or 'yes' to enable automatic purge (useful for loops)
+        - Disabled by default to prevent issues during pytest teardown
+
+        For explicit cleanup, use context managers or call purge() manually.
+        """
+        # Only purge if explicitly enabled via environment variable
+        if os.environ.get('YAPOCIS_AUTO_PURGE', '').lower() in ('1', 'true', 'yes'):
+            try:
+                if hasattr(self, 'kmgr'):
+                    self.kmgr.purge()
+            except Exception:
+                # Silently ignore errors during cleanup
+                pass

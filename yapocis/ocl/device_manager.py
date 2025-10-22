@@ -26,7 +26,7 @@ class DeviceManager(DeviceManagerBase):
     """
     OpenCL device manager - coordinates device, context, queue, and buffer management.
 
-    Inherits from DeviceManagerBase (which extends BufferManagerBase).
+    Inherits from DeviceManagerBase (which includes buffer management functionality).
     """
 
     MEMFLAGS = mf.READ_WRITE | mf.COPY_HOST_PTR
@@ -38,7 +38,7 @@ class DeviceManager(DeviceManagerBase):
         Args:
             device_name: Device identifier (None for default)
             timed: Enable performance timing
-            **kwargs: Additional arguments for BufferManagerBase
+            **kwargs: Additional arguments for DeviceManagerBase
         """
         assert device_name is None or isinstance(device_name, (str, int, bytes)), device_name
         device_name_str, device = get_device(device_name=device_name)
@@ -71,7 +71,7 @@ class DeviceManager(DeviceManagerBase):
         program = binary.build(options=options, cache_dir=YAPOCIS_CACHE)
         return program
 
-    # Implement abstract methods from BufferManagerBase
+    # Implement abstract methods from DeviceManagerBase
     def make_buffer(self, a: Array) -> pyopencl.Buffer:
         """Create PyOpenCL buffer from numpy array."""
         if not a.data.contiguous:

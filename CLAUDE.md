@@ -386,3 +386,4 @@ Use this tool to diagnose data quality issues like NaN/Inf values, check dtypes,
 outputs.
 
 - Never delete the performance database. Update the schema instead.
+- Bound kernels do not take arguments via named arguments, except for meta- kernel control. Library methods may take keyword arguments.

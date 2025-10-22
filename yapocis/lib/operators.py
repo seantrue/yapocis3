@@ -10,10 +10,10 @@ from yapocis.utils.stereo_typing import *
 
 class Operators(BoundKernels):
     INTERFACE = "operators"
-    OPERATORS = [("add", "+"), ("sub", "-"), ("mul", "*"), ("divop", "/")]
 
     def __init__(self, *args, use_package: bool | None = None, **kwargs):
-        super(Operators, self).__init__(*args, operators=self.OPERATORS, **kwargs)
+        # Operators context loaded automatically from operators.yml
+        super(Operators, self).__init__(*args, **kwargs)
 
         # Determine whether to use compiled kernel package
         if use_package is None:
@@ -32,16 +32,21 @@ class Operators(BoundKernels):
     def _init_with_package(self):
         """Initialize using compiled kernel package (fast path)."""
         from yapocis.kernelpack import get_operators_package
+        from yapocis.core.interface_context import load_interface_context
+
+        # Load operator list from YAML
+        context = load_interface_context("operators")
+        operators = context.get('operators', [])
 
         # Get compiled package for current backend
         self.package = get_operators_package(self.kmgr)
 
         # Load all operator kernels
-        kernel_names = [name for name, _ in self.OPERATORS]
+        kernel_names = [name for name, _ in operators]
         self.package.load(kernel_names)
 
         # Wrap package methods to match BoundKernels interface
-        for name, _ in self.OPERATORS:
+        for name, _ in operators:
             # Create wrapper for main operator
             setattr(self, name, self._make_operator_wrapper(name))
             # Create wrapper for _res variant

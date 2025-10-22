@@ -29,7 +29,7 @@ class DeviceManager(DeviceManagerBase):
     """
     Metal device manager - coordinates device, queue, and buffer management.
 
-    Inherits from DeviceManagerBase (which extends BufferManagerBase).
+    Inherits from DeviceManagerBase (which includes buffer management functionality).
     """
 
     def __init__(
@@ -41,7 +41,7 @@ class DeviceManager(DeviceManagerBase):
         Args:
             device_name: Device identifier (None for default)
             timed: Enable performance timing
-            **kwargs: Additional arguments for BufferManagerBase
+            **kwargs: Additional arguments for DeviceManagerBase
         """
         assert device_name is None or isinstance(
             device_name, (str, int, bytes)
@@ -69,7 +69,7 @@ class DeviceManager(DeviceManagerBase):
         # from source on demand and cached by pymetallic.kernel_cache.
         return None
 
-    # Implement abstract methods from BufferManagerBase
+    # Implement abstract methods from DeviceManagerBase
     def make_buffer(self, a: Array) -> "pymetallic.Buffer":
         """Create PyMetallic buffer from numpy array."""
         # Ensure contiguous data for low-level transfer
