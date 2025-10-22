@@ -1,48 +1,7 @@
 import os
 
 _backends = None
-
-
-def get_backends() -> list[str]:
-    global _backends
-    if _backends is None:
-        backends = []
-        try:
-            import pyopencl
-
-            backends.append("ocl")
-        except:
-            pass
-        try:
-            import pymetallic
-
-            backends.append("metal")
-        except:
-            pass
-        try:
-            import pycuda
-
-            backends.append("cuda")
-        except:
-            pass
-        try:
-            import numba
-
-            backends.append("numba")
-        except:
-            pass
-        _backends = backends
-    return _backends
-
-
-def get_backend():
-    backend = os.environ.get("YAPOCIS_BACKEND") or "ocl"
-    backend = backend.lower()
-    backends = get_backends()
-    if backend not in backends:
-        raise RuntimeError(f"{backend=} is not one of available {backends=}")
-    return backend
-
+from . import get_backends, get_backend
 
 def get_manager(backend: str | None = None):
     """
@@ -68,7 +27,7 @@ def get_manager(backend: str | None = None):
         from yapocis.metallic import kernel_manager as km
 
         return km
-    elif backend in ("numba"):
+    elif backend in ("numba","numbax"):
         # Return the Numba kernel_manager module (uses Numba JIT)
         from yapocis.numbax import kernel_manager as km
 

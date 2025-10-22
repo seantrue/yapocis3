@@ -51,13 +51,14 @@ def test_runtime_demo_metal(monkeypatch):
 @pytest.mark.cuda
 def test_runtime_demo_cuda(monkeypatch):
     try:
-        import pycuda.autoinit  # noqa: F401
-        import pycuda.driver as cuda  # noqa: F401
+        # import pycuda.autoinit  # noqa: F401
+        # import pycuda.driver as cuda  # noqa: F401
+        import pycuda
     except Exception as e:
         pytest.skip(f"pycuda not available: {e}")
     monkeypatch.setenv("YAPOCIS_BACKEND", "cuda")
 
-    mgr = get_manager("cuda")
+    # mgr = get_manager("cuda")
     prog = load_program("demo")
 
     # Use numpy arrays; CUDA wrapper will stage to device and return host array
