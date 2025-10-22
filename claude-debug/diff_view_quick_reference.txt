@@ -1,0 +1,52 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║           IMAGEWATCHER DIFFERENCE VISUALIZATION MODE                          ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+KEYBOARD SHORTCUT: F8
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                       3-PANEL LAYOUT VISUALIZATION                            ║
+╠═════════════════════╦═════════════════════╦═════════════════════════════════╣
+║                     ║                     ║                                 ║
+║      Current        ║    Validation       ║   Difference (max: 2.55e+02)    ║
+║                     ║                     ║                                 ║
+║  ┌───────────┐      ║  ┌───────────┐      ║  ┌───────────┐                 ║
+║  │           │      ║  │           │      ║  │░░░░░▓▓▓███│  Legend:        ║
+║  │  Test     │      ║  │ Reference │      ║  │░░░░░▓▓▓███│                 ║
+║  │  Output   │      ║  │   Image   │      ║  │░░░░░▓▓▓███│  Blue   = Match ║
+║  │           │      ║  │           │      ║  │░░░░░▓▓▓███│  Cyan   = Small ║
+║  │           │      ║  │           │      ║  │░░░░░▓▓▓███│  Green  = Medium║
+║  └───────────┘      ║  └───────────┘      ║  └───────────┘  Yellow = Large ║
+║                     ║                     ║                  Red    = Max   ║
+║                     ║                     ║  ┌───────────────────────────┐  ║
+║                     ║                     ║  │░░▒▒▓▓██                  │  ║
+║                     ║                     ║  └───────────────────────────┘  ║
+║                     ║                     ║   0                    2.55e+02 ║
+╚═════════════════════╩═════════════════════╩═════════════════════════════════╝
+
+COLOR SCALE GRADIENT:
+  Blue → Cyan → Green → Yellow → Red
+  (0%)   (25%)   (50%)    (75%)   (100%)
+
+FEATURES:
+  ✓ Shows current test image, validation reference, and difference map side-by-side
+  ✓ Color-coded heat map makes differences immediately visible
+  ✓ Quantitative max difference displayed in label
+  ✓ Color scale legend with min/max values
+  ✓ Works with grayscale, RGB, RGBA, and float arrays
+  ✓ Auto-scales to fit window size
+
+USAGE:
+  1. Open imagewatcher: yapocis-imagewatcher --queue <queue_dir>
+  2. Navigate to image with validation reference
+  3. Press F8 to toggle difference view
+  4. Press F8 again to return to normal view
+  5. Navigate with a/d/w/e (auto-exits difference view)
+
+RELATED SHORTCUTS:
+  F8  - Toggle 3-panel difference view
+  F9  - Toggle validation reference only
+  F10 - Show validation info
+  F11 - Compare with validation (text output)
+  F12 - Promote to validation reference
+  h   - Show all keyboard shortcuts
