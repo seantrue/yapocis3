@@ -3,7 +3,7 @@
 
 [project]
 name = "yapocis"
-version = "0.3.1"
+version = "0.3.2"
 description = "Yet another PyOpenCL interface specifier - Multi-backend GPU/CPU computing framework for image processing"
 readme = "README.md"
 authors = [
@@ -133,15 +133,39 @@ yapocis-package = "yapocis.scripts.package:main"
 requires = ["hatchling>=1.13"]
 build-backend = "hatchling.build"
 
+[dependency-groups]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=3.0.0",
+    "pytest-benchmark>=3.4.0",
+    "black>=22.0.0",
+    "ruff>=0.1.0",
+    "isort>=5.0.0",
+    "mypy>=1.0.0",
+    "licensecheck>=2025.1.0",
+    "pip-tools>=7.0.0",
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+    "tabulate>=0.9.0",
+    "duckdb>=1.1.0",
+    "scipy>=1.11.0",
+    "pygame>=2.5.0",
+    "pyopengl>=3.1.0",
+    "build>=1.0.0",
+    "twine>=4.0.0",
+    "wheel>=0.37.0",
+    "watchdog>=4.0.0",
+]
+
 [tool.hatch.build.targets.wheel]
-packages = ["yapocis"]
+packages = ["src/yapocis"]
 include = [
-    "yapocis/**/*.interface",
-    "yapocis/**/*.mako",
-    "yapocis/**/*.cl",
-    "yapocis/**/*.ttf",
-    "yapocis/**/test.jpg",
-    "yapocis/**/test.txt",
+    "src/yapocis/**/*.interface",
+    "src/yapocis/**/*.mako",
+    "src/yapocis/**/*.cl",
+    "src/yapocis/**/*.ttf",
+    "src/yapocis/**/test.jpg",
+    "src/yapocis/**/test.txt",
 ]
 
 [tool.black]
@@ -229,7 +253,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["yapocis"]
+source = ["src/yapocis"]
 omit = [
     "*/tests/*",
     "*/scripts/*",

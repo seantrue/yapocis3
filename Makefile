@@ -7,7 +7,7 @@ PYTHON := python3.13
 UV ?= uv
 PYTEST_ARGS ?= -vv
 PACKAGE_NAME = yapocis
-SRC_DIR = yapocis
+SRC_DIR = src/yapocis
 SCRIPTS_DIR = scripts
 TESTS_DIR = tests
 DOCS_DIR = docs
@@ -66,50 +66,62 @@ venv: ## Create virtual environment with Python 3.13
 
 .PHONY: install
 install: venv ## Install package and core dependencies
-	@echo "$(YELLOW)Installing package in development mode...$(NC)"
-	$(UV) pip install -e .
+	@echo "$(YELLOW)Installing package with uv sync...$(NC)"
+	$(UV) sync
 	@echo "$(GREEN)Installation complete$(NC)"
 
 .PHONY: install-dev
 install-dev: venv ## Install package with development dependencies
 	@echo "$(YELLOW)Installing package with development dependencies...$(NC)"
-	$(UV) pip install -e ".[dev]"
+	$(UV) sync --group dev
 	@echo "$(GREEN)Development installation complete$(NC)"
 
 .PHONY: install-backends
 install-backends: venv ## Install with all backend dependencies
 	@echo "$(YELLOW)Installing package with all backend dependencies...$(NC)"
-	$(UV) pip install -e ".[all-backends,dev]"
+	$(UV) sync --extra all-backends --group dev
 	@echo "$(GREEN)Full installation complete$(NC)"
 
 .PHONY: install-mac
-install-mac: venv ## Install with OpenCL backend
-	$(UV) pip install -e ".[opencl,dev,metal,numbax]"
+install-mac: venv ## Install with macOS backends (OpenCL, Metal, Numba)
+	@echo "$(YELLOW)Installing macOS backends...$(NC)"
+	$(UV) sync --extra opencl --extra metal --extra numba --group dev
+	@echo "$(GREEN)macOS installation complete$(NC)"
 
 .PHONY: install-linux
-install-linux: venv ## Install with OpenCL backend
-	$(UV) pip install -e ".[opencl,dev,cuda,numbax]"
+install-linux: venv ## Install with Linux backends (OpenCL, CUDA, Numba)
+	@echo "$(YELLOW)Installing Linux backends...$(NC)"
+	$(UV) sync --extra opencl --extra cuda --extra numba --group dev
+	@echo "$(GREEN)Linux installation complete$(NC)"
 
 .PHONY: install-opencl
 install-opencl: venv ## Install with OpenCL backend
-	$(UV) pip install -e ".[opencl,dev]"
+	@echo "$(YELLOW)Installing OpenCL backend...$(NC)"
+	$(UV) sync --extra opencl --group dev
+	@echo "$(GREEN)OpenCL installation complete$(NC)"
 
 .PHONY: install-metal
 install-metal: venv ## Install with Metal backend
-	$(UV) pip install -e ".[metal,dev]"
+	@echo "$(YELLOW)Installing Metal backend...$(NC)"
+	$(UV) sync --extra metal --group dev
+	@echo "$(GREEN)Metal installation complete$(NC)"
 
 .PHONY: install-numba
 install-numba: venv ## Install with Numba backend
-	$(UV) pip install -e ".[numba,dev]"
+	@echo "$(YELLOW)Installing Numba backend...$(NC)"
+	$(UV) sync --extra numba --group dev
+	@echo "$(GREEN)Numba installation complete$(NC)"
 
 .PHONY: install-cuda
 install-cuda: venv ## Install with CUDA backend
-	$(UV) pip install -e ".[cuda,dev]"
+	@echo "$(YELLOW)Installing CUDA backend...$(NC)"
+	$(UV) sync --extra cuda --group dev
+	@echo "$(GREEN)CUDA installation complete$(NC)"
 
 .PHONY: deps-update
 deps-update: venv ## Update all dependencies
 	@echo "$(YELLOW)Updating dependencies...$(NC)"
-	$(UV) pip install --upgrade -e ".[all-backends,dev]"
+	$(UV) sync --upgrade --extra all-backends --group dev
 	@echo "$(GREEN)Dependencies updated$(NC)"
 
 ##@ Development
