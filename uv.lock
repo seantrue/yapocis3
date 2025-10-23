@@ -3040,6 +3040,31 @@ test = [
     { name = "scipy", version = "1.16.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "black" },
+    { name = "build" },
+    { name = "duckdb" },
+    { name = "isort" },
+    { name = "licensecheck" },
+    { name = "matplotlib" },
+    { name = "mypy" },
+    { name = "pip-tools" },
+    { name = "pygame" },
+    { name = "pyopengl" },
+    { name = "pytest" },
+    { name = "pytest-benchmark" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scipy", version = "1.16.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "seaborn" },
+    { name = "tabulate" },
+    { name = "twine" },
+    { name = "watchdog" },
+    { name = "wheel" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "black", marker = "extra == 'dev'", specifier = ">=22.0.0" },
@@ -3093,6 +3118,30 @@ requires-dist = [
     { name = "yapocis", extras = ["opencl", "metal", "numba"], marker = "extra == 'all-backends'" },
 ]
 provides-extras = ["opencl", "metal", "cuda", "numba", "all-backends", "gpu-backends", "dev", "test", "docs"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "black", specifier = ">=22.0.0" },
+    { name = "build", specifier = ">=1.0.0" },
+    { name = "duckdb", specifier = ">=1.1.0" },
+    { name = "isort", specifier = ">=5.0.0" },
+    { name = "licensecheck", specifier = ">=2025.1.0" },
+    { name = "matplotlib", specifier = ">=3.7.0" },
+    { name = "mypy", specifier = ">=1.0.0" },
+    { name = "pip-tools", specifier = ">=7.0.0" },
+    { name = "pygame", specifier = ">=2.5.0" },
+    { name = "pyopengl", specifier = ">=3.1.0" },
+    { name = "pytest", specifier = ">=7.4.0" },
+    { name = "pytest-benchmark", specifier = ">=3.4.0" },
+    { name = "pytest-cov", specifier = ">=3.0.0" },
+    { name = "ruff", specifier = ">=0.1.0" },
+    { name = "scipy", specifier = ">=1.11.0" },
+    { name = "seaborn", specifier = ">=0.12.0" },
+    { name = "tabulate", specifier = ">=0.9.0" },
+    { name = "twine", specifier = ">=4.0.0" },
+    { name = "watchdog", specifier = ">=4.0.0" },
+    { name = "wheel", specifier = ">=0.37.0" },
+]
 
 [[package]]
 name = "zipp"

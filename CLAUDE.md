@@ -17,12 +17,20 @@ and Mako template system.
 make install-dev
 
 # Or manually with uv
-uv venv .venv && source .venv/bin/activate
-uv pip install -e ".[dev]"
+uv venv .venv --python 3.13
+source .venv/bin/activate  # On Unix/macOS
+# .venv\Scripts\activate  # On Windows
+uv sync --group dev
 
 # Install with all backends
 make install-backends
-# Or: uv pip install -e ".[all-backends,dev]"
+# Or: uv sync --extra all-backends --group dev
+
+# Install specific backends
+uv sync --extra opencl --group dev  # OpenCL only
+uv sync --extra metal --group dev   # Metal only
+uv sync --extra numba --group dev   # Numba only
+uv sync --extra cuda --group dev    # CUDA only
 ```
 
 ### Code Quality & Formatting

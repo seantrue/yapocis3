@@ -19,7 +19,7 @@ __pycache__
 #*
 /.claude
 .env
-/yapocis/mako_modules
+/src/yapocis/mako_modules
 /queue
 /opencl_cache
 /prof
@@ -34,7 +34,7 @@ __pycache__
 /yapocis.egg-info/
 /.pydevproject
 /.project
-/yapocis/icons/*/*
+/src/yapocis/icons/*/*
 /performance
 /performance/reports/
 /code_cache
