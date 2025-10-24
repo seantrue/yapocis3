@@ -130,22 +130,21 @@ export YAPOCIS_PROJECT=external
 ### CLI Tools
 
 ```bash
-# List available OpenCL/Metal devices
-yapocis-devices --list
+# Unified development tools (recommended)
+yapocis-tools backends                    # List all backends and devices
+yapocis-tools devices --list              # List OpenCL/Metal/CUDA devices
+yapocis-tools assets --list --all         # List all assets
+yapocis-tools assets test.jpg --images    # Find specific asset
+yapocis-tools interfaces --list           # List interfaces
+yapocis-tools interfaces mandelbrot --explain  # Show interface docs
 
-# Manage assets (images, icons, fonts, kernels, interfaces)
-yapocis-assets --list --all
-yapocis-assets --list interfaces
-yapocis-assets image test.jpg
+# Individual commands (also available)
+yapocis-devices --list                    # List devices
+yapocis-backends                          # List backends
+yapocis-assets --list --all               # List assets
+yapocis-interfaces --list                 # List interfaces
 
-# Generate interface documentation and stubs
-yapocis-interfaces --list
-yapocis-interfaces mandelbrot --all
-yapocis-interfaces graphics4 --python --opencl
-
-# List available backends
-yapocis-backends
-
+# Specialized tools
 # Manage validation references
 yapocis-validate info
 yapocis-validate list
@@ -163,7 +162,8 @@ yapocis-imagewatcher --queue queue/rendered
 yapocis-imagewatcher --validation-failed  # Show only failed validations
 yapocis-imagewatcher graphics  # Filter by name substring
 
-# Generate Python stubs from C headers
+# Generate kernel packages and stubs
+yapocis-package convolvesep --backend ocl
 yapocis-stubs input.h
 ```
 
