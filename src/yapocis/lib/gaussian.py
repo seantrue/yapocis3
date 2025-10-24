@@ -14,6 +14,53 @@ def are_close(a: float, b: float) -> bool:
     eps = 0.00001
     return abs(a - b) <= eps
 
+
+def generate_convolvesep_context(context):
+    """
+    Context generator for convolvesep interface.
+
+    Generates Gaussian convolution kernels from gaussian_params specification
+    and adds them to the context as 'convs' parameter.
+
+    This function is invoked by the generic context generator system when
+    rendering the convolvesep interface template.
+
+    Args:
+        context: Dictionary containing YAML context with 'gaussian_params'
+
+    Returns:
+        Modified context dictionary with 'convs' parameter added
+
+    Example:
+        Input context (from convolvesep.yml):
+            {
+                'gaussian_params': {
+                    'max_width': 150,
+                    'scale': 1.6,
+                    'limit': 0.001
+                }
+            }
+
+        Output context:
+            {
+                'gaussian_params': {...},
+                'convs': [
+                    ('gauss5', array([...])),
+                    ('gauss9', array([...])),
+                    ('gauss13', array([...])),
+                    ...
+                ]
+            }
+    """
+    if 'gaussian_params' in context:
+        gaussian_params = context['gaussian_params']
+        gw = GaussianWeights(**gaussian_params)
+        gws = gw.gaussian_weights()
+        convs = [("gauss%s" % len(a), a) for a in gws]
+        context['convs'] = convs
+    return context
+
+
 class GaussianWeights:
     def __init__(self, max_width=None, **kwargs):
         # Always load YAML defaults first

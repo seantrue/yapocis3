@@ -7,8 +7,8 @@ from argparse import ArgumentParser
 from io import StringIO
 
 from yapocis.core.interface import load_interface, scan_kernel_parameters, get_interface
+from yapocis.core.manager import get_manager
 from yapocis.interfaces import interfaces
-from yapocis.ocl.kernel_manager import render_interface
 
 
 def explain_interface(interface, file=None):
@@ -45,7 +45,7 @@ def explain_interface(interface, file=None):
             return ireturn + 1
 
         def format_param(param):
-            return f"{param.data_type} {param.pointer+' ' if param.pointer else ''}{param.name}"
+            return f"{param.data_type} {param.pointer + ' ' if param.pointer else ''}{param.name}"
 
         for param in kernel.parameters:
             visible_param = not param.derived
@@ -164,6 +164,7 @@ def main():
     parser.add_argument("--list", action="store_true")
     parser.add_argument("interfaces", nargs="*")
     args = parser.parse_args()
+    mgr = get_manager()
     requested_interfaces = [f"{name}.interface" for name in args.interfaces]
     if not args.list:
         print("# Kernels")
@@ -176,7 +177,7 @@ def main():
         s = interface_name.split(".")[0]
         as_header(f"`{s}`")
         template = load_interface(interface_name)
-        source = render_interface(template)
+        source = mgr.render_interface(template)
         if "%" in source or "${" in source:
             as_bullet(f"{interface_name} has unprocessed template markup.")
             as_code(template)

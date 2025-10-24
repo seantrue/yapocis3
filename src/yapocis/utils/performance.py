@@ -6,18 +6,20 @@ import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Type
 
 import duckdb
 
+from .internals import get_performance_dir
+
 # Performance data directory
-PERFORMANCE_DIR = Path(__file__).parent.parent.parent / "performance"
+PERFORMANCE_DIR = Path(get_performance_dir())
 REPORTS_DIR = PERFORMANCE_DIR / "reports"
 DB_PATH = PERFORMANCE_DIR / "performance.duckdb"
 
 # Ensure directories exist
 PERFORMANCE_DIR.mkdir(parents=True, exist_ok=True)
 REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+
 
 def _get_connection():
     """Get a DuckDB connection and ensure schema exists."""
@@ -33,26 +35,35 @@ def _get_connection():
     """)
 
     conn.execute("""
-        CREATE TABLE IF NOT EXISTS performance_runs (
-            id INTEGER PRIMARY KEY DEFAULT nextval('runs_seq'),
-            test_name VARCHAR NOT NULL,
-            test_file VARCHAR NOT NULL,
-            backend VARCHAR NOT NULL,
-            device_name VARCHAR,
-            driver_version VARCHAR,
-            branch VARCHAR NOT NULL,
-            commit VARCHAR NOT NULL,
-            file_status VARCHAR NOT NULL,
-            timestamp TIMESTAMP NOT NULL,
-            timestamp_unix DOUBLE NOT NULL,
-            total_time DOUBLE NOT NULL,
-            min_time DOUBLE,
-            max_time DOUBLE,
-            mean_time DOUBLE,
-            slowest_operation VARCHAR,
-            fastest_operation VARCHAR
-        )
-    """)
+                 CREATE TABLE IF NOT EXISTS performance_runs
+                 (
+                     id
+                     INTEGER
+                     PRIMARY
+                     KEY
+                     DEFAULT
+                     nextval
+                 (
+                     'runs_seq'
+                 ),
+                     test_name VARCHAR NOT NULL,
+                     test_file VARCHAR NOT NULL,
+                     backend VARCHAR NOT NULL,
+                     device_name VARCHAR,
+                     driver_version VARCHAR,
+                     branch VARCHAR NOT NULL,
+                     commit VARCHAR NOT NULL,
+                     file_status VARCHAR NOT NULL,
+                     timestamp TIMESTAMP NOT NULL,
+                     timestamp_unix DOUBLE NOT NULL,
+                     total_time DOUBLE NOT NULL,
+                     min_time DOUBLE,
+                     max_time DOUBLE,
+                     mean_time DOUBLE,
+                     slowest_operation VARCHAR,
+                     fastest_operation VARCHAR
+                     )
+                 """)
 
     # Migrate existing schema: add device_name and driver_version columns if they don't exist
     try:
@@ -66,27 +77,43 @@ def _get_connection():
         pass  # Column already exists
 
     conn.execute("""
-        CREATE TABLE IF NOT EXISTS performance_checkpoints (
-            id INTEGER PRIMARY KEY DEFAULT nextval('checkpoints_seq'),
-            run_id INTEGER NOT NULL,
-            checkpoint_name VARCHAR NOT NULL,
-            elapsed_time DOUBLE NOT NULL,
-            FOREIGN KEY (run_id) REFERENCES performance_runs(id)
-        )
-    """)
+                 CREATE TABLE IF NOT EXISTS performance_checkpoints
+                 (
+                     id
+                     INTEGER
+                     PRIMARY
+                     KEY
+                     DEFAULT
+                     nextval
+                 (
+                     'checkpoints_seq'
+                 ),
+                     run_id INTEGER NOT NULL,
+                     checkpoint_name VARCHAR NOT NULL,
+                     elapsed_time DOUBLE NOT NULL,
+                     FOREIGN KEY
+                 (
+                     run_id
+                 ) REFERENCES performance_runs
+                 (
+                     id
+                 )
+                     )
+                 """)
 
     # Create indexes for common queries
     conn.execute("""
-        CREATE INDEX IF NOT EXISTS idx_test_backend_branch
-        ON performance_runs(test_name, backend, branch, commit, file_status)
-    """)
+                 CREATE INDEX IF NOT EXISTS idx_test_backend_branch
+                     ON performance_runs(test_name, backend, branch, commit, file_status)
+                 """)
 
     conn.execute("""
-        CREATE INDEX IF NOT EXISTS idx_timestamp
-        ON performance_runs(timestamp_unix DESC)
-    """)
+                 CREATE INDEX IF NOT EXISTS idx_timestamp
+                     ON performance_runs(timestamp_unix DESC)
+                 """)
 
     return conn
+
 
 def get_git_info(file_path: str) -> dict[str, str]:
     """
@@ -103,8 +130,8 @@ def get_git_info(file_path: str) -> dict[str, str]:
         anywhere in the repository. This ensures "clean" results are fully replicable.
     """
     info = {
-        "branch": "unknown",
-        "commit": "unknown",
+        "branch":      "unknown",
+        "commit":      "unknown",
         "file_status": "unknown"
     }
 
@@ -158,15 +185,16 @@ def get_git_info(file_path: str) -> dict[str, str]:
 
     return info
 
+
 def save_performance_data(
-    test_name: str,
-    file_path: str,
-    backend: str,
-    timing_data: dict[str, float],
-    metadata: dict | None = None,
-    test_start_time: float | None = None,
-    device_name: str | None = None,
-    driver_version: str | None = None
+        test_name: str,
+        file_path: str,
+        backend: str,
+        timing_data: dict[str, float],
+        metadata: dict | None = None,
+        test_start_time: float | None = None,
+        device_name: str | None = None,
+        driver_version: str | None = None
 ) -> int:
     """
     Save performance data to DuckDB.
@@ -201,9 +229,9 @@ def save_performance_data(
     stats = {}
     if times:
         stats = {
-            "min_time": min(times),
-            "max_time": max(times),
-            "mean_time": sum(times) / len(times),
+            "min_time":          min(times),
+            "max_time":          max(times),
+            "mean_time":         sum(times) / len(times),
             "slowest_operation": max(timing_data.items(), key=lambda x: x[1])[0],
             "fastest_operation": min(timing_data.items(), key=lambda x: x[1])[0],
         }
@@ -212,51 +240,50 @@ def save_performance_data(
 
     # Insert run
     result = conn.execute("""
-        INSERT INTO performance_runs (
-            test_name, test_file, backend, device_name, driver_version,
-            branch, commit, file_status,
-            timestamp, timestamp_unix, total_time, min_time, max_time,
-            mean_time, slowest_operation, fastest_operation
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        RETURNING id
-    """, [
-        test_name,
-        os.path.basename(file_path),
-        backend,
-        device_name,
-        driver_version,
-        git_info["branch"],
-        git_info["commit"],
-        git_info["file_status"],
-        timestamp,
-        timestamp_unix,
-        total_time,
-        stats.get("min_time"),
-        stats.get("max_time"),
-        stats.get("mean_time"),
-        stats.get("slowest_operation"),
-        stats.get("fastest_operation"),
-    ]).fetchone()
+                          INSERT INTO performance_runs (test_name, test_file, backend, device_name, driver_version,
+                                                        branch, commit, file_status,
+                                                        timestamp, timestamp_unix, total_time, min_time, max_time,
+                                                        mean_time, slowest_operation, fastest_operation)
+                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
+                          """, [
+                              test_name,
+                              os.path.basename(file_path),
+                              backend,
+                              device_name,
+                              driver_version,
+                              git_info["branch"],
+                              git_info["commit"],
+                              git_info["file_status"],
+                              timestamp,
+                              timestamp_unix,
+                              total_time,
+                              stats.get("min_time"),
+                              stats.get("max_time"),
+                              stats.get("mean_time"),
+                              stats.get("slowest_operation"),
+                              stats.get("fastest_operation"),
+                          ]).fetchone()
 
     run_id = result[0]
 
     # Insert checkpoints
     for checkpoint_name, elapsed_time in timing_data.items():
         conn.execute("""
-            INSERT INTO performance_checkpoints (run_id, checkpoint_name, elapsed_time)
-            VALUES (?, ?, ?)
-        """, [run_id, checkpoint_name, elapsed_time])
+                     INSERT INTO performance_checkpoints (run_id, checkpoint_name, elapsed_time)
+                     VALUES (?, ?, ?)
+                     """, [run_id, checkpoint_name, elapsed_time])
 
     conn.close()
     return run_id
 
+
 def load_performance_data(
-    backend: str | None = None,
-    test_name: str | None = None,
-    branch: str | None = None,
-    file_status: str | None = None,
-    limit: int | None = None,
-    exact_match: bool = False
+        backend: str | None = None,
+        test_name: str | None = None,
+        branch: str | None = None,
+        file_status: str | None = None,
+        limit: int | None = None,
+        exact_match: bool = False
 ) -> list[dict]:
     """
     Load and filter performance data from DuckDB.
@@ -276,13 +303,26 @@ def load_performance_data(
 
     # Build query
     query = """
-        SELECT
-            r.id, r.test_name, r.test_file, r.backend, r.device_name, r.driver_version,
-            r.branch, r.commit, r.file_status, r.timestamp, r.timestamp_unix, r.total_time,
-            r.min_time, r.max_time, r.mean_time, r.slowest_operation, r.fastest_operation
-        FROM performance_runs r
-        WHERE 1=1
-    """
+            SELECT r.id,
+                   r.test_name,
+                   r.test_file,
+                   r.backend,
+                   r.device_name,
+                   r.driver_version,
+                   r.branch,
+                   r.commit,
+                   r.file_status,
+                   r.timestamp,
+                   r.timestamp_unix,
+                   r.total_time,
+                   r.min_time,
+                   r.max_time,
+                   r.mean_time,
+                   r.slowest_operation,
+                   r.fastest_operation
+            FROM performance_runs r
+            WHERE 1 = 1 \
+            """
     params = []
 
     if backend:
@@ -319,35 +359,35 @@ def load_performance_data(
 
         # Get checkpoints for this run
         checkpoints_result = conn.execute("""
-            SELECT checkpoint_name, elapsed_time
-            FROM performance_checkpoints
-            WHERE run_id = ?
-        """, [run_id]).fetchall()
+                                          SELECT checkpoint_name, elapsed_time
+                                          FROM performance_checkpoints
+                                          WHERE run_id = ?
+                                          """, [run_id]).fetchall()
 
         checkpoints = {name: time for name, time in checkpoints_result}
 
         # Build data structure
         entry = {
             "metadata": {
-                "test_name": row[1],
-                "test_file": row[2],
-                "backend": row[3],
-                "device_name": row[4],
+                "test_name":      row[1],
+                "test_file":      row[2],
+                "backend":        row[3],
+                "device_name":    row[4],
                 "driver_version": row[5],
-                "branch": row[6],
-                "commit": row[7],
-                "file_status": row[8],
-                "timestamp": row[9].isoformat(),
+                "branch":         row[6],
+                "commit":         row[7],
+                "file_status":    row[8],
+                "timestamp":      row[9].isoformat(),
                 "timestamp_unix": row[10],
             },
-            "timing": {
+            "timing":   {
                 "checkpoints": checkpoints,
-                "total": row[11],
+                "total":       row[11],
             },
-            "stats": {
-                "min": row[12],
-                "max": row[13],
-                "mean": row[14],
+            "stats":    {
+                "min":               row[12],
+                "max":               row[13],
+                "mean":              row[14],
                 "slowest_operation": row[15],
                 "fastest_operation": row[16],
             }
@@ -358,11 +398,12 @@ def load_performance_data(
     conn.close()
     return data
 
+
 def purge_performance_data(
-    older_than_days: int | None = None,
-    backend: str | None = None,
-    test_name: str | None = None,
-    dry_run: bool = False
+        older_than_days: int | None = None,
+        backend: str | None = None,
+        test_name: str | None = None,
+        dry_run: bool = False
 ) -> tuple[int, list[str]]:
     """
     Delete old performance data from DuckDB.
@@ -420,6 +461,7 @@ def purge_performance_data(
     conn.close()
     return len(results), deleted_descriptions
 
+
 def generate_summary_table(data: list[dict]) -> str:
     """
     Generate a summary table of performance data using tabulate.
@@ -472,6 +514,7 @@ def generate_summary_table(data: list[dict]) -> str:
 
     return tabulate(rows, headers=headers, tablefmt="github")
 
+
 def generate_checkpoint_comparison_table(data: list[dict]) -> str:
     """
     Generate a table comparing checkpoints across multiple runs.
@@ -519,10 +562,11 @@ def generate_checkpoint_comparison_table(data: list[dict]) -> str:
 
     return tabulate(rows, headers=headers, tablefmt="github")
 
+
 def plot_backend_comparison(
-    data: list[dict],
-    output_path: Path | None = None,
-    checkpoint_name: str | None = None
+        data: list[dict],
+        output_path: Path | None = None,
+        checkpoint_name: str | None = None
 ) -> Path | None:
     """
     Generate a bar chart comparing performance across backends.
@@ -614,10 +658,11 @@ def plot_backend_comparison(
 
     return output_path
 
+
 def plot_longitudinal_trend(
-    data: list[dict],
-    output_path: Path | None = None,
-    checkpoint_name: str | None = None
+        data: list[dict],
+        output_path: Path | None = None,
+        checkpoint_name: str | None = None
 ) -> Path | None:
     """
     Generate a line graph showing performance trends over time.
@@ -695,10 +740,11 @@ def plot_longitudinal_trend(
 
     return output_path
 
+
 def plot_checkpoint_breakdown(
-    data: dict,
-    output_path: Path | None = None,
-    plot_type: str = "bar"
+        data: dict,
+        output_path: Path | None = None,
+        plot_type: str = "bar"
 ) -> Path | None:
     """
     Generate a breakdown chart of checkpoint times for a single test run.
@@ -739,7 +785,7 @@ def plot_checkpoint_breakdown(
         wedges, texts, autotexts = ax.pie(
             times,
             labels=names,
-            autopct=lambda pct: f"{pct:.1f}%\n({pct/100*sum(times):.3f}s)",
+            autopct=lambda pct: f"{pct:.1f}%\n({pct / 100 * sum(times):.3f}s)",
             colors=colors,
             startangle=90
         )
@@ -784,9 +830,10 @@ def plot_checkpoint_breakdown(
 
     return output_path
 
+
 def generate_backend_comparison_report(
-    test_name: str,
-    output_path: Path | None = None
+        test_name: str,
+        output_path: Path | None = None
 ) -> Path:
     """
     Generate a comprehensive markdown report comparing backend performance.
@@ -872,10 +919,11 @@ def generate_backend_comparison_report(
 
     return output_path
 
+
 def generate_longitudinal_report(
-    test_name: str,
-    backend: str | None = None,
-    output_path: Path | None = None
+        test_name: str,
+        backend: str | None = None,
+        output_path: Path | None = None
 ) -> Path:
     """
     Generate a markdown report showing performance trends over time.
@@ -974,9 +1022,10 @@ def generate_longitudinal_report(
 
     return output_path
 
+
 def generate_comprehensive_report(
-    test_name: str | None = None,
-    output_path: Path | None = None
+        test_name: str | None = None,
+        output_path: Path | None = None
 ) -> Path:
     """
     Generate a comprehensive performance report with all available data.
@@ -1019,8 +1068,8 @@ def generate_comprehensive_report(
 
         if key not in aggregated:
             aggregated[key] = {
-                "times": [],
-                "metadata": meta,
+                "times":       [],
+                "metadata":    meta,
                 "checkpoints": {}
             }
 
@@ -1046,15 +1095,15 @@ def generate_comprehensive_report(
             std_time = 0.0
 
         agg_data.append({
-            "test_name": test_name_key,
-            "backend": backend,
-            "branch": branch,
-            "commit": commit,
-            "status": status,
-            "mean": mean_time,
-            "std": std_time,
-            "runs": len(times),
-            "checkpoints": {k: sum(v)/len(v) for k, v in values["checkpoints"].items()}
+            "test_name":   test_name_key,
+            "backend":     backend,
+            "branch":      branch,
+            "commit":      commit,
+            "status":      status,
+            "mean":        mean_time,
+            "std":         std_time,
+            "runs":        len(times),
+            "checkpoints": {k: sum(v) / len(v) for k, v in values["checkpoints"].items()}
         })
 
     # Sort by test name, then backend
@@ -1116,7 +1165,7 @@ def generate_comprehensive_report(
 
         for i, backend in enumerate(backends):
             times = [plot_tests[tn].get(backend, 0) for tn in test_names]
-            offset = (i - len(backends)/2) * width + width/2
+            offset = (i - len(backends) / 2) * width + width / 2
             ax.bar([pos + offset for pos in x], times, width, label=backend, color=colors[i], alpha=0.8)
 
         ax.set_xlabel("Test", fontsize=12)
@@ -1188,7 +1237,8 @@ def generate_comprehensive_report(
 
         for item in test_items:
             if item["std"] > 0:
-                lines.append(f"- **{item['backend']}** ({item['status']}): {item['mean']:.3f}s ± {item['std']:.3f}s ({item['runs']} runs)")
+                lines.append(
+                    f"- **{item['backend']}** ({item['status']}): {item['mean']:.3f}s ± {item['std']:.3f}s ({item['runs']} runs)")
             else:
                 lines.append(f"- **{item['backend']}** ({item['status']}): {item['mean']:.3f}s ({item['runs']} run)")
         lines.append("")
@@ -1208,12 +1258,13 @@ def generate_comprehensive_report(
 
     return output_path
 
+
 def generate_backend_cross_comparison_report(
-    test_pattern: str | None = None,
-    branch: str | None = None,
-    component: str | None = None,
-    limit: int = 100,
-    output_path: Path | None = None
+        test_pattern: str | None = None,
+        branch: str | None = None,
+        component: str | None = None,
+        limit: int = 100,
+        output_path: Path | None = None
 ) -> Path:
     """
     Generate a comprehensive cross-backend comparison report.
@@ -1243,18 +1294,13 @@ def generate_backend_cross_comparison_report(
 
     # Build query
     query = """
-        SELECT
-            test_name,
-            backend,
-            device_name,
-            branch,
-            commit,
-            file_status,
-            total_time,
-            timestamp
-        FROM performance_runs
-        WHERE 1=1
-    """
+            SELECT test_name,
+                   backend,
+                   device_name,
+                   branch, commit, file_status, total_time, timestamp
+            FROM performance_runs
+            WHERE 1=1 \
+            """
 
     params = []
     if test_pattern:
@@ -1277,22 +1323,23 @@ def generate_backend_cross_comparison_report(
     conn.close()
 
     if not result:
-        raise ValueError(f"No performance data found (test_pattern={test_pattern}, component={component}, branch={branch})")
+        raise ValueError(
+            f"No performance data found (test_pattern={test_pattern}, component={component}, branch={branch})")
 
     # Convert to dict format
     data = []
     for row in result:
         data.append({
             "metadata": {
-                "test_name": row[0],
-                "backend": row[1],
+                "test_name":   row[0],
+                "backend":     row[1],
                 "device_name": row[2] or "N/A",
-                "branch": row[3],
-                "commit": row[4],
+                "branch":      row[3],
+                "commit":      row[4],
                 "file_status": row[5],
-                "timestamp": row[7].isoformat() if hasattr(row[7], 'isoformat') else str(row[7])
+                "timestamp":   row[7].isoformat() if hasattr(row[7], 'isoformat') else str(row[7])
             },
-            "timing": {
+            "timing":   {
                 "total": row[6]
             }
         })
@@ -1329,9 +1376,9 @@ def generate_backend_cross_comparison_report(
 
             test_stats[test_name][backend] = {
                 "mean": mean,
-                "std": std,
-                "min": min(times),
-                "max": max(times),
+                "std":  std,
+                "min":  min(times),
+                "max":  max(times),
                 "runs": len(times)
             }
 
@@ -1354,9 +1401,9 @@ def generate_backend_cross_comparison_report(
 
                 # Format: mean±std (speedup) [runs]
                 if stats["std"] > 0:
-                    cell = f"{stats['mean']*1000:.2f}±{stats['std']*1000:.2f}ms"
+                    cell = f"{stats['mean'] * 1000:.2f}±{stats['std'] * 1000:.2f}ms"
                 else:
-                    cell = f"{stats['mean']*1000:.2f}ms"
+                    cell = f"{stats['mean'] * 1000:.2f}ms"
 
                 if speedup != 1.0:
                     cell += f" ({speedup:.2f}x)"
@@ -1401,7 +1448,7 @@ def generate_backend_cross_comparison_report(
                     means.append(0)
                     stds.append(0)
 
-            offset = (i - len(all_backends)/2) * width + width/2
+            offset = (i - len(all_backends) / 2) * width + width / 2
             ax.bar(
                 [pos + offset for pos in x],
                 means,
@@ -1485,7 +1532,7 @@ def generate_backend_cross_comparison_report(
     for backend in sorted(backend_totals.keys()):
         times = backend_totals[backend]
         mean = sum(times) / len(times)
-        lines.append(f"- **{backend}**: Average {mean*1000:.2f}ms across {len(times)} tests")
+        lines.append(f"- **{backend}**: Average {mean * 1000:.2f}ms across {len(times)} tests")
 
     lines.extend([
         "",
@@ -1510,13 +1557,14 @@ def generate_backend_cross_comparison_report(
 
     return output_path
 
+
 def generate_branch_comparison_report(
-    test_pattern: str | None = None,
-    backend: str | None = None,
-    component: str | None = None,
-    branches: list[str] | None = None,
-    limit: int = 100,
-    output_path: Path | None = None
+        test_pattern: str | None = None,
+        backend: str | None = None,
+        component: str | None = None,
+        branches: list[str] | None = None,
+        limit: int = 100,
+        output_path: Path | None = None
 ) -> Path:
     """
     Generate a comprehensive cross-branch comparison report.
@@ -1547,17 +1595,12 @@ def generate_branch_comparison_report(
 
     # Build query
     query = """
-        SELECT
-            test_name,
-            backend,
-            branch,
-            commit,
-            file_status,
-            total_time,
-            timestamp
-        FROM performance_runs
-        WHERE 1=1
-    """
+            SELECT test_name,
+                   backend,
+                   branch, commit, file_status, total_time, timestamp
+            FROM performance_runs
+            WHERE 1=1 \
+            """
 
     params = []
     if test_pattern:
@@ -1584,21 +1627,22 @@ def generate_branch_comparison_report(
     conn.close()
 
     if not result:
-        raise ValueError(f"No performance data found (test_pattern={test_pattern}, component={component}, backend={backend}, branches={branches})")
+        raise ValueError(
+            f"No performance data found (test_pattern={test_pattern}, component={component}, backend={backend}, branches={branches})")
 
     # Convert to dict format
     data = []
     for row in result:
         data.append({
             "metadata": {
-                "test_name": row[0],
-                "backend": row[1],
-                "branch": row[2],
-                "commit": row[3],
+                "test_name":   row[0],
+                "backend":     row[1],
+                "branch":      row[2],
+                "commit":      row[3],
                 "file_status": row[4],
-                "timestamp": row[6].isoformat() if hasattr(row[6], 'isoformat') else str(row[6])
+                "timestamp":   row[6].isoformat() if hasattr(row[6], 'isoformat') else str(row[6])
             },
-            "timing": {
+            "timing":   {
                 "total": row[5]
             }
         })
@@ -1641,9 +1685,9 @@ def generate_branch_comparison_report(
 
                 test_stats[test_name][branch_name][backend_name] = {
                     "mean": mean,
-                    "std": std,
-                    "min": min(times),
-                    "max": max(times),
+                    "std":  std,
+                    "min":  min(times),
+                    "max":  max(times),
                     "runs": len(times)
                 }
 
@@ -1681,9 +1725,9 @@ def generate_branch_comparison_report(
                     speedup = baseline_mean / stats["mean"]
 
                     if stats["std"] > 0:
-                        cell = f"{stats['mean']*1000:.2f}±{stats['std']*1000:.2f}ms"
+                        cell = f"{stats['mean'] * 1000:.2f}±{stats['std'] * 1000:.2f}ms"
                     else:
-                        cell = f"{stats['mean']*1000:.2f}ms"
+                        cell = f"{stats['mean'] * 1000:.2f}ms"
 
                     if speedup != 1.0:
                         cell += f" ({speedup:.2f}x)"
@@ -1730,9 +1774,9 @@ def generate_branch_comparison_report(
                         speedup = baseline_mean / stats["mean"]
 
                         if stats["std"] > 0:
-                            cell = f"{stats['mean']*1000:.2f}±{stats['std']*1000:.2f}ms"
+                            cell = f"{stats['mean'] * 1000:.2f}±{stats['std'] * 1000:.2f}ms"
                         else:
-                            cell = f"{stats['mean']*1000:.2f}ms"
+                            cell = f"{stats['mean'] * 1000:.2f}ms"
 
                         if speedup != 1.0:
                             cell += f" ({speedup:.2f}x)"
@@ -1782,7 +1826,7 @@ def generate_branch_comparison_report(
                         means.append(0)
                         stds.append(0)
 
-                offset = (i - len(all_branches)/2) * width + width/2
+                offset = (i - len(all_branches) / 2) * width + width / 2
                 ax.bar(
                     [pos + offset for pos in x],
                     means,
@@ -1813,7 +1857,7 @@ def generate_branch_comparison_report(
                         means.append(0)
                         stds.append(0)
 
-                offset = (i - len(combinations)/2) * width + width/2
+                offset = (i - len(combinations) / 2) * width + width / 2
                 ax.bar(
                     [pos + offset for pos in x],
                     means,
@@ -1898,7 +1942,7 @@ def generate_branch_comparison_report(
     for branch_name in sorted(branch_totals.keys()):
         times = branch_totals[branch_name]
         mean = sum(times) / len(times)
-        lines.append(f"- **{branch_name}**: Average {mean*1000:.2f}ms across {len(times)} test-backend combinations")
+        lines.append(f"- **{branch_name}**: Average {mean * 1000:.2f}ms across {len(times)} test-backend combinations")
 
     lines.extend([
         "",

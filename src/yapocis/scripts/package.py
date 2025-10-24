@@ -71,27 +71,16 @@ def render_interface_with_context(interface_text: str, interface_name: str) -> s
 
     if not context:
         print(f"Warning: Interface '{interface_name}' uses Mako templates but no YAML context found")
-        print(f"Expected: yapocis/interfaces/{interface_name}.yml")
+        print(f"Expected: interfaces/{interface_name}.yml in yapocis package directory")
         return interface_text
 
-    # Special handling for convolvesep: generate 'convs' from 'gaussian_params'
-    if interface_name == 'convolvesep' and 'gaussian_params' in context:
-        import numpy as np
-        from yapocis.lib.gaussian import GaussianWeights
+    # Apply context generator if specified in YAML
+    from yapocis.core.interface_context import apply_context_generator
+    context = apply_context_generator(context)
 
-        print("Generating 'convs' from gaussian_params for convolvesep template")
-        gaussian_params = context['gaussian_params']
-
-        # Generate Gaussian weights using the same logic as Gaussian.__init__
-        gw = GaussianWeights(**gaussian_params)
-        gws = gw.gaussian_weights()
-
-        # Create convs list: [(name, array), ...]
-        convs = [("gauss%s" % len(a), a) for a in gws]
-
-        # Add to context
-        context['convs'] = convs
-        print(f"Generated {len(convs)} Gaussian kernels for package generation")
+    # Report if convs were generated
+    if 'convs' in context:
+        print(f"Generated {len(context['convs'])} kernels for {interface_name} package generation")
 
     # Render template with context
     try:
@@ -261,7 +250,7 @@ def generate_package_class(interface_name: str, spec: dict[str, Any], backend: s
     lines.append('"""')
     lines.append(f'Auto-generated {backend_name} kernel package for {interface_name} interface.')
     lines.append('')
-    lines.append(f'Generated from: yapocis/interfaces/{interface_name}.interface')
+    lines.append(f'Generated from: yapocis.interfaces.{interface_name}')
     lines.append(f'Backend: {backend_name}')
     lines.append(f'Generation date: {datetime.now().strftime("%Y-%m-%d")}')
     lines.append('')

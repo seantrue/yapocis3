@@ -54,8 +54,8 @@ class KernelManager(KernelManagerBase):
         Metal-specific template resolution with OCL fallback.
 
         Looks for templates in:
-        1. yapocis/metalkernels/*.mako (Metal-specific)
-        2. yapocis/kernels/*.mako (OCL fallback)
+        1. metalkernels/*.mako (Metal-specific)
+        2. kernels/*.mako (OCL fallback)
 
         Args:
             base_filename: Interface name (e.g., "mandelbrot")

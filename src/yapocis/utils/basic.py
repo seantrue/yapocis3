@@ -1,22 +1,17 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 import os
 import sys
-from typing import Iterable, Iterator, Union
+from typing import Iterable, Iterator
 
 import skimage
 from PIL import Image, ImageDraw, ImageFont
 
-import yapocis
 from yapocis.fonts import font as find_font
 from yapocis.utils.stereo_typing import *
+from .internals import get_viewing_queue
 
 VIEWER = os.environ.get("YAPOCIS_VIEWER")
-VIEWING_QUEUE = os.environ.get("YAPOCIS_VIEW")
-VIEWING_QUEUE = (
-    os.path.join(os.path.dirname(os.path.abspath(yapocis.__file__)), "..", "queue")
-    if VIEWING_QUEUE is None
-    else VIEWING_QUEUE
-)
+VIEWING_QUEUE = get_viewing_queue()
 RAW_QUEUE = os.path.join(VIEWING_QUEUE, "raw")
 os.makedirs(RAW_QUEUE, exist_ok=True)
 
@@ -26,6 +21,7 @@ if not os.path.isdir(VIEWING_QUEUE):
 DEBUG = False
 BENCHMARKING = os.environ.get('BENCHMARKING', None)
 
+
 def _current_backend() -> str:
     """Return the active backend name for labeling output images.
 
@@ -33,6 +29,7 @@ def _current_backend() -> str:
     """
     b = os.environ.get("YAPOCIS_BACKEND")
     return (b or "ocl").lower()
+
 
 # bytescale, toimage borrowed from scipy.misc
 # Used under the liberal BSD license
@@ -48,7 +45,9 @@ def byte_scale(data: Array, cmin: float | None = None, cmax: float | None = None
     bytedata = ((data * 1.0 - cmin) * scale + 0.4999).astype(np.uint8)
     return bytedata + np.uint8(low)
 
+
 _errstr = "Mode is unknown or incompatible with input array shape."
+
 
 def to_image(arr: Array, high: int = 255, low: int = 0, cmin: float | None = None, cmax: float | None = None,
              pal: Array | None = None, mode: str | None = None,
@@ -158,6 +157,7 @@ def to_image(arr: Array, high: int = 255, low: int = 0, cmin: float | None = Non
     image = Image.frombytes(mode, shape, strdata)
     return image
 
+
 def newsize(width: int, height: int, longest: int) -> tuple[bool, int, int]:
     if longest is not None:
         resize = False
@@ -172,6 +172,7 @@ def newsize(width: int, height: int, longest: int) -> tuple[bool, int, int]:
         return resize, width, height
     return False, width, height
 
+
 def imread(filename: str, longest: int | None = None, keep_alpha: bool = False) -> Union[
     Image1, Image3]:
     img = skimage.io.imread(filename)
@@ -184,13 +185,16 @@ def imread(filename: str, longest: int | None = None, keep_alpha: bool = False) 
         a = a[:, :, 0:3]
     return a
 
+
 def imwrite(filename: str, img: Union[Image1, Image3, Image4]):
-    img = np.nan_to_num(img, neginf=0,posinf=1.0)
+    img = np.nan_to_num(img, neginf=0, posinf=1.0)
     img *= 255.0
     img = img.to_image()
     img.save(filename)
 
+
 import time
+
 
 class Stage:
     def __init__(self):
@@ -209,7 +213,9 @@ class Stage:
         else:
             self.t = self.stage = None
 
+
 stage = Stage()
+
 
 def sign(title: str, img: Union[Image1, PILImage]) -> PILImage:
     if hasattr(img, "dtype"):
@@ -244,7 +250,9 @@ def sign(title: str, img: Union[Image1, PILImage]) -> PILImage:
     draw.draw_string((10, height - 75), title, ink, font=font)
     return img
 
+
 _showArrayCounter = 0
+
 
 def array_to_image(array):
     if len(array.shape) == 3 and array.shape[2] == 4:
@@ -261,6 +269,7 @@ def array_to_image(array):
     if img.mode == "L":
         img = img.convert("RGB")
     return img
+
 
 def sign_array(*args, **kwargs) -> tuple[str, PILImage]:
     global _showArrayCounter
@@ -295,6 +304,7 @@ def sign_array(*args, **kwargs) -> tuple[str, PILImage]:
     draw.text((10, 10), title + caption, ink, font=font)
     return title, img
 
+
 def show_array(array: np.ndarray, *args, checkzero=True, **kwargs) -> None:
     if BENCHMARKING:
         print(args, file=sys.stderr)
@@ -310,6 +320,7 @@ def show_array(array: np.ndarray, *args, checkzero=True, **kwargs) -> None:
     np.savez_compressed(os.path.join(RAW_QUEUE, npz_name), array)
     if VIEWER:
         os.system(f'{VIEWER} "{os.path.abspath(os.path.join(VIEWING_QUEUE, name))}"&')
+
 
 def show_arraygrad(title: str, image: Image1, theta: Image1, grad: Image1 | None = None) -> None:
     """
@@ -359,6 +370,7 @@ def show_arraygrad(title: str, image: Image1, theta: Image1, grad: Image1 | None
             draw.line([(x1, y1), (x2, y2)], fill=color)
     show_array(np.array(img), title)
 
+
 class Shaper:
     def __init__(self, data: Array):
         assert len(data.shape) == 2, "Shaper requires 2-d data"
@@ -396,6 +408,7 @@ class Shaper:
             self.data = self.data.reshape(-1, order=self.order)
         return self.data
 
+
 def histeq_large(im: Image1, nbr_bins=2 ** 16) -> Array:
     """
     Histogram equalization of a 2D array
@@ -420,6 +433,7 @@ def histeq_large(im: Image1, nbr_bins=2 ** 16) -> Array:
     im2 = np.interp(im.ravel(), bins[:-1], cdf)
     return np.array(im2, np.float32).reshape(im.shape)
 
+
 def histeq(im: Image1, nbr_bins: int = 256, max_value=255) -> tuple[Array, Array]:
     """
     Histogram equalization quantized to 8 bits. Appropriate for 8 bit images.
@@ -436,7 +450,9 @@ def histeq(im: Image1, nbr_bins: int = 256, max_value=255) -> tuple[Array, Array
     im2 = np.interp(im.ravel(), bins[:-1], cdf)
     return im2.reshape(im.shape), cdf
 
+
 ALIGNMENT = 4
+
 
 def align_image(image: Image1, alignment: int = ALIGNMENT) -> Image1:
     """
@@ -463,6 +479,7 @@ def align_image(image: Image1, alignment: int = ALIGNMENT) -> Image1:
         aligned[:, :, :] = image[:evenw, :evenh, :]
     return aligned
 
+
 def normalize(a: Array) -> Array:
     """
     Ensures that array contents are in range 0 <= elem <= 1.0
@@ -475,6 +492,7 @@ def normalize(a: Array) -> Array:
     a = a - a.min()
     a = a / a.max()
     return a
+
 
 def set_margin(a: Image1, margin: int, value: float | None = 0.0) -> None:
     """
@@ -491,6 +509,7 @@ def set_margin(a: Image1, margin: int, value: float | None = 0.0) -> None:
     a[:, :margin] = value
     a[-margin:, :] = value
     a[:margin, :] = value
+
 
 def set_frame(a: Image1, width: int, frame: float | None = 1.0, margin: float | None = 0.0) -> None:
     """
@@ -511,11 +530,13 @@ def set_frame(a: Image1, width: int, frame: float | None = 1.0, margin: float | 
     a[-1, :] = frame
     a[:, -1] = frame
 
+
 def compute_360_to_180(rotation: float) -> float:
     rotation = rotation % 360
     if rotation > 180:
         rotation = -180 + (rotation - 180)
     return rotation
+
 
 def chunker(data: Iterable, chunk_size: int = 100) -> Iterator[list]:
     """
@@ -529,6 +550,7 @@ def chunker(data: Iterable, chunk_size: int = 100) -> Iterator[list]:
     """
     for i in range(0, len(data), chunk_size):
         yield data[i:i + chunk_size]
+
 
 def get_image_depth(image):
     if len(image.shape) in (2, 3):

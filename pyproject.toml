@@ -118,12 +118,18 @@ docs = [
 
 
 [project.scripts]
+# Unified development tools CLI
+yapocis-tools = "yapocis.scripts.tools:main"
+
+# Individual commands (can also use: yapocis-tools <subcommand>)
 yapocis-assets = "yapocis.scripts.assets:main"
 yapocis-backends = "yapocis.scripts.backends:main"
 yapocis-devices = "yapocis.scripts.devices:main"
-yapocis-imagewatcher = "yapocis.scripts.imagewatcher:main"
 yapocis-interfaces = "yapocis.scripts.interfaces:main"
-yapocis-queue = "yapocis.scripts.queue:main"
+
+# Specialized tools
+yapocis-imagewatcher = "yapocis.scripts.imagewatcher:main"
+yapocis-queue = "yapocis.scripts.queue-check:main"
 yapocis-report = "yapocis.scripts.report:main"
 yapocis-stubs = "yapocis.scripts.stubs:main"
 yapocis-validate = "yapocis.scripts.validate:main"
