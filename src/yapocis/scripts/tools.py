@@ -167,9 +167,45 @@ def cmd_backends(args):
 def cmd_interfaces(args):
     """Generate documentation and stubs from interface files."""
     from io import StringIO
+    from mako.template import Template
     from yapocis.core.interface import load_interface, scan_kernel_parameters, get_interface
+    from yapocis.core.interface_context import load_interface_context
     from yapocis.core.manager import get_manager
     from yapocis.interfaces import interfaces
+
+    def render_interface_template(interface_name: str) -> str:
+        """Load and render interface template with YAML context if needed."""
+        template_text = load_interface(f"{interface_name}.interface")
+
+        # Check if template contains Mako constructs
+        if '%' not in template_text and '${' not in template_text:
+            return template_text
+
+        # Load YAML context
+        context = load_interface_context(interface_name)
+
+        if not context:
+            # No context available, return unrendered
+            return template_text
+
+        # Handle special case for convolvesep
+        if interface_name == 'convolvesep' and 'gaussian_params' in context:
+            from yapocis.lib.gaussian import GaussianWeights
+            gaussian_params = context['gaussian_params']
+            gw = GaussianWeights(**gaussian_params)
+            gws = gw.gaussian_weights()
+            convs = [("gauss%s" % len(a), a) for a in gws]
+            context['convs'] = convs
+
+        # Handle special case for convolves
+        if interface_name == 'convolves':
+            from yapocis.lib.convolve_kernels import generate_convs_from_spec
+            convs = generate_convs_from_spec(context)
+            context['convs'] = convs
+
+        # Render template
+        template = Template(template_text)
+        return template.render(**context)
 
     def explain_interface(interface, file=None):
         """Print human-readable interface documentation."""
@@ -268,8 +304,7 @@ def cmd_interfaces(args):
             print(f"        pass", file=file)
             print(file=file)
 
-    mgr = get_manager()
-    requested_interfaces = [f"{name}.interface" for name in args.interfaces] if args.interfaces else []
+    requested_interfaces = args.interfaces if args.interfaces else []
 
     if args.list:
         print("# Available Interfaces")
@@ -278,26 +313,38 @@ def cmd_interfaces(args):
         return 0
 
     if not requested_interfaces:
-        requested_interfaces = interfaces()
+        # Get all interface names without .interface extension
+        requested_interfaces = [name.replace(".interface", "") for name in interfaces()]
 
     for interface_name in requested_interfaces:
-        s = interface_name.split(".")[0]
-        template = load_interface(interface_name)
-        source = mgr.render_interface(template)
+        # Render template with YAML context if needed
+        rendered_template = render_interface_template(interface_name)
+
+        # Skip if template still has unprocessed Mako constructs
+        if "%" in rendered_template or "${" in rendered_template:
+            print(f"\n## {interface_name}")
+            print(f"Note: {interface_name} has unprocessed Mako template markup (no YAML context available)")
+            continue
+
+        try:
+            # Get interface object from rendered template
+            # get_interface() expects the source text, not a name
+            interface_obj = get_interface(rendered_template)
+        except RuntimeError as e:
+            print(f"\n## {interface_name}")
+            print(f"Error parsing interface: {e}")
+            continue
 
         if args.all or args.explain:
-            print(f"\n## {s}")
-            interface_obj = get_interface(s)
+            print(f"\n## {interface_name}")
             explain_interface(interface_obj)
 
         if args.all or args.opencl:
-            print(f"\n### OpenCL Stubs: {s}")
-            interface_obj = get_interface(s)
+            print(f"\n### OpenCL Stubs: {interface_name}")
             opencl_stubs(interface_obj)
 
         if args.all or args.python:
-            print(f"\n### Python Stubs: {s}")
-            interface_obj = get_interface(s)
+            print(f"\n### Python Stubs: {interface_name}")
             python_stubs(interface_obj)
 
     return 0

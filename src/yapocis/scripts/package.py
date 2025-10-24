@@ -93,6 +93,17 @@ def render_interface_with_context(interface_text: str, interface_name: str) -> s
         context['convs'] = convs
         print(f"Generated {len(convs)} Gaussian kernels for package generation")
 
+    # Special handling for convolves: generate 'convs' from kernel specifications
+    if interface_name == 'convolves':
+        from yapocis.lib.convolve_kernels import generate_convs_from_spec
+
+        print("Generating 'convs' from kernel specifications for convolves template")
+        convs = generate_convs_from_spec(context)
+
+        # Add to context
+        context['convs'] = convs
+        print(f"Generated {len(convs)} signal processing kernels for package generation")
+
     # Render template with context
     try:
         template = Template(interface_text)

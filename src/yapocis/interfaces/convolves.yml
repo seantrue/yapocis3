@@ -1,0 +1,109 @@
+# Template context for convolves interface
+#
+# This interface implements 1D convolution kernels for signal processing,
+# including windowing functions, smoothing filters, and derivative operators.
+#
+# Context Structure:
+# ------------------
+# The convolves interface expects a 'convs' parameter:
+#   convs: List of (name, weights) tuples
+#     - name: Kernel name (e.g., "hamming9", "deriv3")
+#     - weights: 1D numpy array of convolution weights (float values)
+#
+# Kernel Specifications:
+# ----------------------
+# Each kernel is defined by its type and size. The actual weights are
+# computed at runtime using standard signal processing formulas.
+
+# Windowing functions - useful for spectral analysis and filtering
+windows:
+  # Hamming window - good general-purpose window with low sidelobes
+  - type: hamming
+    sizes: [5, 9, 13, 17, 25]
+
+  # Hann window - smooth window, good frequency resolution
+  - type: hann
+    sizes: [5, 9, 13, 17, 25]
+
+  # Blackman window - excellent sidelobe suppression
+  - type: blackman
+    sizes: [7, 11, 15, 21]
+
+  # Bartlett (triangular) window - simple linear taper
+  - type: bartlett
+    sizes: [5, 9, 13, 17]
+
+# Smoothing filters - averaging and noise reduction
+smoothing:
+  # Box/uniform filter - simple averaging
+  - type: box
+    sizes: [3, 5, 7, 9, 11, 15, 21]
+
+  # Triangular filter - weighted averaging with linear falloff
+  - type: triangle
+    sizes: [3, 5, 7, 9, 11]
+
+  # Binomial filter - approximates Gaussian, good for smoothing
+  - type: binomial
+    sizes: [3, 5, 7, 9]
+
+# Derivative operators - edge detection and gradient estimation
+derivatives:
+  # First derivative (central difference)
+  - type: deriv1
+    sizes: [3, 5, 7]
+
+  # Second derivative (discrete Laplacian)
+  - type: deriv2
+    sizes: [3, 5, 7]
+
+  # Sobel-style derivative - smooth + differentiate
+  - type: sobel
+    sizes: [3]
+
+  # Prewitt derivative - alternative to Sobel
+  - type: prewitt
+    sizes: [3]
+
+# High-pass filters - edge enhancement and sharpening
+highpass:
+  # Simple sharpening kernels
+  - type: sharpen
+    sizes: [3, 5]
+
+  # Unsharp masking kernels
+  - type: unsharp
+    sizes: [3, 5, 7]
+
+# Band-pass approximations
+bandpass:
+  # Difference of box filters
+  - type: dog  # Difference of Gaussians approximation
+    sizes: [5, 7, 9, 11]
+
+# Custom kernels for specific signal processing tasks
+custom:
+  # Edge detection kernels
+  - name: edge3
+    weights: [-1.0, 0.0, 1.0]
+
+  - name: edge5
+    weights: [-1.0, -0.5, 0.0, 0.5, 1.0]
+
+  # Savitzky-Golay smoothing (polynomial fit)
+  - name: savgol5
+    weights: [-3.0, 12.0, 17.0, 12.0, -3.0]  # Normalized: divide by 35
+    normalize: true
+
+  - name: savgol7
+    weights: [-2.0, 3.0, 6.0, 7.0, 6.0, 3.0, -2.0]  # Normalized: divide by 21
+    normalize: true
+
+# Notes:
+# ------
+# 1. Kernel weights are generated at runtime using numpy functions.
+# 2. Window functions use scipy.signal.windows or numpy equivalents.
+# 3. All kernels are normalized to sum to 1.0 for averaging/smoothing,
+#    or to sum to 0.0 for derivatives/high-pass.
+# 4. Custom kernels can specify exact weights directly.
+# 5. Kernel naming convention: <type><size> (e.g., "hamming9", "deriv3")
