@@ -71,7 +71,7 @@ def render_interface_with_context(interface_text: str, interface_name: str) -> s
 
     if not context:
         print(f"Warning: Interface '{interface_name}' uses Mako templates but no YAML context found")
-        print(f"Expected: yapocis/interfaces/{interface_name}.yml")
+        print(f"Expected: interfaces/{interface_name}.yml in yapocis package directory")
         return interface_text
 
     # Special handling for convolvesep: generate 'convs' from 'gaussian_params'
@@ -261,7 +261,7 @@ def generate_package_class(interface_name: str, spec: dict[str, Any], backend: s
     lines.append('"""')
     lines.append(f'Auto-generated {backend_name} kernel package for {interface_name} interface.')
     lines.append('')
-    lines.append(f'Generated from: yapocis/interfaces/{interface_name}.interface')
+    lines.append(f'Generated from: yapocis.interfaces.{interface_name}')
     lines.append(f'Backend: {backend_name}')
     lines.append(f'Generation date: {datetime.now().strftime("%Y-%m-%d")}')
     lines.append('')

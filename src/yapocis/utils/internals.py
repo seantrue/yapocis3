@@ -1,10 +1,41 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
+"""
+Path discovery utilities for yapocis package resources.
+
+These functions dynamically discover the yapocis package location, which works
+correctly in both development (src layout) and installed environments.
+
+Path Resolution:
+    get_yapocis_dir() returns the yapocis package directory by inspecting yapocis.__file__
+    This automatically resolves to:
+    - Development: /path/to/project/src/yapocis
+    - Installed: /path/to/.venv/lib/python3.X/site-packages/yapocis
+
+    All resource lookups (kernels, interfaces, fonts, etc.) are relative to this directory.
+"""
+
 import os
 
 import yapocis
 
 def get_yapocis_dir():
+    """
+    Get the yapocis package directory.
+
+    Returns the absolute path to the yapocis package, which is used as the base
+    for all resource discovery (kernels, interfaces, fonts, icons, images).
+
+    This function works correctly in both development and installed environments
+    by using yapocis.__file__ to dynamically locate the package.
+
+    Returns:
+        str: Absolute path to yapocis package directory
+
+    Example:
+        >>> yapocis_dir = get_yapocis_dir()
+        >>> interfaces_dir = os.path.join(yapocis_dir, 'interfaces')
+    """
     yapocis_dir = os.path.dirname(yapocis.__file__)
     return yapocis_dir
 
