@@ -310,6 +310,7 @@ result = prog.mandelbrot(input_array, maxiter=1000)
 
 ```python
 from yapocis.lib.graphics4 import Graphics4
+
 g = Graphics4()
 canvas = np.zeros((height, width, 4), dtype=np.float32)
 g.circles(canvas, [(x, y, radius)], color=[r, g, b, a])
@@ -382,16 +383,17 @@ def test_operation(backend, validate_result):
 
 ```bash
 # Analyze test output files for data quality
-python yapocis/scripts/queue.py [directory]           # Analyze queue/raw by default
-python yapocis/scripts/queue.py --filter "cuda"       # Filter by pattern
-python yapocis/scripts/queue.py --nan-only            # Only show files with NaN
-python yapocis/scripts/queue.py --summary             # Summary statistics only
-python yapocis/scripts/queue.py --dtype float32       # Filter by dtype
-python yapocis/scripts/queue.py --verbose             # Show all array details
+python yapocis/scripts/queue-check.py [directory]           # Analyze queue/raw by default
+python yapocis/scripts/queue-check.py --filter "cuda"       # Filter by pattern
+python yapocis/scripts/queue-check.py --nan-only            # Only show files with NaN
+python yapocis/scripts/queue-check.py --summary             # Summary statistics only
+python yapocis/scripts/queue-check.py --dtype float32       # Filter by dtype
+python yapocis/scripts/queue-check.py --verbose             # Show all array details
 ```
 
 Use this tool to diagnose data quality issues like NaN/Inf values, check dtypes, and verify min/max ranges in test
 outputs.
 
 - Never delete the performance database. Update the schema instead.
-- Bound kernels do not take arguments via named arguments, except for meta- kernel control. Library methods may take keyword arguments.
+- Bound kernels do not take arguments via named arguments, except for meta- kernel control. Library methods may take
+  keyword arguments.

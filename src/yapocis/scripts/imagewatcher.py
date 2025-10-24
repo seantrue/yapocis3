@@ -27,7 +27,7 @@ except ImportError:
     print("Warning: watchdog not available, using manual cache invalidation")
 
 from yapocis.fonts import font as find_font
-from yapocis.utils.basic import VIEWING_QUEUE
+from yapocis.utils.internals import get_viewing_queue
 
 # Import validation framework
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -38,7 +38,7 @@ from yapocis.utils.validation import (
     compare_with_validation,
 )
 
-queue = VIEWING_QUEUE
+VIEWING_QUEUE = get_viewing_queue()
 RAW_QUEUE = os.path.join(VIEWING_QUEUE, "raw")
 VALIDATION_PATH = os.path.join(VIEWING_QUEUE, "validation")
 os.makedirs(RAW_QUEUE, exist_ok=True)
@@ -1159,7 +1159,8 @@ def create_difference_visualization(font=None):
             else:
                 t = (val - 0.75) / 0.25
                 color = (255, int(255 * (1 - t)), 0)
-            pygame.draw.line(composite, color, (x_positions[2] + i, legend_y), (x_positions[2] + i, legend_y + legend_height))
+            pygame.draw.line(composite, color, (x_positions[2] + i, legend_y),
+                             (x_positions[2] + i, legend_y + legend_height))
 
         # Add scale labels
         scale_label_font = pygame.font.Font(None, 14)

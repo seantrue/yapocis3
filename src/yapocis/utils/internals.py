@@ -16,8 +16,10 @@ Path Resolution:
 """
 
 import os
+import tempfile
 
 import yapocis
+
 
 def get_yapocis_dir():
     """
@@ -39,12 +41,34 @@ def get_yapocis_dir():
     yapocis_dir = os.path.dirname(yapocis.__file__)
     return yapocis_dir
 
+
+def get_performance_dir() -> str | None:
+    performance_dir = os.environ.get("YAPOCIS_PERFORMANCEDIR", None)
+    if performance_dir and os.path.isdir(performance_dir):
+        return performance_dir
+    if os.path.isdir("performance"):
+        return os.path.abspath("performance")
+    return tempfile.TemporaryDirectory("-performance", prefix="yapocis-").name
+
+
+def get_viewing_queue() -> str | None:
+    viewing_dir = os.environ.get("YAPOCIS_VIEWING", None)
+    if viewing_dir and os.path.isdir(viewing_dir):
+        return viewing_dir
+    else:
+        performance_dir = get_performance_dir()
+        viewing_dir = os.path.join(performance_dir, "queue")
+        os.makedirs(viewing_dir, exist_ok=True)
+        return viewing_dir
+
+
 def get_project_dir() -> str | None:
-    yapocis_project = os.environ.get("YAPOCIS_PROJECT",None)
+    yapocis_project = os.environ.get("YAPOCIS_PROJECT", None)
     if yapocis_project and os.path.isdir(yapocis_project):
         return yapocis_project
     else:
         return None
+
 
 def get_yapocis_dirs() -> list[str]:
     yapocis_dir = get_yapocis_dir()
@@ -55,6 +79,7 @@ def get_yapocis_dirs() -> list[str]:
         directories.append(project_dir)
     return directories
 
+
 def find_file(dirs: list[str], subdirs: list[str], filename: str) -> str | None:
     for d in dirs:
         for sd in subdirs:
@@ -63,10 +88,12 @@ def find_file(dirs: list[str], subdirs: list[str], filename: str) -> str | None:
                 return pth
     return None
 
-def find_yapocis_file(subdirs:list[str], filename:str) -> str | None:
+
+def find_yapocis_file(subdirs: list[str], filename: str) -> str | None:
     dirs = get_yapocis_dirs()
     tfilename = find_file(dirs, subdirs, filename)
     return tfilename
+
 
 class AssetManager:
     def __init__(self, dirname, ext, extensions=None, match=None, recursive=False, default=None):
@@ -74,7 +101,7 @@ class AssetManager:
         self.extensions = [] if extensions is None else extensions
         if ext:
             self.extensions.append(ext)
-        assert match in (None,"exact","name","lower", "partial")
+        assert match in (None, "exact", "name", "lower", "partial")
         self.match = match
         self.recursive = recursive
         self.default = default
@@ -98,6 +125,7 @@ class AssetManager:
         Returns:
 
         """
+
         def has_ext(s):
             if not self.extensions:
                 return s
@@ -111,11 +139,14 @@ class AssetManager:
         for asset_dir in asset_dirs:
             if self.recursive:
                 for subdir_name, dir_names, file_names in os.walk(asset_dir):
-                    assets.update({asset_name: os.path.join(asset_dir, subdir_name, asset_name) for asset_name in file_names if
-                              has_ext(asset_name)})
+                    assets.update(
+                        {asset_name: os.path.join(asset_dir, subdir_name, asset_name) for asset_name in file_names if
+                         has_ext(asset_name)})
             else:
                 for asset_dir in asset_dirs:
-                    assets.update({asset_name:os.path.join(asset_dir,asset_name) for asset_name in os.listdir(asset_dir) if has_ext(asset_name)})
+                    assets.update(
+                        {asset_name: os.path.join(asset_dir, asset_name) for asset_name in os.listdir(asset_dir) if
+                         has_ext(asset_name)})
         self.cached_assets = assets
         return list(self.cached_assets.keys())
 
@@ -163,5 +194,5 @@ class AssetManager:
                         return self.asset_path(asset_name)
             if self.default:
                 return self.asset_path(self.default)
-            asset_names = [an.rsplit(".",1)[0] for an in self.assets()]
+            asset_names = [an.rsplit(".", 1)[0] for an in self.assets()]
             raise ValueError(f"{asset_suggestion} not found, use one of: {' '.join(asset_names)}")
