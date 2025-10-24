@@ -38,3 +38,4 @@ __pycache__
 /performance
 /performance/reports/
 /code_cache
+/claude-debug/*.py
