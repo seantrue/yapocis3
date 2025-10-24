@@ -232,3 +232,45 @@ def generate_convs_from_spec(spec):
             convs.append((name, weights))
 
     return convs
+
+
+def generate_convolves_context(context):
+    """
+    Context generator for convolves interface.
+
+    Generates signal processing convolution kernels from YAML specification
+    and adds them to the context as 'convs' parameter.
+
+    This function is invoked by the generic context generator system when
+    rendering the convolves interface template.
+
+    Args:
+        context: Dictionary containing YAML context (windows, smoothing, etc.)
+
+    Returns:
+        Modified context dictionary with 'convs' parameter added
+
+    Example:
+        Input context (from convolves.yml):
+            {
+                'windows': [{'type': 'hamming', 'sizes': [5, 9]}],
+                'smoothing': [{'type': 'box', 'sizes': [3, 5]}],
+                ...
+            }
+
+        Output context:
+            {
+                'windows': [...],
+                'smoothing': [...],
+                'convs': [
+                    ('hamming5', array([...])),
+                    ('hamming9', array([...])),
+                    ('box3', array([...])),
+                    ('box5', array([...])),
+                    ...
+                ]
+            }
+    """
+    convs = generate_convs_from_spec(context)
+    context['convs'] = convs
+    return context

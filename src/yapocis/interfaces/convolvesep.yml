@@ -23,6 +23,12 @@
 # Convolution weights are typically generated using GaussianWeights.compute_gaussian_weights()
 # with the following parameters:
 
+# Context generator specification
+# This function transforms the YAML context before template rendering
+_generator:
+  module: yapocis.lib.gaussian
+  function: generate_convolvesep_context
+
 # Default parameters for Gaussian weight generation
 gaussian_params:
   # Maximum kernel width (weights arrays larger than this are excluded)

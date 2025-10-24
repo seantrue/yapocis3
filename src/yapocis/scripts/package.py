@@ -74,35 +74,13 @@ def render_interface_with_context(interface_text: str, interface_name: str) -> s
         print(f"Expected: interfaces/{interface_name}.yml in yapocis package directory")
         return interface_text
 
-    # Special handling for convolvesep: generate 'convs' from 'gaussian_params'
-    if interface_name == 'convolvesep' and 'gaussian_params' in context:
-        import numpy as np
-        from yapocis.lib.gaussian import GaussianWeights
+    # Apply context generator if specified in YAML
+    from yapocis.core.interface_context import apply_context_generator
+    context = apply_context_generator(context)
 
-        print("Generating 'convs' from gaussian_params for convolvesep template")
-        gaussian_params = context['gaussian_params']
-
-        # Generate Gaussian weights using the same logic as Gaussian.__init__
-        gw = GaussianWeights(**gaussian_params)
-        gws = gw.gaussian_weights()
-
-        # Create convs list: [(name, array), ...]
-        convs = [("gauss%s" % len(a), a) for a in gws]
-
-        # Add to context
-        context['convs'] = convs
-        print(f"Generated {len(convs)} Gaussian kernels for package generation")
-
-    # Special handling for convolves: generate 'convs' from kernel specifications
-    if interface_name == 'convolves':
-        from yapocis.lib.convolve_kernels import generate_convs_from_spec
-
-        print("Generating 'convs' from kernel specifications for convolves template")
-        convs = generate_convs_from_spec(context)
-
-        # Add to context
-        context['convs'] = convs
-        print(f"Generated {len(convs)} signal processing kernels for package generation")
+    # Report if convs were generated
+    if 'convs' in context:
+        print(f"Generated {len(context['convs'])} kernels for {interface_name} package generation")
 
     # Render template with context
     try:

@@ -15,6 +15,12 @@
 # Each kernel is defined by its type and size. The actual weights are
 # computed at runtime using standard signal processing formulas.
 
+# Context generator specification
+# This function transforms the YAML context before template rendering
+_generator:
+  module: yapocis.lib.convolve_kernels
+  function: generate_convolves_context
+
 # Windowing functions - useful for spectral analysis and filtering
 windows:
   # Hamming window - good general-purpose window with low sidelobes

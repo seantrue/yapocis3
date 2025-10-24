@@ -188,20 +188,9 @@ def cmd_interfaces(args):
             # No context available, return unrendered
             return template_text
 
-        # Handle special case for convolvesep
-        if interface_name == 'convolvesep' and 'gaussian_params' in context:
-            from yapocis.lib.gaussian import GaussianWeights
-            gaussian_params = context['gaussian_params']
-            gw = GaussianWeights(**gaussian_params)
-            gws = gw.gaussian_weights()
-            convs = [("gauss%s" % len(a), a) for a in gws]
-            context['convs'] = convs
-
-        # Handle special case for convolves
-        if interface_name == 'convolves':
-            from yapocis.lib.convolve_kernels import generate_convs_from_spec
-            convs = generate_convs_from_spec(context)
-            context['convs'] = convs
+        # Apply context generator if specified in YAML
+        from yapocis.core.interface_context import apply_context_generator
+        context = apply_context_generator(context)
 
         # Render template
         template = Template(template_text)

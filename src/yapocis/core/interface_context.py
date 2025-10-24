@@ -21,11 +21,15 @@ Example:
           - [divop, "/"]
 """
 
+import importlib
 import os
 import yaml
-from typing import Any, Dict
+from typing import Any, Callable, Dict
 
 from yapocis.interfaces import find_interface
+
+# Type alias for context generator functions
+ContextGenerator = Callable[[Dict[str, Any]], Dict[str, Any]]
 
 
 def load_interface_context(interface_name: str) -> Dict[str, Any]:
@@ -111,8 +115,8 @@ def get_interface_context(interface_name: str, **kwargs: Any) -> Dict[str, Any]:
     """
     Get complete template context for an interface.
 
-    Loads YAML context (if exists) and merges with programmatic context.
-    Programmatic context takes precedence.
+    Loads YAML context (if exists), applies context generator if specified,
+    and merges with programmatic context. Programmatic context takes precedence.
 
     Args:
         interface_name: Name of interface (e.g., "operators")
@@ -129,4 +133,77 @@ def get_interface_context(interface_name: str, **kwargs: Any) -> Dict[str, Any]:
         ...     operators=[["add", "+"], ["sub", "-"]])
     """
     yaml_context = load_interface_context(interface_name)
+
+    # Apply context generator if specified in YAML
+    yaml_context = apply_context_generator(yaml_context)
+
     return merge_context(yaml_context, **kwargs)
+
+
+def apply_context_generator(context: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Apply context generator if specified in metadata.
+
+    Looks for '_generator' key in context and invokes the specified
+    Python function to transform the context. The generator function
+    is loaded dynamically from the specified module.
+
+    Args:
+        context: YAML context dictionary
+
+    Returns:
+        Transformed context dictionary (with _generator metadata removed)
+
+    Raises:
+        ValueError: If _generator format is invalid
+        ImportError: If generator module cannot be imported
+        AttributeError: If generator function not found in module
+
+    Example:
+        ```yaml
+        # convolvesep.yml
+        _generator:
+          module: yapocis.lib.gaussian
+          function: generate_convolvesep_context
+
+        gaussian_params:
+          max_width: 150
+          scale: 1.6
+        ```
+
+        The function `yapocis.lib.gaussian.generate_convolvesep_context(context)`
+        will be called to transform the context before template rendering.
+    """
+    if '_generator' not in context:
+        return context
+
+    # Extract and remove metadata
+    gen_spec = context.pop('_generator')
+
+    # Validate generator spec
+    if not isinstance(gen_spec, dict):
+        raise ValueError(f"_generator must be a dict, got {type(gen_spec).__name__}")
+
+    if 'module' not in gen_spec or 'function' not in gen_spec:
+        raise ValueError("_generator must have 'module' and 'function' keys")
+
+    module_name = gen_spec['module']
+    function_name = gen_spec['function']
+
+    # Import module and get function
+    try:
+        module = importlib.import_module(module_name)
+    except ImportError as e:
+        raise ImportError(
+            f"Cannot import generator module '{module_name}': {e}"
+        ) from e
+
+    try:
+        generator_func = getattr(module, function_name)
+    except AttributeError as e:
+        raise AttributeError(
+            f"Module '{module_name}' has no function '{function_name}': {e}"
+        ) from e
+
+    # Invoke generator
+    return generator_func(context)

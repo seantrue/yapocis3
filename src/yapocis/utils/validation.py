@@ -14,9 +14,9 @@ from pathlib import Path
 from typing import Optional, Union
 import shutil
 from .basic import _current_backend
-
+from .internals import get_viewing_queue
 # Default paths
-QUEUE_DIR = Path(__file__).parent.parent.parent / "queue"
+QUEUE_DIR = Path(get_viewing_queue())
 RAW_DIR = QUEUE_DIR / "raw"
 VALIDATION_DIR = QUEUE_DIR / "validation"
 
