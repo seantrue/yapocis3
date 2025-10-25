@@ -1,0 +1,15 @@
+interface fft {
+    # 1D FFT forward transform (complex to complex)
+    # direction: 1 for forward, -1 for inverse
+    kernel fft1d(in complex64 input, out_like input, int direction);
+    extension res as fft1d(resident complex64 input, resident complex64 output, int direction);
+
+    # Apply window function to signal
+    # window_type: 0=rectangular, 1=hann, 2=hamming, 3=blackman
+    kernel window(in float input, int window_type, out_like input);
+    extension res as window(resident float input, int window_type, resident float output);
+
+    # Compute power spectrum from complex FFT output
+    kernel power_spectrum(in complex64 fft_output, out_like float fft_output);
+    extension res as power_spectrum(resident complex64 fft_output, resident float power);
+};
