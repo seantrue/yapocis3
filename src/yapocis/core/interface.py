@@ -133,6 +133,8 @@ def get_interfaces(s: str) -> list[InterfaceSpec]:
                 elif role in (
                         "size_of",
                         "sizeof",
+                        "length_of",
+                        "lengthof",
                         "width_of",
                         "widthof",
                         "height_of",
@@ -142,6 +144,8 @@ def get_interfaces(s: str) -> list[InterfaceSpec]:
                     dim = {
                         "size_of":   "size_of",
                         "sizeof":    "sizeof",
+                        "length_of": "length_of",
+                        "lengthof":  "length_of",
                         "width_of":  "width_of",
                         "widthof":   "width_of",
                         "height_of": "height_of",
@@ -175,6 +179,8 @@ def get_interfaces(s: str) -> list[InterfaceSpec]:
                 if role in (
                         "size_of",
                         "sizeof",
+                        "length_of",
+                        "lengthof",
                         "width_of",
                         "widthof",
                         "height_of",
@@ -184,6 +190,8 @@ def get_interfaces(s: str) -> list[InterfaceSpec]:
                     dim = {
                         "size_of":   "size_of",
                         "sizeof":    "sizeof",
+                        "length_of": "length_of",
+                        "lengthof":  "length_of",
                         "width_of":  "width_of",
                         "widthof":   "width_of",
                         "height_of": "height_of",

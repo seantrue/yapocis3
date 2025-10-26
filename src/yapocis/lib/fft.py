@@ -48,9 +48,16 @@ class FFT(BoundKernels):
     # Apple's OpenCL compiler has a bug with aggressive optimizations that causes
     # 2x amplification in batch FFT for sizes >= 64. Disabling optimizations fixes this.
     # This affects Apple M1/M2/M3 GPUs. The performance cost is acceptable (~10-20%).
-    load_program_config = {
-        "options": ["-cl-opt-disable"]
-    }
+    # Note: This option is OpenCL-specific and not needed for CUDA/Metal/Numbax
+    def __init__(self, *args, **kwargs):
+        import os
+        backend = os.environ.get('YAPOCIS_BACKEND', 'ocl')
+
+        # Only apply optimization workaround for OpenCL backend
+        if backend == 'ocl':
+            self.load_program_config = {"options": ["-cl-opt-disable"]}
+
+        super().__init__(*args, **kwargs)
 
     # Window type constants for clarity
     WINDOW_RECTANGULAR = 0

@@ -53,13 +53,12 @@ __device__ __inline__ float2 twiddle_factor(uint k, uint N, int direction) {
  * Block size must equal FFT size (for sizes up to 1024)
  * direction: 1 for forward FFT, -1 for inverse FFT
  */
-extern "C" __global__ void fft1d(float2 *input, float2 *output, int direction)
+extern "C" __global__ void fft1d(float2 *input, int n, float2 *output, int direction)
 {
-    extern __shared__ float2 shared_data[];
+    __shared__ float2 shared_data[1024];  // Static shared memory allocation
 
     uint gid = blockIdx.x * blockDim.x + threadIdx.x;
     uint lid = threadIdx.x;
-    uint n = gridDim.x * blockDim.x;
 
     if (gid >= n) return;
 
@@ -74,8 +73,10 @@ extern "C" __global__ void fft1d(float2 *input, float2 *output, int direction)
     // Bit-reversed input loading into shared memory
     uint rev_idx = bit_reverse(lid, log2n);
 
-    if (n <= 1024) {
-        // Optimized path for small FFTs (≤ 1024)
+    // Use optimized FFT only if we have exactly one block of size n
+    // This is the only configuration where the shared memory algorithm works correctly
+    if (n <= 1024 && gridDim.x == 1 && blockDim.x == n) {
+        // Optimized path for small FFTs (≤ 1024) with correct block config
         shared_data[lid] = input[rev_idx];
         __syncthreads();
 
@@ -109,7 +110,7 @@ extern "C" __global__ void fft1d(float2 *input, float2 *output, int direction)
             result.y /= (float)n;
         }
 
-        output[lid] = result;
+        output[gid] = result;
     } else {
         // Fallback to DFT for sizes > 1024
         float2 sum = make_float2(0.0f, 0.0f);
@@ -131,10 +132,10 @@ extern "C" __global__ void fft1d(float2 *input, float2 *output, int direction)
 /* Window function kernel
  * window_type: 0=rectangular, 1=hann, 2=hamming, 3=blackman
  */
-extern "C" __kernel void window(float *input, int const window_type, float *output)
+extern "C" __global__ void window(float *input, int const window_type, float *output)
 {
-    size_t gid = get_global_id(0);
-    size_t n = gridDim.x * blockDim.x;
+    uint gid = blockIdx.x * blockDim.x + threadIdx.x;
+    uint n = gridDim.x * blockDim.x;
 
     float w = 1.0f;
     float pos = (float)gid / (n - 1);
@@ -158,10 +159,10 @@ extern "C" __kernel void window(float *input, int const window_type, float *outp
 }
 
 /* Power spectrum kernel - compute magnitude squared */
-extern "C" __kernel void power_spectrum(float2 *fft_output, float *power)
+extern "C" __global__ void power_spectrum(float2 *fft_output, float *power)
 {
-    size_t gid = get_global_id(0);
-    size_t n = gridDim.x * blockDim.x;
+    uint gid = blockIdx.x * blockDim.x + threadIdx.x;
+    uint n = gridDim.x * blockDim.x;
 
     if (gid >= n) return;
 
@@ -199,7 +200,7 @@ extern "C" __global__ void fft1d_batch(
     int const direction,
     float2 *output
 ) {
-    extern __shared__ float2 shared_data[];
+    __shared__ float2 shared_data[256];  // Static shared memory allocation
 
     uint gid = blockIdx.x * blockDim.x + threadIdx.x;
     uint lid = threadIdx.x;

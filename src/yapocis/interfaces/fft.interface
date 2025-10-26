@@ -1,8 +1,8 @@
 interface fft {
     # 1D FFT forward transform (complex to complex)
     # direction: 1 for forward, -1 for inverse
-    kernel fft1d(in complex64 input, out_like input, int direction);
-    extension res as fft1d(resident complex64 input, resident complex64 output, int direction);
+    kernel fft1d(in complex64 input, length_of int input, out_like input, int direction);
+    extension res as fft1d(resident complex64 input, length_of int input, resident complex64 output, int direction);
 
     # Batch 1D FFT - process multiple FFTs in single kernel launch
     # input: 2D array of shape (batch_size, fft_size)

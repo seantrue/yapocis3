@@ -50,12 +50,13 @@ def _blackman_window(n: int) -> np.ndarray:
     return window
 
 
-def fft1d(input_arr: np.ndarray, output: np.ndarray, direction: int):
+def fft1d(input_arr: np.ndarray, n: int, output: np.ndarray, direction: int):
     """
     1D FFT forward/inverse transform.
 
     Args:
         input_arr: Complex input array
+        n: FFT size (size of input array)
         output: Complex output array
         direction: 1 for forward, -1 for inverse
     """

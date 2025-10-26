@@ -4,28 +4,28 @@
 #define M_2PI 6.28318530717958647692f
 
 /* Complex multiplication */
-inline float2 cmul(float2 a, float2 b) {
+static inline float2 cmul(float2 a, float2 b) {
     return (float2)(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
 }
 
 /* Complex addition */
-inline float2 cadd(float2 a, float2 b) {
+static inline float2 cadd(float2 a, float2 b) {
     return (float2)(a.x + b.x, a.y + b.y);
 }
 
 /* Complex subtraction */
-inline float2 csub(float2 a, float2 b) {
+static inline float2 csub(float2 a, float2 b) {
     return (float2)(a.x - b.x, a.y - b.y);
 }
 
 /* Twiddle factor */
-inline float2 twiddle(int k, int N, int direction) {
+static inline float2 twiddle(int k, int N, int direction) {
     float angle = direction * M_2PI * k / N;
     return (float2)(cos(angle), sin(angle));
 }
 
 /* Bit reversal for FFT */
-inline int bit_reverse_int(int x, int log2n) {
+static inline int bit_reverse_int(int x, int log2n) {
     int result = 0;
     for (int i = 0; i < log2n; i++) {
         result = (result << 1) | (x & 1);
@@ -37,7 +37,7 @@ inline int bit_reverse_int(int x, int log2n) {
 /* Compute twiddle factor W_N^k = e^(-i*2π*k/N) for forward FFT
  * For inverse FFT (direction = -1), we use the conjugate: e^(+i*2π*k/N)
  */
-inline float2 twiddle_factor(uint k, uint N, int direction) {
+static inline float2 twiddle_factor(uint k, uint N, int direction) {
     // Forward FFT: direction = 1,  angle = -2πk/N (negative)
     // Inverse FFT: direction = -1, angle = +2πk/N (positive)
     float angle = -direction * M_2PI * (float)k / (float)N;
@@ -58,13 +58,13 @@ inline float2 twiddle_factor(uint k, uint N, int direction) {
  */
 __kernel void fft1d(
     __global float2 *input,
+    int const n,
     __global float2 *output,
     int const direction
 ) {
     __local float2 shared_data[1024];  // Local memory for FFT computation
     size_t gid = get_global_id(0);
     size_t lid = get_local_id(0);
-    size_t n = get_global_size(0);
     size_t local_size = get_local_size(0);
 
     if (gid >= n) return;

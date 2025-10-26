@@ -175,7 +175,7 @@ dtype = oneOf("float float32 half f16 double int int32 uint32 short int16 uint16
 
 # Roles and legacy spellings
 io_role_kw   = oneOf("in out inout in_out resident READWRITE")
-dim_role_kw  = oneOf("size_of sizeof width_of widthof height_of heightof depth_of depthof")
+dim_role_kw  = oneOf("size_of sizeof length_of lengthof width_of widthof height_of heightof depth_of depthof")
 outlike_role = oneOf("out_like outlike")
 
 brackets = Group(Suppress("[") + Regex(r"[^\]]*")("shape") + Suppress("]"))
