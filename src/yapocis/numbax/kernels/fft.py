@@ -100,6 +100,39 @@ def window(input_arr: np.ndarray, window_type: int, output: np.ndarray):
     return output
 
 
+def fft1d_batch(input_arr: np.ndarray, batch_size: int, fft_size: int,
+                direction: int, output: np.ndarray):
+    """
+    Batch 1D FFT forward/inverse transform.
+
+    Process multiple FFTs in a single call for better performance.
+
+    Args:
+        input_arr: Complex input array (batch_size, fft_size)
+        batch_size: Number of FFTs to compute
+        fft_size: Size of each FFT
+        direction: 1 for forward, -1 for inverse
+        output: Complex output array (batch_size, fft_size)
+
+    Returns:
+        output: Complex FFT results
+    """
+    # Reshape input to ensure correct dimensions
+    input_2d = input_arr.reshape(batch_size, fft_size)
+    output_2d = output.reshape(batch_size, fft_size)
+
+    if direction == 1:
+        # Forward FFT - process each row
+        for i in range(batch_size):
+            output_2d[i, :] = np.fft.fft(input_2d[i, :]).astype(np.complex64)
+    else:
+        # Inverse FFT - process each row
+        for i in range(batch_size):
+            output_2d[i, :] = np.fft.ifft(input_2d[i, :]).astype(np.complex64)
+
+    return output
+
+
 def power_spectrum(fft_output: np.ndarray, power: np.ndarray):
     """
     Compute power spectrum from FFT output.
