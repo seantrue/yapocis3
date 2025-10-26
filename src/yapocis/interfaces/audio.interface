@@ -1,0 +1,20 @@
+interface audio {
+    # Apply log transform and normalize array to [0, 1]
+    kernel log_normalize(in float input, out_like input);
+    extension res as log_normalize(resident float input, resident float output);
+
+    # Normalize with known min/max values
+    kernel normalize_with_minmax(in float input, float min_val, float max_val, out_like input);
+    extension res as normalize_with_minmax(resident float input, float min_val, float max_val, resident float output);
+
+    # Fused kernel: Extract bandpass region + compute variance + log
+    # spectrogram is 2D (freq x time), features is 1D (time)
+    # Note: width and height must be passed explicitly as int parameters
+    kernel fused_vad_features(in float spectrogram, int lower_freq_idx, int upper_freq_idx, int width, int height, out float features);
+    extension res as fused_vad_features(resident float spectrogram, int lower_freq_idx, int upper_freq_idx, int width, int height, resident float features);
+
+    # Smooth signal with box filter (1D convolution)
+    # Note: sizeof input parameter is required for Metal bounds checking
+    kernel smooth_1d(in float input, int window_size, sizeof input, out_like input);
+    extension res as smooth_1d(resident float input, int window_size, sizeof input, resident float output);
+};

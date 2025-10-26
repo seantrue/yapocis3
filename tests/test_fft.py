@@ -9,12 +9,21 @@ from yapocis.core import load_program, get_backends
 from . import StopWatcher
 
 
+def _load_fft_program(backend):
+    """Load FFT program with appropriate compiler options for each backend."""
+    if backend == "ocl":
+        # OpenCL requires -cl-opt-disable to fix compiler optimization bug
+        return load_program("fft", options=["-cl-opt-disable"])
+    else:
+        return load_program("fft")
+
+
 @pytest.mark.parametrize("backend", get_backends())
 def test_fft1d_forward(backend, monkeypatch):
     """Test 1D forward FFT against NumPy reference."""
     monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
-    prog = load_program("fft")
+    prog = _load_fft_program(backend)
 
     # Create a simple test signal
     n = 128
@@ -42,7 +51,7 @@ def test_fft1d_inverse(backend, monkeypatch):
     """Test 1D inverse FFT."""
     monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
-    prog = load_program("fft")
+    prog = _load_fft_program(backend)
 
     # Create frequency domain signal
     n = 64
@@ -65,7 +74,7 @@ def test_fft1d_roundtrip(backend, monkeypatch):
     """Test FFT forward then inverse returns original signal."""
     monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
-    prog = load_program("fft")
+    prog = _load_fft_program(backend)
 
     # Create test signal
     n = 256
@@ -86,7 +95,7 @@ def test_window_functions(backend, monkeypatch):
     """Test window functions."""
     monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
-    prog = load_program("fft")
+    prog = _load_fft_program(backend)
 
     n = 256
     signal = np.ones(n, dtype=np.float32)
@@ -120,7 +129,7 @@ def test_power_spectrum(backend, monkeypatch):
     """Test power spectrum computation."""
     monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
-    prog = load_program("fft")
+    prog = _load_fft_program(backend)
 
     # Create FFT output with known magnitudes
     n = 64
@@ -144,7 +153,7 @@ def test_different_sizes(backend, monkeypatch):
     """Test FFT with different power-of-2 sizes."""
     monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
-    prog = load_program("fft")
+    prog = _load_fft_program(backend)
 
     sizes = [16, 32, 64, 128, 256]
 
@@ -166,7 +175,7 @@ def test_fft_performance(backend, monkeypatch, perf_tracker):
     """Performance test for FFT operations."""
     monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
-    prog = load_program("fft")
+    prog = _load_fft_program(backend)
 
     # Test with a moderately large signal
     n = 512  # Reduced from 1024 for DFT performance
@@ -201,7 +210,10 @@ def test_fft_performance(backend, monkeypatch, perf_tracker):
 
 def test_fft_smoke():
     """Smoke test - just ensure the FFT program loads."""
-    prog = load_program("fft")
+    # Use whatever backend is currently configured
+    import os
+    backend = os.environ.get("YAPOCIS_BACKEND", "numbax")
+    prog = _load_fft_program(backend)
     assert prog is not None
     assert hasattr(prog, "fft1d")
     assert hasattr(prog, "window")
@@ -213,7 +225,7 @@ def test_fft_with_windowing(backend, monkeypatch):
     """Test FFT combined with windowing."""
     monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
-    prog = load_program("fft")
+    prog = _load_fft_program(backend)
 
     # Create test signal
     n = 128

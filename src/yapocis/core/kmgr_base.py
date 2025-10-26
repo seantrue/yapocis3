@@ -217,10 +217,18 @@ class KernelManagerBase(ABC):
 
         # Register all kernels as callables
         for kernel_spec in interface.kernels:
-            name = kernel_spec.alias if kernel_spec.alias else kernel_spec.name
-            kernel_func = self.get_kernel(self.program, name)
+            # For extension kernels, lookup the base kernel they extend
+            # For regular kernels, use their own name
+            if hasattr(kernel_spec, 'extends') and kernel_spec.extends:
+                lookup_name = kernel_spec.extends
+            elif hasattr(kernel_spec, 'alias') and kernel_spec.alias:
+                lookup_name = kernel_spec.alias
+            else:
+                lookup_name = kernel_spec.name
+
+            kernel_func = self.get_kernel(self.program, lookup_name)
             self.callable[kernel_spec.name] = self._kernel_class(
-                name, self, kernel_func, kernel_spec.parameters, async_write=async_write
+                lookup_name, self, kernel_func, kernel_spec.parameters, async_write=async_write
             )
 
     def read(self, a):
