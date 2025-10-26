@@ -1,0 +1,26 @@
+<%include file="constants.mako"/>
+<%include file="helpers.mako"/>
+
+/* Kernels to compute direction and magnitude of gradient of an image. */
+
+/* Compute gradient for images with 1,2,3,4 channels per pixel. */
+
+%for planes in ["",2,3,4]:
+extern "C" __kernel
+void gradient${planes}(int width, int height, FLOAT${planes}* input, int reach, FLOAT${planes}* grad, FLOAT${planes} *theta )
+{
+    size_t i = get_global_id(0);
+    int x = X(i);
+    int y = Y(i);
+    FLOAT${planes} gr = ZERO${planes};
+    FLOAT${planes} th = ZERO${planes};
+    if (0 <= (x-reach)  && (x+reach) < width && 0 <= (y-reach) && (y+reach) < height) {
+        FLOAT${planes} dx = input[ADDRESS(x+reach,y)] - input[ADDRESS(x-reach,y)];
+        FLOAT${planes} dy = input[ADDRESS(x,y+reach)] - input[ADDRESS(x,y-reach)];
+        gr = sqrt(dx*dx+dy*dy);
+        th = atan2pi(dy, dx);
+    }
+    grad[i] = isnan(gr) ? ZERO${planes}: gr;
+    theta[i] = isnan(th) ? ZERO${planes}: th;
+}
+%endfor

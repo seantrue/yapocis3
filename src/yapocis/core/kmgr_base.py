@@ -107,7 +107,7 @@ class KernelManagerBase(ABC):
         """
         Locate kernel template file for given interface name.
 
-        Default implementation looks in yapocis/{backend}kernels/*.mako
+        Default implementation looks in yapocis/kernels/{backend}/*.mako
         Subclasses can override for custom template resolution (e.g., Metal's fallback).
 
         Args:
@@ -119,16 +119,9 @@ class KernelManagerBase(ABC):
         Raises:
             FileNotFoundError: If template not found
         """
-        if self._backend_name == "ocl":
-            kernel_dir = "kernels"
-        elif self._backend_name == "metal":
-            kernel_dir = "metalkernels"
-        elif self._backend_name == "cuda":
-            kernel_dir = "cukernels"
-        elif self._backend_name == "numbax":
-            kernel_dir = "numbaxkernels"
-        else:
-            kernel_dir = f"{self._backend_name}kernels"
+        # New structure: kernels/{backend}/*
+        # All backends now use kernels/{backend}/ structure
+        kernel_dir = os.path.join("kernels", self._backend_name)
 
         kernel_path = os.path.join(
             get_yapocis_dir(), kernel_dir, f"{base_filename}.mako"

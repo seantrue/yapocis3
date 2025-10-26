@@ -54,8 +54,8 @@ class KernelManager(KernelManagerBase):
         Metal-specific template resolution with OCL fallback.
 
         Looks for templates in:
-        1. metalkernels/*.mako (Metal-specific)
-        2. kernels/*.mako (OCL fallback)
+        1. kernels/metal/*.mako (Metal-specific)
+        2. kernels/ocl/*.mako (OCL fallback)
 
         Args:
             base_filename: Interface name (e.g., "mandelbrot")
@@ -67,13 +67,13 @@ class KernelManager(KernelManagerBase):
             FileNotFoundError: If template not found in either location
         """
         # Prefer Metal-specific templates
-        base_dir = os.path.join(get_yapocis_dir(), "metalkernels")
+        base_dir = os.path.join(get_yapocis_dir(), "kernels", "metal")
         metal_template = os.path.join(base_dir, f"{base_filename}.mako")
         if os.path.exists(metal_template):
             return metal_template
 
         # Fallback to OCL kernels for compatibility
-        ocl_dir = os.path.join(get_yapocis_dir(), "kernels")
+        ocl_dir = os.path.join(get_yapocis_dir(), "kernels", "ocl")
         ocl_template = os.path.join(ocl_dir, f"{base_filename}.mako")
         if os.path.exists(ocl_template):
             return ocl_template
