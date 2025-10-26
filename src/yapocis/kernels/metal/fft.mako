@@ -69,9 +69,10 @@ inline float2 twiddle_lookup(constant float2 *twiddle_table, uint k, uint m, uin
  */
 kernel void fft1d_opt(
     device float2 *input [[ buffer(0) ]],
-    device float2 *output [[ buffer(1) ]],
-    constant int &direction [[ buffer(2) ]],
-    constant float2 *twiddle_table [[ buffer(3) ]],
+    constant int &n [[ buffer(1) ]],
+    device float2 *output [[ buffer(2) ]],
+    constant int &direction [[ buffer(3) ]],
+    constant float2 *twiddle_table [[ buffer(4) ]],
     uint gid [[ thread_position_in_grid ]],
     uint lid [[ thread_position_in_threadgroup ]],
     uint grid_size [[ threads_per_grid ]],
@@ -79,8 +80,6 @@ kernel void fft1d_opt(
 ) {
     // Fixed-size threadgroup memory (1024 elements max)
     threadgroup float2 shared_data[1024];
-
-    uint n = grid_size;
 
     if (gid >= n) return;
 
@@ -166,8 +165,9 @@ kernel void fft1d_opt(
  */
 kernel void fft1d(
     device float2 *input [[ buffer(0) ]],
-    device float2 *output [[ buffer(1) ]],
-    constant int &direction [[ buffer(2) ]],
+    constant int &n [[ buffer(1) ]],
+    device float2 *output [[ buffer(2) ]],
+    constant int &direction [[ buffer(3) ]],
     uint gid [[ thread_position_in_grid ]],
     uint lid [[ thread_position_in_threadgroup ]],
     uint grid_size [[ threads_per_grid ]],
@@ -175,8 +175,6 @@ kernel void fft1d(
 ) {
     // Fixed-size threadgroup memory (1024 elements max)
     threadgroup float2 shared_data[1024];
-
-    uint n = grid_size;
 
     if (gid >= n) return;
 
