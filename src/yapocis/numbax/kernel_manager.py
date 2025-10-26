@@ -30,7 +30,7 @@ class KernelManager:
         self.context = context
         self.snapshots = []
         # Load module with Python implementations
-        mod_name = f"yapocis.numbax.kernels.{interface.name}"
+        mod_name = f"yapocis.kernels.numbax.{interface.name}"
         try:
             mod = importlib.import_module(mod_name)
         except ModuleNotFoundError:
@@ -68,7 +68,7 @@ class KernelManager:
         alias = getattr(kernel, "alias", None)
         ctx = self.context
         if iface_name == "convolve":
-            from yapocis.numbax.kernels.convolve import make_convolve_functions
+            from yapocis.kernels.numbax.convolve import make_convolve_functions
 
             base = (alias or name).replace("_fast", "")
             kmain, kfast = make_convolve_functions(base, ctx.get("conv"))
@@ -77,7 +77,7 @@ class KernelManager:
             # Return function matching the requested callable name
             return getattr(mod, alias or name)
         if iface_name == "convolvesep":
-            from yapocis.numbax.kernels.convolvesep import make_sep_functions
+            from yapocis.kernels.numbax.convolvesep import make_sep_functions
 
             convs_list = ctx.get("convs", [])
             convs = {n: v for (n, v) in convs_list}

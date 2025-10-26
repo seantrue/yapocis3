@@ -1,0 +1,70 @@
+/* Separable convolution kernels (Metal), names and constants determined at compile time */
+
+<%include file="constants.mako" />
+<%include file="helpers.mako" />
+
+% for name, conv in convs:
+<% margin = len(conv)//2 %>
+kernel void ${name}(constant int &vertical [[ buffer(0) ]],
+                    constant int &width [[ buffer(1) ]],
+                    constant int &height [[ buffer(2) ]],
+                    const device float* a [[ buffer(3) ]],
+                    device float* ret [[ buffer(4) ]],
+                    uint i [[ thread_position_in_grid ]])
+{
+    size_t n = width*height;
+    float sum = 0.0f;
+    if (!vertical && ((size_t)(${margin}*height) < i) && (i < (n-${margin}*height))){
+       // Horizontal convolution
+  	%for j in range(len(conv)):
+        sum = sum + a[i+(${j-margin}*height)] * ${conv[j]};
+	%endfor
+    }
+    if (vertical && (${margin} < i) && (i < (n-${margin}))) {
+       // Vertical convolution
+  	%for j in range(len(conv)):
+        sum = sum + a[i+(${j-margin})] * ${conv[j]};
+	%endfor
+    }
+    ret[i] = sum;
+}
+
+kernel void ${name}_h(constant int &width [[ buffer(0) ]],
+                      constant int &height [[ buffer(1) ]],
+                      const device float* a [[ buffer(2) ]],
+                      device float* ret [[ buffer(3) ]],
+                      uint i [[ thread_position_in_grid ]])
+{
+    size_t n = width*height;
+    float sum = 0.0f;
+    int x = X(i);
+    int y = Y(i);
+    // Horizontal convolution
+    int inside = (x >= ${margin}) && (x<width-${margin}) && (y >= ${margin}) && (y <= height-${margin});
+    //int inside = (((size_t)(${margin}*height) < i) && (i < (n-${margin}*height)));
+  	%for j in range(len(conv)):
+    sum += inside ? a[i+(${j-margin}*height)] * ${conv[j]} : 0.0f;
+	%endfor
+    ret[i] = sum;
+}
+
+kernel void ${name}_v(constant int &width [[ buffer(0) ]],
+                      constant int &height [[ buffer(1) ]],
+                      const device float* a [[ buffer(2) ]],
+                      device float* ret [[ buffer(3) ]],
+                      uint i [[ thread_position_in_grid ]])
+{
+    size_t n = width*height;
+    int x = X(i);
+    int y = Y(i);
+    // Vertical convolution
+    float sum = 0.0f;
+    int inside = (x >= ${margin}) && (x<width-${margin}) && (y >= ${margin}) && (y <= height-${margin});
+    //int inside = (${margin} < i) && (i < (n-${margin}));
+  	%for j in range(len(conv)):
+    sum +=  inside ?  a[i+(${j-margin})] * ${conv[j]} : 0.0f;
+	%endfor
+
+    ret[i] = sum;
+}
+% endfor
