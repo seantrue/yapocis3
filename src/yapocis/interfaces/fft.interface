@@ -4,6 +4,12 @@ interface fft {
     kernel fft1d(in complex64 input, out_like input, int direction);
     extension res as fft1d(resident complex64 input, resident complex64 output, int direction);
 
+    # Batch 1D FFT - process multiple FFTs in single kernel launch
+    # input: 2D array of shape (batch_size, fft_size)
+    # batch_size: number of FFTs to compute
+    # fft_size: size of each FFT
+    kernel fft1d_batch(in complex64 input, int batch_size, int fft_size, int direction, out_like input);
+
     # Apply window function to signal
     # window_type: 0=rectangular, 1=hann, 2=hamming, 3=blackman
     kernel window(in float input, int window_type, out_like input);
