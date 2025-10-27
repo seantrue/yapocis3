@@ -73,12 +73,16 @@ def evaluate_dispatch_expression(expr: str, args: tuple[Any, ...], params: list)
             raise ValueError(f"Parameter '{param_name}' must be a numpy array for {dim_type}")
 
         # Get the dimension value
+        # For yapocis arrays in (C, H, W) format:
+        # - depth_of (channels) → shape[0]
+        # - height_of → shape[1]
+        # - width_of → shape[2]
         if dim_type == "width_of":
-            dim_value = arg.shape[0]
+            dim_value = arg.shape[2] if len(arg.shape) > 2 else arg.shape[0]
         elif dim_type == "height_of":
             dim_value = arg.shape[1] if len(arg.shape) > 1 else 1
         elif dim_type == "depth_of":
-            dim_value = arg.shape[2] if len(arg.shape) > 2 else 1
+            dim_value = arg.shape[0]
         elif dim_type == "sizeof":
             dim_value = arg.size
         else:
