@@ -20,12 +20,14 @@ class Kernel:
         kernel: Callable,
         params: list[tuple],
         async_write: bool = False,
+        traits: dict | None = None,
     ):
         self.name = name
         self.kernel_manager = kernel_manager
         self.queue = kernel_manager.dmgr.queue
         self.kernel = kernel
         self.params = params
+        self.traits = traits or {}
         self.autoflatten = kernel_manager.dmgr.autoflatten
         self.argspecs = self.posbyname = self.returns = self.local_size = (
             self.global_size
@@ -94,7 +96,8 @@ class Kernel:
                     method_name = "handle_resident"
                 real_arg = getattr(self, method_name)(arg, dtype)
             realargs[iparam] = real_arg
-        if self.global_size is None:
+        # Only infer global_size automatically if no dispatch_size trait exists
+        if self.global_size is None and "dispatch_size" not in self.traits:
             for arg in args:
                 if hasattr(arg, "size"):
                     if self.autoflatten:
@@ -184,6 +187,12 @@ class Kernel:
         ), f"{self.global_size},{self.local_size}"
         resident_arrays = kwargs.pop("resident", None)
         prepared_args = self.prepare_arguments(args, resident_arrays=resident_arrays)
+
+        # Check for dispatch_size trait if global_size not explicitly provided
+        if self.global_size is None and "dispatch_size" in self.traits:
+            from yapocis.core.dispatch_expr import evaluate_dispatch_size
+            dispatch_expr = self.traits["dispatch_size"]
+            self.global_size = evaluate_dispatch_size(dispatch_expr, args, self.params)
 
         def show_args():
             print("Python arguments")

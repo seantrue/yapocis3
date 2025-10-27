@@ -221,7 +221,8 @@ class KernelManagerBase(ABC):
 
             kernel_func = self.get_kernel(self.program, lookup_name)
             self.callable[kernel_spec.name] = self._kernel_class(
-                lookup_name, self, kernel_func, kernel_spec.parameters, async_write=async_write
+                lookup_name, self, kernel_func, kernel_spec.parameters,
+                async_write=async_write, traits=kernel_spec.traits
             )
 
     def read(self, a):

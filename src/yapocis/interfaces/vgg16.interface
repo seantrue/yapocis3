@@ -1,0 +1,107 @@
+interface vgg16 {
+    # =================================================================
+    # Convolutional Layers
+    # =================================================================
+
+    # 3x3 Convolution with padding=1, stride=1
+    # Input:  (input_channels, input_height, input_width) - shape is (C, H, W)
+    # Weights: (output_channels, input_channels, 3, 3)
+    # Bias:   (output_channels)
+    # Output: (output_channels, input_height, input_width)
+    # Metal kernel order: input, weights, bias, output, input_height, input_width, input_channels, output_channels
+    # Dimension mapping: height_of=shape[1]=H, depth_of=shape[2]=W, width_of=shape[0]=C
+    kernel conv2d_3x3(in float input, in float weights, in float bias, out float output,
+                      height_of input, depth_of input, width_of input, int output_channels);
+    with { dispatch_size (height_of input, depth_of input, width_of output); };
+    extension res as conv2d_3x3(resident float input, resident float weights, resident float bias, resident float output,
+                                 height_of input, depth_of input, width_of input, int output_channels);
+
+    # Optimized 3x3 Convolution using threadgroup memory
+    # Same signature as conv2d_3x3 but uses shared memory for tiling
+    kernel conv2d_3x3_optimized(in float input, in float weights, in float bias, out float output,
+                                 height_of input, depth_of input, width_of input, int output_channels);
+    with { dispatch_size (height_of input, depth_of input, width_of output); };
+    extension res as conv2d_3x3_optimized(resident float input, resident float weights, resident float bias, resident float output,
+                                          height_of input, depth_of input, width_of input, int output_channels);
+
+    # =================================================================
+    # Activation Functions
+    # =================================================================
+
+    # ReLU activation: max(0, x)
+    # Metal kernel order: input, output, size
+    kernel relu_activation(in float input, out_like input, sizeof input);
+    with { dispatch_size (sizeof input); };
+    extension res as relu_activation(resident float input, resident float output, sizeof input);
+
+    # Softmax activation for classification
+    # Metal kernel order: input, output, size
+    kernel softmax(in float input, out_like input, sizeof input);
+    with { dispatch_size (sizeof input); };
+    extension res as softmax(resident float input, resident float output, sizeof input);
+
+    # =================================================================
+    # Pooling Layers
+    # =================================================================
+
+    # 2x2 Max Pooling with stride=2
+    # Input:  (channels, input_height, input_width) - shape is (C, H, W)
+    # Output: (channels, input_height/2, input_width/2)
+    # Metal kernel order: input, output, input_height, input_width, channels
+    # Dimension mapping: height_of=shape[1]=H, depth_of=shape[2]=W, width_of=shape[0]=C
+    kernel max_pool_2x2(in float input, out float output,
+                        height_of input, depth_of input, width_of input);
+    with { dispatch_size (height_of input / 2, depth_of input / 2, width_of input); };
+    extension res as max_pool_2x2(resident float input, resident float output,
+                                   height_of input, depth_of input, width_of input);
+
+    # =================================================================
+    # Normalization Layers
+    # =================================================================
+
+    # Batch Normalization
+    # Input:  (channels, height, width) - shape is (C, H, W)
+    # Params: (channels) for each of gamma, beta, mean, variance
+    # Output: (channels, height, width)
+    # Metal kernel order: input, gamma, beta, mean, variance, output, height, width, channels, epsilon
+    # Dimension mapping: height_of=shape[1]=H, depth_of=shape[2]=W, width_of=shape[0]=C
+    kernel batch_norm(in float input, in float gamma, in float beta,
+                      in float mean, in float variance, out_like input,
+                      height_of input, depth_of input, width_of input, float epsilon);
+    with { dispatch_size (height_of input, depth_of input, width_of input); };
+    extension res as batch_norm(resident float input, resident float gamma, resident float beta,
+                                 resident float mean, resident float variance, resident float output,
+                                 height_of input, depth_of input, width_of input, float epsilon);
+
+    # =================================================================
+    # Fully Connected (Dense) Layers
+    # =================================================================
+
+    # Fully connected layer: y = Wx + b
+    # Input:  (input_size)
+    # Weights: (output_size, input_size)
+    # Bias:   (output_size)
+    # Output: (output_size)
+    # Metal kernel order: input, weights, bias, output, input_size, output_size
+    kernel fully_connected(in float input, in float weights, in float bias, out float output,
+                          sizeof input, sizeof output);
+    with { dispatch_size (sizeof output); };
+    extension res as fully_connected(resident float input, resident float weights, resident float bias, resident float output,
+                                     sizeof input, sizeof output);
+
+    # Matrix multiplication with bias (optimized with SIMD)
+    # A: (M, K)
+    # B: (K, N)
+    # bias: (N)
+    # C: (M, N)
+    # C = A * B + bias
+    # Metal kernel order: A, B, bias, C, M, N, K
+    # Dimensions auto-derived: M=height_of A, N=height_of B, K=width_of A
+    # Note: yapocis uses column-major: width_of=shape[0], height_of=shape[1]
+    # Uses 1D dispatch with X/Y macros from helpers.mako
+    kernel matrix_multiply_simd(in float A, in float B, in float bias, out float C,
+                               height_of A, height_of B, width_of A);
+    with { dispatch_size (sizeof C); };
+    extension res as matrix_multiply_simd(resident float A, resident float B, resident float bias, resident float C,
+                                          height_of A, height_of B, width_of A);
+};
