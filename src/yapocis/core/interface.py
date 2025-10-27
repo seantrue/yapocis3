@@ -30,6 +30,7 @@ class KernelSpec:
     parameters: list[KernelParamSpec]
     definitions: dict[str, KernelParamSpec]
     tiled: bool
+    traits: dict[str, Any] = None
 
 
 @dataclass
@@ -283,6 +284,7 @@ def get_interfaces(s: str) -> list[InterfaceSpec]:
                 parameters=kernel_parameters,
                 definitions=param_definitions,
                 tiled=kernel_tiled,
+                traits=getattr(p_kernel, "traits", {}),
             )
             kernel_definitions.append(kernel_spec)
             if aliasof:

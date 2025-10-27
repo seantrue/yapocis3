@@ -156,6 +156,11 @@ colon, comma, semi = Suppress(":"), Suppress(","), Suppress(";")
 tuple2 = Group(lparen + number + comma + number + rparen)
 tuple3 = Group(lparen + number + comma + number + comma + number + rparen)
 
+# Expression tuple for dispatch_size - captures raw expression strings
+# Matches: (expr, expr) or (expr, expr, expr)
+expr_content = Regex(r"[^,)]+")  # anything except comma or close paren
+tuple_expr = Group(lparen + delimitedList(expr_content) + rparen)
+
 # --- meta { ... } ----------------------------------------------------------
 
 meta_key = oneOf("layout dtype fast_math workgroup class blend cull binning tile_pixels stage_tile")
@@ -203,8 +208,8 @@ kernel_sig = (kernel_kw + PPOptional(Keyword("tiled")("tiled")) + ident("kname")
               lparen + PPOptional(delimitedList(param))("params") + rparen + semi)
 
 trait_key = oneOf("""class axis radius boundary tile halo fastmem taps identity op
-                     deterministic accumulator_dtype texture_input vector_width blend cull""")
-val_token = (ident | number | tuple2 | tuple3 | Group(lparen + integer + comma + integer + rparen))
+                     deterministic accumulator_dtype texture_input vector_width blend cull dispatch_size""")
+val_token = (tuple_expr | tuple2 | tuple3 | Group(lparen + integer + comma + integer + rparen) | number | ident)
 kv_pair   = Group(trait_key("k") + val_token("v") + semi)
 
 backend_block = Group(Keyword("backend") + ident("backend") + lbrace +
@@ -300,19 +305,23 @@ def parse_interface_text(src: str) -> list[InterfaceSpec]:
                 traits: dict[str, Any] = {}
                 backends: dict[str, dict[str, Any]] = {}
 
-                if "withs" in item and item.withs:
-                    wt = item.withs
-                    if "traits" in wt and wt.traits:
-                        for kv in wt.traits:
+                # Extract traits directly from item (pyparsing named group)
+                if "traits" in item and item.traits:
+                    for kv in item.traits:
+                        v = kv.v.asList() if hasattr(kv.v, "asList") else kv.v
+                        # Unwrap nested lists from tuple_expr (dispatch_size)
+                        if isinstance(v, list) and len(v) == 1 and isinstance(v[0], list):
+                            v = v[0]
+                        traits[kv.k] = v
+
+                # Extract backend overrides
+                if "backends" in item and item.backends:
+                    for bb in item.backends:
+                        items = {}
+                        for kv in bb["items"]:
                             v = kv.v.asList() if hasattr(kv.v, "asList") else kv.v
-                            traits[kv.k] = v
-                    if "backends" in wt and wt.backends:
-                        for bb in wt.backends:
-                            items = {}
-                            for kv in bb["items"]:
-                                v = kv.v.asList() if hasattr(kv.v, "asList") else kv.v
-                                items[kv.k] = v
-                            backends[bb.backend] = items
+                            items[kv.k] = v
+                        backends[bb.backend] = items
                 # kernel-level tiled modifier
                 if ("tiled" in item and item.tiled) or ("tiled" in sig and sig.tiled):
                     traits["tiled"] = True

@@ -26,12 +26,14 @@ class Kernel:
         params: list[tuple],
         async_write: bool = False,
         local_size: tuple | None = None,
+        traits: dict | None = None,
     ):
         self.name = name
         self.kernel_manager = kernel_manager
         self.queue = kernel_manager.dmgr.queue
         self.kernel = kernel  # pm.Kernel
         self.params = params
+        self.traits = traits or {}
         self.argspecs = self.posbyname = self.returns = self.global_size = None
         self.async_write = async_write
         self.local_size = local_size
@@ -178,12 +180,21 @@ class Kernel:
             list(args), resident_arrays=resident_arrays
         )
         if self.global_size is None:
-            shape = infer_wh_from_args(args)
-            if len(shape) > 1:
-                global_size = (shape[0] * shape[1], 1)
+            # Check for dispatch_size trait
+            if "dispatch_size" in self.traits:
+                from yapocis.core.dispatch_expr import evaluate_dispatch_size
+                dispatch_expr = self.traits["dispatch_size"]
+                # dispatch_expr is a list of expression strings
+                self.global_size = evaluate_dispatch_size(dispatch_expr, args, self.params)
             else:
-                global_size = shape
-            self.global_size, self.local_size = global_size, None
+                # Default behavior: infer from first array
+                shape = infer_wh_from_args(args)
+                if shape:
+                    if len(shape) > 1:
+                        global_size = (shape[0] * shape[1], 1)
+                    else:
+                        global_size = shape
+                    self.global_size, self.local_size = global_size, None
 
         def show_args():
             print("Python arguments")
