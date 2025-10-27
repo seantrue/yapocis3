@@ -397,3 +397,6 @@ outputs.
 - Never delete the performance database. Update the schema instead.
 - Bound kernels do not take arguments via named arguments, except for meta- kernel control. Library methods may take
   keyword arguments.
+- It looks like you are still explicitly specifying derivable parameters (M=3,N=2, etc)
+Yapocis kernels derive all parameters if possible.
+- OpenCL and Metal are both column major; cuda is row major.
