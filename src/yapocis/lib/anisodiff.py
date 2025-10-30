@@ -2,7 +2,6 @@ from typing import Iterator
 """
 Higher level wrapper for anisotropic filter (Perona/Malik).
 """
-import os
 import numpy as np
 
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
@@ -23,42 +22,16 @@ from .hsi import HSI
 class Anisodiff(BoundKernels):
     INTERFACE = "anisodiff"
     filter_by_depth = ["filterImage", "filterImage2", "filterImage3", "filterImage4"]
-    def __init__(self, device_name:str | None=None, use_package: bool | None = None, **kwargs):
-        super().__init__(device_name=device_name,  **kwargs)
 
-        # Determine whether to use compiled kernel package
-        if use_package is None:
-            use_package = os.environ.get('YAPOCIS_KERNELPACK', '').lower() in ('1', 'true', 'yes')
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.hsi = HSI(device_name=kwargs.get('device_name'))
 
-        # Attempt to use package if requested
-        self.use_package = False
-        if use_package:
-            try:
-                self._init_with_package()
-                self.use_package = True
-            except (ImportError, AttributeError):
-                # Package not available, already using traditional path
-                pass
-
-        # Pass use_package to HSI as well
-        self.hsi = HSI(device_name=device_name, use_package=use_package)
-
-    def _init_with_package(self):
-        """Initialize using compiled kernel package (fast path)."""
-        from yapocis.kernelpack import get_kernelpack, get_kernel_names
-
-        # Get compiled package for current backend
-        self.package = get_kernelpack('anisodiff', self.kmgr)
-        kernel_names = get_kernel_names('anisodiff')
-        self.package.load(kernel_names)
     def select_by_depth(self, image, suffix=""):
         depth = get_image_depth(image)
         attr = self.filter_by_depth[depth - 1]
         attr = f"{attr}{suffix}" if suffix else attr
-        if self.use_package:
-            selected = getattr(self.package, attr, None)
-        else:
-            selected = getattr(self.kmgr, attr, None)
+        selected = getattr(self.kmgr, attr, None)
         if selected is None:
             raise ValueError(f'No {attr} kernel found for array shape {image.shape}')
         return selected
@@ -94,23 +67,13 @@ class Anisodiff(BoundKernels):
             input = image
         output = np.empty_like(input)
 
-        if self.use_package:
-            # Package path: Use kmgr for buffer ops, pass kernel name WITHOUT _res suffix
-            kernel_name = self.filter_by_depth[get_image_depth(image) - 1]
-            self.kmgr.write(input)
-            self.kmgr.write(output)
-            for i in range(n):
-                self.package.filterImage_res(kernel_name, input, scale, step_size, output)
-                input, output = output, input
-            self.kmgr.read(output)
-        else:
-            # Traditional path
-            filter_res.write(input)
-            filter_res.write(output)
-            for i in range(n):
-                filter_res(input, scale, step_size, output, global_size=global_size, resident=(input, output))
-                input, output = output, input
-            filter_res.read(output)
+        # Traditional path
+        filter_res.write(input)
+        filter_res.write(output)
+        for i in range(n):
+            filter_res(input, scale, step_size, output, global_size=global_size, resident=(input, output))
+            input, output = output, input
+        filter_res.read(output)
         if padding_required:
             output = output[:,:,:3]
         return output / 256.

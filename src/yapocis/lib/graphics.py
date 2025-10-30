@@ -159,8 +159,3 @@ class Graphics1(AbstractGraphics, Graphics1Setup):
     CHANNELS=1
     INTERFACE="graphics"
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Graphics1 doesn't have a kernel package yet
-        self.use_package = False
-

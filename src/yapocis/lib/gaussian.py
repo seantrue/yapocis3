@@ -1,6 +1,5 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
-import os
 from yapocis.core.interface_context import load_interface_context
 from yapocis.lib.gradient import Gradient
 from yapocis.lib.operators import Operators
@@ -195,7 +194,6 @@ class Gaussian(BoundKernels):
         self,
         device_name: str | None = None,
         gaussian_weights: list[np.ndarray] | None = None,
-        use_package: bool | None = None,  # Explicit override (True/False/None)
     ):
         self.gaussian_weights = (
             GaussianWeights() if gaussian_weights is None else gaussian_weights
@@ -205,63 +203,14 @@ class Gaussian(BoundKernels):
 
         super(Gaussian, self).__init__(device_name=device_name, convs=convs)
 
-        # Determine whether to use compiled kernel package
-        # 1. Explicit parameter overrides everything
-        # 2. Otherwise check YAPOCIS_KERNELPACK environment variable
-        # 3. Default to False (traditional path)
-        if use_package is None:
-            use_package = os.environ.get('YAPOCIS_KERNELPACK', '').lower() in ('1', 'true', 'yes')
-
-        # Attempt to use package if requested
-        self.use_package = False
-        if use_package:
-            try:
-                self._init_with_package(convs)
-                self.use_package = True
-            except (ImportError, AttributeError) as e:
-                # Package not available or incomplete, fall back to traditional path
-                self._init_with_bound_kernels(convs)
-        else:
-            self._init_with_bound_kernels(convs)
+        # Initialize with traditional path
+        self._init_with_bound_kernels(convs)
 
         # Rest of initialization unchanged
         self.zc = ZC(device_name=device_name)
         self.grad = Gradient(device_name=device_name)
         self.ops = Operators(device_name=device_name)
         self.threshold = 7.5e-06
-
-    def _init_with_package(self, convs):
-        """Initialize using compiled kernel package (fast path)."""
-        # Import package loader and wrapper (may raise ImportError)
-        from yapocis.kernelpack import get_kernelpack
-        from yapocis.core.manager import get_backend
-
-        backend = get_backend()
-
-        # Import backend-specific wrapper
-        if backend == "ocl":
-            from yapocis.kernelpack.ocl.convolvesep import GaussianKernelWrapper
-        elif backend == "metal":
-            from yapocis.kernelpack.metal.convolvesep import GaussianKernelWrapper
-        elif backend == "cuda":
-            from yapocis.kernelpack.cuda.convolvesep import GaussianKernelWrapper
-        elif backend == "numba":
-            from yapocis.kernelpack.numba.convolvesep import GaussianKernelWrapper
-        else:
-            raise ImportError(f"No kernel package available for backend: {backend}")
-
-        # Get compiled package for current backend
-        package = get_kernelpack('convolvesep', self.kmgr)
-
-        # Load all kernel variants
-        kernel_names = [name for name, _ in convs]
-        package.load(kernel_names)
-
-        # Create wrapper objects that mimic old Kernel interface
-        self.gaussian_kernels: list[object] = [
-            GaussianKernelWrapper(package, name, len(conv))
-            for name, conv in convs
-        ]
 
     def _init_with_bound_kernels(self, convs):
         """Initialize using traditional runtime interpretation (slow path)."""
