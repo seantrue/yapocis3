@@ -2,6 +2,7 @@ from typing import Iterator
 """
 Higher level wrapper for anisotropic filter (Perona/Malik).
 """
+import os
 import numpy as np
 
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
@@ -67,12 +68,24 @@ class Anisodiff(BoundKernels):
             input = image
         output = np.empty_like(input)
 
-        # Traditional path
+        # Check if async mode is enabled
+        use_async = os.environ.get('YAPOCIS_ASYNC', '').lower() in ('1', 'true', 'yes')
+
         filter_res.write(input)
         filter_res.write(output)
-        for i in range(n):
-            filter_res(input, scale, step_size, output, global_size=global_size, resident=(input, output))
-            input, output = output, input
+
+        if use_async:
+            # Async path: enqueue all iterations without waiting
+            with self.kmgr.async_mode():
+                for i in range(n):
+                    filter_res(input, scale, step_size, output, global_size=global_size, resident=(input, output))
+                    input, output = output, input
+        else:
+            # Synchronous path (traditional)
+            for i in range(n):
+                filter_res(input, scale, step_size, output, global_size=global_size, resident=(input, output))
+                input, output = output, input
+
         filter_res.read(output)
         if padding_required:
             output = output[:,:,:3]

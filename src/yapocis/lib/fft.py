@@ -21,6 +21,7 @@ Example:
 
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2024.
 
+import os
 import numpy as np
 from typing import Tuple, Optional
 from .bound_kernels import BoundKernels
@@ -363,6 +364,10 @@ class FFT(BoundKernels):
         # Use batch processing for efficiency (70x speedup on Metal, 55x on OpenCL)
         # Only use batch if we have enough windows to amortize overhead
         use_batch = n_windows >= 10 and window_size <= 256
+
+        # Note: Async mode is not beneficial for spectrogram due to data dependencies
+        # The batch_forward and compute_power_spectrum return values that are immediately needed
+        # The batch processing path already provides significant speedup (70x on Metal)
 
         if use_batch:
             # Batch processing path - much faster for many windows

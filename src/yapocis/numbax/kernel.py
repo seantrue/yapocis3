@@ -90,6 +90,11 @@ class Kernel:
                     prepared_args[ip] = None
         # Call underlying function
         rv = self.func(*prepared_args)
+
+        # In async mode, return None for API consistency (even though execution is synchronous)
+        if async_exec:
+            return None
+
         if returns:
             return returns[0] if len(returns) == 1 else tuple(returns)
         return rv

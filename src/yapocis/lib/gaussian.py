@@ -1,5 +1,6 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
+import os
 from yapocis.core.interface_context import load_interface_context
 from yapocis.lib.gradient import Gradient
 from yapocis.lib.operators import Operators
@@ -243,8 +244,20 @@ class Gaussian(BoundKernels):
         b = np.empty_like(aa)
         g.write(aa)
         g.write(b)
-        g.h(aa, b)
-        g.v(b, aa)
+
+        # Check if async mode is enabled
+        use_async = os.environ.get('YAPOCIS_ASYNC', '').lower() in ('1', 'true', 'yes')
+
+        if use_async:
+            # Async path: enqueue both convolutions without waiting
+            with self.kmgr.async_mode():
+                g.h(aa, b)
+                g.v(b, aa)
+        else:
+            # Synchronous path (traditional)
+            g.h(aa, b)
+            g.v(b, aa)
+
         g.read(aa)
         return aa
 
@@ -266,6 +279,10 @@ class Gaussian(BoundKernels):
         res: bool = True,
     ) -> tuple[Image1, Image1, Image1]:
         threshold = self.threshold if threshold is None else threshold
+
+        # Check if async mode is enabled
+        use_async = os.environ.get('YAPOCIS_ASYNC', '').lower() in ('1', 'true', 'yes')
+
         if res:
             g = self.get_gaussian_kernel(scale)
             g1 = self.get_gaussian_kernel(scale + 1)
@@ -278,12 +295,25 @@ class Gaussian(BoundKernels):
             g.write(larger)
             g.write(tmp)
             g.write(zca)
-            g.res(0, a, tmp)
-            g.res(1, tmp, smaller)
-            g1.res(0, a, tmp)
-            g1.res(1, tmp, larger)
-            self.ops.sub_res(larger, smaller, tmp)
-            self.zcs_res(tmp, zca, threshold=threshold)
+
+            if use_async:
+                # Async path: enqueue all operations without waiting
+                with self.kmgr.async_mode():
+                    g.res(0, a, tmp)
+                    g.res(1, tmp, smaller)
+                    g1.res(0, a, tmp)
+                    g1.res(1, tmp, larger)
+                    self.ops.sub_res(larger, smaller, tmp)
+                    self.zcs_res(tmp, zca, threshold=threshold)
+            else:
+                # Synchronous path (traditional)
+                g.res(0, a, tmp)
+                g.res(1, tmp, smaller)
+                g1.res(0, a, tmp)
+                g1.res(1, tmp, larger)
+                self.ops.sub_res(larger, smaller, tmp)
+                self.zcs_res(tmp, zca, threshold=threshold)
+
             g.read(zca)
             g.read(smaller)
         else:
