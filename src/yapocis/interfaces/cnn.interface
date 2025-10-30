@@ -110,6 +110,13 @@ interface cnn {
     with { dispatch_size (sizeof input); };
     extension res as softmax(resident float input, resident float output, sizeof input);
 
+    // Sigmoid activation: 1 / (1 + exp(-x))
+    // Used in: RetinaNet classification head, binary classification
+    // Maps values to range (0, 1)
+    kernel sigmoid(in float input, out_like input, sizeof input);
+    with { dispatch_size (sizeof input); };
+    extension res as sigmoid(resident float input, resident float output, sizeof input);
+
     // =================================================================
     // Pooling Layers
     // =================================================================
@@ -261,4 +268,19 @@ interface cnn {
     extension res as spatial_dropout(resident float input, resident float output,
                                       width_of input, height_of input, depth_of input,
                                       float rate, int seed, int training);
+
+    // =================================================================
+    // Upsampling / Spatial Operations
+    // =================================================================
+
+    // 2x Bilinear Upsampling
+    // Used in: Feature Pyramid Network (FPN), U-Net, semantic segmentation
+    // Doubles spatial dimensions using bilinear interpolation
+    // Input:  (channels, height, width)
+    // Output: (channels, height*2, width*2)
+    kernel upsample_2x(in float input, out float output,
+                       height_of input, depth_of input, width_of input);
+    with { dispatch_size (height_of output, depth_of output, width_of output); };
+    extension res as upsample_2x(resident float input, resident float output,
+                                 height_of input, depth_of input, width_of input);
 };
