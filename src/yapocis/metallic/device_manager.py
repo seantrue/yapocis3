@@ -120,6 +120,19 @@ class DeviceManager(DeviceManagerBase):
             return None
         raise RuntimeError(f"Failed to find a buffer for {op} a@{buffer_id=}")
 
+    def wait_events(self, events: list) -> None:
+        """
+        Wait for a list of Metal command buffers to complete.
+
+        Args:
+            events: List of command buffers or events to wait for
+        """
+        if events:
+            # Metal command buffers have waitUntilCompleted() method
+            for event in events:
+                if hasattr(event, 'waitUntilCompleted'):
+                    event.waitUntilCompleted()
+
 _device_managers: dict[str | int, DeviceManager] = {}
 
 def get_device_manager(device_name: str | int | None = None) -> DeviceManager:

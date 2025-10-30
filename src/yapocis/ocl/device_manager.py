@@ -129,6 +129,16 @@ class DeviceManager(DeviceManagerBase):
             return None
         raise RuntimeError(f"Failed to find a buffer for {op} {a}")
 
+    def wait_events(self, events: list[pyopencl.Event]) -> None:
+        """
+        Wait for a list of OpenCL events to complete.
+
+        Args:
+            events: List of pyopencl.Event objects to wait for
+        """
+        if events:
+            pyopencl.wait_for_events(events)
+
 _device_managers: dict[str, DeviceManager] = {}
 
 def get_device_manager(device_name: str | None = None) -> DeviceManager:

@@ -125,6 +125,25 @@ class DeviceManager(DeviceManagerBase):
             return None
         raise RuntimeError(f"Failed to find a buffer for {op} {a}")
 
+    def wait_events(self, events: list) -> None:
+        """
+        Wait for a list of CUDA streams to complete.
+
+        Args:
+            events: List of CUDA streams to wait for
+        """
+        if events:
+            # CUDA streams have synchronize() method
+            # Collect unique streams
+            unique_streams = set()
+            for event in events:
+                if hasattr(event, 'synchronize'):
+                    unique_streams.add(event)
+
+            # Synchronize each unique stream
+            for stream in unique_streams:
+                stream.synchronize()
+
     def _free_buffer(self, buffer: gpuarray.GPUArray):
         """
         Prepare PyCUDA GPUArray for garbage collection.
