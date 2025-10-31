@@ -42,6 +42,7 @@ The base class handles:
 
 import os
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from typing import Any, Callable, Type
 
 from mako.lookup import TemplateLookup
@@ -171,6 +172,10 @@ class KernelManagerBase(ABC):
         self.runtime = 0.0
         self.async_write = async_write
 
+        # Async execution support
+        self.pending_events: list[Any] = []  # Track pending async operations
+        self._default_async = False  # Default to synchronous execution
+
         # Get backend-specific device manager
         self.dmgr = self.get_device_manager(device_name)
 
@@ -239,6 +244,50 @@ class KernelManagerBase(ABC):
     def reset(self):
         self.dmgr.reset()
         self.runtime = self.calls = 0
+
+    def wait_all(self):
+        """
+        Wait for all pending async operations to complete.
+
+        This method blocks until all kernels enqueued in async mode have finished.
+        Backend-specific implementations should override this to handle their
+        specific event types (OpenCL events, Metal command buffers, CUDA streams).
+
+        The default implementation calls the backend-specific wait method if available.
+        """
+        if self.pending_events:
+            # Call backend-specific wait implementation
+            if hasattr(self.dmgr, 'wait_events'):
+                self.dmgr.wait_events(self.pending_events)
+            self.pending_events.clear()
+
+    @contextmanager
+    def async_mode(self):
+        """
+        Context manager for async kernel execution.
+
+        All kernel calls within this context will be enqueued without waiting,
+        allowing the GPU to execute them asynchronously. The context manager
+        automatically waits for all operations to complete on exit.
+
+        Usage:
+            with prog.async_mode():
+                prog.conv2d_3x3(x, w, b, out, channels)  # Async
+                prog.relu(out, out, size)                # Async
+                prog.max_pool(out, pool, params)         # Async
+            # All operations complete here
+            result = prog.read(pool)
+
+        Yields:
+            self: The kernel manager instance
+        """
+        old_default = self._default_async
+        self._default_async = True
+        try:
+            yield self
+        finally:
+            self.wait_all()
+            self._default_async = old_default
 
     def snapshot(self, **kwargs):
         d = dict(

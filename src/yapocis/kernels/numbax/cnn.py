@@ -366,6 +366,31 @@ def softmax_res(input: np.ndarray, output: np.ndarray, size: int) -> None:
     return None
 
 
+@njit(cache=True, fastmath=True, parallel=True)
+def _sigmoid_njit(input: np.ndarray, output: np.ndarray) -> None:
+    """Sigmoid activation: 1 / (1 + exp(-x))."""
+    inp_flat = input.ravel()
+    out_flat = output.ravel()
+
+    for i in prange(inp_flat.shape[0]):
+        out_flat[i] = 1.0 / (1.0 + np.exp(-inp_flat[i]))
+
+
+def sigmoid(input: np.ndarray, output: np.ndarray, size: int) -> np.ndarray:
+    """Sigmoid activation."""
+    if HAVE_NUMBA:
+        _sigmoid_njit(input, output)
+    else:
+        np.divide(1.0, 1.0 + np.exp(-input), out=output)
+    return output
+
+
+def sigmoid_res(input: np.ndarray, output: np.ndarray, size: int) -> None:
+    """Resident version of sigmoid."""
+    sigmoid(input, output, size)
+    return None
+
+
 # =================================================================
 # Pooling Layers
 # =================================================================
@@ -1351,4 +1376,85 @@ def add_tensors_res(
 ) -> None:
     """Resident version of add_tensors."""
     add_tensors(input1, input2, output, size)
+    return None
+
+
+# =================================================================
+# Upsampling / Spatial Operations
+# =================================================================
+
+@njit(cache=True, fastmath=True, parallel=True)
+def _upsample_2x_njit(input: np.ndarray, output: np.ndarray) -> None:
+    """2x bilinear upsampling."""
+    # Input: (C, H, W)
+    # Output: (C, 2*H, 2*W)
+    C, H_in, W_in = input.shape
+    H_out = H_in * 2
+    W_out = W_in * 2
+
+    for c in prange(C):
+        for y_out in range(H_out):
+            for x_out in range(W_out):
+                # Map output position to input space
+                in_y = (y_out + 0.5) / 2.0 - 0.5
+                in_x = (x_out + 0.5) / 2.0 - 0.5
+
+                # Get integer coordinates
+                y0 = int(np.floor(in_y))
+                x0 = int(np.floor(in_x))
+                y1 = y0 + 1
+                x1 = x0 + 1
+
+                # Clamp to valid range
+                y0 = max(0, min(y0, H_in - 1))
+                y1 = max(0, min(y1, H_in - 1))
+                x0 = max(0, min(x0, W_in - 1))
+                x1 = max(0, min(x1, W_in - 1))
+
+                # Get interpolation weights
+                y_weight = in_y - np.floor(in_y)
+                x_weight = in_x - np.floor(in_x)
+
+                # Read four neighboring pixels
+                val00 = input[c, y0, x0]
+                val01 = input[c, y0, x1]
+                val10 = input[c, y1, x0]
+                val11 = input[c, y1, x1]
+
+                # Bilinear interpolation
+                val0 = val00 * (1.0 - x_weight) + val01 * x_weight
+                val1 = val10 * (1.0 - x_weight) + val11 * x_weight
+                result = val0 * (1.0 - y_weight) + val1 * y_weight
+
+                output[c, y_out, x_out] = result
+
+
+def upsample_2x(
+    input: np.ndarray,
+    output: np.ndarray,
+    input_height: int,
+    input_depth: int,
+    input_width: int
+) -> np.ndarray:
+    """2x bilinear upsampling (FPN, U-Net, semantic segmentation)."""
+    if HAVE_NUMBA:
+        _upsample_2x_njit(input, output)
+    else:
+        # NumPy fallback using scipy or manual implementation
+        from scipy import ndimage
+        C, H, W = input.shape
+        for c in range(C):
+            output[c] = ndimage.zoom(input[c], 2.0, order=1)
+    return output
+
+
+def upsample_2x_res(
+    input: np.ndarray,
+    output: np.ndarray,
+    input_height: int,
+    input_depth: int,
+    input_width: int
+) -> None:
+    """Resident version of upsample_2x."""
+    upsample_2x(input, output, input_height, input_depth, input_width)
     return None

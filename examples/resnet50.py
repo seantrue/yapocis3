@@ -33,10 +33,10 @@ Usage:
 
 from __future__ import annotations
 
+import argparse
 import os
 import sys
 import time
-import argparse
 from pathlib import Path
 from typing import Optional, Tuple, List
 
@@ -45,8 +45,9 @@ from PIL import Image
 
 # Add src to path for development
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+from yapocis.images import images as get_image_list, find_image
 
-from yapocis.lib.resnet50 import ResNet50, load_imagenet_labels
+from yapocis.lib.resnet50 import ResNet50, ResNet50Resident, load_imagenet_labels
 from yapocis.models import models, get_weights_path, get_classes_path
 
 
@@ -59,9 +60,9 @@ def load_image(image_path: str) -> np.ndarray:
 
 
 def resolve_model_paths(
-    weights_arg: Optional[str] = None,
-    labels_arg: Optional[str] = None,
-    model_name: str = 'resnet50'
+        weights_arg: Optional[str] = None,
+        labels_arg: Optional[str] = None,
+        model_name: str = 'resnet50'
 ) -> Tuple[str, str]:
     """
     Resolve paths to weights and labels files.
@@ -126,11 +127,11 @@ def resolve_model_paths(
 
 
 def classify_image(
-    resnet: ResNet50,
-    image_path: str,
-    labels: List[str],
-    top_k: int = 5,
-    show_embeddings: bool = False
+        resnet: ResNet50,
+        image_path: str,
+        labels: List[str],
+        top_k: int = 5,
+        show_embeddings: bool = False
 ) -> None:
     """Classify single image and print results."""
     print(f"\nClassifying: {image_path}")
@@ -146,7 +147,7 @@ def classify_image(
     # Print top predictions
     print(f"Top {top_k} predictions:")
     for i, (idx, prob) in enumerate(zip(top_indices, top_probs), 1):
-        print(f"  {i}. {labels[idx]:25s} {prob*100:6.2f}%")
+        print(f"  {i}. {labels[idx]:25s} {prob * 100:6.2f}%")
 
     # Show embeddings if requested
     if show_embeddings:
@@ -159,37 +160,36 @@ def classify_image(
 
 
 def test_mode(
-    resnet: ResNet50,
-    labels: List[str],
-    max_images: Optional[int] = None
+        resnet: ResNet50,
+        labels: List[str],
+        max_images: Optional[int] = None
 ) -> None:
-    """Test mode: process all image assets."""
-    # Try to import image assets
-    try:
-        from yapocis.images import images, image
-    except ImportError:
-        print("ERROR: Image assets not available. Set YAPOCIS_PROJECT=external")
-        return
+    """
+    Test VGG16 on all available image assets.
 
-    # Get available images
-    available_images = images()
-    if not available_images:
-        print("No image assets found")
+    Args:
+        vgg: VGG16 model instance
+        labels: ImageNet class labels
+        show_embeddings: If True, show embeddings instead of classification
+        max_images: Maximum number of images to process (None for all)
+    """
+    image_names = get_image_list()
+
+    if not image_names:
+        print("No image assets found!")
+        print("Image assets should be in src/yapocis/images/")
         return
 
     if max_images:
-        available_images = available_images[:max_images]
+        image_names = image_names[:max_images]
 
-    print(f"Testing ResNet50 on {len(available_images)} images\n")
-
-    # Process images
-    total_time = 0
+    total_time = 0.0
     successful = 0
 
-    for i, img_name in enumerate(available_images, 1):
+    for i, img_name in enumerate(image_names, 1):
         try:
-            img_path = image(img_name)
-            print(f"[{i}/{len(available_images)}] {img_name}")
+            img_path = find_image(img_name)
+            print(f"[{i}/{len(image_names)}] {img_name}")
 
             img = load_image(str(img_path))
             start_time = time.time()
@@ -200,7 +200,7 @@ def test_mode(
             # Print top prediction
             top_idx = top_indices[0]
             top_prob = top_probs[0]
-            print(f"  → {labels[top_idx]:30s} {top_prob*100:6.2f}% ({elapsed:.1f} ms)\n")
+            print(f"  → {labels[top_idx]:30s} {top_prob * 100:6.2f}% ({elapsed:.1f} ms)\n")
 
             successful += 1
 
@@ -213,7 +213,7 @@ def test_mode(
         avg_time = total_time / successful
         throughput = 1000.0 / avg_time if avg_time > 0 else 0
         print("=" * 60)
-        print(f"Processed {successful}/{len(available_images)} images successfully")
+        print(f"Processed {successful}/{len(image_names)} images successfully")
         print(f"Average time per image: {avg_time:.2f} ms")
         print(f"Throughput: {throughput:.2f} images/sec")
         print("=" * 60)
@@ -248,6 +248,7 @@ Examples:
     parser.add_argument('--labels', help='Path to classes.txt (optional, auto-detected)')
     parser.add_argument('--top-k', type=int, default=5, help='Number of top predictions (default: 5)')
     parser.add_argument('--embeddings', action='store_true', help='Show feature embeddings')
+    parser.add_argument('--resident', action='store_true', help='Use GPU-resident buffers for better performance')
     parser.add_argument('--test', action='store_true', help='Test mode: process all image assets')
     parser.add_argument('--max-images', type=int, help='Max images to process in test mode')
     parser.add_argument('--model', default='resnet50', help='Model name for asset manager (default: resnet50)')
@@ -272,8 +273,12 @@ Examples:
         return 1
 
     # Load model and labels
-    print("Loading ResNet50...")
-    resnet = ResNet50(weights_path)
+    if args.resident:
+        print("Loading ResNet50Resident (GPU-resident buffers)...")
+        resnet = ResNet50Resident(weights_path)
+    else:
+        print("Loading ResNet50...")
+        resnet = ResNet50(weights_path)
     labels = load_imagenet_labels(labels_path)
     print(f"Loaded {len(labels)} ImageNet class labels\n")
 

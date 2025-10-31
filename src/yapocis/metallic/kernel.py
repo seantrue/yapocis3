@@ -175,6 +175,10 @@ class Kernel:
         assert not isinstance(self.global_size, float) and not isinstance(
             self.local_size, float
         ), f"{self.global_size},{self.local_size}"
+
+        # Check for async execution mode
+        async_exec = kwargs.pop("async_exec", self.kernel_manager._default_async)
+
         resident_arrays = kwargs.pop("resident", None)
         prepared_args = self.prepare_arguments(
             list(args), resident_arrays=resident_arrays
@@ -247,7 +251,8 @@ class Kernel:
                 tgs = (int(ls[0]), int(ls[1]), int(ls[2]))
 
         try:
-            self.kernel(
+            # Metal kernel execution returns a command buffer (if available)
+            cmd_buffer = self.kernel(
                 self.kernel_manager.dmgr.queue,
                 grid,
                 tgs,
@@ -258,9 +263,19 @@ class Kernel:
             print(f"RuntimeError calling {self.name}: {e}")
             show_args()
             raise
-        rval = self.prepare_return()
-        self.kernel_manager.runtime += time.time() - t
-        return rval
+
+        # Handle synchronization based on async mode
+        if async_exec:
+            # Async mode: track command buffer for later synchronization
+            if cmd_buffer is not None:
+                self.kernel_manager.pending_events.append(cmd_buffer)
+            self.kernel_manager.runtime += time.time() - t
+            return None  # Can't return results yet - kernel still executing
+        else:
+            # Synchronous mode: wait and return results (backward compatible)
+            rval = self.prepare_return()
+            self.kernel_manager.runtime += time.time() - t
+            return rval
 
     def prepare_return(self) -> Union[Any, tuple[Any], None]:
         """Takes the return value buffers (out and outlike) and prepares proper Numpy arrays"""

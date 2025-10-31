@@ -185,6 +185,10 @@ class Kernel:
         assert not isinstance(self.global_size, float) and not isinstance(
             self.local_size, float
         ), f"{self.global_size},{self.local_size}"
+
+        # Check for async execution mode
+        async_exec = kwargs.pop("async_exec", self.kernel_manager._default_async)
+
         resident_arrays = kwargs.pop("resident", None)
         prepared_args = self.prepare_arguments(args, resident_arrays=resident_arrays)
 
@@ -221,19 +225,27 @@ class Kernel:
             print(f"RuntimeError calling {self.name}")
             show_args()
             raise
-        poll = kwargs.pop("poll", None)
-        if poll:
-            while True:
-                status = self.evt.get_info(pyopencl.event_info.COMMAND_EXECUTION_STATUS)
-                if status == pyopencl.command_execution_status.COMPLETE:
-                    break
-                time.sleep(poll)
+        # Handle synchronization based on async mode
+        if async_exec:
+            # Async mode: don't wait, track event for later
+            self.kernel_manager.pending_events.append(self.evt)
+            self.kernel_manager.runtime += time.time() - t
+            return None  # Can't return results yet - kernel still executing
         else:
-            self.evt.wait()
-        # pyopencl.enqueue_barrier(self.queue)
-        rval = self.prepare_return()
-        self.kernel_manager.runtime += time.time() - t
-        return rval
+            # Synchronous mode: wait for completion (backward compatible)
+            poll = kwargs.pop("poll", None)
+            if poll:
+                while True:
+                    status = self.evt.get_info(pyopencl.event_info.COMMAND_EXECUTION_STATUS)
+                    if status == pyopencl.command_execution_status.COMPLETE:
+                        break
+                    time.sleep(poll)
+            else:
+                self.evt.wait()
+            # pyopencl.enqueue_barrier(self.queue)
+            rval = self.prepare_return()
+            self.kernel_manager.runtime += time.time() - t
+            return rval
 
     def prepare_return(self) -> Union[Any, tuple[Any], None]:
         """Takes the return value buffers (out and outlike) and prepares proper Numpy arrays"""

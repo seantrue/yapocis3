@@ -195,7 +195,6 @@ class Gaussian(BoundKernels):
         self,
         device_name: str | None = None,
         gaussian_weights: list[np.ndarray] | None = None,
-        use_package: bool | None = None,  # Explicit override (True/False/None)
     ):
         self.gaussian_weights = (
             GaussianWeights() if gaussian_weights is None else gaussian_weights
@@ -205,63 +204,14 @@ class Gaussian(BoundKernels):
 
         super(Gaussian, self).__init__(device_name=device_name, convs=convs)
 
-        # Determine whether to use compiled kernel package
-        # 1. Explicit parameter overrides everything
-        # 2. Otherwise check YAPOCIS_KERNELPACK environment variable
-        # 3. Default to False (traditional path)
-        if use_package is None:
-            use_package = os.environ.get('YAPOCIS_KERNELPACK', '').lower() in ('1', 'true', 'yes')
-
-        # Attempt to use package if requested
-        self.use_package = False
-        if use_package:
-            try:
-                self._init_with_package(convs)
-                self.use_package = True
-            except (ImportError, AttributeError) as e:
-                # Package not available or incomplete, fall back to traditional path
-                self._init_with_bound_kernels(convs)
-        else:
-            self._init_with_bound_kernels(convs)
+        # Initialize with traditional path
+        self._init_with_bound_kernels(convs)
 
         # Rest of initialization unchanged
         self.zc = ZC(device_name=device_name)
         self.grad = Gradient(device_name=device_name)
         self.ops = Operators(device_name=device_name)
         self.threshold = 7.5e-06
-
-    def _init_with_package(self, convs):
-        """Initialize using compiled kernel package (fast path)."""
-        # Import package loader and wrapper (may raise ImportError)
-        from yapocis.kernelpack import get_kernelpack
-        from yapocis.core.manager import get_backend
-
-        backend = get_backend()
-
-        # Import backend-specific wrapper
-        if backend == "ocl":
-            from yapocis.kernelpack.ocl.convolvesep import GaussianKernelWrapper
-        elif backend == "metal":
-            from yapocis.kernelpack.metal.convolvesep import GaussianKernelWrapper
-        elif backend == "cuda":
-            from yapocis.kernelpack.cuda.convolvesep import GaussianKernelWrapper
-        elif backend == "numba":
-            from yapocis.kernelpack.numba.convolvesep import GaussianKernelWrapper
-        else:
-            raise ImportError(f"No kernel package available for backend: {backend}")
-
-        # Get compiled package for current backend
-        package = get_kernelpack('convolvesep', self.kmgr)
-
-        # Load all kernel variants
-        kernel_names = [name for name, _ in convs]
-        package.load(kernel_names)
-
-        # Create wrapper objects that mimic old Kernel interface
-        self.gaussian_kernels: list[object] = [
-            GaussianKernelWrapper(package, name, len(conv))
-            for name, conv in convs
-        ]
 
     def _init_with_bound_kernels(self, convs):
         """Initialize using traditional runtime interpretation (slow path)."""
@@ -294,8 +244,20 @@ class Gaussian(BoundKernels):
         b = np.empty_like(aa)
         g.write(aa)
         g.write(b)
-        g.h(aa, b)
-        g.v(b, aa)
+
+        # Check if async mode is enabled
+        use_async = os.environ.get('YAPOCIS_ASYNC', '').lower() in ('1', 'true', 'yes')
+
+        if use_async:
+            # Async path: enqueue both convolutions without waiting
+            with self.kmgr.async_mode():
+                g.h(aa, b)
+                g.v(b, aa)
+        else:
+            # Synchronous path (traditional)
+            g.h(aa, b)
+            g.v(b, aa)
+
         g.read(aa)
         return aa
 
@@ -317,6 +279,10 @@ class Gaussian(BoundKernels):
         res: bool = True,
     ) -> tuple[Image1, Image1, Image1]:
         threshold = self.threshold if threshold is None else threshold
+
+        # Check if async mode is enabled
+        use_async = os.environ.get('YAPOCIS_ASYNC', '').lower() in ('1', 'true', 'yes')
+
         if res:
             g = self.get_gaussian_kernel(scale)
             g1 = self.get_gaussian_kernel(scale + 1)
@@ -329,12 +295,25 @@ class Gaussian(BoundKernels):
             g.write(larger)
             g.write(tmp)
             g.write(zca)
-            g.res(0, a, tmp)
-            g.res(1, tmp, smaller)
-            g1.res(0, a, tmp)
-            g1.res(1, tmp, larger)
-            self.ops.sub_res(larger, smaller, tmp)
-            self.zcs_res(tmp, zca, threshold=threshold)
+
+            if use_async:
+                # Async path: enqueue all operations without waiting
+                with self.kmgr.async_mode():
+                    g.res(0, a, tmp)
+                    g.res(1, tmp, smaller)
+                    g1.res(0, a, tmp)
+                    g1.res(1, tmp, larger)
+                    self.ops.sub_res(larger, smaller, tmp)
+                    self.zcs_res(tmp, zca, threshold=threshold)
+            else:
+                # Synchronous path (traditional)
+                g.res(0, a, tmp)
+                g.res(1, tmp, smaller)
+                g1.res(0, a, tmp)
+                g1.res(1, tmp, larger)
+                self.ops.sub_res(larger, smaller, tmp)
+                self.zcs_res(tmp, zca, threshold=threshold)
+
             g.read(zca)
             g.read(smaller)
         else:

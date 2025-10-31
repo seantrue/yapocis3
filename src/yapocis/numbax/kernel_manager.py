@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+from contextlib import contextmanager
 from typing import Callable, Optional
 
 from mako.template import Template
@@ -29,6 +30,9 @@ class KernelManager:
         self.runtime = 0.0
         self.context = context
         self.snapshots = []
+        # Async execution support (no-op for CPU backend)
+        self.pending_events = []
+        self._default_async = False
         # Load module with Python implementations
         mod_name = f"yapocis.kernels.numbax.{interface.name}"
         try:
@@ -55,7 +59,7 @@ class KernelManager:
                     fn = _stub
             else:
                 fn = getattr(mod, func_name)
-            self.callable[k.name] = Kernel(name, fn, k.parameters)
+            self.callable[k.name] = Kernel(name, fn, k.parameters, kernel_manager=self)
 
     def _make_dynamic_fn(self, iface_name: str, kernel, mod):
         """Create missing functions for parameterized interfaces on demand.
@@ -159,6 +163,40 @@ class KernelManager:
 
     def write(self, a, **kwargs):
         return a
+
+    def wait_all(self):
+        """
+        Wait for all pending async operations to complete.
+
+        No-op for Numba backend since execution is synchronous on CPU.
+        Provided for API compatibility with GPU backends.
+        """
+        # CPU backend executes synchronously - nothing to wait for
+        self.pending_events.clear()
+
+    @contextmanager
+    def async_mode(self):
+        """
+        Context manager for async kernel execution.
+
+        No-op for Numba backend since CPU execution is inherently synchronous.
+        Provided for API compatibility with GPU backends.
+
+        Usage:
+            with prog.async_mode():
+                prog.kernel1(...)  # Still executes synchronously
+                prog.kernel2(...)  # Still executes synchronously
+
+        Yields:
+            self: The kernel manager instance
+        """
+        old_default = self._default_async
+        self._default_async = True
+        try:
+            yield self
+        finally:
+            self.wait_all()
+            self._default_async = old_default
 
     @classmethod
     def import_program(

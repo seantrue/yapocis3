@@ -163,6 +163,13 @@ class VGG16:
         Returns:
             Output feature map after convolutions and pooling
         """
+        # Check if async mode is enabled
+        use_async = os.environ.get('YAPOCIS_ASYNC', '').lower() in ('1', 'true', 'yes')
+
+        if use_async:
+            return self._conv_block_async(input_tensor, block_num, num_layers, out_channels)
+
+        # Synchronous path (original implementation)
         x = np.ascontiguousarray(input_tensor)
         C_in, H, W = x.shape
 
@@ -189,6 +196,82 @@ class VGG16:
         x = self.prog.max_pool_2x2(x, pool_buf)
 
         return x
+
+    def _conv_block_async(
+        self,
+        input_tensor: np.ndarray,
+        block_num: int,
+        num_layers: int,
+        out_channels: int
+    ) -> np.ndarray:
+        """
+        Execute a VGG convolutional block using async execution.
+
+        Uses resident buffers to eliminate synchronization overhead between kernels.
+        Expected speedup: 1.08-1.12x per block.
+
+        Args:
+            input_tensor: Input feature map (C, H, W)
+            block_num: Block number (1-5)
+            num_layers: Number of conv layers in block
+            out_channels: Number of output channels
+
+        Returns:
+            Output feature map after convolutions and pooling
+        """
+        C_in, H, W = input_tensor.shape
+
+        # Pre-allocate all intermediate buffers for this block
+        # For num_layers convolutions, we need:
+        # - conv output buffers (one per layer)
+        # - relu output buffers (one per layer)
+        # - pool output buffer (one for the block)
+        conv_buffers = []
+        relu_buffers = []
+
+        for i in range(num_layers):
+            conv_buffers.append(np.ascontiguousarray(np.zeros((out_channels, H, W), dtype=np.float32)))
+            relu_buffers.append(np.ascontiguousarray(np.zeros((out_channels, H, W), dtype=np.float32)))
+
+        H_out = H // 2
+        W_out = W // 2
+        pool_buf = np.ascontiguousarray(np.zeros((out_channels, H_out, W_out), dtype=np.float32))
+
+        # Ensure input is contiguous
+        input_buf = np.ascontiguousarray(input_tensor)
+
+        # Write all buffers to GPU
+        self.prog.write(input_buf)
+        for buf in conv_buffers + relu_buffers:
+            self.prog.write(buf)
+        self.prog.write(pool_buf)
+
+        # Async execution - enqueue all operations without synchronization
+        with self.prog.async_mode():
+            current_input = input_buf
+
+            for i in range(num_layers):
+                conv_idx = self._get_conv_layer_index(block_num, i + 1)
+                # Note: weights and biases are assumed to already be resident on GPU
+                # They are passed as-is without writing
+                weights = self.weights[f"conv{conv_idx}_weights"]
+                bias = self.weights[f"conv{conv_idx}_bias"]
+
+                # Use resident buffer variants to avoid synchronization
+                self.prog.conv2d_3x3_res(
+                    current_input, weights, bias, conv_buffers[i], out_channels
+                )
+                self.prog.relu_activation_res(conv_buffers[i], relu_buffers[i])
+
+                # Next layer uses this layer's relu output
+                current_input = relu_buffers[i]
+
+            # Max pooling on final relu output
+            self.prog.max_pool_2x2_res(relu_buffers[-1], pool_buf)
+
+        # Single synchronization point - read final result
+        self.prog.read(pool_buf)
+        return pool_buf
 
     def forward(self, image: np.ndarray, stop_at: Optional[str] = None) -> np.ndarray:
         """
@@ -303,18 +386,22 @@ class VGG16Resident(VGG16):
     VGG16 with GPU-resident buffers for maximum performance.
 
     This version keeps all intermediate activations on GPU to avoid
-    unnecessary data transfers. Requires more GPU memory but provides
-    better throughput for batch inference.
+    unnecessary data transfers. Pre-allocates all buffers and uses
+    resident buffer kernels (_res variants) throughout.
+
+    Provides better throughput for batch inference and works seamlessly
+    with async execution mode.
     """
 
     def __init__(self, weights_path: Optional[str] = None):
         super().__init__(weights_path)
         self.buffers: Optional[dict] = None
+        self._buffers_written = False
 
     def allocate_buffers(self) -> None:
         """Pre-allocate all intermediate activation buffers."""
         self.buffers = {
-            # Conv blocks
+            # Conv blocks - using naming: conv{block}_{layer}
             'conv1_1': np.zeros((64, 224, 224), dtype=np.float32),
             'conv1_2': np.zeros((64, 224, 224), dtype=np.float32),
             'pool1': np.zeros((64, 112, 112), dtype=np.float32),
@@ -344,69 +431,221 @@ class VGG16Resident(VGG16):
             'fc7': np.zeros(4096, dtype=np.float32),
             'fc8': np.zeros(1000, dtype=np.float32),
         }
-        print("Allocated GPU-resident buffers for VGG16")
+        for _, weight in self.weights.items():
+            self.prog.write(weight)
 
-    def forward_resident(self, image: np.ndarray, stop_at: Optional[str] = None) -> np.ndarray:
+    def _ensure_buffers_on_gpu(self) -> None:
+        """Write all buffers to GPU once (lazy initialization)."""
+        if self._buffers_written:
+            return
+
+        if self.buffers is None:
+            self.allocate_buffers()
+
+        # Write all buffers to GPU once
+        for buf in self.buffers.values():
+            self.prog.write(buf)
+
+        self._buffers_written = True
+
+    def _conv_block(
+        self,
+        input_tensor: np.ndarray,
+        block_num: int,
+        num_layers: int,
+        out_channels: int
+    ) -> np.ndarray:
         """
-        Forward pass using resident buffers.
+        Execute a VGG convolutional block using pre-allocated resident buffers.
+
+        Overrides parent method to use VGG16Resident's pre-allocated buffers.
+        This method runs synchronously - for async mode, forward() wraps all blocks
+        in a single async context.
+
+        Args:
+            input_tensor: Input feature map (C, H, W)
+            block_num: Block number (1-5)
+            num_layers: Number of conv layers in block
+            out_channels: Number of output channels
+
+        Returns:
+            Output feature map after convolutions and pooling
+        """
+        self._ensure_buffers_on_gpu()
+
+        # Get buffer names for this block
+        buffer_names = []
+        for i in range(1, num_layers + 1):
+            buffer_names.append(f'conv{block_num}_{i}')
+
+        pool_buffer_name = f'pool{block_num}'
+
+        # Write input to GPU
+        input_buf = np.ascontiguousarray(input_tensor)
+        self.prog.write(input_buf)
+
+        # Execute block (synchronous)
+        current_input = input_buf
+
+        for i in range(num_layers):
+            conv_idx = self._get_conv_layer_index(block_num, i + 1)
+            weights = self.weights[f"conv{conv_idx}_weights"]
+            bias = self.weights[f"conv{conv_idx}_bias"]
+
+            # Conv and ReLU in-place
+            conv_buf = self.buffers[buffer_names[i]]
+            self.prog.conv2d_3x3_res(
+                current_input, weights, bias, conv_buf, out_channels
+            )
+            self.prog.relu_activation_res(conv_buf, conv_buf)
+
+            current_input = conv_buf
+
+        # Max pooling
+        pool_buf = self.buffers[pool_buffer_name]
+        self.prog.max_pool_2x2_res(current_input, pool_buf)
+
+        # Read result
+        self.prog.read(pool_buf)
+        return pool_buf
+
+    def forward(self, image: np.ndarray, stop_at: Optional[str] = None) -> np.ndarray:
+        """
+        Forward pass through VGG16 using resident buffers.
+
+        Overrides parent method to use pre-allocated buffers throughout.
 
         Args:
             image: Preprocessed image (3, 224, 224)
-            stop_at: Optional layer name to stop at
+            stop_at: Optional layer name to stop at ('fc6', 'fc7', or None for full network)
 
         Returns:
             Network output at specified layer
         """
         self._check_weights()
+        self._ensure_buffers_on_gpu()
 
-        if self.buffers is None:
-            self.allocate_buffers()
+        # Check if async mode is enabled
+        use_async = os.environ.get('YAPOCIS_ASYNC', '').lower() in ('1', 'true', 'yes')
 
-        # Use _res variants of kernels for resident buffer operations
-        # Note: This is a simplified version. Full resident implementation
-        # would require backend-specific buffer management.
+        # Write input image
+        input_buf = np.ascontiguousarray(image)
+        self.prog.write(input_buf)
 
-        # For now, fall back to standard forward pass
-        # TODO: Implement full resident buffer support with backend manager
-        return self.forward(image, stop_at)
+        if use_async:
+            # Async execution - single context for all conv blocks
+            with self.prog.async_mode():
+                # Block 1: 64 channels (conv0, conv1)
+                x = self._run_conv_block_async(input_buf, 1, 2, 64)
 
-    def predict_resident(self, image: np.ndarray, top_k: int = 5) -> Tuple[np.ndarray, np.ndarray]:
+                # Block 2: 128 channels (conv2, conv3)
+                x = self._run_conv_block_async(x, 2, 2, 128)
+
+                # Block 3: 256 channels (conv4, conv5, conv6)
+                x = self._run_conv_block_async(x, 3, 3, 256)
+
+                # Block 4: 512 channels (conv7, conv8, conv9)
+                x = self._run_conv_block_async(x, 4, 3, 512)
+
+                # Block 5: 512 channels (conv10, conv11, conv12)
+                x = self._run_conv_block_async(x, 5, 3, 512)
+
+            # Read final conv output
+            self.prog.read(x)
+        else:
+            # Synchronous execution - use _conv_block which handles sync mode
+            x = self._conv_block(input_buf, 1, 2, 64)
+            x = self._conv_block(x, 2, 2, 128)
+            x = self._conv_block(x, 3, 3, 256)
+            x = self._conv_block(x, 4, 3, 512)
+            x = self._conv_block(x, 5, 3, 512)
+
+        # Flatten
+        flatten_buf = self.buffers['flatten']
+        flatten_buf[:] = x.reshape(-1)
+        # Write flattened data to GPU
+        self.prog.write(flatten_buf)
+
+        # FC layers
+        fc6_buf = self.buffers['fc6']
+        fc7_buf = self.buffers['fc7']
+        fc8_buf = self.buffers['fc8']
+
+        # FC6
+        fc6_W = self.weights['fc0_weights']
+        fc6_b = self.weights['fc0_bias']
+        self.prog.fully_connected_res(flatten_buf, fc6_W, fc6_b, fc6_buf)
+        self.prog.relu_activation_res(fc6_buf, fc6_buf)
+
+        if stop_at == 'fc6':
+            self.prog.read(fc6_buf)
+            return fc6_buf.copy()
+
+        # FC7
+        fc7_W = self.weights['fc1_weights']
+        fc7_b = self.weights['fc1_bias']
+        self.prog.fully_connected_res(fc6_buf, fc7_W, fc7_b, fc7_buf)
+        self.prog.relu_activation_res(fc7_buf, fc7_buf)
+
+        if stop_at == 'fc7':
+            self.prog.read(fc7_buf)
+            return fc7_buf.copy()
+
+        # FC8
+        fc8_W = self.weights['fc2_weights']
+        fc8_b = self.weights['fc2_bias']
+        self.prog.fully_connected_res(fc7_buf, fc8_W, fc8_b, fc8_buf)
+
+        # Softmax
+        self.prog.softmax_res(fc8_buf, fc8_buf)
+
+        # Read final result
+        self.prog.read(fc8_buf)
+        return fc8_buf.copy()
+
+    def _run_conv_block_async(
+        self,
+        input_tensor: np.ndarray,
+        block_num: int,
+        num_layers: int,
+        out_channels: int
+    ) -> np.ndarray:
         """
-        Classify using resident buffers.
+        Helper for async conv block execution within a larger async context.
 
-        Args:
-            image: Input image (H, W, 3)
-            top_k: Number of top predictions
+        This is called from within forward()'s async_mode context, so it doesn't
+        create its own async context.
 
-        Returns:
-            Tuple of (class_indices, probabilities)
+        Returns the buffer reference (not a copy) for chaining.
         """
-        preprocessed = self.preprocess_image(image)
-        probs = self.forward_resident(preprocessed)
+        # Get buffer names for this block
+        buffer_names = []
+        for i in range(1, num_layers + 1):
+            buffer_names.append(f'conv{block_num}_{i}')
 
-        top_indices = np.argsort(probs)[::-1][:top_k]
-        top_probs = probs[top_indices]
+        pool_buffer_name = f'pool{block_num}'
 
-        return top_indices, top_probs
+        current_input = input_tensor
 
-    def extract_features_resident(self, image: np.ndarray, layer: str = 'fc6') -> np.ndarray:
-        """
-        Extract features using resident buffers.
+        for i in range(num_layers):
+            conv_idx = self._get_conv_layer_index(block_num, i + 1)
+            weights = self.weights[f"conv{conv_idx}_weights"]
+            bias = self.weights[f"conv{conv_idx}_bias"]
 
-        Args:
-            image: Input image (H, W, 3)
-            layer: Layer to extract from ('fc6' or 'fc7')
+            # Conv to buffer, then ReLU in-place
+            conv_buf = self.buffers[buffer_names[i]]
+            self.prog.conv2d_3x3_res(
+                current_input, weights, bias, conv_buf, out_channels
+            )
+            self.prog.relu_activation_res(conv_buf, conv_buf)
 
-        Returns:
-            Feature vector (4096-dimensional)
-        """
-        if layer not in ['fc6', 'fc7']:
-            raise ValueError(f"Layer must be 'fc6' or 'fc7', got: {layer}")
+            current_input = conv_buf
 
-        preprocessed = self.preprocess_image(image)
-        features = self.forward_resident(preprocessed, stop_at=layer)
+        # Max pooling
+        pool_buf = self.buffers[pool_buffer_name]
+        self.prog.max_pool_2x2_res(current_input, pool_buf)
 
-        return features
+        return pool_buf
 
 
 def load_imagenet_labels(path: str = None, model_name: str = 'vgg16') -> list[str]:

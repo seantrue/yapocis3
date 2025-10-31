@@ -181,6 +181,10 @@ class Kernel:
         assert not isinstance(self.global_size, float) and not isinstance(
             self.local_size, float
         ), f"{self.global_size},{self.local_size}"
+
+        # Check for async execution mode
+        async_exec = kwargs.pop("async_exec", self.kernel_manager._default_async)
+
         resident_arrays = kwargs.pop("resident", None)
         prepared_args = self.prepare_arguments(args, resident_arrays=resident_arrays)
 
@@ -222,16 +226,24 @@ class Kernel:
             show_args()
             raise
 
-        poll = kwargs.pop("poll", None)
-        if poll:
-            # Polling not typically needed with streams, but we can wait
-            self.stream.synchronize()
+        # Handle synchronization based on async mode
+        if async_exec:
+            # Async mode: don't synchronize, track stream for later
+            self.kernel_manager.pending_events.append(self.stream)
+            self.kernel_manager.runtime += time.time() - t
+            return None  # Can't return results yet - kernel still executing
         else:
-            self.stream.synchronize()
+            # Synchronous mode: wait for stream completion (backward compatible)
+            poll = kwargs.pop("poll", None)
+            if poll:
+                # Polling not typically needed with streams, but we can wait
+                self.stream.synchronize()
+            else:
+                self.stream.synchronize()
 
-        rval = self.prepare_return()
-        self.kernel_manager.runtime += time.time() - t
-        return rval
+            rval = self.prepare_return()
+            self.kernel_manager.runtime += time.time() - t
+            return rval
 
     def _calculate_grid_block(self):
         """Calculate CUDA grid and block dimensions from global_size and local_size"""

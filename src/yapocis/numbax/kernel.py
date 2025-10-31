@@ -11,10 +11,11 @@ class Kernel:
     for out_like and handling derived dims.
     """
 
-    def __init__(self, name: str, func, params: list[tuple]):
+    def __init__(self, name: str, func, params: list[tuple], kernel_manager=None):
         self.name = name
         self.func = func
         self.params = params  # list of KernelParamSpec-like tuples/objects
+        self.kernel_manager = kernel_manager
         # Normalize to objects with attributes used below
         self._norm = []
         for p in params:
@@ -30,6 +31,11 @@ class Kernel:
         return a
 
     def __call__(self, *args: tuple[Any], **kwargs):
+        # Consume async_exec parameter for API compatibility (no-op for CPU)
+        # Honor kernel_manager's default async mode if available
+        default_async = self.kernel_manager._default_async if self.kernel_manager else False
+        async_exec = kwargs.pop("async_exec", default_async)
+
         prepared_args: list[Any] = [None] * len(self._norm)
         returns: list[np.ndarray] = []
         # Build map from logical arg name to user-supplied arg position
@@ -84,6 +90,11 @@ class Kernel:
                     prepared_args[ip] = None
         # Call underlying function
         rv = self.func(*prepared_args)
+
+        # In async mode, return None for API consistency (even though execution is synchronous)
+        if async_exec:
+            return None
+
         if returns:
             return returns[0] if len(returns) == 1 else tuple(returns)
         return rv

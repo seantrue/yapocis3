@@ -242,6 +242,20 @@ __kernel void softmax(
     output[gid] = exp(input[gid] - max_val) / sum;
 }
 
+// Sigmoid Activation (RetinaNet, binary classification)
+__kernel void sigmoid(
+    __global const float* input,
+    __global float* output,
+    const uint size
+) {
+    const uint gid = get_global_id(0);
+
+    if (gid >= size)
+        return;
+
+    output[gid] = 1.0f / (1.0f + exp(-input[gid]));
+}
+
 // =================================================================
 // Pooling Layers
 // =================================================================
@@ -689,8 +703,9 @@ __kernel void conv2d_3x3_stride2(
     const uint out_w = get_global_id(1);
     const uint out_c = get_global_id(2);
 
-    const uint output_height = input_height / 2;
-    const uint output_width = input_width / 2;
+    // Output size with padding=1, kernel=3, stride=2: (input - 1) / 2 + 1
+    const uint output_height = (input_height - 1) / 2 + 1;
+    const uint output_width = (input_width - 1) / 2 + 1;
 
     if (out_h >= output_height || out_w >= output_width || out_c >= output_channels)
         return;
@@ -774,4 +789,40 @@ __kernel void add_tensors(
     if (gid >= size) return;
 
     output[gid] = input1[gid] + input2[gid];
+}
+
+// =================================================================
+// Upsampling / Spatial Operations
+// =================================================================
+
+// 2x Bilinear Upsampling (FPN, U-Net, semantic segmentation)
+__kernel void upsample_2x(
+    __global const float* input,
+    __global float* output,
+    const uint input_height,
+    const uint input_width,
+    const uint channels
+) {
+    // dispatch_size is (height_of output, depth_of output, width_of output)
+    // which maps to (out_h, channels, out_w)
+    const uint out_h = get_global_id(0);
+    const uint c = get_global_id(1);
+    const uint out_w = get_global_id(2);
+
+    const uint output_height = input_height * 2;
+    const uint output_width = input_width * 2;
+
+    if (out_h >= output_height || c >= channels || out_w >= output_width)
+        return;
+
+    // Nearest neighbor interpolation (matches torchvision FPN)
+    // Each input pixel maps to 4 output pixels in a 2×2 block
+    uint in_h = out_h / 2;
+    uint in_w = out_w / 2;
+
+    // Read input pixel and replicate to output
+    uint input_idx = c * input_height * input_width + in_h * input_width + in_w;
+    uint output_idx = c * output_height * output_width + out_h * output_width + out_w;
+
+    output[output_idx] = input[input_idx];
 }
