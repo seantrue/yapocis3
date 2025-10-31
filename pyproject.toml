@@ -99,6 +99,8 @@ dev = [
     "twine>=4.0.0",
     "wheel>=0.37.0",
     "watchdog>=4.0.0",
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
 ]
 
 # Testing dependencies
@@ -161,6 +163,8 @@ dev = [
     "twine>=4.0.0",
     "wheel>=0.37.0",
     "watchdog>=4.0.0",
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -239,6 +243,8 @@ module = [
     "freetype.*",
     "skimage.*",
     "pygame.*",
+    "torch.*",
+    "torchvision.*",
 ]
 ignore_missing_imports = true
 

@@ -296,6 +296,11 @@ install-local: build ## Install from local build
 	@echo "$(YELLOW)Installing from local build...$(NC)"
 	$(UV) pip install dist/*.whl --force-reinstall
 
+.PHONY: release
+release: venv ## Interactive release helper (version bump, changelog, publish)
+	@echo "$(YELLOW)Starting release process...$(NC)"
+	$(VENV_PYTHON) scripts/release.py
+
 .PHONY: publish-test
 publish-test: build ## Publish to TestPyPI
 	@echo "$(YELLOW)Publishing to TestPyPI...$(NC)"
