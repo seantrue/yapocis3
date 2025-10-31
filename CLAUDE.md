@@ -113,6 +113,9 @@ make build
 # Build wheel only
 make build-wheel
 
+# Interactive release (recommended - automates version bump, changelog, publish)
+make release
+
 # Publish to TestPyPI
 make publish-test
 

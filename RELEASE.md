@@ -96,6 +96,15 @@ If you prefer to do it manually:
 2. Create GitHub release with changelog
 3. Update documentation if needed
 
+## Package Contents
+
+The distributed wheel **excludes** large model weight files to keep the package size manageable:
+- Model weights (`.npz`, `.onnx`, `.pth`, `.pt`) are not included
+- Users need to download model weights separately using the provided download scripts
+- See `scripts/download_vgg16.py` and `scripts/download_resnet50.py`
+
+This keeps the wheel size small while still providing all the framework code and utilities.
+
 ## Versioning Scheme
 
 yapocis uses semantic versioning (MAJOR.MINOR.PATCH):

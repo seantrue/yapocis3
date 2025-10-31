@@ -123,12 +123,6 @@ docs = [
 # Unified development tools CLI
 yapocis-tools = "yapocis.scripts.tools:main"
 
-# Individual commands (can also use: yapocis-tools <subcommand>)
-yapocis-assets = "yapocis.scripts.assets:main"
-yapocis-backends = "yapocis.scripts.backends:main"
-yapocis-devices = "yapocis.scripts.devices:main"
-yapocis-interfaces = "yapocis.scripts.interfaces:main"
-
 # Specialized tools
 yapocis-imagewatcher = "yapocis.scripts.imagewatcher:main"
 yapocis-queue = "yapocis.scripts.queue-check:main"
@@ -176,6 +170,12 @@ include = [
     "src/yapocis/**/*.ttf",
     "src/yapocis/**/test.jpg",
     "src/yapocis/**/test.txt",
+]
+exclude = [
+    "src/yapocis/models/**/*.npz",
+    "src/yapocis/models/**/*.onnx",
+    "src/yapocis/models/**/*.pth",
+    "src/yapocis/models/**/*.pt",
 ]
 
 [tool.black]

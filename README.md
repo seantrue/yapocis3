@@ -231,6 +231,7 @@ make check       # Run all checks
 
 # Building & publishing
 make build           # Build distribution packages
+make release         # Interactive release (recommended)
 make publish-test    # Publish to TestPyPI
 make publish         # Publish to PyPI
 ```
@@ -238,6 +239,9 @@ make publish         # Publish to PyPI
 ### Building and Publishing
 
 ```bash
+# Interactive release workflow (recommended - automates version bump, changelog, publish)
+make release
+
 # Build distribution packages
 make build
 
@@ -298,6 +302,7 @@ See [RENOVATE.md](RENOVATE.md) for detailed modernization documentation.
 
 - **[CLAUDE.md](CLAUDE.md)**: Development guide and architecture reference
 - **[CONTRIBUTORS.md](CONTRIBUTORS.md)**: Contribution guidelines
+- **[RELEASE.md](RELEASE.md)**: PyPI release process and automation guide
 - **[CHANGELOG.md](CHANGELOG.md)**: Release notes and version history
 - **[AI.md](AI.md)**: AI-assisted development tracking (yes, really)
 - **[HISTORY.md](HISTORY.md)**: Project origins and evolution (the archaeological layer)
