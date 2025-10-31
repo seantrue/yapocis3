@@ -11,11 +11,13 @@ class Kernel:
     for out_like and handling derived dims.
     """
 
-    def __init__(self, name: str, func, params: list[tuple], kernel_manager=None):
+    def __init__(self, name: str, func, params: list[tuple], kernel_manager=None, async_write: bool = False, traits: dict | None = None):
         self.name = name
         self.func = func
         self.params = params  # list of KernelParamSpec-like tuples/objects
         self.kernel_manager = kernel_manager
+        self.async_write = async_write
+        self.traits = traits or {}
         # Normalize to objects with attributes used below
         self._norm = []
         for p in params:

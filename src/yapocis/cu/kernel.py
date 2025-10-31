@@ -20,12 +20,14 @@ class Kernel:
         kernel: Callable,
         params: list[tuple],
         async_write: bool = False,
+        traits: dict | None = None,
     ):
         self.name = name
         self.kernel_manager = kernel_manager
         self.stream = kernel_manager.dmgr.queue
         self.kernel = kernel
         self.params = params
+        self.traits = traits or {}
         self.autoflatten = kernel_manager.dmgr.autoflatten
         self.argspecs = self.posbyname = self.returns = self.local_size = (
             self.global_size
@@ -184,6 +186,12 @@ class Kernel:
 
         # Check for async execution mode
         async_exec = kwargs.pop("async_exec", self.kernel_manager._default_async)
+
+        # Check for dispatch_size trait BEFORE prepare_arguments (which auto-sets global_size)
+        if self.global_size is None and "dispatch_size" in self.traits:
+            from yapocis.core.dispatch_expr import evaluate_dispatch_size
+            dispatch_expr = self.traits["dispatch_size"]
+            self.global_size = evaluate_dispatch_size(dispatch_expr, args, self.params)
 
         resident_arrays = kwargs.pop("resident", None)
         prepared_args = self.prepare_arguments(args, resident_arrays=resident_arrays)
