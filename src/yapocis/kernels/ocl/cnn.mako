@@ -650,9 +650,9 @@ __kernel void conv2d_7x7_stride2(
     const uint input_channels,
     const uint output_channels
 ) {
-    const uint out_h = get_global_id(0);
-    const uint out_w = get_global_id(1);
-    const uint out_c = get_global_id(2);
+    const uint out_h = get_global_id(0);  // height
+    const uint out_c = get_global_id(1);  // channels
+    const uint out_w = get_global_id(2);  // width
 
     const uint output_height = input_height / 2;
     const uint output_width = input_width / 2;
@@ -699,9 +699,9 @@ __kernel void conv2d_3x3_stride2(
     const uint input_channels,
     const uint output_channels
 ) {
-    const uint out_h = get_global_id(0);
-    const uint out_w = get_global_id(1);
-    const uint out_c = get_global_id(2);
+    const uint out_h = get_global_id(0);  // height
+    const uint out_c = get_global_id(1);  // channels
+    const uint out_w = get_global_id(2);  // width
 
     // Output size with padding=1, kernel=3, stride=2: (input - 1) / 2 + 1
     const uint output_height = (input_height - 1) / 2 + 1;
@@ -747,9 +747,9 @@ __kernel void conv2d_1x1_stride2(
     const uint input_channels,
     const uint output_channels
 ) {
-    const uint out_h = get_global_id(0);
-    const uint out_w = get_global_id(1);
-    const uint out_c = get_global_id(2);
+    const uint out_h = get_global_id(0);  // height
+    const uint out_c = get_global_id(1);  // channels
+    const uint out_w = get_global_id(2);  // width
 
     const uint output_height = input_height / 2;
     const uint output_width = input_width / 2;
