@@ -5,12 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.3] - 2025-10-31
 
 ### Added
 
-- Add interactive PyPI release automation system with `make release`
-- Add comprehensive RELEASE.md documentation for publishing workflow
 - Modernize package infrastructure with hatchling and enhanced tooling
 - Add automated changelog generation with git-cliff
 - Fix CUDA backend kernel compilation and backend isolation
@@ -65,6 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Update CHANGELOG with latest commits
 - Restore code_cache/README.md
+- Bump version to 0.3.3
 
 ### Performance
 
