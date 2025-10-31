@@ -38,4 +38,10 @@ __pycache__
 /performance
 /performance/reports/
 /code_cache
-/claude-debug/*.py
+/claude-debug/*
+*#checkin.txt*
+env
+pyproject.toml.example
+scripts/release.py
+segment.py
+test_vad_yapocis.py
