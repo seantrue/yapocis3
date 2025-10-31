@@ -47,7 +47,7 @@ from PIL import Image
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 from yapocis.images import images as get_image_list, find_image
 
-from yapocis.lib.resnet50 import ResNet50, load_imagenet_labels
+from yapocis.lib.resnet50 import ResNet50, ResNet50Resident, load_imagenet_labels
 from yapocis.models import models, get_weights_path, get_classes_path
 
 
@@ -248,6 +248,7 @@ Examples:
     parser.add_argument('--labels', help='Path to classes.txt (optional, auto-detected)')
     parser.add_argument('--top-k', type=int, default=5, help='Number of top predictions (default: 5)')
     parser.add_argument('--embeddings', action='store_true', help='Show feature embeddings')
+    parser.add_argument('--resident', action='store_true', help='Use GPU-resident buffers for better performance')
     parser.add_argument('--test', action='store_true', help='Test mode: process all image assets')
     parser.add_argument('--max-images', type=int, help='Max images to process in test mode')
     parser.add_argument('--model', default='resnet50', help='Model name for asset manager (default: resnet50)')
@@ -272,8 +273,12 @@ Examples:
         return 1
 
     # Load model and labels
-    print("Loading ResNet50...")
-    resnet = ResNet50(weights_path)
+    if args.resident:
+        print("Loading ResNet50Resident (GPU-resident buffers)...")
+        resnet = ResNet50Resident(weights_path)
+    else:
+        print("Loading ResNet50...")
+        resnet = ResNet50(weights_path)
     labels = load_imagenet_labels(labels_path)
     print(f"Loaded {len(labels)} ImageNet class labels\n")
 
