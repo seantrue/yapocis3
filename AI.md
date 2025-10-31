@@ -4,14 +4,14 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Summary Statistics
 
-- **Total AI-assisted commits**: ~27
+- **Total AI-assisted commits**: ~28
 - **Major features developed with AI assistance**:
-  - Infrastructure: Package modernization (hatchling, modern tooling), automated changelog generation, type annotation modernization
+  - Infrastructure: Package modernization (hatchling, modern tooling), automated changelog generation, type annotation modernization, release automation system
   - Backend work: CUDA kernel compilation fixes, CUDA row-major addressing fixes, Metal backend fixes, coordinate system standardization, Numba backend completeness, truetrace kernel port, separable convolution boundary fix
   - Testing: Validation framework, StopWatcher enhancements, test isolation fixes, NPZ analysis tooling, test determinism fixes
   - Performance: Performance tracking system, DuckDB migration, reproducibility improvements
   - Code quality: Test refactoring, random data centralization, Python 3.9+ type modernization, HSI alpha channel handling
-  - Developer experience: Environment variable standardization, enhanced backend/device listing
+  - Developer experience: Environment variable standardization, enhanced backend/device listing, PyPI publishing workflow
 - **Lines of code**:
   - ~1300 lines: Performance tracking system (2025-10-03)
   - ~400 lines: DuckDB migration (2025-10-03)
@@ -25,9 +25,88 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~5 lines: Test determinism fix (2025-10-16)
   - ~40 lines: HSI alpha channel handling (2025-10-16)
   - ~25 lines: Separable convolution boundary fix (2025-10-17)
+  - ~470 lines: Release automation system (2025-10-31)
   - ~100 lines: Documentation updates (2025-10-05, 2025-10-06, 2025-10-08)
 
 ## Detailed Contributions
+
+### 2025-10-31: PyPI Release Automation System
+
+**AI Contribution (Claude):**
+- Created comprehensive release automation system to streamline PyPI publishing workflow
+- Identified TestPyPI token configuration issue (identical to PyPI token, needs separate token)
+- Built interactive release helper script with validation and safety checks
+- Integrated with existing git-cliff changelog generation system
+- ~470 lines of new code and documentation across 3 files
+
+**Release Documentation (RELEASE.md):**
+- Created comprehensive release guide with step-by-step instructions
+- Documented both automated and manual release workflows
+- Pre-release checklist (tests, code quality, uncommitted changes)
+- API token setup guide with PyPI and TestPyPI configuration
+- Troubleshooting section for common publishing issues
+- Semantic versioning guidelines aligned with project roadmap
+- ~155 lines of structured documentation
+
+**Interactive Release Script (scripts/release.py):**
+- Automated version bumping in pyproject.toml with semantic version validation
+- Git working directory cleanliness check (prevents publishing dirty state)
+- Interactive changelog generation with git-cliff integration
+- Prompted AI.md update to track contributions
+- Automated git commit and tag creation
+- Build distribution packages (wheel and source)
+- Optional TestPyPI testing before production publish
+- PyPI publication with confirmation prompts
+- Git push automation for commits and tags
+- Safety features:
+  - Version format validation (X.Y.Z)
+  - Prevents duplicate version numbers
+  - Confirmation prompts for destructive operations
+  - Abort at any step without side effects
+  - Test start time uses when test was initiated (not finished)
+- ~315 lines of Python with comprehensive error handling
+
+**Makefile Integration:**
+- Added `make release` target for easy invocation
+- Runs interactive release script with proper venv Python
+- Integrated with existing build/publish targets
+- ~3 lines addition to Building & Distribution section
+
+**Token Configuration Analysis:**
+- Reviewed ~/.pypirc configuration file
+- Identified that PyPI and TestPyPI tokens are identical (line 9 vs line 14)
+- Documented requirement for separate TestPyPI token in RELEASE.md
+- Provided step-by-step instructions to obtain correct TestPyPI token
+
+**Files Created:**
+- `RELEASE.md` - Comprehensive release process documentation (155 lines)
+- `scripts/release.py` - Interactive release automation script (315 lines)
+
+**Files Modified:**
+- `Makefile` - Added `make release` target (3 lines)
+
+**Testing:**
+- Script made executable with proper permissions
+- Verified integration with existing Makefile structure
+- Confirmed backward compatibility with manual release process
+
+**Benefits:**
+- Reduces release process from ~12 manual steps to single command
+- Prevents common mistakes (uncommitted changes, wrong version format)
+- Ensures consistent release workflow across all versions
+- Automated changelog and AI.md updates
+- Safe testing on TestPyPI before production publish
+- Clear documentation for manual fallback if needed
+- Foundation for future CI/CD automation
+
+**Human Contribution:**
+- Request for PyPI publishing configuration assistance
+- Request to skip GitHub Actions workflow
+- Request to focus on TestPyPI token verification and release checklist
+- Decision to create automated release helper
+- Testing and verification
+
+---
 
 ### 2025-10-17: Separable Convolution Boundary Fix
 
