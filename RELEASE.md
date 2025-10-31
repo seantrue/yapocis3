@@ -71,9 +71,9 @@ If you prefer to do it manually:
    ```bash
    make publish-test
    ```
-   Then test installation:
+   Then test installation (use --extra-index-url to fetch dependencies from regular PyPI):
    ```bash
-   pip install --index-url https://test.pypi.org/simple/ yapocis
+   pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ yapocis
    ```
 
 9. **Publish to PyPI:**

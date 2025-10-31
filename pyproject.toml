@@ -125,7 +125,7 @@ yapocis-tools = "yapocis.scripts.tools:main"
 
 # Specialized tools
 yapocis-imagewatcher = "yapocis.scripts.imagewatcher:main"
-yapocis-queue = "yapocis.scripts.queue-check:main"
+yapocis-queue = "yapocis.scripts.queue_check:main"
 yapocis-report = "yapocis.scripts.report:main"
 yapocis-stubs = "yapocis.scripts.stubs:main"
 yapocis-validate = "yapocis.scripts.validate:main"
