@@ -8,6 +8,7 @@ comparing to scipy baseline.
 
 Features:
 - Automatic backend and device discovery
+- Backend and device filtering via command-line args
 - Async resident buffer operations for maximum performance
 - Multiple scale levels (edge detection at different resolutions)
 - Elegant seaborn visualization
@@ -15,9 +16,13 @@ Features:
 
 Usage:
     python examples/zcs_performance.py
+    python examples/zcs_performance.py --backends ocl,cuda
+    python examples/zcs_performance.py --devices "GeForce GTX","Quadro"
+    python examples/zcs_performance.py --backends cuda --devices "Quadro GP100"
 """
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
 
+import argparse
 import os
 import sys
 import time
@@ -39,7 +44,7 @@ except ImportError:
 # Add src to path for development
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
-from yapocis.core import get_backends
+from yapocis.core import get_test_backends, get_test_devices
 from yapocis.lib.gaussian import Gaussian
 
 
@@ -69,47 +74,6 @@ def zcsdog_scipy(input_img: np.ndarray, scale: int = 0, iterations: int = 1) -> 
         theta = np.arctan2(np.gradient(smaller)[0], np.gradient(smaller)[1])
 
     return zc.astype(np.float32), grad.astype(np.float32), theta.astype(np.float32)
-
-
-def get_backend_devices(backend: str) -> dict[str, str]:
-    """
-    Get available devices for a given backend.
-
-    Returns:
-        Dict mapping device name to full identifier (backend:device)
-    """
-    devices = {}
-
-    try:
-        if backend == 'ocl':
-            from yapocis.ocl.device import get_available_devices
-            dev_dict = get_available_devices(aliases=False)
-            for name in dev_dict.keys():
-                if isinstance(name, str):
-                    devices[name] = f"ocl:{name}"
-
-        elif backend == 'metal':
-            from yapocis.metallic.device import get_available_devices
-            dev_dict = get_available_devices(aliases=False)
-            for name in dev_dict.keys():
-                if isinstance(name, str):
-                    devices[name] = f"metal:{name}"
-
-        elif backend == 'cuda':
-            from yapocis.cu.device import get_available_devices
-            dev_dict = get_available_devices(aliases=False)
-            for name in dev_dict.keys():
-                if isinstance(name, str):
-                    devices[name] = f"cuda:{name}"
-
-        elif backend == 'numbax':
-            # Numba is CPU-based, single "device"
-            devices['CPU (Numba JIT)'] = 'numbax:cpu'
-
-    except Exception as e:
-        print(f"Warning: Could not enumerate {backend} devices: {e}")
-
-    return devices
 
 
 def benchmark_zcsdog(
@@ -200,12 +164,43 @@ def benchmark_scipy(
 
 
 def main():
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(
+        description="Multi-backend multiscale zero-crossing performance comparison",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Test all backends and devices
+  python zcs_performance.py
+
+  # Test only CUDA and OpenCL backends
+  python zcs_performance.py --backends cuda,ocl
+
+  # Test only devices with "GTX" or "Quadro" in name
+  python zcs_performance.py --devices "GTX,Quadro"
+
+  # Test CUDA backend on Quadro device only
+  python zcs_performance.py --backends cuda --devices Quadro
+        """
+    )
+    parser.add_argument('--backends', type=str, help='Comma-separated list of backends to test (e.g., ocl,cuda,metal)')
+    parser.add_argument('--devices', type=str, help='Comma-separated list of device name filters (substring match)')
+    parser.add_argument('--iterations', type=int, default=10, help='Number of iterations per test (default: 10)')
+    parser.add_argument('--samples', type=int, default=20, help='Number of image size samples (default: 20)')
+    parser.add_argument('--scale', type=int, default=2, help='DoG scale level (default: 2)')
+
+    args = parser.parse_args()
+
+    # Parse filters
+    backend_filters = [b.strip() for b in args.backends.split(',')] if args.backends else []
+    device_filters = [d.strip() for d in args.devices.split(',')] if args.devices else []
+
     # Configuration
-    ITERATIONS = 10
-    SAMPLES = 20
+    ITERATIONS = args.iterations
+    SAMPLES = args.samples
     SMALLEST = 100
     LARGEST = 1000
-    SCALE = 2  # DoG scale level (0=finest detail, higher=coarser features)
+    SCALE = args.scale  # DoG scale level (0=finest detail, higher=coarser features)
 
     print("=" * 70)
     print("Multi-Backend Multiscale Zero-Crossing Performance Comparison")
@@ -214,6 +209,10 @@ def main():
     print(f"Iterations per test: {ITERATIONS}")
     print(f"DoG scale level: {SCALE} (sigma ratio: 1.6^{SCALE} vs 1.6^{SCALE+1})")
     print(f"Testing: Async vs Sync resident buffers")
+    if backend_filters:
+        print(f"Backend filter: {', '.join(backend_filters)}")
+    if device_filters:
+        print(f"Device filter: {', '.join(device_filters)}")
     print()
 
     # Generate test images (logarithmically spaced sizes)
@@ -245,10 +244,11 @@ def main():
     print("=" * 70)
     scipy_areas, scipy_times = benchmark_scipy(images, widths, SCALE, ITERATIONS)
 
-    # Discover backends and devices
-    available_backends = get_backends()
+    # Discover backends and devices using new selection functions
+    available_backends = get_test_backends(backend_filters if backend_filters else None)
+
     print("\n" + "=" * 70)
-    print(f"Available backends: {', '.join(available_backends)}")
+    print(f"Testing backends: {', '.join(available_backends)}")
     print("=" * 70)
 
     # Collect results for all backend/device combinations
@@ -258,7 +258,7 @@ def main():
         # Set backend environment variable
         os.environ['YAPOCIS_BACKEND'] = backend
 
-        devices = get_backend_devices(backend)
+        devices = get_test_devices(backend, device_filters if device_filters else None)
 
         if not devices:
             print(f"\nNo devices found for {backend}, skipping...")

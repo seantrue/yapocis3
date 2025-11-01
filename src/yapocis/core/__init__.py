@@ -195,3 +195,125 @@ def get_active_backend():
 def get_available_devices(backend):
     info = get_backend_info(backend)
     return info["devices"]
+
+
+def matches_filter(name: str, filters: list[str]) -> bool:
+    """
+    Check if name matches any of the filters (substring match).
+
+    Args:
+        name: Name to check
+        filters: List of filter strings (case-insensitive substring match)
+
+    Returns:
+        True if name matches any filter, or if filters is empty
+    """
+    if not filters:
+        return True
+
+    name_lower = name.lower()
+    return any(f.lower() in name_lower for f in filters)
+
+
+def get_test_backends(backend_filters: list[str] | None = None) -> list[str]:
+    """
+    Get list of backends to test, applying filters and environment variables.
+
+    Priority:
+    1. If backend_filters is explicitly provided (not None), use those
+    2. Else check YAPOCIS_TEST_BACKENDS environment variable
+    3. Else return all available backends
+
+    Args:
+        backend_filters: Optional list of backend names to filter
+
+    Returns:
+        List of backend names to test
+
+    Environment:
+        YAPOCIS_TEST_BACKENDS: Comma-separated list of backends (e.g., "ocl,cuda")
+    """
+    # Get all available backends
+    available_backends = get_backends()
+
+    # Determine which filters to use
+    if backend_filters is None:
+        # Check environment variable
+        env_backends = os.environ.get('YAPOCIS_TEST_BACKENDS', '').strip()
+        if env_backends:
+            backend_filters = [b.strip() for b in env_backends.split(',') if b.strip()]
+        else:
+            backend_filters = []
+
+    # Apply filters
+    if backend_filters:
+        available_backends = [b for b in available_backends if matches_filter(b, backend_filters)]
+
+    return available_backends
+
+
+def get_test_devices(backend: str, device_filters: list[str] | None = None) -> dict[str, str]:
+    """
+    Get devices for a backend, applying filters and environment variables.
+
+    Priority:
+    1. If device_filters is explicitly provided (not None), use those
+    2. Else check YAPOCIS_TEST_DEVICES environment variable
+    3. Else return all available devices
+
+    Device filters are only applied to GPU backends (ocl, metal, cuda).
+    CPU-only backends (numbax) always return their single device.
+
+    Args:
+        backend: Backend name (ocl, metal, cuda, numbax)
+        device_filters: Optional list of device name filters
+
+    Returns:
+        Dict mapping device name to full identifier (backend:device)
+
+    Environment:
+        YAPOCIS_TEST_DEVICES: Comma-separated list of device filters (e.g., "GTX,Quadro")
+    """
+    # Determine which filters to use
+    if device_filters is None:
+        # Check environment variable
+        env_devices = os.environ.get('YAPOCIS_TEST_DEVICES', '').strip()
+        if env_devices:
+            device_filters = [d.strip() for d in env_devices.split(',') if d.strip()]
+        else:
+            device_filters = []
+
+    devices = {}
+
+    try:
+        if backend == 'ocl':
+            from yapocis.ocl.device import get_available_devices
+            dev_dict = get_available_devices(aliases=False)
+            for name in dev_dict.keys():
+                if isinstance(name, str) and matches_filter(name, device_filters):
+                    devices[name] = f"ocl:{name}"
+
+        elif backend == 'metal':
+            from yapocis.metallic.device import get_available_devices
+            dev_dict = get_available_devices(aliases=False)
+            for name in dev_dict.keys():
+                if isinstance(name, str) and matches_filter(name, device_filters):
+                    devices[name] = f"metal:{name}"
+
+        elif backend == 'cuda':
+            from yapocis.cu.device import get_available_devices
+            dev_dict = get_available_devices(aliases=False)
+            for name in dev_dict.keys():
+                if isinstance(name, str) and matches_filter(name, device_filters):
+                    devices[name] = f"cuda:{name}"
+
+        elif backend == 'numbax':
+            # Numba is CPU-based, single "device"
+            # Don't apply device filters to CPU-only backends
+            devices['CPU (Numba JIT)'] = 'numbax:cpu'
+
+    except Exception as e:
+        # Silently skip backends that fail to enumerate devices
+        pass
+
+    return devices

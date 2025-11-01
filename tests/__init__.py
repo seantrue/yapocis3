@@ -743,10 +743,10 @@ def backend_comparison(request):
     """Run the same test across multiple backends for comparison."""
     available_backends = []
 
-    from yapocis.core import get_backends
+    from yapocis.core import get_test_backends
 
     try:
-        available_backends = get_backends()
+        available_backends = get_test_backends()
     except ImportError:
         available_backends = ["ocl"]  # fallback
 

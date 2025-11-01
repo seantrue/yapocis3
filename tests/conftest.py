@@ -264,9 +264,9 @@ def backend_comparison(request):
     available_backends = []
 
     try:
-        from yapocis.core import get_backends
+        from yapocis.core import get_test_backends
 
-        available_backends = get_backends()
+        available_backends = get_test_backends()
     except ImportError:
         available_backends = ["ocl"]  # fallback
 
