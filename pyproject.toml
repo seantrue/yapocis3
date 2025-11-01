@@ -130,6 +130,7 @@ yapocis-report = "yapocis.scripts.report:main"
 yapocis-stubs = "yapocis.scripts.stubs:main"
 yapocis-validate = "yapocis.scripts.validate:main"
 yapocis-package = "yapocis.scripts.package:main"
+yapocis-performance = "yapocis.scripts.performance:main"
 
 [build-system]
 requires = ["hatchling>=1.13"]
