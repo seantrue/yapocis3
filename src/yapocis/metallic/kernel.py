@@ -14,10 +14,11 @@ try:
 except Exception as e:  # pragma: no cover
     raise RuntimeError("PyMetallic is required for the metallic backend") from e
 
+from yapocis.core.kernel_base import KernelBase
 from yapocis.utils.stereo_typing import Array
 from yapocis.core import infer_wh_from_args
 
-class Kernel:
+class Kernel(KernelBase):
     def __init__(
         self,
         name,
@@ -38,27 +39,6 @@ class Kernel:
         self.async_write = async_write
         self.local_size = local_size
         self.map_arguments()
-
-    def read(self, a: Array):
-        return self.kernel_manager.dmgr.read(a)
-
-    def write(self, a: Array, wait=True):
-        return self.kernel_manager.dmgr.write(a, wait=wait)
-
-    def ensure(self, a: Array):
-        return self.kernel_manager.dmgr.ensure(a)
-
-    def map_arguments(self):
-        argspecs = [None] * len(self.params)
-        posbyname = {}
-        iarg = 0
-        for iparam, param in enumerate(self.params):
-            argspecs[iparam] = param
-            if not param.derived:
-                posbyname[param.name] = iarg
-                iarg += 1
-        self.argspecs = argspecs
-        self.posbyname = posbyname
 
     def prepare_arguments(
         self, args: list[Any], resident_arrays: list[str] | None = None
@@ -144,28 +124,6 @@ class Kernel:
         return buf
 
     handle_out_like = handle_outlike
-
-    def handle_in(self, arg, dtype):
-        arg = arg.astype(dtype, copy=False)
-        buf = self.write(arg, wait=not self.async_write)
-        return buf
-
-    def handle_inout(self, arg, dtype):
-        arg = arg.astype(dtype, copy=False)
-        buf = self.write(arg, wait=not self.async_write)
-        self.returns.append((arg, buf))
-        return buf
-
-    def handle_out(self, arg, dtype):
-        arg = arg.astype(dtype, copy=False)
-        buf = self.ensure(arg)
-        self.returns.append((arg, buf))
-        return buf
-
-    def handle_resident(self, arg, dtype):
-        arg = arg.astype(dtype, copy=False)
-        buf = self.ensure(arg)
-        return buf
 
     def __call__(self, *args: tuple[Any], **kwargs):
         self.kernel_manager.calls += 1
@@ -276,16 +234,3 @@ class Kernel:
             rval = self.prepare_return()
             self.kernel_manager.runtime += time.time() - t
             return rval
-
-    def prepare_return(self) -> Union[Any, tuple[Any], None]:
-        """Takes the return value buffers (out and outlike) and prepares proper Numpy arrays"""
-        rvals = []
-        for arg, buf in self.returns:
-            self.read(arg)
-            rvals.append(arg)
-        self.returns = []
-        if len(rvals) == 0:
-            return None
-        elif len(rvals) == 1:
-            return rvals[0]
-        return tuple(rvals)
