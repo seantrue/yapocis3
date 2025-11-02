@@ -79,15 +79,6 @@ class Kernel(KernelBase):
                     method_name = "handle_resident"
                 real_arg = getattr(self, method_name)(arg, dtype)
             realargs[iparam] = real_arg
-        # Only infer global_size automatically if no dispatch_size trait exists
-        if self.global_size is None and "dispatch_size" not in self.traits:
-            for arg in args:
-                if hasattr(arg, "size"):
-                    if self.autoflatten:
-                        self.global_size = arg.size
-                    else:
-                        self.global_size = arg.shape
-                    break
         return tuple(realargs)
 
     def handle_outlike(self, arg, dtype):
@@ -100,40 +91,46 @@ class Kernel(KernelBase):
 
     handle_out_like = handle_outlike
 
-    def __call__(self, *args: tuple[Any], **kwargs):
-        """Call a kernel, prepare arguments, and track performance"""
-        self.kernel_manager.calls += 1
-        t = time.time()
-        self.global_size = kwargs.pop("global_size", None)
-        self.local_size = kwargs.pop("local_size", None)
-        assert not isinstance(self.global_size, float) and not isinstance(
-            self.local_size, float
-        ), f"{self.global_size},{self.local_size}"
-
-        # Check for async execution mode
-        async_exec = kwargs.pop("async_exec", self.kernel_manager._default_async)
-
-        resident_arrays = kwargs.pop("resident", None)
-        prepared_args = self.prepare_arguments(args, resident_arrays=resident_arrays)
-
+    def _normalize_sizes(self):
+        """Normalize global_size and local_size for OpenCL."""
         # Check for dispatch_size trait if global_size not explicitly provided
         if self.global_size is None and "dispatch_size" in self.traits:
             from yapocis.core.dispatch_expr import evaluate_dispatch_size
             dispatch_expr = self.traits["dispatch_size"]
-            self.global_size = evaluate_dispatch_size(dispatch_expr, args, self.params)
+            self.global_size = evaluate_dispatch_size(dispatch_expr, self._current_args, self.params)
 
+        # Auto-infer global_size if still None
+        if self.global_size is None:
+            for arg in self._current_args:
+                if hasattr(arg, "size"):
+                    if self.autoflatten:
+                        self.global_size = arg.size
+                    else:
+                        self.global_size = arg.shape
+                    break
+
+        # Validate sizes
+        assert not isinstance(self.global_size, float) and not isinstance(
+            self.local_size, float
+        ), f"{self.global_size},{self.local_size}"
+
+        # Convert to tuples
+        if self.global_size is not None:
+            if not isinstance(self.global_size, (tuple, list)):
+                self.global_size = (self.global_size,)
+        if self.local_size and not isinstance(self.local_size, (tuple, list)):
+            self.local_size = (self.local_size,)
+
+    def _execute_kernel_with_args(self, prepared_args, original_args, extra_kwargs):
+        """Execute OpenCL kernel with prepared arguments."""
         def show_args():
             print("Python arguments")
-            for iarg, arg in enumerate(args):
+            for iarg, arg in enumerate(original_args):
                 print(f"Argument: {iarg+1}: {type(arg)} {str(arg)[:64]}")
             print("Kernel arguments")
             for iarg, arg in enumerate(prepared_args):
                 print(f"Argument: {iarg+1}: {type(arg)} {str(arg)[:64]}")
 
-        if not isinstance(self.global_size, (tuple, list)):
-            self.global_size = (self.global_size,)
-        if self.local_size and not isinstance(self.local_size, (tuple, list)):
-            self.local_size = (self.local_size,)
         try:
             self.evt = self.kernel(
                 self.kernel_manager.dmgr.queue,
@@ -149,24 +146,19 @@ class Kernel(KernelBase):
             print(f"RuntimeError calling {self.name}")
             show_args()
             raise
-        # Handle synchronization based on async mode
-        if async_exec:
-            # Async mode: don't wait, track event for later
-            self.kernel_manager.pending_events.append(self.evt)
-            self.kernel_manager.runtime += time.time() - t
-            return None  # Can't return results yet - kernel still executing
+
+    def _handle_async_completion(self):
+        """Track OpenCL event for async execution."""
+        self.kernel_manager.pending_events.append(self.evt)
+
+    def _handle_sync_completion(self, extra_kwargs):
+        """Wait for OpenCL kernel completion."""
+        poll = extra_kwargs.pop("poll", None)
+        if poll:
+            while True:
+                status = self.evt.get_info(pyopencl.event_info.COMMAND_EXECUTION_STATUS)
+                if status == pyopencl.command_execution_status.COMPLETE:
+                    break
+                time.sleep(poll)
         else:
-            # Synchronous mode: wait for completion (backward compatible)
-            poll = kwargs.pop("poll", None)
-            if poll:
-                while True:
-                    status = self.evt.get_info(pyopencl.event_info.COMMAND_EXECUTION_STATUS)
-                    if status == pyopencl.command_execution_status.COMPLETE:
-                        break
-                    time.sleep(poll)
-            else:
-                self.evt.wait()
-            # pyopencl.enqueue_barrier(self.queue)
-            rval = self.prepare_return()
-            self.kernel_manager.runtime += time.time() - t
-            return rval
+            self.evt.wait()

@@ -100,32 +100,17 @@ class Kernel(KernelBase):
 
     handle_out_like = handle_outlike
 
-    def __call__(self, *args: tuple[Any], **kwargs):
-        self.kernel_manager.calls += 1
-        t = time.time()
-        self.global_size = kwargs.pop("global_size", None)
-        self.local_size = kwargs.pop("local_size", None)
-        assert not isinstance(self.global_size, float) and not isinstance(
-            self.local_size, float
-        ), f"{self.global_size},{self.local_size}"
-
-        # Check for async execution mode
-        async_exec = kwargs.pop("async_exec", self.kernel_manager._default_async)
-
-        resident_arrays = kwargs.pop("resident", None)
-        prepared_args = self.prepare_arguments(
-            list(args), resident_arrays=resident_arrays
-        )
+    def _normalize_sizes(self):
+        """Normalize global_size and local_size for Metal (3D grid format)."""
+        # Check for dispatch_size trait if global_size not explicitly provided
         if self.global_size is None:
-            # Check for dispatch_size trait
             if "dispatch_size" in self.traits:
                 from yapocis.core.dispatch_expr import evaluate_dispatch_size
                 dispatch_expr = self.traits["dispatch_size"]
-                # dispatch_expr is a list of expression strings
-                self.global_size = evaluate_dispatch_size(dispatch_expr, args, self.params)
+                self.global_size = evaluate_dispatch_size(dispatch_expr, self._current_args, self.params)
             else:
                 # Default behavior: infer from first array
-                shape = infer_wh_from_args(args)
+                shape = infer_wh_from_args(self._current_args)
                 if shape:
                     if len(shape) > 1:
                         global_size = (shape[0] * shape[1], 1)
@@ -133,9 +118,51 @@ class Kernel(KernelBase):
                         global_size = shape
                     self.global_size, self.local_size = global_size, None
 
+        # Validate sizes
+        assert not isinstance(self.global_size, float) and not isinstance(
+            self.local_size, float
+        ), f"{self.global_size},{self.local_size}"
+
+        # Convert to 3D grid format for Metal
+        if not isinstance(self.global_size, (tuple, list)):
+            self.grid = (int(self.global_size), 1, 1)
+        else:
+            self.global_size = (
+                (self.global_size,)
+                if isinstance(self.global_size, int)
+                else self.global_size
+            )
+            if len(self.global_size) == 1:
+                self.grid = (int(self.global_size[0]), 1, 1)
+            elif len(self.global_size) == 2:
+                self.grid = (int(self.global_size[0]), int(self.global_size[1]), 1)
+            else:
+                self.grid = (
+                    int(self.global_size[0]),
+                    int(self.global_size[1]),
+                    int(self.global_size[2]),
+                )
+
+        # Convert local_size to threadgroup size
+        self.tgs = None
+        if self.local_size is not None:
+            ls = (
+                self.local_size
+                if isinstance(self.local_size, (tuple, list))
+                else (self.local_size,)
+            )
+            if len(ls) == 1:
+                self.tgs = (int(ls[0]), 1, 1)
+            elif len(ls) == 2:
+                self.tgs = (int(ls[0]), int(ls[1]), 1)
+            else:
+                self.tgs = (int(ls[0]), int(ls[1]), int(ls[2]))
+
+    def _execute_kernel_with_args(self, prepared_args, original_args, extra_kwargs):
+        """Execute Metal kernel with prepared arguments."""
         def show_args():
             print("Python arguments")
-            for iarg, arg in enumerate(args):
+            for iarg, arg in enumerate(original_args):
                 print(f"Argument: {iarg + 1}: {type(arg)} {str(arg)[:64]}")
             print("Kernel arguments")
             for iarg, arg in enumerate(prepared_args):
@@ -151,44 +178,12 @@ class Kernel(KernelBase):
                 arr = real if isinstance(real, np.ndarray) else np.asarray(real)
                 bytes_args.append((arr, idx))
 
-        # Convert sizes to 3D grid and optional threadgroup size
-        if not isinstance(self.global_size, (tuple, list)):
-            grid = (int(self.global_size), 1, 1)
-        self.global_size = (
-            (self.global_size,)
-            if isinstance(self.global_size, int)
-            else self.global_size
-        )
-        if len(self.global_size) == 1:
-            grid = (int(self.global_size[0]), 1, 1)
-        elif len(self.global_size) == 2:
-            grid = (int(self.global_size[0]), int(self.global_size[1]), 1)
-        else:
-            grid = (
-                int(self.global_size[0]),
-                int(self.global_size[1]),
-                int(self.global_size[2]),
-            )
-        tgs = None
-        if self.local_size is not None:
-            ls = (
-                self.local_size
-                if isinstance(self.local_size, (tuple, list))
-                else (self.local_size,)
-            )
-            if len(ls) == 1:
-                tgs = (int(ls[0]), 1, 1)
-            elif len(ls) == 2:
-                tgs = (int(ls[0]), int(ls[1]), 1)
-            else:
-                tgs = (int(ls[0]), int(ls[1]), int(ls[2]))
-
         try:
             # Metal kernel execution returns a command buffer (if available)
-            cmd_buffer = self.kernel(
+            self.cmd_buffer = self.kernel(
                 self.kernel_manager.dmgr.queue,
-                grid,
-                tgs,
+                self.grid,
+                self.tgs,
                 buffers=buffers,
                 bytes_args=bytes_args,
             )
@@ -197,15 +192,11 @@ class Kernel(KernelBase):
             show_args()
             raise
 
-        # Handle synchronization based on async mode
-        if async_exec:
-            # Async mode: track command buffer for later synchronization
-            if cmd_buffer is not None:
-                self.kernel_manager.pending_events.append(cmd_buffer)
-            self.kernel_manager.runtime += time.time() - t
-            return None  # Can't return results yet - kernel still executing
-        else:
-            # Synchronous mode: wait and return results (backward compatible)
-            rval = self.prepare_return()
-            self.kernel_manager.runtime += time.time() - t
-            return rval
+    def _handle_async_completion(self):
+        """Track Metal command buffer for async execution."""
+        if self.cmd_buffer is not None:
+            self.kernel_manager.pending_events.append(self.cmd_buffer)
+
+    def _handle_sync_completion(self, extra_kwargs):
+        """Metal has implicit synchronization - nothing to do."""
+        pass

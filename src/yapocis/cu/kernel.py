@@ -79,14 +79,6 @@ class Kernel(KernelBase):
                     method_name = "handle_resident"
                 real_arg = getattr(self, method_name)(arg, dtype)
             realargs[iparam] = real_arg
-        if self.global_size is None:
-            for arg in args:
-                if hasattr(arg, "size"):
-                    if self.autoflatten:
-                        self.global_size = arg.size
-                    else:
-                        self.global_size = arg.shape
-                    break
         return tuple(realargs)
 
     def handle_outlike(self, arg, dtype):
@@ -99,44 +91,47 @@ class Kernel(KernelBase):
 
     handle_out_like = handle_outlike
 
-    def __call__(self, *args: tuple[Any], **kwargs):
-        """Call a kernel, prepare arguments, and track performance"""
-        self.kernel_manager.calls += 1
-        t = time.time()
-        self.global_size = kwargs.pop("global_size", None)
-        self.local_size = kwargs.pop("local_size", None)
+    def _normalize_sizes(self):
+        """Normalize global_size and local_size for CUDA."""
+        # Check for dispatch_size trait if global_size not explicitly provided
+        if self.global_size is None and "dispatch_size" in self.traits:
+            from yapocis.core.dispatch_expr import evaluate_dispatch_size
+            dispatch_expr = self.traits["dispatch_size"]
+            self.global_size = evaluate_dispatch_size(dispatch_expr, self._current_args, self.params)
+
+        # Auto-infer global_size if still None
+        if self.global_size is None:
+            for arg in self._current_args:
+                if hasattr(arg, "size"):
+                    if self.autoflatten:
+                        self.global_size = arg.size
+                    else:
+                        self.global_size = arg.shape
+                    break
+
+        # Validate sizes
         assert not isinstance(self.global_size, float) and not isinstance(
             self.local_size, float
         ), f"{self.global_size},{self.local_size}"
 
-        # Check for async execution mode
-        async_exec = kwargs.pop("async_exec", self.kernel_manager._default_async)
-
-        # Check for dispatch_size trait BEFORE prepare_arguments (which auto-sets global_size)
-        if self.global_size is None and "dispatch_size" in self.traits:
-            from yapocis.core.dispatch_expr import evaluate_dispatch_size
-            dispatch_expr = self.traits["dispatch_size"]
-            self.global_size = evaluate_dispatch_size(dispatch_expr, args, self.params)
-
-        resident_arrays = kwargs.pop("resident", None)
-        prepared_args = self.prepare_arguments(args, resident_arrays=resident_arrays)
-
-        def show_args():
-            print("Python arguments")
-            for iarg, arg in enumerate(args):
-                print(f"Argument: {iarg+1}: {type(arg)} {str(arg)[:64]}")
-            print("Kernel arguments")
-            for iarg, arg in enumerate(prepared_args):
-                print(f"Argument: {iarg+1}: {type(arg)} {str(arg)[:64]}")
-
-        # Convert global_size to grid/block dimensions for CUDA
+        # Convert to tuples
         if not isinstance(self.global_size, (tuple, list)):
             self.global_size = (self.global_size,)
         if self.local_size and not isinstance(self.local_size, (tuple, list)):
             self.local_size = (self.local_size,)
 
-        # Calculate grid and block dimensions
-        grid, block = self._calculate_grid_block()
+        # Calculate grid and block dimensions for CUDA
+        self.grid, self.block = self._calculate_grid_block()
+
+    def _execute_kernel_with_args(self, prepared_args, original_args, extra_kwargs):
+        """Execute CUDA kernel with prepared arguments."""
+        def show_args():
+            print("Python arguments")
+            for iarg, arg in enumerate(original_args):
+                print(f"Argument: {iarg+1}: {type(arg)} {str(arg)[:64]}")
+            print("Kernel arguments")
+            for iarg, arg in enumerate(prepared_args):
+                print(f"Argument: {iarg+1}: {type(arg)} {str(arg)[:64]}")
 
         # Prepare CUDA kernel arguments - convert GPUArrays to their underlying data
         cuda_args = []
@@ -149,7 +144,7 @@ class Kernel(KernelBase):
                 cuda_args.append(arg)
 
         try:
-            self.kernel(*cuda_args, block=block, grid=grid, stream=self.stream)
+            self.kernel(*cuda_args, block=self.block, grid=self.grid, stream=self.stream)
         except cuda.Error as e:
             print(f"CUDA error calling {self.name}: {e}")
             show_args()
@@ -159,24 +154,13 @@ class Kernel(KernelBase):
             show_args()
             raise
 
-        # Handle synchronization based on async mode
-        if async_exec:
-            # Async mode: don't synchronize, track stream for later
-            self.kernel_manager.pending_events.append(self.stream)
-            self.kernel_manager.runtime += time.time() - t
-            return None  # Can't return results yet - kernel still executing
-        else:
-            # Synchronous mode: wait for stream completion (backward compatible)
-            poll = kwargs.pop("poll", None)
-            if poll:
-                # Polling not typically needed with streams, but we can wait
-                self.stream.synchronize()
-            else:
-                self.stream.synchronize()
+    def _handle_async_completion(self):
+        """Track CUDA stream for async execution."""
+        self.kernel_manager.pending_events.append(self.stream)
 
-            rval = self.prepare_return()
-            self.kernel_manager.runtime += time.time() - t
-            return rval
+    def _handle_sync_completion(self, extra_kwargs):
+        """Wait for CUDA stream completion."""
+        self.stream.synchronize()
 
     def _calculate_grid_block(self):
         """Calculate CUDA grid and block dimensions from global_size and local_size"""

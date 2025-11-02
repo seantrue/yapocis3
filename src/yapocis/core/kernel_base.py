@@ -18,6 +18,7 @@ Backend-specific classes inherit from this base and implement:
 - Synchronization (event/stream handling)
 """
 
+import time
 from abc import ABC, abstractmethod
 from typing import Any, Union
 
@@ -259,3 +260,96 @@ class KernelBase(ABC):
         return self._package_dimension(arg.shape[2], dtype)
 
     handle_depth_of = handle_depthof
+
+    def __call__(self, *args: tuple[Any], **kwargs):
+        """
+        Template method for kernel execution orchestration.
+
+        Handles common flow:
+        1. Extract kwargs and prepare arguments
+        2. Normalize sizes
+        3. Execute kernel (backend-specific)
+        4. Handle async vs sync completion
+        5. Track performance
+        """
+        # Common pre-processing
+        self.kernel_manager.calls += 1
+        t = time.time()
+
+        # Extract standard kwargs
+        self.global_size = kwargs.pop("global_size", None)
+        self.local_size = kwargs.pop("local_size", None)
+        async_exec = kwargs.pop("async_exec", self.kernel_manager._default_async)
+        resident_arrays = kwargs.pop("resident", None)
+
+        # Store args for use in hooks
+        self._current_args = args
+
+        # Prepare arguments
+        prepared_args = self.prepare_arguments(args, resident_arrays=resident_arrays)
+
+        # Normalize sizes to tuples (backend-specific normalization in subclass)
+        self._normalize_sizes()
+
+        # Backend-specific kernel execution
+        self._execute_kernel_with_args(prepared_args, args, kwargs)
+
+        # Handle async vs sync completion
+        if async_exec:
+            self._handle_async_completion()
+            self.kernel_manager.runtime += time.time() - t
+            return None  # Can't return results yet - kernel still executing
+        else:
+            self._handle_sync_completion(kwargs)
+            rval = self.prepare_return()
+            self.kernel_manager.runtime += time.time() - t
+            return rval
+
+    @abstractmethod
+    def _normalize_sizes(self):
+        """
+        Normalize global_size and local_size to appropriate format.
+
+        OpenCL/CUDA: Convert to tuples if not already
+        Metal: Convert to 3D grid format
+        """
+        pass
+
+    @abstractmethod
+    def _execute_kernel_with_args(self, prepared_args, original_args, extra_kwargs):
+        """
+        Execute the kernel with prepared arguments.
+
+        This is the core backend-specific execution logic.
+
+        Args:
+            prepared_args: Arguments prepared by prepare_arguments()
+            original_args: Original Python arguments (for error messages)
+            extra_kwargs: Any remaining kwargs (e.g., 'poll' for OpenCL)
+        """
+        pass
+
+    @abstractmethod
+    def _handle_async_completion(self):
+        """
+        Handle completion in async mode (track event/buffer for later wait).
+
+        OpenCL: Append self.evt to pending_events
+        Metal: Track cmd_buffer
+        CUDA: Track stream
+        """
+        pass
+
+    @abstractmethod
+    def _handle_sync_completion(self, extra_kwargs):
+        """
+        Handle completion in sync mode (wait for kernel to finish).
+
+        Args:
+            extra_kwargs: Remaining kwargs (e.g., 'poll' for OpenCL)
+
+        OpenCL: self.evt.wait() or polling
+        Metal: Implicit sync
+        CUDA: self.stream.synchronize()
+        """
+        pass
