@@ -11,11 +11,9 @@ extern "C" __kernel
 void zcs${planes}(int width, int height, float threshold, float* input, float* zcs )
 {
     size_t i = get_global_id(0)*${planes};
-    // CUDA: X/Y macros expect pixel index, not plane-multiplied index
-    size_t pixel_id = get_global_id(0);
-    int x = max(1, (int)(pixel_id % width));
+    int x = max(1, (int)X(i));
     x = min(x, width-2);
-    int y = max(1, (int)(pixel_id / width));
+    int y = max(1, (int)Y(i));
     y = min(y, height-2);
     float zclt;
     float v, below, left, above, right;
