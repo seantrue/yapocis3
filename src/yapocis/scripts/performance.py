@@ -722,6 +722,282 @@ def plot_resnet50_results(results, iterations):
 
 
 # ============================================================================
+# Graphics4 Performance Testing
+# ============================================================================
+
+def benchmark_graphics4(
+    kdraw,
+    primitive_count: int,
+    canvas_size: int,
+    iterations: int,
+    use_async: bool = True
+) -> float:
+    """
+    Benchmark graphics4 display list rendering.
+
+    Args:
+        kdraw: KernelDraw4 instance with resident canvas
+        primitive_count: Number of primitives to render
+        canvas_size: Canvas dimension (square)
+        iterations: Number of render iterations
+        use_async: Whether to use async mode
+
+    Returns:
+        Elapsed time in seconds
+    """
+    os.environ['YAPOCIS_ASYNC'] = '1' if use_async else '0'
+
+    # Generate random primitives
+    np.random.seed(42)  # Reproducible data
+
+    # Mix of primitive types (proportions typical of UI rendering)
+    n_lines = int(primitive_count * 0.35)
+    n_circles = int(primitive_count * 0.25)
+    n_rects = int(primitive_count * 0.25)
+    n_triangles = int(primitive_count * 0.10)
+    n_ellipses = int(primitive_count * 0.05)
+
+    # Generate coordinates scaled to canvas
+    lines = np.random.randint(0, canvas_size, size=(n_lines, 4))
+    circles = np.column_stack([
+        np.random.randint(0, canvas_size, size=n_circles),
+        np.random.randint(0, canvas_size, size=n_circles),
+        np.random.randint(5, 50, size=n_circles)
+    ])
+    rects = np.random.randint(0, canvas_size, size=(n_rects, 4))
+    triangles = np.random.randint(0, canvas_size, size=(n_triangles, 6))
+    ellipses = np.column_stack([
+        np.random.randint(0, canvas_size, size=n_ellipses),
+        np.random.randint(0, canvas_size, size=n_ellipses),
+        np.random.randint(10, 60, size=n_ellipses),
+        np.random.randint(10, 60, size=n_ellipses)
+    ])
+
+    # Generate random colors
+    colors_lines = np.random.rand(n_lines, 4).astype(np.float32)
+    colors_circles = np.random.rand(n_circles, 4).astype(np.float32)
+    colors_rects = np.random.rand(n_rects, 4).astype(np.float32)
+    colors_triangles = np.random.rand(n_triangles, 4).astype(np.float32)
+    colors_ellipses = np.random.rand(n_ellipses, 4).astype(np.float32)
+
+    # Warmup iteration
+    kdraw.lines(lines, colors=colors_lines)
+    kdraw.circles(circles, colors=colors_circles)
+    kdraw.rects(rects, colors=colors_rects)
+    kdraw.triangles(triangles, colors=colors_triangles)
+    kdraw.ellipses(ellipses, colors=colors_ellipses)
+    kdraw.render()
+
+    # Timed iterations
+    t_start = time.time()
+    for _ in range(iterations):
+        kdraw.lines(lines, colors=colors_lines)
+        kdraw.circles(circles, colors=colors_circles)
+        kdraw.rects(rects, colors=colors_rects)
+        kdraw.triangles(triangles, colors=colors_triangles)
+        kdraw.ellipses(ellipses, colors=colors_ellipses)
+        kdraw.render()
+    t_elapsed = time.time() - t_start
+
+    return t_elapsed
+
+
+def test_graphics4(args):
+    """Test Graphics4/KernelDraw4 display list rendering performance."""
+    from yapocis.lib.kerneldraw4 import KernelDraw4
+
+    PRIMITIVE_COUNTS = [100, 500, 1000, 5000, 10000]
+    CANVAS_SIZES = [512, 1024, 2048]
+    ITERATIONS = args.iterations
+
+    print("=" * 70)
+    print("Graphics4 Display List Rendering Performance Test")
+    print("=" * 70)
+    print(f"Primitive counts: {PRIMITIVE_COUNTS}")
+    print(f"Canvas sizes: {CANVAS_SIZES}")
+    print(f"Iterations per test: {ITERATIONS}")
+    print()
+
+    # Discover backends
+    backend_filters = args.backends.split(',') if args.backends else []
+    device_filters = args.devices.split(',') if args.devices else []
+    available_backends = get_test_backends(backend_filters if backend_filters else None)
+
+    results = []
+
+    for backend in available_backends:
+        os.environ['YAPOCIS_BACKEND'] = backend
+        devices = get_test_devices(backend, device_filters if device_filters else None)
+
+        if not devices:
+            continue
+
+        for device_name, device_id in devices.items():
+            label = f"{backend.upper()}: {device_name}"
+
+            try:
+                # Test across canvas sizes
+                for canvas_size in CANVAS_SIZES:
+                    print(f"\n{label} - Canvas {canvas_size}x{canvas_size}")
+
+                    # Create canvas and KernelDraw4 instance
+                    canvas = np.zeros((canvas_size, canvas_size, 4), dtype=np.float32)
+                    kdraw = KernelDraw4(canvas, device_name=device_name)
+
+                    counts = []
+                    times_async = []
+                    times_sync = []
+
+                    for prim_count in PRIMITIVE_COUNTS:
+                        try:
+                            print(f"  {prim_count:5d} primitives (ASYNC)...", end=' ')
+                            t_async = benchmark_graphics4(
+                                kdraw, prim_count, canvas_size, ITERATIONS, use_async=True
+                            )
+                            times_async.append(t_async)
+                            print(f"{t_async:.4f}s")
+
+                            print(f"  {prim_count:5d} primitives (SYNC)...", end=' ')
+                            t_sync = benchmark_graphics4(
+                                kdraw, prim_count, canvas_size, ITERATIONS, use_async=False
+                            )
+                            times_sync.append(t_sync)
+                            print(f"{t_sync:.4f}s")
+
+                            counts.append(prim_count)
+
+                        except Exception as e:
+                            print(f"FAILED - {e}")
+                            continue
+
+                    if len(counts) > 0:
+                        counts = np.array(counts)
+                        times_async = np.array(times_async)
+                        times_sync = np.array(times_sync)
+                        async_speedup = times_sync / times_async
+
+                        results.append({
+                            'backend': backend.upper(),
+                            'device': device_name,
+                            'label': label,
+                            'canvas_size': canvas_size,
+                            'counts': counts,
+                            'times_async': times_async,
+                            'times_sync': times_sync,
+                            'async_speedup': async_speedup
+                        })
+
+            except Exception as e:
+                print(f"\n  ERROR: {label} failed: {e}")
+                import traceback
+                traceback.print_exc()
+                continue
+
+    if not results:
+        print("\nNo successful benchmarks.")
+        return 1
+
+    plot_graphics4_results(results, ITERATIONS, PRIMITIVE_COUNTS, CANVAS_SIZES)
+    return 0
+
+
+def plot_graphics4_results(results, iterations, primitive_counts, canvas_sizes):
+    """Create visualization for graphics4 results."""
+    sns.set_theme(style="whitegrid", palette="husl")
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(14, 14))
+
+    # Group results by backend/device
+    by_device = {}
+    for result in results:
+        key = result['label']
+        if key not in by_device:
+            by_device[key] = []
+        by_device[key].append(result)
+
+    colors = sns.color_palette("husl", len(by_device))
+
+    # Plot 1: Execution time vs primitive count (largest canvas)
+    largest_canvas = max(canvas_sizes)
+    ax1.set_title(
+        f'Graphics4 Display List Performance ({largest_canvas}x{largest_canvas}, {iterations} iterations)\n'
+        f'Async vs Sync',
+        fontsize=13, fontweight='bold', pad=15
+    )
+
+    for i, (device_label, device_results) in enumerate(by_device.items()):
+        # Find result for largest canvas
+        canvas_result = [r for r in device_results if r['canvas_size'] == largest_canvas]
+        if canvas_result:
+            result = canvas_result[0]
+            ax1.plot(result['counts'], result['times_async'],
+                    linewidth=2, marker='o', markersize=5, linestyle='-',
+                    color=colors[i], label=f"{device_label} (async)", zorder=2)
+            ax1.plot(result['counts'], result['times_sync'],
+                    linewidth=2, marker='s', markersize=4, linestyle='--',
+                    color=colors[i], alpha=0.6, label=f"{device_label} (sync)", zorder=2)
+
+    ax1.set_ylabel('Execution Time (seconds)', fontsize=11, fontweight='bold')
+    ax1.set_xlabel('Number of Primitives', fontsize=11, fontweight='bold')
+    ax1.legend(loc='upper left', framealpha=0.9, fontsize=8, ncol=2)
+    ax1.grid(True, alpha=0.3)
+    ax1.set_xscale('log')
+    ax1.set_yscale('log')
+
+    # Plot 2: Throughput (primitives/sec) vs canvas size
+    ax2.set_title('Rendering Throughput (async mode)', fontsize=11, fontweight='bold', pad=15)
+
+    for i, (device_label, device_results) in enumerate(by_device.items()):
+        # Calculate throughput for each canvas size
+        canvas_sizes_actual = []
+        throughputs = []
+
+        for result in sorted(device_results, key=lambda r: r['canvas_size']):
+            canvas_sizes_actual.append(result['canvas_size'])
+            # Use largest primitive count for throughput calculation
+            max_count = result['counts'][-1]
+            time_per_iter = result['times_async'][-1] / iterations
+            throughput = max_count / time_per_iter
+            throughputs.append(throughput / 1000.0)  # K primitives/sec
+
+        if canvas_sizes_actual:
+            ax2.plot(canvas_sizes_actual, throughputs,
+                    linewidth=2, marker='o', markersize=6,
+                    color=colors[i], label=device_label)
+
+    ax2.set_ylabel('Throughput (K primitives/sec)', fontsize=11, fontweight='bold')
+    ax2.set_xlabel('Canvas Size (pixels)', fontsize=11, fontweight='bold')
+    ax2.legend(loc='best', framealpha=0.9, fontsize=9)
+    ax2.grid(True, alpha=0.3)
+
+    # Plot 3: Async speedup vs primitive count
+    ax3.set_title('Async vs Sync Performance Gain', fontsize=11, fontweight='bold', pad=15)
+
+    for i, (device_label, device_results) in enumerate(by_device.items()):
+        # Find result for largest canvas
+        canvas_result = [r for r in device_results if r['canvas_size'] == largest_canvas]
+        if canvas_result:
+            result = canvas_result[0]
+            ax3.plot(result['counts'], result['async_speedup'],
+                    linewidth=2, marker='d', markersize=5,
+                    color=colors[i], label=device_label)
+
+    ax3.axhline(y=1.0, color='gray', linestyle='--', linewidth=1.5, alpha=0.7)
+    ax3.set_ylabel('Async Speedup', fontsize=11, fontweight='bold')
+    ax3.set_xlabel('Number of Primitives', fontsize=11, fontweight='bold')
+    ax3.legend(loc='best', framealpha=0.9, fontsize=9)
+    ax3.grid(True, alpha=0.3)
+    ax3.set_xscale('log')
+
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
+    fig.text(0.99, 0.01, f'Generated: {timestamp}', ha='right', va='bottom', fontsize=8, alpha=0.5)
+
+    plt.tight_layout()
+    output_path = get_output_dir() / "graphics4_performance.png"
+    fig.savefig(output_path, dpi=150, bbox_inches='tight')
+    print(f"\nPlot saved to: {output_path}")
+
+
+# ============================================================================
 # Main Entry Point
 # ============================================================================
 
@@ -730,6 +1006,7 @@ AVAILABLE_TESTS = {
     'gaussian': ('Separable Gaussian convolution', test_gaussian),
     'vgg16': ('VGG16 CNN inference', test_vgg16),
     'resnet50': ('ResNet50 CNN inference', test_resnet50),
+    'graphics4': ('KernelDraw4 display list rendering', test_graphics4),
 }
 
 
