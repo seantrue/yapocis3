@@ -70,7 +70,8 @@ class DeviceManager(DeviceManagerBase):
         # Default CUDA compilation options
         default_options = [
             "--use_fast_math",
-            "-Xcudafe", "--diag_suppress=177"  # Suppress "function declared but never referenced"
+            "-Xcudafe", "--diag_suppress=177",  # Suppress "function declared but never referenced"
+            "-Xcudafe", "--diag_suppress=68"    # Suppress "integer conversion resulted in a change of sign"
         ]
         options = default_options if options is None else options
 
