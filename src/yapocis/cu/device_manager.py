@@ -68,7 +68,10 @@ class DeviceManager(DeviceManagerBase):
             Compiled SourceModule
         """
         # Default CUDA compilation options
-        default_options = ["--use_fast_math"]
+        default_options = [
+            "--use_fast_math",
+            "-Xcudafe", "--diag_suppress=177"  # Suppress "function declared but never referenced"
+        ]
         options = default_options if options is None else options
 
         # Compile the source module (no_extern_c=True to allow C++ templates)
