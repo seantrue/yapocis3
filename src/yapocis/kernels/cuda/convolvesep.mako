@@ -34,7 +34,7 @@ void ${name}_h(int width, int height, float* a, float* ret )
     int x = X(i);
     int y = Y(i);
     // Horizontal convolution
-    int inside = (x >= ${margin}) && (x<width-${margin}) && (y >= ${margin}) && (y <= height-${margin});
+    int inside = (x >= ${margin}) && (x<width-${margin}) && (y >= ${margin}) && (y < height-${margin});
     //int inside = (((size_t)(${margin}*height) < i) && (i < (n-${margin}*height)));
   	%for j in range(len(conv)):
     sum += inside ? a[i+(${j-margin}*height)] * ${conv[j]} : 0.0f;
@@ -51,7 +51,7 @@ void ${name}_v(int width, int height, float* a, float* ret )
     int y = Y(i);
     // Vertical convolution
     float sum = 0.0;
-    int inside = (x >= ${margin}) && (x<width-${margin}) && (y >= ${margin}) && (y <= height-${margin});
+    int inside = (x >= ${margin}) && (x<width-${margin}) && (y >= ${margin}) && (y < height-${margin});
     //int inside = (${margin} < i) && (i < (n-${margin}));
   	%for j in range(len(conv)):
     sum +=  inside ?  a[i+(${j-margin})] * ${conv[j]} : 0.0;
