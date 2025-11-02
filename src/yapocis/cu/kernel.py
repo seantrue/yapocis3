@@ -36,6 +36,10 @@ class Kernel(KernelBase):
         self.async_write = async_write
         self.map_arguments()
 
+    def _package_dimension(self, value, dtype):
+        """Package dimension as raw scalar for CUDA."""
+        return dtype(value)
+
     def prepare_arguments(
         self, args: list[Any], resident_arrays: list[str] | None = None
     ):
@@ -84,43 +88,6 @@ class Kernel(KernelBase):
                         self.global_size = arg.shape
                     break
         return tuple(realargs)
-
-    def handle_sizeof(self, arg, dtype):
-        if not dtype:
-            dtype = np.int32
-        return dtype(arg.size)
-
-    handle_size_of = handle_sizeof
-
-    def handle_lengthof(self, arg, dtype):
-        """Get length of 1D array (size for 1D, shape[0] for multi-dimensional)."""
-        if not dtype:
-            dtype = np.int32
-        # For 1D arrays, length is the size. For multi-D, it's shape[0]
-        return dtype(len(arg))
-
-    handle_length_of = handle_lengthof
-
-    def handle_widthof(self, arg, dtype):
-        if not dtype:
-            dtype = np.int32
-        return dtype(arg.shape[0])
-
-    handle_width_of = handle_widthof
-
-    def handle_heightof(self, arg, dtype):
-        if not dtype:
-            dtype = np.int32
-        return dtype(arg.shape[1])
-
-    handle_height_of = handle_heightof
-
-    def handle_depthof(self, arg, dtype):
-        if not dtype:
-            dtype = np.int32
-        return dtype(arg.shape[2])
-
-    handle_depth_of = handle_depthof
 
     def handle_outlike(self, arg, dtype):
         if not dtype:

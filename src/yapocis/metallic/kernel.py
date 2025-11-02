@@ -80,38 +80,13 @@ class Kernel(KernelBase):
             realargs[iparam] = real_arg
         return tuple(realargs)
 
-    def package_scalar(self, value, dtype):
+    def _package_dimension(self, value, dtype):
+        """Package dimension as 1-element array for Metal."""
         return np.array([value], dtype=dtype)
 
-    def handle_lengthof(self, arg, dtype=np.int32):
-        return self.package_scalar(max(arg.shape), dtype)
-
-    handle_length_of = handle_lengthof
-
-    def handle_sizeof(self, arg, dtype=np.int32):
-        return self.package_scalar(arg.size, dtype)
-
-    handle_size_of = handle_sizeof
-
-    def handle_widthof(self, arg, dtype=np.int32):
-        # Column-major layout: width is shape[0]
-        return self.package_scalar(arg.shape[0], dtype)
-
-    handle_width_of = handle_widthof
-
-    def handle_heightof(self, arg, dtype=np.int32):
-        # Column-major layout: height is shape[1]
-        return self.package_scalar(arg.shape[1], dtype)
-
-    handle_height_of = handle_heightof
-
-    def handle_depthof(self, arg, dtype=np.int32):
-        return self.package_scalar(arg.shape[2], dtype)
-
-    handle_depth_of = handle_depthof
-
     def handle_countof(self, arg, dtype=np.int32):
-        return self.package_scalar(arg.shape[0], dtype)
+        """Metal-specific: get count (shape[0]) - same as widthof."""
+        return self._package_dimension(arg.shape[0], dtype)
 
     handle_count_of = handle_countof
 
