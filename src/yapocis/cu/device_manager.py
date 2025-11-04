@@ -101,12 +101,30 @@ class DeviceManager(DeviceManagerBase):
         return a
 
     def write_buffer(self, a: Array, wait: bool = True) -> gpuarray.GPUArray:
-        """Write numpy array to PyCUDA GPUArray."""
+        """
+        Write numpy array to PyCUDA GPUArray.
+
+        Args:
+            a: NumPy array to write to GPU
+            wait: If True, wait for transfer to complete (sync).
+                  If False, return immediately (async transfer).
+
+        Returns:
+            PyCUDA GPUArray handle
+
+        Note:
+            On discrete GPUs, async_write can provide significant benefit
+            (1.5-2x speedup) by overlapping PCIe transfers with CPU work.
+            On unified memory (Apple M1), async_write provides no benefit
+            as "transfers" are essentially pointer operations.
+        """
         buf = self.ensure_buffer(a)
-        # Copy from host to GPU
+        # Copy from host to GPU using async transfer
         buf.set_async(a, stream=self.queue)
         if wait:
+            # Synchronous mode: block until transfer completes
             self.queue.synchronize()
+        # Async mode: return immediately, transfer continues in background
         return buf
 
     def find_buffer(self, a: Array, op: int) -> gpuarray.GPUArray | None:

@@ -22,6 +22,7 @@ from .hsi import HSI
 
 class Anisodiff(BoundKernels):
     INTERFACE = "anisodiff"
+    use_async = True  # Enable async execution by default for Anisodiff operations
     filter_by_depth = ["filterImage", "filterImage2", "filterImage3", "filterImage4"]
 
     def __init__(self, *args, **kwargs):
@@ -68,13 +69,10 @@ class Anisodiff(BoundKernels):
             input = image
         output = np.empty_like(input)
 
-        # Check if async mode is enabled
-        use_async = os.environ.get('YAPOCIS_ASYNC', '').lower() in ('1', 'true', 'yes')
-
         filter_res.write(input)
         filter_res.write(output)
 
-        if use_async:
+        if self.use_async:
             # Async path: enqueue all iterations without waiting
             with self.kmgr.async_mode():
                 for i in range(n):

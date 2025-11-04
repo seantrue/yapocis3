@@ -12,6 +12,7 @@ from .bound_kernels import BoundKernels
 
 class Median(BoundKernels):
     INTERFACE = "median3x3"
+    use_async = True  # Enable async execution by default for Median operations
 
     def median3x3slow(self, image: Image1, iterations: int = 1) -> Image1:
         """
@@ -43,16 +44,13 @@ class Median(BoundKernels):
         if iterations == 0:
             return image.copy()
 
-        # Check if async mode is enabled
-        use_async = os.environ.get('YAPOCIS_ASYNC', '').lower() in ('1', 'true', 'yes')
-
         m3 = self.kmgr.median3x3_res
         input = image
         output = np.empty_like(input)
         m3.write(input)
         m3.write(output)
 
-        if use_async:
+        if self.use_async:
             # Async path: enqueue all iterations without waiting
             with self.kmgr.async_mode():
                 for i in range(iterations):

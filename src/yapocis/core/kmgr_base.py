@@ -235,7 +235,7 @@ class KernelManagerBase(ABC):
 
     def write(self, a, async_write=None):
         async_write = self.async_write if async_write is None else async_write
-        return self.dmgr.write(a, wait=async_write)
+        return self.dmgr.write(a, wait=not async_write)
 
     def purge(self):
         self.stats()

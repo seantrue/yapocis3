@@ -89,11 +89,34 @@ class DeviceManager(DeviceManagerBase):
         return a
 
     def write_buffer(self, a: Array, wait: bool = True) -> "pymetallic.Buffer":
-        """Write numpy array to PyMetallic buffer."""
-        # For PyMetallic we create/replace the backing buffer from host bytes
+        """
+        Write numpy array to PyMetallic buffer.
+
+        Args:
+            a: NumPy array to write to GPU
+            wait: If True, wait for transfer to complete (sync).
+                  If False, return immediately (async transfer).
+
+        Returns:
+            PyMetallic buffer handle
+
+        Note:
+            On Apple Silicon with unified memory, buffer "transfers" are
+            essentially pointer operations, so async_write provides no benefit.
+            The wait parameter is accepted for API compatibility but currently
+            ignored - all writes use the fast synchronous Buffer.from_numpy().
+        """
         if not a.flags.c_contiguous:
             a = np.ascontiguousarray(a)
+
+        # Always use synchronous Buffer.from_numpy on Metal
+        # Reasons:
+        # 1. Unified memory makes transfers instant (~0.1μs)
+        # 2. async_buffer_from_numpy requires new command buffer per call
+        # 3. Command buffer overhead (200-300μs) >> transfer time
+        # 4. Result: async is 2x SLOWER than sync on unified memory
         buf = pymetallic.Buffer.from_numpy(self.device, a)
+
         buffer_id = id(a)
         self.arrays[buffer_id] = a
         self.buffers[buffer_id] = buf

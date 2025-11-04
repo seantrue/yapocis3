@@ -190,11 +190,14 @@ class GaussianWeights:
 class Gaussian(BoundKernels):
     INTERFACE = "convolvesep"
     load_program_config = {}
+    use_async = True  # Enable async execution by default for Gaussian operations
 
     def __init__(
         self,
         device_name: str | None = None,
         gaussian_weights: list[np.ndarray] | None = None,
+        use_async: bool | None = None,
+        async_write: bool | None = None,
     ):
         self.gaussian_weights = (
             GaussianWeights() if gaussian_weights is None else gaussian_weights
@@ -202,7 +205,12 @@ class Gaussian(BoundKernels):
         gws = self.gaussian_weights.gaussian_weights()
         convs = [("gauss%s" % len(a), a) for a in gws]
 
-        super(Gaussian, self).__init__(device_name=device_name, convs=convs)
+        super(Gaussian, self).__init__(
+            device_name=device_name,
+            use_async=use_async,
+            async_write=async_write,
+            convs=convs
+        )
 
         # Initialize with traditional path
         self._init_with_bound_kernels(convs)
@@ -245,10 +253,7 @@ class Gaussian(BoundKernels):
         g.write(aa)
         g.write(b)
 
-        # Check if async mode is enabled
-        use_async = os.environ.get('YAPOCIS_ASYNC', '').lower() in ('1', 'true', 'yes')
-
-        if use_async:
+        if self.use_async:
             # Async path: enqueue both convolutions without waiting
             with self.kmgr.async_mode():
                 g.h(aa, b)
@@ -280,9 +285,6 @@ class Gaussian(BoundKernels):
     ) -> tuple[Image1, Image1, Image1]:
         threshold = self.threshold if threshold is None else threshold
 
-        # Check if async mode is enabled
-        use_async = os.environ.get('YAPOCIS_ASYNC', '').lower() in ('1', 'true', 'yes')
-
         if res:
             g = self.get_gaussian_kernel(scale)
             g1 = self.get_gaussian_kernel(scale + 1)
@@ -296,7 +298,7 @@ class Gaussian(BoundKernels):
             g.write(tmp)
             g.write(zca)
 
-            if use_async:
+            if self.use_async:
                 # Async path: enqueue all operations without waiting
                 with self.kmgr.async_mode():
                     g.res(0, a, tmp)

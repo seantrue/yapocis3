@@ -18,8 +18,20 @@ except Exception as e:  # pragma: no cover
 
 from yapocis.core.kmgr_base import KernelManagerBase
 from yapocis.metallic.device_manager import get_device_manager
-from yapocis.metallic.kernel import Kernel
 from yapocis.utils.internals import get_yapocis_dir
+
+# Runtime selection between Python and Cython implementations
+_use_cython = os.environ.get("YAPOCIS_USE_CYTHON", "0").lower() in ("1", "true", "yes")
+
+if _use_cython:
+    try:
+        from yapocis.metallic.kernel_cy import KernelCy as Kernel
+        print("Using Cython-optimized Metal kernel")
+    except ImportError:
+        from yapocis.metallic.kernel import Kernel
+        print("Warning: YAPOCIS_USE_CYTHON=1 but Cython extension not built, falling back to Python")
+else:
+    from yapocis.metallic.kernel import Kernel
 
 
 class KernelManager(KernelManagerBase):

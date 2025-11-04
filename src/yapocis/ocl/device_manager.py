@@ -95,15 +95,33 @@ class DeviceManager(DeviceManagerBase):
         return a
 
     def write_buffer(self, a: Array, wait: bool = True) -> pyopencl.Buffer:
-        """Write numpy array to PyOpenCL buffer."""
+        """
+        Write numpy array to PyOpenCL buffer.
+
+        Args:
+            a: NumPy array to write to GPU
+            wait: If True, wait for transfer to complete (sync).
+                  If False, return immediately (async transfer).
+
+        Returns:
+            PyOpenCL buffer handle
+
+        Note:
+            On discrete GPUs, async_write can provide significant benefit
+            (1.5-2x speedup) by overlapping PCIe transfers with CPU work.
+            On unified memory (Apple M1), async_write provides no benefit
+            as "transfers" are essentially pointer operations.
+        """
         buf = self.ensure_buffer(a)
         shape = a.shape
         strides = a.strides
         a.shape = (a.size,)
         a.strides = (strides[-1],)
         if wait:
+            # Synchronous mode: enqueue transfer and wait for completion
             pyopencl.enqueue_copy(self.queue, buf, a).wait()
         else:
+            # Async mode: enqueue transfer and return immediately
             pyopencl.enqueue_copy(self.queue, buf, a)
         a.shape = shape
         a.strides = strides

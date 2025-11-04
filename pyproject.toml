@@ -101,6 +101,7 @@ dev = [
     "watchdog>=4.0.0",
     "torch>=2.0.0",
     "torchvision>=0.15.0",
+    "cython>=3.0.0",
 ]
 
 # Testing dependencies
@@ -160,6 +161,7 @@ dev = [
     "watchdog>=4.0.0",
     "torch>=2.0.0",
     "torchvision>=0.15.0",
+    "cython>=3.0.0",
 ]
 
 [tool.hatch.build.targets.wheel]
