@@ -13,7 +13,7 @@
 
 extern "C" __kernel void lines(int width, int height, READWRITE float4 *a, int nelements,
                     READONLY float2 *coords, READONLY float *rdist,
-                    READONLY float4 *colors) {
+                    READONLY float *aa_widths, READONLY float4 *colors) {
   size_t i = get_global_id(0);
   int x = X(i);
   int y = Y(i);
@@ -21,8 +21,9 @@ extern "C" __kernel void lines(int width, int height, READWRITE float4 *a, int n
 
   float2 point = make_float2((float)x, (float)y);
   for (int ielement = 0; ielement < nelements; ielement++) {
-    float threshold2 = ((*rdist++ * .5) + .5);
-    threshold2 *= threshold2;
+    float threshold = ((*rdist++ * .5) + .5);
+    float aa_width = *aa_widths++;
+    float threshold2 = threshold * threshold;
     float2 linestart = *coords++;
     float2 lineend = *coords++;
     float4 rgba = *colors++;
@@ -32,9 +33,23 @@ extern "C" __kernel void lines(int width, int height, READWRITE float4 *a, int n
     float2 u2 = (point - linestart) * (delta);
     float u = (u2.x + u2.y) / linemag2;
     float2 intersection = linestart + (u * delta);
-    float dist = dxdy2(point,intersection);
-    float4 clr = (rgba * alpha) + (color * (ONES - alpha));
-    color = (u >= 0.0f && u <= 1.0f && dist < threshold2) ? clr : color;
+    float dist2 = dxdy2(point,intersection);
+
+    if (u >= 0.0f && u <= 1.0f) {
+      if (aa_width > 0.0f) {
+        // Anti-aliased edge using smoothstep
+        float dist = sqrt(dist2);
+        float edge_outer = threshold + aa_width;
+        float edge_inner = threshold - aa_width;
+        float t = smoothstep(edge_outer, edge_inner, dist);
+        float4 clr = (rgba * alpha) + (color * (ONES - alpha));
+        color = mix(color, clr, t * rgba.w);
+      } else {
+        // Hard edge (original behavior, fast path)
+        float4 clr = (rgba * alpha) + (color * (ONES - alpha));
+        color = (dist2 < threshold2) ? clr : color;
+      }
+    }
   }
   color.w = 0.0f;
   a[i] = color;

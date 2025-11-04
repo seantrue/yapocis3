@@ -10,7 +10,8 @@ kernel void lines(constant int &width [[ buffer(0) ]],
                   constant int &nelements [[ buffer(3) ]],
                   const device float2 *coords [[ buffer(4) ]],
                   const device float *rdist [[ buffer(5) ]],
-                  const device float2 *colors [[ buffer(6) ]],
+                  const device float *aa_widths [[ buffer(6) ]],
+                  const device float2 *colors [[ buffer(7) ]],
                   uint i [[ thread_position_in_grid ]])
 {
     float color = a[i];
@@ -18,8 +19,9 @@ kernel void lines(constant int &width [[ buffer(0) ]],
     int y = Y(i);
     float2 point = float2((float)x, (float)y);
     for (int ielement = 0; ielement < nelements; ielement++) {
-        float threshold2 = ((*rdist++ * .5f) + .5f);
-        threshold2 = threshold2*threshold2;
+        float threshold = ((*rdist++ * .5f) + .5f);
+        float aa_width = *aa_widths++;
+        float threshold2 = threshold * threshold;
         float2 linestart = *coords++;
         float2 lineend = *coords++;
         float2 value_alpha = *colors++;
@@ -31,8 +33,22 @@ kernel void lines(constant int &width [[ buffer(0) ]],
         float u = (u2.x + u2.y) / linemag2;
         float2 intersection = linestart + (u * delta);
         float dist2 = dxdy2(point,intersection);
-        float clr = (value*alpha)+(color*(1.0f-alpha));
-        color = (u >= 0.0f && u <= 1.0f && dist2 < threshold2) ? clr : color;
+
+        if (u >= 0.0f && u <= 1.0f) {
+            if (aa_width > 0.0f) {
+                // Anti-aliased edge using smoothstep
+                float dist = sqrt(dist2);
+                float edge_outer = threshold + aa_width;
+                float edge_inner = threshold - aa_width;
+                float t = smoothstep(edge_outer, edge_inner, dist);
+                float clr = (value * alpha) + (color * (1.0f - alpha));
+                color = mix(color, clr, t * alpha);
+            } else {
+                // Hard edge (original behavior, fast path)
+                float clr = (value * alpha) + (color * (1.0f - alpha));
+                color = (dist2 < threshold2) ? clr : color;
+            }
+        }
     }
     a[i] = color;
 }

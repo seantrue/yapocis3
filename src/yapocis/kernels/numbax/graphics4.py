@@ -17,6 +17,13 @@ except Exception:  # pragma: no cover - fallback
 
 
 @njit(cache=True, fastmath=True)
+def _smoothstep(edge0: float, edge1: float, x: float) -> float:
+    """Smooth Hermite interpolation between 0 and 1."""
+    t = max(0.0, min(1.0, (x - edge0) / (edge1 - edge0)))
+    return t * t * (3.0 - 2.0 * t)
+
+
+@njit(cache=True, fastmath=True)
 def _blend_rgba(dst: np.ndarray, x: int, y: int, rgba: np.ndarray):
     if 0 <= y < dst.shape[0] and 0 <= x < dst.shape[1]:
         alpha_src = rgba[3]
@@ -40,16 +47,17 @@ def _blend_rgba(dst: np.ndarray, x: int, y: int, rgba: np.ndarray):
 
 @njit(cache=True, fastmath=True)
 def _draw_line_rgba(
-    img: np.ndarray, x0: int, y0: int, x1: int, y1: int, width: float, rgba: np.ndarray
+    img: np.ndarray, x0: int, y0: int, x1: int, y1: int, width: float, aa_width: float, rgba: np.ndarray
 ):
-    xmin = int(max(0, min(x0, x1) - width - 1))
-    xmax = int(min(img.shape[1] - 1, max(x0, x1) + width + 1))
-    ymin = int(max(0, min(y0, y1) - width - 1))
-    ymax = int(min(img.shape[0] - 1, max(y0, y1) + width + 1))
+    xmin = int(max(0, min(x0, x1) - width - aa_width - 1))
+    xmax = int(min(img.shape[1] - 1, max(x0, x1) + width + aa_width + 1))
+    ymin = int(max(0, min(y0, y1) - width - aa_width - 1))
+    ymax = int(min(img.shape[0] - 1, max(y0, y1) + width + aa_width + 1))
     vx = x1 - x0
     vy = y1 - y0
     seg2 = vx * vx + vy * vy + 1e-20
-    thr2 = (width * 0.5) * (width * 0.5)
+    threshold = width * 0.5
+    thr2 = threshold * threshold
     for y in range(ymin, ymax + 1):
         for x in range(xmin, xmax + 1):
             wx = x - x0
@@ -64,8 +72,23 @@ def _draw_line_rgba(
                 py = y0 + t * vy
             dx = x - px
             dy = y - py
-            if dx * dx + dy * dy <= thr2:
-                _blend_rgba(img, x, y, rgba)
+            dist2 = dx * dx + dy * dy
+
+            if aa_width > 0.0:
+                # Anti-aliased edge
+                dist = np.sqrt(dist2)
+                edge_outer = threshold + aa_width
+                edge_inner = threshold - aa_width
+                blend_t = _smoothstep(edge_outer, edge_inner, dist)
+                if blend_t > 0.0:
+                    # Create anti-aliased color with modulated alpha
+                    aa_rgba = rgba.copy()
+                    aa_rgba[3] *= blend_t
+                    _blend_rgba(img, x, y, aa_rgba)
+            else:
+                # Hard edge (original behavior)
+                if dist2 <= thr2:
+                    _blend_rgba(img, x, y, rgba)
 
 
 @njit(cache=True, fastmath=True)
@@ -157,6 +180,7 @@ def lines(
     nelements: int,
     coords: np.ndarray,
     widths: np.ndarray,
+    aa_widths: np.ndarray,
     colors: np.ndarray,
 ):
     for i in range(nelements):
@@ -165,8 +189,9 @@ def lines(
         x1 = int(coords[i, 2])
         y1 = int(coords[i, 3])
         w = float(widths[i])
+        aa_w = float(aa_widths[i])
         rgba = colors[i]
-        _draw_line_rgba(a, x0, y0, x1, y1, w, rgba)
+        _draw_line_rgba(a, x0, y0, x1, y1, w, aa_w, rgba)
     return a
 
 

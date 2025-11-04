@@ -59,6 +59,12 @@ class GraphicsSetup4(AbstractGraphicsSetup):
         widths = to_vector(width, widths, n, default=1.0, dtype=np.float32)
         return widths
 
+    def coerce_aa_widths(self, coords, aa_width=None, aa_widths=None, **kwargs) -> np.ndarray:
+        n = coords.shape[0]
+        if aa_width is not None and aa_widths is not None:
+            raise RuntimeError(f"Only one of aa_width {aa_width} and {aa_widths}")
+        aa_widths = to_vector(aa_width, aa_widths, n, default=0.0, dtype=np.float32)
+        return aa_widths
 
     def setup_composite(self, locations, blocks, **kwargs):
         """

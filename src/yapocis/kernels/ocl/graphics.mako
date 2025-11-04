@@ -21,7 +21,7 @@
 <%include file="helpers.mako" />
 
 __kernel
-void lines(int width, int height,  READWRITE float *a, int nelements, READONLY float2 *coords, READONLY float *rdist, READONLY float2 *colors)
+void lines(int width, int height,  READWRITE float *a, int nelements, READONLY float2 *coords, READONLY float *rdist, READONLY float *aa_widths, READONLY float2 *colors)
 {
     size_t i =  get_global_id(0);
     float color = a[i];
@@ -29,8 +29,9 @@ void lines(int width, int height,  READWRITE float *a, int nelements, READONLY f
     int y = Y(i);
     float2 point = (float2)((float)x, (float)y);
     for (int ielement = 0; ielement < nelements; ielement++) {
-        float threshold2 = ((*rdist++ * .5) + .5);
-        threshold2 = threshold2*threshold2;
+        float threshold = ((*rdist++ * .5) + .5);
+        float aa_width = *aa_widths++;
+        float threshold2 = threshold * threshold;
         float2 linestart = *coords++;
         float2 lineend = *coords++;
         float2 value_alpha = *colors++;
@@ -42,8 +43,22 @@ void lines(int width, int height,  READWRITE float *a, int nelements, READONLY f
         float u = (u2.x + u2.y) / linemag2;
         float2 intersection = linestart + (u * delta);
         float dist2 = dxdy2(point,intersection);
-        float clr = (value*alpha)+(color*(1.0-alpha));
-        color = (u >= 0.0f && u <= 1.0 && dist2 < threshold2) ? clr : color;
+
+        if (u >= 0.0f && u <= 1.0f) {
+            if (aa_width > 0.0f) {
+                // Anti-aliased edge using smoothstep
+                float dist = sqrt(dist2);
+                float edge_outer = threshold + aa_width;
+                float edge_inner = threshold - aa_width;
+                float t = smoothstep(edge_outer, edge_inner, dist);
+                float clr = (value * alpha) + (color * (1.0 - alpha));
+                color = mix(color, clr, t * alpha);
+            } else {
+                // Hard edge (original behavior, fast path)
+                float clr = (value * alpha) + (color * (1.0 - alpha));
+                color = (dist2 < threshold2) ? clr : color;
+            }
+        }
     }
     a[i] = color;
     barrier(CLK_GLOBAL_MEM_FENCE);
