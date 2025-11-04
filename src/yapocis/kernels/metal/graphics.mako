@@ -58,7 +58,8 @@ kernel void rects(constant int &width [[ buffer(0) ]],
                   device float *a [[ buffer(2) ]],
                   constant int &nlines [[ buffer(3) ]],
                   const device float4 *coords [[ buffer(4) ]],
-                  const device float2 *colors [[ buffer(5) ]],
+                  const device float *aa_widths [[ buffer(5) ]],
+                  const device float2 *colors [[ buffer(6) ]],
                   uint i [[ thread_position_in_grid ]])
 {
     float color = a[i];
@@ -67,15 +68,34 @@ kernel void rects(constant int &width [[ buffer(0) ]],
     float4 region;
     for (int iline=0; iline < nlines; iline++) {
         region = *coords++;
+        float aa_width = *aa_widths++;
         float2 rc = *colors++;
-        float clr = (rc.x*rc.y)+(color*(1.0f-rc.y));
+        float value = rc.x;
+        float alpha = rc.y;
 
         float l = min(region.x,region.z);
         float b = min(region.y,region.w);
         float r = max(region.x,region.z);
         float t = max(region.y,region.w);
 
-        color = (l <= x && x <= r && b <= y && y <= t) ? clr : color;
+        bool inside = (l <= x && x <= r && b <= y && y <= t);
+
+        if (aa_width > 0.0f && inside) {
+            // Anti-aliased edges using distance to nearest edge
+            float dist_l = float(x) - l;
+            float dist_r = r - float(x);
+            float dist_b = float(y) - b;
+            float dist_t = t - float(y);
+            float edge_dist = min(min(dist_l, dist_r), min(dist_b, dist_t));
+
+            float blend_t = smoothstep(0.0f, aa_width, edge_dist);
+            float clr = (value * alpha) + (color * (1.0f - alpha));
+            color = mix(color, clr, blend_t * alpha);
+        } else if (inside) {
+            // Hard edge (original behavior, fast path)
+            float clr = (value * alpha) + (color * (1.0f - alpha));
+            color = clr;
+        }
     }
     a[i] = color;
 }
@@ -85,7 +105,8 @@ kernel void circles(constant int &width [[ buffer(0) ]],
                     device float *a [[ buffer(2) ]],
                     constant int &nlines [[ buffer(3) ]],
                     const device float *coords [[ buffer(4) ]],
-                    const device float2 *colors [[ buffer(5) ]],
+                    const device float *aa_widths [[ buffer(5) ]],
+                    const device float2 *colors [[ buffer(6) ]],
                     uint i [[ thread_position_in_grid ]])
 {
     float color = a[i];
@@ -96,23 +117,46 @@ kernel void circles(constant int &width [[ buffer(0) ]],
         float cx = *coords++;
         float cy = *coords++;
         float radius = *coords++;
+        float aa_width = *aa_widths++;
         float2 rc = *colors++;
-        float clr = (rc.x*rc.y)+(color*(1.0f-rc.y));
-        radius *= radius;
-        float2 center = float2(cx,cy);
-        color = dxdy2(center,point) <= radius ? clr : color;
+        float value = rc.x;
+        float alpha = rc.y;
+        float2 center = float2(cx, cy);
+        float dist = sqrt(dxdy2(center, point));
+
+        if (aa_width > 0.0f) {
+            // Anti-aliased edge using smoothstep
+            float edge_outer = radius + aa_width;
+            float edge_inner = radius - aa_width;
+            float t = smoothstep(edge_outer, edge_inner, dist);
+            float clr = (value * alpha) + (color * (1.0f - alpha));
+            color = mix(color, clr, t * alpha);
+        } else {
+            // Hard edge (original behavior, fast path)
+            float clr = (value * alpha) + (color * (1.0f - alpha));
+            color = (dist <= radius) ? clr : color;
+        }
     }
     a[i] = color;
 }
 
 #define signex(p1,p2,p3) ((p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y))
 
+// Helper function to compute distance from point to line segment
+static inline float dist_to_segment(float2 p, float2 a, float2 b) {
+  float2 pa = p - a;
+  float2 ba = b - a;
+  float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0f, 1.0f);
+  return length(pa - h * ba);
+}
+
 kernel void triangles(constant int &width [[ buffer(0) ]],
                       constant int &height [[ buffer(1) ]],
                       device float *a [[ buffer(2) ]],
                       constant int &nlines [[ buffer(3) ]],
                       const device float2 *coords [[ buffer(4) ]],
-                      const device float2 *colors [[ buffer(5) ]],
+                      const device float *aa_widths [[ buffer(5) ]],
+                      const device float2 *colors [[ buffer(6) ]],
                       uint i [[ thread_position_in_grid ]])
 {
     float color = a[i];
@@ -123,16 +167,33 @@ kernel void triangles(constant int &width [[ buffer(0) ]],
         float2 v1 = *coords++;
         float2 v2 = *coords++;
         float2 v3 = *coords++;
+        float aa_width = *aa_widths++;
         float2 rc = *colors++;
-        float clr = (rc.x*rc.y)+(color*(1.0f-rc.y));
+        float value = rc.x;
+        float alpha = rc.y;
 
         float d1 = signex(point, v1, v2);
         float d2 = signex(point, v2, v3);
         float d3 = signex(point, v3, v1);
         bool has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
         bool has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+        bool inside = !(has_neg && has_pos);
 
-        color = !(has_neg && has_pos) ? clr : color;
+        if (aa_width > 0.0f && inside) {
+            // Anti-aliased edges using distance to nearest edge
+            float dist1 = dist_to_segment(point, v1, v2);
+            float dist2 = dist_to_segment(point, v2, v3);
+            float dist3 = dist_to_segment(point, v3, v1);
+            float edge_dist = min(min(dist1, dist2), dist3);
+
+            float blend_t = smoothstep(0.0f, aa_width, edge_dist);
+            float clr = (value * alpha) + (color * (1.0f - alpha));
+            color = mix(color, clr, blend_t * alpha);
+        } else if (inside) {
+            // Hard edge (original behavior, fast path)
+            float clr = (value * alpha) + (color * (1.0f - alpha));
+            color = clr;
+        }
     }
     a[i] = color;
 }
@@ -143,7 +204,8 @@ kernel void ellipses(constant int &width [[ buffer(0) ]],
                      device float *a [[ buffer(2) ]],
                      constant int &nlines [[ buffer(3) ]],
                      const device float2 *coords [[ buffer(4) ]],
-                     const device float2 *colors [[ buffer(5) ]],
+                     const device float *aa_widths [[ buffer(5) ]],
+                     const device float2 *colors [[ buffer(6) ]],
                      uint i [[ thread_position_in_grid ]])
 {
     float color = a[i];
@@ -153,11 +215,29 @@ kernel void ellipses(constant int &width [[ buffer(0) ]],
     for (int iline=0; iline < nlines; iline++) {
         float2 center = *coords++;
         float2 axes = *coords++;
+        float aa_width = *aa_widths++;
         float2 rc = *colors++;
-        float clr = (rc.x*rc.y)+(color*(1.0f-rc.y));
+        float value = rc.x;
+        float alpha = rc.y;
 
-        float2 dist = (point-center)*(point-center)/(axes*axes);
-        color = (dist.x+dist.y) <= 1.0f ? clr : color;
+        float2 delta = (point - center) / axes;
+        float d = length(delta);
+
+        if (aa_width > 0.0f) {
+            // Anti-aliased edge using smoothstep
+            // d < 1: inside, d = 1: on boundary, d > 1: outside
+            float avg_radius = (axes.x + axes.y) * 0.5f;
+            float dist_to_edge = (d - 1.0f) * avg_radius;
+            float edge_outer = aa_width;
+            float edge_inner = -aa_width;
+            float t = smoothstep(edge_outer, edge_inner, dist_to_edge);
+            float clr = (value * alpha) + (color * (1.0f - alpha));
+            color = mix(color, clr, t * alpha);
+        } else {
+            // Hard edge (original behavior, fast path)
+            float clr = (value * alpha) + (color * (1.0f - alpha));
+            color = (d <= 1.0f) ? clr : color;
+        }
     }
     a[i] = color;
 }

@@ -11,6 +11,7 @@ Supported modules:
 - vgg16: VGG16 CNN inference
 - resnet50: ResNet50 CNN inference
 - graphics4: KernelDraw4 display list rendering
+- graphics-aa: Graphics anti-aliasing performance comparison
 
 Features:
 - Automatic backend and device discovery
@@ -29,6 +30,7 @@ Usage:
     yapocis-performance gaussian --backends cuda --devices Quadro
     yapocis-performance vgg16 --iterations 10
     yapocis-performance resnet50 --test-base
+    yapocis-performance graphics-aa --backends metal,ocl
     yapocis-performance --list
 
     # Use yapocis backend for plot rendering (GPU-accelerated)
@@ -1012,6 +1014,294 @@ def plot_graphics4_results(results, iterations, primitive_counts, canvas_sizes):
 
 
 # ============================================================================
+# Graphics Anti-Aliasing Performance Testing
+# ============================================================================
+
+def benchmark_graphics_aa(
+    kdraw,
+    primitive_type: str,
+    primitive_count: int,
+    canvas_size: int,
+    aa_width: float,
+    iterations: int,
+    use_async: bool = True
+) -> float:
+    """
+    Benchmark graphics rendering with anti-aliasing.
+
+    Args:
+        kdraw: KernelDraw4 instance with resident canvas
+        primitive_type: Type of primitive ('circles', 'rects', 'triangles', 'ellipses')
+        primitive_count: Number of primitives to render
+        canvas_size: Canvas dimension (square)
+        aa_width: Anti-aliasing width (0 = disabled)
+        iterations: Number of render iterations
+        use_async: Whether to use async mode
+
+    Returns:
+        Elapsed time in seconds
+    """
+    os.environ['YAPOCIS_ASYNC'] = '1' if use_async else '0'
+
+    # Generate random primitives
+    np.random.seed(42)  # Reproducible data
+
+    # Generate coordinates and colors based on primitive type
+    if primitive_type == 'circles':
+        coords = np.column_stack([
+            np.random.randint(0, canvas_size, size=primitive_count),
+            np.random.randint(0, canvas_size, size=primitive_count),
+            np.random.randint(10, 50, size=primitive_count)
+        ])
+    elif primitive_type == 'rects':
+        coords = np.random.randint(0, canvas_size, size=(primitive_count, 4))
+    elif primitive_type == 'triangles':
+        coords = np.random.randint(0, canvas_size, size=(primitive_count, 6))
+    elif primitive_type == 'ellipses':
+        coords = np.column_stack([
+            np.random.randint(0, canvas_size, size=primitive_count),
+            np.random.randint(0, canvas_size, size=primitive_count),
+            np.random.randint(15, 60, size=primitive_count),
+            np.random.randint(15, 60, size=primitive_count)
+        ])
+    else:
+        raise ValueError(f"Unknown primitive type: {primitive_type}")
+
+    colors = np.random.rand(primitive_count, 4).astype(np.float32)
+
+    # Get the drawing method
+    draw_method = getattr(kdraw, primitive_type)
+
+    # Warmup iteration
+    draw_method(coords, colors=colors, aa_width=aa_width)
+    kdraw.render()
+
+    # Timed iterations
+    t_start = time.time()
+    for _ in range(iterations):
+        draw_method(coords, colors=colors, aa_width=aa_width)
+        kdraw.render()
+    t_elapsed = time.time() - t_start
+
+    return t_elapsed
+
+
+def test_graphics_aa(args):
+    """Test Graphics4 anti-aliasing performance across backends and async modes."""
+    from yapocis.lib.kerneldraw4 import KernelDraw4
+
+    # Configuration
+    AA_WIDTHS = [0.0, 0.25, 0.5, 1.0]
+    PRIMITIVE_TYPES = ['circles', 'rects', 'triangles', 'ellipses']
+    PRIMITIVE_COUNT = 5000
+    CANVAS_SIZE = 1024
+    ITERATIONS = args.iterations
+
+    print("=" * 70)
+    print("Graphics Anti-Aliasing Performance Test")
+    print("=" * 70)
+    print(f"AA widths: {AA_WIDTHS}")
+    print(f"Primitive types: {PRIMITIVE_TYPES}")
+    print(f"Primitives per test: {PRIMITIVE_COUNT}")
+    print(f"Canvas size: {CANVAS_SIZE}x{CANVAS_SIZE}")
+    print(f"Iterations per test: {ITERATIONS}")
+    print()
+
+    # Discover backends
+    backend_filters = args.backends.split(',') if args.backends else []
+    device_filters = args.devices.split(',') if args.devices else []
+    available_backends = get_test_backends(backend_filters if backend_filters else None)
+
+    if not available_backends:
+        print("No backends available for testing")
+        return 1
+
+    results = []
+
+    for backend in available_backends:
+        os.environ['YAPOCIS_BACKEND'] = backend
+        devices = get_test_devices(backend, device_filters if device_filters else None)
+
+        if not devices:
+            continue
+
+        for device_name, device_id in devices.items():
+            label = f"{backend.upper()}: {device_name}"
+
+            try:
+                print(f"\n{label}")
+
+                # Create canvas and KernelDraw4 instance
+                canvas = np.zeros((CANVAS_SIZE, CANVAS_SIZE, 4), dtype=np.float32)
+                kdraw = KernelDraw4(canvas, device_name=device_name)
+
+                for primitive_type in PRIMITIVE_TYPES:
+                    print(f"\n  {primitive_type.capitalize()}:")
+
+                    for aa_width in AA_WIDTHS:
+                        # Skip AA tests for numbax (CPU baseline only)
+                        if backend == 'numbax' and aa_width > 0.0:
+                            continue
+
+                        try:
+                            # Test with async
+                            t_async = benchmark_graphics_aa(
+                                kdraw, primitive_type, PRIMITIVE_COUNT, CANVAS_SIZE,
+                                aa_width, ITERATIONS, use_async=True
+                            )
+
+                            # Test without async
+                            t_sync = benchmark_graphics_aa(
+                                kdraw, primitive_type, PRIMITIVE_COUNT, CANVAS_SIZE,
+                                aa_width, ITERATIONS, use_async=False
+                            )
+
+                            baseline_note = " (CPU baseline)" if backend == 'numbax' else ""
+                            print(f"    aa={aa_width:4.2f}: async={t_async:.4f}s, sync={t_sync:.4f}s, "
+                                  f"speedup={t_sync/t_async:.2f}x{baseline_note}")
+
+                            results.append({
+                                'backend': backend.upper(),
+                                'device': device_name,
+                                'label': label,
+                                'primitive_type': primitive_type,
+                                'aa_width': aa_width,
+                                'time_async': t_async,
+                                'time_sync': t_sync,
+                                'async_speedup': t_sync / t_async
+                            })
+
+                        except Exception as e:
+                            print(f"    aa={aa_width:4.2f}: FAILED - {e}")
+                            continue
+
+            except Exception as e:
+                print(f"\n  ERROR: {label} failed: {e}")
+                import traceback
+                traceback.print_exc()
+                continue
+
+    if not results:
+        print("\nNo successful benchmarks.")
+        return 1
+
+    plot_graphics_aa_results(results, ITERATIONS, AA_WIDTHS, PRIMITIVE_TYPES, PRIMITIVE_COUNT, CANVAS_SIZE)
+    return 0
+
+
+def plot_graphics_aa_results(results, iterations, aa_widths, primitive_types, primitive_count, canvas_size):
+    """Create visualization for anti-aliasing performance results."""
+    sns.set_theme(style="whitegrid", palette="husl")
+    fig = plt.figure(figsize=(16, 12))
+
+    # Create grid: 2 rows x 2 columns for each primitive type
+    gs = fig.add_gridspec(2, 2, hspace=0.3, wspace=0.3)
+
+    # Group results by backend/device
+    by_device = {}
+    for result in results:
+        key = result['label']
+        if key not in by_device:
+            by_device[key] = []
+        by_device[key].append(result)
+
+    colors = sns.color_palette("husl", len(by_device))
+
+    # Create subplot for each primitive type
+    for idx, primitive_type in enumerate(primitive_types):
+        ax = fig.add_subplot(gs[idx // 2, idx % 2])
+
+        ax.set_title(
+            f'{primitive_type.capitalize()} Anti-Aliasing Performance\n'
+            f'({canvas_size}x{canvas_size}, {primitive_count} primitives, {iterations} iterations)',
+            fontsize=10, fontweight='bold', pad=10
+        )
+
+        # Plot async and sync times for each device
+        for i, (device_label, device_results) in enumerate(by_device.items()):
+            # Filter results for this primitive type
+            prim_results = [r for r in device_results if r['primitive_type'] == primitive_type]
+            if not prim_results:
+                continue
+
+            # Sort by aa_width
+            prim_results = sorted(prim_results, key=lambda r: r['aa_width'])
+
+            aa_vals = [r['aa_width'] for r in prim_results]
+            times_async = [r['time_async'] for r in prim_results]
+            times_sync = [r['time_sync'] for r in prim_results]
+
+            # Plot async times (solid line)
+            ax.plot(aa_vals, times_async,
+                    linewidth=2, marker='o', markersize=5, linestyle='-',
+                    color=colors[i], label=f"{device_label} (async)", zorder=2)
+
+            # Plot sync times (dashed line)
+            ax.plot(aa_vals, times_sync,
+                    linewidth=2, marker='s', markersize=4, linestyle='--',
+                    color=colors[i], alpha=0.6, label=f"{device_label} (sync)", zorder=2)
+
+        ax.set_ylabel('Execution Time (seconds)', fontsize=9, fontweight='bold')
+        ax.set_xlabel('Anti-Aliasing Width', fontsize=9, fontweight='bold')
+        ax.legend(loc='upper left', framealpha=0.9, fontsize=7, ncol=1)
+        ax.grid(True, alpha=0.3)
+        ax.set_xticks(aa_widths)
+
+    # Add overall async speedup comparison plot
+    fig2, ax_speedup = plt.subplots(figsize=(14, 6))
+
+    ax_speedup.set_title(
+        f'Async vs Sync Performance Gain Across Primitives\n'
+        f'({canvas_size}x{canvas_size}, {primitive_count} primitives, {iterations} iterations)',
+        fontsize=12, fontweight='bold', pad=15
+    )
+
+    # Create grouped bar chart
+    x = np.arange(len(aa_widths))
+    width = 0.15  # Width of each bar
+
+    for i, (device_label, device_results) in enumerate(by_device.items()):
+        for j, primitive_type in enumerate(primitive_types):
+            prim_results = [r for r in device_results if r['primitive_type'] == primitive_type]
+            prim_results = sorted(prim_results, key=lambda r: r['aa_width'])
+
+            if not prim_results:
+                continue
+
+            speedups = [r['async_speedup'] for r in prim_results]
+            offset = (i * len(primitive_types) + j - len(by_device) * len(primitive_types) / 2) * width
+
+            ax_speedup.bar(x + offset, speedups, width,
+                          label=f"{device_label} - {primitive_type}",
+                          color=colors[i], alpha=0.5 + 0.1 * j)
+
+    ax_speedup.axhline(y=1.0, color='gray', linestyle='--', linewidth=1.5, alpha=0.7)
+    ax_speedup.set_ylabel('Async Speedup', fontsize=11, fontweight='bold')
+    ax_speedup.set_xlabel('Anti-Aliasing Width', fontsize=11, fontweight='bold')
+    ax_speedup.set_xticks(x)
+    ax_speedup.set_xticklabels([f'{w:.2f}' for w in aa_widths])
+    ax_speedup.legend(loc='best', framealpha=0.9, fontsize=8, ncol=2)
+    ax_speedup.grid(True, alpha=0.3, axis='y')
+
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
+    fig.text(0.99, 0.01, f'Generated: {timestamp}', ha='right', va='bottom', fontsize=8, alpha=0.5)
+    fig2.text(0.99, 0.01, f'Generated: {timestamp}', ha='right', va='bottom', fontsize=8, alpha=0.5)
+
+    plt.tight_layout()
+
+    # Save plots
+    output_path1 = get_output_dir() / "graphics_aa_performance_by_primitive.png"
+    output_path2 = get_output_dir() / "graphics_aa_performance_speedup.png"
+
+    fig.savefig(output_path1, dpi=150, bbox_inches='tight')
+    fig2.savefig(output_path2, dpi=150, bbox_inches='tight')
+
+    print(f"\nPlots saved to:")
+    print(f"  {output_path1}")
+    print(f"  {output_path2}")
+
+
+# ============================================================================
 # Main Entry Point
 # ============================================================================
 
@@ -1021,6 +1311,7 @@ AVAILABLE_TESTS = {
     'vgg16': ('VGG16 CNN inference', test_vgg16),
     'resnet50': ('ResNet50 CNN inference', test_resnet50),
     'graphics4': ('KernelDraw4 display list rendering', test_graphics4),
+    'graphics-aa': ('Graphics anti-aliasing performance comparison', test_graphics_aa),
 }
 
 

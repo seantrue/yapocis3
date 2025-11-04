@@ -79,26 +79,32 @@ class AbstractGraphics(BoundKernels):
             return
         coords = self.coerce_coords(coords, 4)
         colors = self.coerce_colors(coords, **kwargs)
-        self.kmgr.rects(image, coords, colors, global_size=image.size // self.CHANNELS)
+        aa_widths = self.coerce_aa_widths(coords, **kwargs)
+        self.kmgr.rects(image, coords, aa_widths, colors, global_size=image.size // self.CHANNELS)
 
     def circles(self, image, coords, **kwargs):
         if not coords:
             return
         coords = self.coerce_coords(coords, 3)
         colors = self.coerce_colors(coords, **kwargs)
-        self.kmgr.circles(image, coords, colors, global_size=image.size // self.CHANNELS)
+        aa_widths = self.coerce_aa_widths(coords, **kwargs)
+        self.kmgr.circles(image, coords, aa_widths, colors, global_size=image.size // self.CHANNELS)
 
     def triangles(self, image, coords, **kwargs):
         if not coords:
             return
         coords = self.coerce_coords(coords, 6)
         colors = self.coerce_colors(coords, **kwargs)
-        self.kmgr.triangles(image, coords, colors, global_size=image.size // self.CHANNELS)
+        aa_widths = self.coerce_aa_widths(coords, **kwargs)
+        self.kmgr.triangles(image, coords, aa_widths, colors, global_size=image.size // self.CHANNELS)
 
     def ellipses(self, image, coords, **kwargs):
+        if not coords:
+            return
         coords = self.coerce_coords(coords, 4)
         colors = self.coerce_colors(coords, **kwargs)
-        self.kmgr.ellipses(image, coords, colors, global_size=image.size // self.CHANNELS)
+        aa_widths = self.coerce_aa_widths(coords, **kwargs)
+        self.kmgr.ellipses(image, coords, aa_widths, colors, global_size=image.size // self.CHANNELS)
 
     def composite(self, image, locations, blocks, **kwargs):
         """
@@ -331,20 +337,20 @@ class AbstractKernelDraw:
         self.graphics.kmgr.lines_res(self.a, coords, widths, aa_widths, colors, global_size=self.global_size)
 
     def rects(self, coords, **kwargs):
-        coords, colors, _, _ = self.prepare_args(coords, 4, **kwargs)
-        self.graphics.kmgr.rects_res(self.a, coords, colors, global_size=self.global_size)
+        coords, colors, _, aa_widths = self.prepare_args(coords, 4, **kwargs)
+        self.graphics.kmgr.rects_res(self.a, coords, aa_widths, colors, global_size=self.global_size)
 
     def circles(self, coords, **kwargs):
-        coords, colors, _, _ = self.prepare_args(coords, 3, **kwargs)
-        self.graphics.kmgr.circles_res(self.a, coords, colors, global_size=self.global_size)
+        coords, colors, _, aa_widths = self.prepare_args(coords, 3, **kwargs)
+        self.graphics.kmgr.circles_res(self.a, coords, aa_widths, colors, global_size=self.global_size)
 
     def triangles(self, coords, **kwargs):
-        coords, colors, _, _ = self.prepare_args(coords, 6, **kwargs)
-        self.graphics.kmgr.triangles_res(self.a, coords, colors, global_size=self.global_size)
+        coords, colors, _, aa_widths = self.prepare_args(coords, 6, **kwargs)
+        self.graphics.kmgr.triangles_res(self.a, coords, aa_widths, colors, global_size=self.global_size)
 
     def ellipses(self, coords, **kwargs):
-        coords, colors, _, _ = self.prepare_args(coords, 4, **kwargs)
-        self.graphics.kmgr.ellipses_res(self.a, coords, colors, global_size=self.global_size)
+        coords, colors, _, aa_widths = self.prepare_args(coords, 4, **kwargs)
+        self.graphics.kmgr.ellipses_res(self.a, coords, aa_widths, colors, global_size=self.global_size)
 
     def composite(self, locations, blocks, **kwargs):
         coords, buffer, pixel_indexes = self.graphics.setup_composite(locations, blocks, **kwargs)

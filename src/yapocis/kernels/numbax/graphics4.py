@@ -93,7 +93,7 @@ def _draw_line_rgba(
 
 @njit(cache=True, fastmath=True)
 def _draw_rect_rgba(
-    img: np.ndarray, x0: int, y0: int, x1: int, y1: int, rgba: np.ndarray
+    img: np.ndarray, x0: int, y0: int, x1: int, y1: int, aa_width: float, rgba: np.ndarray
 ):
     if x0 <= x1:
         xmin, xmax = int(x0), int(x1)
@@ -103,33 +103,71 @@ def _draw_rect_rgba(
         ymin, ymax = int(y0), int(y1)
     else:
         ymin, ymax = int(y1), int(y0)
-    xmin = max(0, xmin)
-    xmax = min(img.shape[1] - 1, xmax)
-    ymin = max(0, ymin)
-    ymax = min(img.shape[0] - 1, ymax)
-    if xmin > xmax or ymin > ymax:
+
+    # Expand bounds for anti-aliasing
+    if aa_width > 0.0:
+        xmin_draw = max(0, int(xmin - aa_width - 1))
+        xmax_draw = min(img.shape[1] - 1, int(xmax + aa_width + 1))
+        ymin_draw = max(0, int(ymin - aa_width - 1))
+        ymax_draw = min(img.shape[0] - 1, int(ymax + aa_width + 1))
+    else:
+        xmin_draw = max(0, xmin)
+        xmax_draw = min(img.shape[1] - 1, xmax)
+        ymin_draw = max(0, ymin)
+        ymax_draw = min(img.shape[0] - 1, ymax)
+
+    if xmin_draw > xmax_draw or ymin_draw > ymax_draw:
         return
+
     a = rgba[3]
-    for y in range(ymin, ymax + 1):
-        for x in range(xmin, xmax + 1):
-            img[y, x, 0] = (1.0 - a) * img[y, x, 0] + a * rgba[0]
-            img[y, x, 1] = (1.0 - a) * img[y, x, 1] + a * rgba[1]
-            img[y, x, 2] = (1.0 - a) * img[y, x, 2] + a * rgba[2]
+    for y in range(ymin_draw, ymax_draw + 1):
+        for x in range(xmin_draw, xmax_draw + 1):
+            inside = (xmin <= x <= xmax and ymin <= y <= ymax)
+
+            if aa_width > 0.0 and inside:
+                # Anti-aliased edges using distance to nearest edge
+                dist_l = float(x) - float(xmin)
+                dist_r = float(xmax) - float(x)
+                dist_b = float(y) - float(ymin)
+                dist_t = float(ymax) - float(y)
+                edge_dist = min(min(dist_l, dist_r), min(dist_b, dist_t))
+
+                blend_t = _smoothstep(0.0, aa_width, edge_dist)
+                aa_rgba = rgba.copy()
+                aa_rgba[3] *= blend_t
+                _blend_rgba(img, x, y, aa_rgba)
+            elif inside:
+                # Hard edge (original behavior)
+                img[y, x, 0] = (1.0 - a) * img[y, x, 0] + a * rgba[0]
+                img[y, x, 1] = (1.0 - a) * img[y, x, 1] + a * rgba[1]
+                img[y, x, 2] = (1.0 - a) * img[y, x, 2] + a * rgba[2]
 
 
 @njit(cache=True, fastmath=True)
-def _draw_circle_rgba(img: np.ndarray, cx: int, cy: int, r: float, rgba: np.ndarray):
-    r2 = r * r
-    xmin = int(max(0, cx - r - 1))
-    xmax = int(min(img.shape[1] - 1, cx + r + 1))
-    ymin = int(max(0, cy - r - 1))
-    ymax = int(min(img.shape[0] - 1, cy + r + 1))
+def _draw_circle_rgba(img: np.ndarray, cx: int, cy: int, r: float, aa_width: float, rgba: np.ndarray):
+    xmin = int(max(0, cx - r - aa_width - 1))
+    xmax = int(min(img.shape[1] - 1, cx + r + aa_width + 1))
+    ymin = int(max(0, cy - r - aa_width - 1))
+    ymax = int(min(img.shape[0] - 1, cy + r + aa_width + 1))
     for y in range(ymin, ymax + 1):
         dy = y - cy
         for x in range(xmin, xmax + 1):
             dx = x - cx
-            if dx * dx + dy * dy <= r2:
-                _blend_rgba(img, x, y, rgba)
+            dist = np.sqrt(dx * dx + dy * dy)
+
+            if aa_width > 0.0:
+                # Anti-aliased edge
+                edge_outer = r + aa_width
+                edge_inner = r - aa_width
+                blend_t = _smoothstep(edge_outer, edge_inner, dist)
+                if blend_t > 0.0:
+                    aa_rgba = rgba.copy()
+                    aa_rgba[3] *= blend_t
+                    _blend_rgba(img, x, y, aa_rgba)
+            else:
+                # Hard edge (original behavior)
+                if dist <= r:
+                    _blend_rgba(img, x, y, rgba)
 
 
 @njit(cache=True, fastmath=True)
@@ -138,11 +176,35 @@ def _edge(ax, ay, bx, by, px, py):
 
 
 @njit(cache=True, fastmath=True)
-def _draw_triangle_rgba(img: np.ndarray, x0, y0, x1, y1, x2, y2, rgba: np.ndarray):
-    xmin = int(max(0, min(x0, x1, x2)))
-    xmax = int(min(img.shape[1] - 1, max(x0, x1, x2)))
-    ymin = int(max(0, min(y0, y1, y2)))
-    ymax = int(min(img.shape[0] - 1, max(y0, y1, y2)))
+def _dist_to_segment(px: float, py: float, ax: float, ay: float, bx: float, by: float) -> float:
+    """Compute distance from point (px, py) to line segment (a, b)."""
+    pax = px - ax
+    pay = py - ay
+    bax = bx - ax
+    bay = by - ay
+    dot_ba = bax * bax + bay * bay
+    if dot_ba == 0.0:
+        return np.sqrt(pax * pax + pay * pay)
+    h = max(0.0, min(1.0, (pax * bax + pay * bay) / dot_ba))
+    dx = pax - h * bax
+    dy = pay - h * bay
+    return np.sqrt(dx * dx + dy * dy)
+
+
+@njit(cache=True, fastmath=True)
+def _draw_triangle_rgba(img: np.ndarray, x0, y0, x1, y1, x2, y2, aa_width: float, rgba: np.ndarray):
+    # Expand bounds for anti-aliasing
+    if aa_width > 0.0:
+        xmin = int(max(0, min(x0, x1, x2) - aa_width - 1))
+        xmax = int(min(img.shape[1] - 1, max(x0, x1, x2) + aa_width + 1))
+        ymin = int(max(0, min(y0, y1, y2) - aa_width - 1))
+        ymax = int(min(img.shape[0] - 1, max(y0, y1, y2) + aa_width + 1))
+    else:
+        xmin = int(max(0, min(x0, x1, x2)))
+        xmax = int(min(img.shape[1] - 1, max(x0, x1, x2)))
+        ymin = int(max(0, min(y0, y1, y2)))
+        ymax = int(min(img.shape[0] - 1, max(y0, y1, y2)))
+
     area = _edge(x0, y0, x1, y1, x2, y2)
     if area == 0:
         return
@@ -151,26 +213,65 @@ def _draw_triangle_rgba(img: np.ndarray, x0, y0, x1, y1, x2, y2, rgba: np.ndarra
             w0 = _edge(x1, y1, x2, y2, x, y)
             w1 = _edge(x2, y2, x0, y0, x, y)
             w2 = _edge(x0, y0, x1, y1, x, y)
-            if (w0 >= 0 and w1 >= 0 and w2 >= 0) or (w0 <= 0 and w1 <= 0 and w2 <= 0):
+            inside = (w0 >= 0 and w1 >= 0 and w2 >= 0) or (w0 <= 0 and w1 <= 0 and w2 <= 0)
+
+            if aa_width > 0.0 and inside:
+                # Anti-aliased edges using distance to nearest edge
+                dist1 = _dist_to_segment(float(x), float(y), float(x0), float(y0), float(x1), float(y1))
+                dist2 = _dist_to_segment(float(x), float(y), float(x1), float(y1), float(x2), float(y2))
+                dist3 = _dist_to_segment(float(x), float(y), float(x2), float(y2), float(x0), float(y0))
+                edge_dist = min(min(dist1, dist2), dist3)
+
+                blend_t = _smoothstep(0.0, aa_width, edge_dist)
+                aa_rgba = rgba.copy()
+                aa_rgba[3] *= blend_t
+                _blend_rgba(img, x, y, aa_rgba)
+            elif inside:
+                # Hard edge (original behavior)
                 _blend_rgba(img, x, y, rgba)
 
 
 @njit(cache=True, fastmath=True)
 def _draw_ellipse_rgba(
-    img: np.ndarray, cx: int, cy: int, rx: float, ry: float, rgba: np.ndarray
+    img: np.ndarray, cx: int, cy: int, rx: float, ry: float, aa_width: float, rgba: np.ndarray
 ):
-    xmin = int(max(0, cx - rx - 1))
-    xmax = int(min(img.shape[1] - 1, cx + rx + 1))
-    ymin = int(max(0, cy - ry - 1))
-    ymax = int(min(img.shape[0] - 1, cy + ry + 1))
-    rx2 = rx * rx
-    ry2 = ry * ry
+    # Expand bounds for anti-aliasing
+    if aa_width > 0.0:
+        xmin = int(max(0, cx - rx - aa_width - 1))
+        xmax = int(min(img.shape[1] - 1, cx + rx + aa_width + 1))
+        ymin = int(max(0, cy - ry - aa_width - 1))
+        ymax = int(min(img.shape[0] - 1, cy + ry + aa_width + 1))
+    else:
+        xmin = int(max(0, cx - rx - 1))
+        xmax = int(min(img.shape[1] - 1, cx + rx + 1))
+        ymin = int(max(0, cy - ry - 1))
+        ymax = int(min(img.shape[0] - 1, cy + ry + 1))
+
     for y in range(ymin, ymax + 1):
-        dy2 = float((y - cy) * (y - cy))
+        dy = float(y - cy)
         for x in range(xmin, xmax + 1):
-            dx2 = float((x - cx) * (x - cx))
-            if dx2 / rx2 + dy2 / ry2 <= 1.0:
-                _blend_rgba(img, x, y, rgba)
+            dx = float(x - cx)
+            # Compute normalized distance
+            delta_x = dx / rx
+            delta_y = dy / ry
+            d = np.sqrt(delta_x * delta_x + delta_y * delta_y)
+
+            if aa_width > 0.0:
+                # Anti-aliased edge using smoothstep
+                # d < 1: inside, d = 1: on boundary, d > 1: outside
+                avg_radius = (rx + ry) * 0.5
+                dist_to_edge = (d - 1.0) * avg_radius
+                edge_outer = aa_width
+                edge_inner = -aa_width
+                blend_t = _smoothstep(edge_outer, edge_inner, dist_to_edge)
+                if blend_t > 0.0:
+                    aa_rgba = rgba.copy()
+                    aa_rgba[3] *= blend_t
+                    _blend_rgba(img, x, y, aa_rgba)
+            else:
+                # Hard edge (original behavior)
+                if d <= 1.0:
+                    _blend_rgba(img, x, y, rgba)
 
 
 def lines(
@@ -201,6 +302,7 @@ def rects(
     a: np.ndarray,
     nelements: int,
     coords: np.ndarray,
+    aa_widths: np.ndarray,
     colors: np.ndarray,
 ):
     for i in range(nelements):
@@ -208,8 +310,9 @@ def rects(
         y0 = int(coords[i, 1])
         x1 = int(coords[i, 2])
         y1 = int(coords[i, 3])
+        aa_w = float(aa_widths[i])
         rgba = colors[i]
-        _draw_rect_rgba(a, x0, y0, x1, y1, rgba)
+        _draw_rect_rgba(a, x0, y0, x1, y1, aa_w, rgba)
     return a
 
 
@@ -219,14 +322,16 @@ def circles(
     a: np.ndarray,
     nelements: int,
     coords: np.ndarray,
+    aa_widths: np.ndarray,
     colors: np.ndarray,
 ):
     for i in range(nelements):
         cx = int(coords[i, 0])
         cy = int(coords[i, 1])
         r = float(coords[i, 2])
+        aa_w = float(aa_widths[i])
         rgba = colors[i]
-        _draw_circle_rgba(a, cx, cy, r, rgba)
+        _draw_circle_rgba(a, cx, cy, r, aa_w, rgba)
     return a
 
 
@@ -236,6 +341,7 @@ def triangles(
     a: np.ndarray,
     nelements: int,
     coords: np.ndarray,
+    aa_widths: np.ndarray,
     colors: np.ndarray,
 ):
     for i in range(nelements):
@@ -245,8 +351,9 @@ def triangles(
         y1 = int(coords[i, 3])
         x2 = int(coords[i, 4])
         y2 = int(coords[i, 5])
+        aa_w = float(aa_widths[i])
         rgba = colors[i]
-        _draw_triangle_rgba(a, x0, y0, x1, y1, x2, y2, rgba)
+        _draw_triangle_rgba(a, x0, y0, x1, y1, x2, y2, aa_w, rgba)
     return a
 
 
@@ -256,6 +363,7 @@ def ellipses(
     a: np.ndarray,
     nelements: int,
     coords: np.ndarray,
+    aa_widths: np.ndarray,
     colors: np.ndarray,
 ):
     for i in range(nelements):
@@ -263,8 +371,9 @@ def ellipses(
         cy = int(coords[i, 1])
         rx = float(coords[i, 2])
         ry = float(coords[i, 3])
+        aa_w = float(aa_widths[i])
         rgba = colors[i]
-        _draw_ellipse_rgba(a, cx, cy, rx, ry, rgba)
+        _draw_ellipse_rgba(a, cx, cy, rx, ry, aa_w, rgba)
     return a
 
 
