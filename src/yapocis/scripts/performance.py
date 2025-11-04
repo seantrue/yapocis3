@@ -10,6 +10,7 @@ Supported modules:
 - gaussian: Separable Gaussian convolution
 - vgg16: VGG16 CNN inference
 - resnet50: ResNet50 CNN inference
+- graphics4: KernelDraw4 display list rendering
 
 Features:
 - Automatic backend and device discovery
@@ -17,6 +18,11 @@ Features:
 - Async vs sync comparison
 - Elegant matplotlib/seaborn visualizations
 - Configurable output directory via YAPOCIS_PERFORMANCE_DIR
+- Optional yapocis matplotlib backend for GPU-accelerated plot rendering
+
+Environment Variables:
+- YAPOCIS_PERFORMANCE_DIR: Output directory for plots (default: ./performance)
+- YAPOCIS_MPLBACKEND: Set to '1' to use yapocis matplotlib backend for rendering
 
 Usage:
     yapocis-performance anisodiff
@@ -24,6 +30,9 @@ Usage:
     yapocis-performance vgg16 --iterations 10
     yapocis-performance resnet50 --test-base
     yapocis-performance --list
+
+    # Use yapocis backend for plot rendering (GPU-accelerated)
+    YAPOCIS_MPLBACKEND=1 yapocis-performance graphics4
 """
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
 
@@ -37,6 +46,11 @@ from pathlib import Path
 import numpy as np
 
 try:
+    import matplotlib
+    # Use yapocis backend if requested
+    if os.environ.get('YAPOCIS_MPLBACKEND', '').lower() in ('1', 'true', 'yes'):
+        matplotlib.use('module://yapocis.lib.mplbackend', force=True)
+        print("Using yapocis matplotlib backend for plot rendering")
     from matplotlib import pyplot as plt
     import seaborn as sns
 except ImportError:
