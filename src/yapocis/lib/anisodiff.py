@@ -22,7 +22,9 @@ from .hsi import HSI
 
 class Anisodiff(BoundKernels):
     INTERFACE = "anisodiff"
-    use_async = True  # Enable async execution by default for Anisodiff operations
+    use_async = None
+    use_async_write = None
+    
     filter_by_depth = ["filterImage", "filterImage2", "filterImage3", "filterImage4"]
 
     def __init__(self, *args, **kwargs):

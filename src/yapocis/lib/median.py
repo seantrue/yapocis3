@@ -12,7 +12,7 @@ from .bound_kernels import BoundKernels
 
 class Median(BoundKernels):
     INTERFACE = "median3x3"
-    use_async = True  # Enable async execution by default for Median operations
+    use_async = None
 
     def median3x3slow(self, image: Image1, iterations: int = 1) -> Image1:
         """
