@@ -55,12 +55,16 @@ class RendererTemplate(RendererBase):
             if (points[0, :] - points[-1, :]).sum() == 0.0:
                 # Closed polys have start,end point identical
                 closed_polygon_points.append(points)
+        # Get line width from graphics context and convert to pixels
+        linewidth = gc.get_linewidth()  # In points
+        linewidth_pixels = self.points_to_pixels(linewidth)
+
         # Draw outlines (lines) for all polygons
         for points in polygon_points:
             flat_points = points.ravel()
             for i in range(points.shape[0] - 1):
                 line = flat_points[i * 2:i * 2 + 4]
-                self.kd.line(line, color=color)
+                self.kd.line(line, color=color, width=linewidth_pixels)
 
         # Fill closed polygons if face color is provided and visible
         if closed_polygon_points and rgbFace is not None:

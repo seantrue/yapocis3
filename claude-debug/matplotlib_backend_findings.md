@@ -137,6 +137,37 @@ for polygon in polygons:
 - `draw_image()`: Receives Y coordinate, flips with `y = self.height - y - im.shape[0]`
 - `draw_path()`: Receives path coordinates, must flip Y with `y = self.height - y` (but not swap X/Y)
 
+## Line Width Support
+
+**Issue**: Line plots rendered with hairline thickness (~1 pixel) instead of matplotlib's default line width (1.5 points = ~2 pixels at 100 DPI).
+
+**Root Cause**: The `draw_path()` method was not retrieving or applying line width from the graphics context.
+
+**Solution** (in `src/yapocis/lib/mplbackend.py:58-67`):
+```python
+# Get line width from graphics context and convert to pixels
+linewidth = gc.get_linewidth()  # In points
+linewidth_pixels = self.points_to_pixels(linewidth)
+
+# Draw outlines (lines) for all polygons
+for points in polygon_points:
+    flat_points = points.ravel()
+    for i in range(points.shape[0] - 1):
+        line = flat_points[i * 2:i * 2 + 4]
+        self.kd.line(line, color=color, width=linewidth_pixels)
+```
+
+**Changes Made**:
+1. Retrieve line width from graphics context: `gc.get_linewidth()`
+2. Convert from points to pixels: `self.points_to_pixels(linewidth)`
+3. Pass width parameter to `self.kd.line()`: `width=linewidth_pixels`
+
+**Test Results**: ✅ **Line widths now match AGG backend**
+- Default line width (1.5 points) renders correctly
+- Explicit line widths (`linewidth=3`, etc.) honored
+- Performance plots have properly weighted lines
+- Output matches AGG backend thickness
+
 ## Implementation Details
 
 ### What Works ✅
