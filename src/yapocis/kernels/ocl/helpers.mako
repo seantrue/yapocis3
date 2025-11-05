@@ -43,3 +43,5 @@ static __inline void p4(__constant char *s, float4 v) {
 
 #define ANYISLESS(a,b) (a.x < b.x || a.y < b.y)
 #define ANYISGTE(a,b) (a.x >= b.x || a.y >= b.y)
+
+// Note: smoothstep(), mix(), dot(), and length() are built-in OpenCL functions

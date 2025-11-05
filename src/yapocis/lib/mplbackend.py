@@ -64,7 +64,7 @@ class RendererTemplate(RendererBase):
             flat_points = points.ravel()
             for i in range(points.shape[0] - 1):
                 line = flat_points[i * 2:i * 2 + 4]
-                self.kd.line(line, color=color, width=linewidth_pixels)
+                self.kd.line(line, color=color, width=linewidth_pixels, aa_width=0.5)
 
         # Fill closed polygons if face color is provided and visible
         if closed_polygon_points and rgbFace is not None:
@@ -81,7 +81,7 @@ class RendererTemplate(RendererBase):
                 vertices = earcut_points[simplices]
                 for i in range(0, len(vertices), 3):
                     triangle = vertices[i:i + 3].ravel()
-                    self.kd.triangle(triangle, color=rgbFace)
+                    self.kd.triangle(triangle, color=rgbFace, aa_width=0.5)
 
         self.kd.render()
 

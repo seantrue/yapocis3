@@ -20,6 +20,9 @@ class AbstractGraphicsSetup:
     def coerce_widths(self, coords, width=None, widths=None, **kwargs) -> np.ndarray:
         raise NotImplementedError
 
+    def coerce_aa_widths(self, coords, aa_width=None, aa_widths=None, **kwargs) -> np.ndarray:
+        raise NotImplementedError
+
     def setup_composite(self, locations, blocks, alpha=None, alphas=None, **kwargs):
         """
         Compute the information for compositing a set of distinct blocks
@@ -68,33 +71,40 @@ class AbstractGraphics(BoundKernels):
         coords = self.coerce_coords(coords, 4)
         colors = self.coerce_colors(coords, **kwargs)
         widths = self.coerce_widths(coords, **kwargs)
-        self.kmgr.lines(image, coords, widths, colors, global_size=image.size // self.CHANNELS)
+        aa_widths = self.coerce_aa_widths(coords, **kwargs)
+        self.kmgr.lines(image, coords, widths, aa_widths, colors, global_size=image.size // self.CHANNELS)
 
     def rects(self, image, coords, **kwargs):
         if not coords:
             return
         coords = self.coerce_coords(coords, 4)
         colors = self.coerce_colors(coords, **kwargs)
-        self.kmgr.rects(image, coords, colors, global_size=image.size // self.CHANNELS)
+        aa_widths = self.coerce_aa_widths(coords, **kwargs)
+        self.kmgr.rects(image, coords, aa_widths, colors, global_size=image.size // self.CHANNELS)
 
     def circles(self, image, coords, **kwargs):
         if not coords:
             return
         coords = self.coerce_coords(coords, 3)
         colors = self.coerce_colors(coords, **kwargs)
-        self.kmgr.circles(image, coords, colors, global_size=image.size // self.CHANNELS)
+        aa_widths = self.coerce_aa_widths(coords, **kwargs)
+        self.kmgr.circles(image, coords, aa_widths, colors, global_size=image.size // self.CHANNELS)
 
     def triangles(self, image, coords, **kwargs):
         if not coords:
             return
         coords = self.coerce_coords(coords, 6)
         colors = self.coerce_colors(coords, **kwargs)
-        self.kmgr.triangles(image, coords, colors, global_size=image.size // self.CHANNELS)
+        aa_widths = self.coerce_aa_widths(coords, **kwargs)
+        self.kmgr.triangles(image, coords, aa_widths, colors, global_size=image.size // self.CHANNELS)
 
     def ellipses(self, image, coords, **kwargs):
+        if not coords:
+            return
         coords = self.coerce_coords(coords, 4)
         colors = self.coerce_colors(coords, **kwargs)
-        self.kmgr.ellipses(image, coords, colors, global_size=image.size // self.CHANNELS)
+        aa_widths = self.coerce_aa_widths(coords, **kwargs)
+        self.kmgr.ellipses(image, coords, aa_widths, colors, global_size=image.size // self.CHANNELS)
 
     def composite(self, image, locations, blocks, **kwargs):
         """
@@ -172,7 +182,8 @@ class AbstractKernelDraw:
         coords = self.graphics.coerce_coords(coords, width)
         colors = self.coerce_colors(len(coords), **kwargs)
         widths = self.coerce_widths(len(coords), **kwargs)
-        return coords, colors, widths
+        aa_widths = self.coerce_aa_widths(len(coords), **kwargs)
+        return coords, colors, widths, aa_widths
 
     def coerce_colors(self, n: int, color: float | None = None, colors=None, alpha=None, **kwargs):
         # a tuple, list, array of COLOR_WIDTH floats
@@ -220,6 +231,12 @@ class AbstractKernelDraw:
         width = distance if width is None else width
         widths = to_vector(width, widths, n, default=1.0, dtype=np.float32)
         return widths
+
+    def coerce_aa_widths(self, n, aa_width=None, aa_widths=None, **kwargs) -> np.ndarray:
+        if aa_width is not None and aa_widths is not None:
+            raise RuntimeError(f"Only one of aa_width {aa_width} and {aa_widths}")
+        aa_widths = to_vector(aa_width, aa_widths, n, default=0.0, dtype=np.float32)
+        return aa_widths
 
     # Add item to display list for batch rendering
     def line(self, xyxy, **kwargs):
@@ -316,24 +333,24 @@ class AbstractKernelDraw:
             self._render()
 
     def lines(self, coords, **kwargs):
-        coords, colors, widths = self.prepare_args(coords, 4, **kwargs)
-        self.graphics.kmgr.lines_res(self.a, coords, widths, colors, global_size=self.global_size)
+        coords, colors, widths, aa_widths = self.prepare_args(coords, 4, **kwargs)
+        self.graphics.kmgr.lines_res(self.a, coords, widths, aa_widths, colors, global_size=self.global_size)
 
     def rects(self, coords, **kwargs):
-        coords, colors, _ = self.prepare_args(coords, 4, **kwargs)
-        self.graphics.kmgr.rects_res(self.a, coords, colors, global_size=self.global_size)
+        coords, colors, _, aa_widths = self.prepare_args(coords, 4, **kwargs)
+        self.graphics.kmgr.rects_res(self.a, coords, aa_widths, colors, global_size=self.global_size)
 
     def circles(self, coords, **kwargs):
-        coords, colors, _ = self.prepare_args(coords, 3, **kwargs)
-        self.graphics.kmgr.circles_res(self.a, coords, colors, global_size=self.global_size)
+        coords, colors, _, aa_widths = self.prepare_args(coords, 3, **kwargs)
+        self.graphics.kmgr.circles_res(self.a, coords, aa_widths, colors, global_size=self.global_size)
 
     def triangles(self, coords, **kwargs):
-        coords, colors, _ = self.prepare_args(coords, 6, **kwargs)
-        self.graphics.kmgr.triangles_res(self.a, coords, colors, global_size=self.global_size)
+        coords, colors, _, aa_widths = self.prepare_args(coords, 6, **kwargs)
+        self.graphics.kmgr.triangles_res(self.a, coords, aa_widths, colors, global_size=self.global_size)
 
     def ellipses(self, coords, **kwargs):
-        coords, colors, _ = self.prepare_args(coords, 4, **kwargs)
-        self.graphics.kmgr.ellipses_res(self.a, coords, colors, global_size=self.global_size)
+        coords, colors, _, aa_widths = self.prepare_args(coords, 4, **kwargs)
+        self.graphics.kmgr.ellipses_res(self.a, coords, aa_widths, colors, global_size=self.global_size)
 
     def composite(self, locations, blocks, **kwargs):
         coords, buffer, pixel_indexes = self.graphics.setup_composite(locations, blocks, **kwargs)

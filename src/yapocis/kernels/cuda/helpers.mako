@@ -41,5 +41,21 @@ static __inline void p4(__constant char *s, float4 v) {
 #define ANYISLESS(a,b) (a.x < b.x || a.y < b.y)
 #define ANYISGTE(a,b) (a.x >= b.x || a.y >= b.y)
 
+// Anti-aliasing helper functions
+static __device__ __inline__ float smoothstep(float edge0, float edge1, float x) {
+    float t = fminf(fmaxf((x - edge0) / (edge1 - edge0), 0.0f), 1.0f);
+    return t * t * (3.0f - 2.0f * t);
+}
+
+// Note: mix() functions are defined in constants.mako
+
+static __device__ __inline__ float dot(float2 a, float2 b) {
+    return a.x * b.x + a.y * b.y;
+}
+
+static __device__ __inline__ float length(float2 v) {
+    return sqrtf(v.x * v.x + v.y * v.y);
+}
+
 
 #endif
