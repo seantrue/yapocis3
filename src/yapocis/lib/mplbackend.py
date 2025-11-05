@@ -30,6 +30,72 @@ class RendererTemplate(RendererBase):
         # Initialize math text parser for rendering LaTeX-style math expressions
         self.mathtext_parser = MathTextParser('agg')
 
+    def _draw_dashed_line(self, x1, y1, x2, y2, color, linewidth, dash_pattern, dash_offset):
+        """Draw a dashed line from (x1,y1) to (x2,y2) using the given dash pattern.
+
+        Args:
+            x1, y1: Start point
+            x2, y2: End point
+            color: Line color [R, G, B, A]
+            linewidth: Line width in pixels
+            dash_pattern: Tuple/list of (on, off, on, off, ...) lengths in pixels
+            dash_offset: Starting offset into the dash pattern (in pixels)
+        """
+        # Debug
+        # log.debug(f"_draw_dashed_line called: pattern={dash_pattern}, offset={dash_offset}")
+        # Calculate line length and direction
+        dx = x2 - x1
+        dy = y2 - y1
+        length = np.sqrt(dx*dx + dy*dy)
+
+        if length < 1e-10:
+            return  # Line too short
+
+        # Normalize direction
+        ux = dx / length
+        uy = dy / length
+
+        # Current position along the line
+        pos = 0.0
+        # Index into dash pattern
+        dash_index = 0
+        # Whether currently drawing (True) or skipping (False)
+        drawing = True
+
+        # Apply dash offset
+        offset_remaining = dash_offset
+        while offset_remaining > 0 and dash_index < len(dash_pattern):
+            if offset_remaining >= dash_pattern[dash_index]:
+                offset_remaining -= dash_pattern[dash_index]
+                dash_index = (dash_index + 1) % len(dash_pattern)
+                drawing = not drawing
+            else:
+                pos = offset_remaining
+                offset_remaining = 0
+
+        # Draw the dashed line
+        while pos < length:
+            # Length of current dash/gap segment
+            segment_length = dash_pattern[dash_index]
+
+            if drawing:
+                # Draw a solid segment
+                end_pos = min(pos + segment_length, length)
+                seg_x1 = x1 + ux * pos
+                seg_y1 = y1 + uy * pos
+                seg_x2 = x1 + ux * end_pos
+                seg_y2 = y1 + uy * end_pos
+                line = np.array([seg_x1, seg_y1, seg_x2, seg_y2])
+                self.kd.line(line, color=color, width=linewidth, aa_width=0.5)
+                pos = end_pos
+            else:
+                # Skip a gap
+                pos = min(pos + segment_length, length)
+
+            # Move to next dash pattern element
+            dash_index = (dash_index + 1) % len(dash_pattern)
+            drawing = not drawing
+
     def draw_path(self, gc, path, transform, rgbFace=None):
         # log.debug(f"draw_path {path} {rgbFace}")
         # Get edge color from graphics context and ensure it has alpha
@@ -59,12 +125,33 @@ class RendererTemplate(RendererBase):
         linewidth = gc.get_linewidth()  # In points
         linewidth_pixels = self.points_to_pixels(linewidth)
 
+        # Get line dash pattern from graphics context
+        dash_offset, dash_pattern = gc.get_dashes()
+        # dash_pattern is None for solid lines, or a tuple of (on, off, on, off, ...)
+        # Convert dash pattern from points to pixels
+        if dash_pattern is not None:
+            dash_pattern_pixels = tuple(self.points_to_pixels(x) for x in dash_pattern)
+            dash_offset_pixels = self.points_to_pixels(dash_offset)
+        else:
+            dash_pattern_pixels = None
+            dash_offset_pixels = 0
+
         # Draw outlines (lines) for all polygons
         for points in polygon_points:
             flat_points = points.ravel()
-            for i in range(points.shape[0] - 1):
-                line = flat_points[i * 2:i * 2 + 4]
-                self.kd.line(line, color=color, width=linewidth_pixels, aa_width=0.5)
+            # If we have a dash pattern, we need to draw dashed lines
+            if dash_pattern_pixels:
+                # Draw dashed lines segment by segment
+                for i in range(points.shape[0] - 1):
+                    x1, y1 = points[i]
+                    x2, y2 = points[i + 1]
+                    self._draw_dashed_line(x1, y1, x2, y2, color, linewidth_pixels,
+                                          dash_pattern_pixels, dash_offset_pixels)
+            else:
+                # Draw solid lines
+                for i in range(points.shape[0] - 1):
+                    line = flat_points[i * 2:i * 2 + 4]
+                    self.kd.line(line, color=color, width=linewidth_pixels, aa_width=0.5)
 
         # Fill closed polygons if face color is provided and visible
         if closed_polygon_points and rgbFace is not None:
@@ -85,9 +172,54 @@ class RendererTemplate(RendererBase):
 
         self.kd.render()
 
-    def draw_image(self, gc, x, y, im):
-        y = self.height-y-im.shape[0]
-        self.kd.composite([(x,y)],[im])
+    def draw_image(self, gc, x, y, im, transform=None):
+        """Draw an image at the specified position.
+
+        Args:
+            gc: Graphics context
+            x, y: Bottom-left position in display coordinates (pixels)
+            im: Image array (RGB or RGBA), already in uint8 [0-255] or float [0-1]
+            transform: Optional affine transform (typically not used by matplotlib)
+
+        Notes:
+            - matplotlib pre-renders images at the correct size and orientation
+            - x, y give the bottom-left corner in matplotlib coordinates (y-up)
+            - We need to convert to canvas coordinates (y-down)
+            - Image data is already correctly oriented - don't flip it
+        """
+        # Convert image to float32 [0, 1] if needed
+        if im.dtype == np.uint8:
+            im = im.astype(np.float32) / 255.0
+
+        # Ensure RGBA format
+        if im.ndim == 2:
+            # Grayscale to RGBA
+            rgba = np.zeros((*im.shape, 4), dtype=np.float32)
+            rgba[:, :, :3] = im[:, :, np.newaxis]
+            rgba[:, :, 3] = 1.0
+            im = rgba
+        elif im.shape[2] == 3:
+            # RGB to RGBA
+            rgba = np.ones((*im.shape[:2], 4), dtype=np.float32)
+            rgba[:, :, :3] = im
+            im = rgba
+
+        # Convert matplotlib coordinates to canvas coordinates
+        # matplotlib: (x, y) is bottom-left, y increases upward
+        # canvas: (x, y) is top-left, y increases downward
+        canvas_x = int(x)
+        canvas_y = int(self.height - y - im.shape[0])
+
+        # DEBUG: Save image to inspect
+        # np.savez(f'/tmp/mplbackend_image_{canvas_x}_{canvas_y}.npz', im=im)
+
+        # Flip image vertically
+        # Since flipy() returns True (canvas uses y-down), but matplotlib renders images
+        # with row 0 at the top of the image region, we need to flip to match our canvas
+        im = np.flipud(im)
+
+        # Composite image onto canvas
+        self.kd.composite([(canvas_x, canvas_y)], [im])
 
     def get_text_width_height_descent(self, s, prop, ismath):
         # Handle external LaTeX (not supported)
@@ -156,6 +288,7 @@ class RendererTemplate(RendererBase):
         self.kd.draw_string((x, y), s, color=gc._rgb, rotation=angle, size=size)
 
     def flipy(self):
+        # Return True to indicate canvas uses y-down coordinate system
         return True
 
     def get_canvas_width_height(self):
