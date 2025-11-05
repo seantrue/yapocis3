@@ -43,16 +43,16 @@ class DeviceManager(DeviceManagerBase):
         device_name_str, device = get_device(device_name=device_name)
 
         # Create context and stream
+        # Use make_context() to create and activate a context (not retain_primary_context)
+        # This gives us a context that we have full control over
         try:
-            ctx = device.retain_primary_context()
-            ctx.push()  # Make this context current
+            ctx = device.make_context()
             stream = cuda.Stream()
             super().__init__(ctx, stream, device_name_str, device, timed=timed, **kwargs)
         except RuntimeError as e:
             print(f"Failed to initialize `{device_name_str}', trying default")
             device_name_str, device = get_device()
-            ctx = device.retain_primary_context()
-            ctx.push()  # Make this context current
+            ctx = device.make_context()
             stream = cuda.Stream()
             super().__init__(ctx, stream, device_name_str, device, timed=timed, **kwargs)
 
@@ -215,13 +215,13 @@ class DeviceManager(DeviceManagerBase):
             if hasattr(self, 'buffers'):
                 self.buffers.clear()
 
-            # Pop context as fallback
+            # Pop context to clean up the context stack
             try:
                 self.ctx.pop()
-                self.ctx = None
             except (cuda.Error, AttributeError, RuntimeError):
-                # Context may already be invalid
+                # Context may already be popped or invalid
                 pass
+            self.ctx = None
         except Exception:
             # Silently ignore all errors during __del__
             pass
@@ -233,13 +233,7 @@ def _cleanup_device_managers():
     Cleanup all device managers at program exit.
 
     Registered as atexit handler to ensure proper resource cleanup.
-    Only performs cleanup if explicitly enabled to avoid pytest issues.
     """
-    # Only do aggressive cleanup if explicitly requested
-    # During pytest, this cleanup can corrupt contexts for other tests
-    if os.environ.get('YAPOCIS_ATEXIT_CLEANUP', '').lower() not in ('1', 'true', 'yes'):
-        return
-
     for device_name, dmgr in list(_device_managers.items()):
         try:
             # Purge buffers before exit
@@ -252,10 +246,10 @@ def _cleanup_device_managers():
             if hasattr(dmgr, 'ctx') and dmgr.ctx is not None:
                 try:
                     dmgr.ctx.pop()
-                    dmgr.ctx = None  # Mark as cleaned up
                 except (cuda.Error, AttributeError, RuntimeError):
-                    # Context may already be invalid
+                    # Context may already be popped or invalid
                     pass
+                dmgr.ctx = None
         except Exception:
             # Ignore errors during cleanup
             pass
