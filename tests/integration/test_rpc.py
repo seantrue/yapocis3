@@ -1,0 +1,201 @@
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
+
+import pyopencl
+import pytest
+
+from yapocis.core.interface import get_interface
+from yapocis.ocl.device import get_available_device_names, get_device
+from yapocis.ocl.device_manager import DeviceManager
+from yapocis.ocl.kernel_manager import import_program, load_program
+from yapocis.utils.stereo_typing import *
+
+
+def test_buffers():
+    # TODO: Test all available devices
+    bmgr = DeviceManager()
+    a = np.random.sample((100,)).astype(np.float32)
+    b = a.copy()
+    bmgr.write_buffer(a)
+    bmgr.read_buffer(a)
+    assert a.sum() == b.sum()
+    b[:] = 0.0
+    assert a.sum() != b.sum()
+    assert len(list(bmgr.arrays.keys())) == 1
+    del a
+    assert len(list(bmgr.arrays.keys())) == 0
+    a = np.random.sample((100, 100)).astype(np.float32)
+    b = a.copy()
+    bmgr.write_buffer(a)
+    bmgr.read_buffer(a)
+    assert a.sum() == b.sum()
+    b[:, :] = 0.0
+    assert a.sum() != b.sum()
+    bmgr.read_buffer(a)
+    try:
+        bmgr.read_buffer(b)
+        assert False, "Should have generated a Value error"
+    except:
+        pass
+    bmgr.write_buffer(b)
+    bmgr.read_buffer(b)
+    assert b.sum() == 0.0
+    print(id(a), id(b))
+    assert len(list(bmgr.arrays.keys())) == 2
+    a = None
+    assert len(list(bmgr.arrays.keys())) == 1
+    b = None
+    print(list(bmgr.arrays.keys()), id(a), id(b))
+    # Todo: why does the b buffer stay?
+    # assert len(bmgr.arrays.keys())==0
+    bmgr.snapshot(name="buffers")
+
+
+def test_buffers_async_write():
+    # TODO: Test all available devices
+    bmgr = DeviceManager(device_name=0, timed=True)
+    a = np.random.sample((2000, 1000)).astype(np.float32)
+    t = a.sum()
+    for i in range(1000):
+        bmgr.write(a, wait=False)
+    a[:, :] = 0.0
+    bmgr.read(a)
+    assert a.sum() == t
+    print(bmgr.snapshot(name="async_write"))
+    del bmgr
+    bmgr = DeviceManager(device_name=0, timed=True)
+    arrays = []
+    a = np.random.sample((2000, 1000)).astype(np.float32)
+    t = a.sum()
+    for i in range(1000):
+        bmgr.write(a, wait=True)
+    a[:, :] = 0.0
+    bmgr.read(a)
+    assert a.sum() == t
+    print(bmgr.snapshot(name="sync_write"))
+    del bmgr
+
+
+def test_getinterface():
+    # TODO: replace with a more generic kernel
+    interface = get_interface(
+        """\
+interface demo {
+    kernel sum_kernel(in float a, in float b, out_like a);
+    };
+            """
+    )
+    # assert len(interface.kernels) == 3
+    # assert len(interface.aliases) == 2
+
+
+def test_compiling():
+    interfaces = [
+        ("convolve", dict(name="convolve", conv=[1, 2, 3, 4, 3, 2, 1])),
+        ("median3x3", dict(steps=[9], width=9)),
+        ("gradient", {}),
+        ("convolves", dict(convs=[("boxone", [1, 1, 1]), ("triangle", [0.5, 1, 0.5])])),
+        ("mandelbrot", {}),
+        ("demo", {}),
+        ("hsi", {}),
+        (
+            "operators",
+            dict(operators=[("add", "+"), ("sub", "-"), ("mul", "*"), ("divop", "/")]),
+        ),
+    ]
+
+    for device_name in get_available_device_names():
+        for itest, (interface, context) in enumerate(interfaces):
+            print(device_name, interface)
+            program = load_program(
+                interface, device_name=device_name, debug=False, **context
+            )
+            print("Interface", program.interface.name)
+            print(f"Kernels: {len(program.interface.kernels)}")
+
+
+def test_context():
+    engine = DeviceManager()
+    a = np.random.sample((100,)).astype(np.float32)
+    b = a.copy()
+    # b[0]=b[1]
+    engine.write(a)
+    engine.read(a)
+    diff = np.abs(a - b).sum()
+    assert diff == 0.0
+    del a
+    with pytest.raises(ValueError):
+        engine.read(b)
+
+
+def test_demo_kernel():
+    # TODO: use load_program instead
+    _, entrypoints = import_program("demo", import_kernels="*")
+    print(sum, sum_res)
+    assert sum == entrypoints[0]
+    assert sum_res == entrypoints[1]
+    a = np.array([0, 1, 2, 3]).astype(np.float32)
+    b = np.ones_like(a)
+    c = np.zeros_like(a)
+    ids = (id(a), id(b), id(c))
+    # Send two arrays in, allocate and retrieve results
+    d = sum(a, b)
+    assert id(d) not in ids
+    assert d.sum() == 10
+    d1 = sum_res(a, b, c, resident=(a, b))
+    assert id(d1) == id(c)
+    assert id(d) != id(d1)
+    assert d.sum() == 10
+    c1 = sum_res(a, b, c)
+    assert id(c) == id(c1)
+    assert c1.sum() == 10
+    c[:] = 0
+    a[:] = 0
+    sum_res(c, c, a, resident=(c, a))
+    assert a.sum() == 0
+    sum_res.read(a)
+    assert a.sum() == 20
+
+
+def test_import():
+    import_program("demo", sum="frabjous_day")
+    assert callable(frabjous_day)
+
+
+def test_interface_tiled_propagates_to_kernels():
+    interface = get_interface(
+        """\
+        interface tiled foo {
+            kernel bar(widthof a, heightof a, inout float a, widthof lines, in float lines, in float distance, in float rcolor);
+            kernel fu(widthof a, heightof a, inout float a, widthof lines, in float lines, in float rcolor);
+        };
+        """
+    )
+    assert getattr(interface, "tiled", False) is True
+    assert len(interface.kernels) == 2
+    assert all(k.tiled for k in interface.kernels)
+
+
+def test_kernel_level_tiled_only_one():
+    interface = get_interface(
+        """\
+        interface foo {
+            kernel tiled bar(widthof a, heightof a, inout float a, widthof lines, in float lines, in float distance, in float rcolor);
+            kernel fu(widthof a, heightof a, inout float a, widthof lines, in float lines, in float rcolor);
+        };
+        """
+    )
+    assert getattr(interface, "tiled", False) is False
+    assert len(interface.kernels) == 2
+    assert interface.kernels[0].tiled is True
+    assert interface.kernels[1].tiled is False
+
+
+def test_devices():
+    print()
+    for device_name in get_available_device_names():
+        device_name_found, device = get_device(device_name)
+        try:
+            ctx = pyopencl.Context([device])
+            print(device_name, "loaded", device)
+        except RuntimeError:
+            print(device_name, "failed to load", device)

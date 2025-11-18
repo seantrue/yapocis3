@@ -134,7 +134,7 @@ def plot_chirp_analysis():
     plt.tight_layout()
 
     # Save
-    output_file = 'claude-debug/fft_chirp_analysis.png'
+    output_file = 'fft_chirp_analysis.png'
     print(f"\nSaving plot to {output_file}...")
     plt.savefig(output_file, dpi=150, bbox_inches='tight')
     print("Plot saved!")

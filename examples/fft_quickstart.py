@@ -69,7 +69,7 @@ def main():
     plt.tight_layout()
 
     # Save the plot
-    output_file = 'claude-debug/fft_quickstart.png'
+    output_file = 'fft_quickstart.png'
     plt.savefig(output_file, dpi=150, bbox_inches='tight')
     print(f"\nPlot saved to {output_file}")
 

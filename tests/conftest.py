@@ -195,6 +195,9 @@ def pytest_runtest_setup(item):
 def pytest_configure(config):
     """Configure pytest markers."""
     config.addinivalue_line(
+        "markers", "smoke: marks quick validation tests that cover all library modules"
+    )
+    config.addinivalue_line(
         "markers", "validation: marks tests that support validation checking"
     )
     config.addinivalue_line(
@@ -203,6 +206,40 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "performance: marks performance tests that should only run when explicitly requested"
     )
+
+
+def get_backend_device_combinations():
+    """
+    Generate all (backend, device) combinations for testing.
+
+    This is used for parametrizing tests that need to run across all
+    backend/device combinations. Respects YAPOCIS_TEST_BACKENDS for filtering.
+
+    Returns:
+        list: List of (backend, device_name) tuples
+
+    Example:
+        @pytest.mark.parametrize("backend,device", get_backend_device_combinations())
+        def test_something(backend, device):
+            ...
+    """
+    try:
+        from yapocis.core import get_test_backends, get_test_devices
+    except ImportError:
+        # Fallback if imports fail
+        return [("ocl", "default")]
+
+    combinations = []
+    for backend in get_test_backends():
+        try:
+            devices = get_test_devices(backend)
+            for device_name in devices.keys():
+                combinations.append((backend, device_name))
+        except Exception:
+            # If we can't get devices for a backend, skip it
+            continue
+
+    return combinations
 
 
 @pytest.fixture(autouse=True)

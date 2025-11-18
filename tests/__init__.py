@@ -794,3 +794,39 @@ def backend_comparison(request):
 def assert_closeenough(a, b):
     assert a.shape == b.shape
     assert_allclose(a, b, atol=0.0001)
+
+
+def get_backend_device_combinations():
+    """
+    Generate all (backend, device) combinations for testing.
+
+    This is used for parametrizing tests that need to run across all
+    backend/device combinations. Respects YAPOCIS_TEST_BACKENDS for filtering.
+
+    Returns:
+        list: List of (backend, device_name) tuples
+
+    Example:
+        from tests import get_backend_device_combinations
+
+        @pytest.mark.parametrize("backend,device", get_backend_device_combinations())
+        def test_something(backend, device):
+            ...
+    """
+    try:
+        from yapocis.core import get_test_backends, get_test_devices
+    except ImportError:
+        # Fallback if imports fail
+        return [("ocl", "default")]
+
+    combinations = []
+    for backend in get_test_backends():
+        try:
+            devices = get_test_devices(backend)
+            for device_name in devices.keys():
+                combinations.append((backend, device_name))
+        except Exception:
+            # If we can't get devices for a backend, skip it
+            continue
+
+    return combinations

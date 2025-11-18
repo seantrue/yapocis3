@@ -58,8 +58,8 @@ def demo_basic_analysis():
         ax.axvline(freq, color='red', linestyle='--', alpha=0.5)
 
     plt.tight_layout()
-    plt.savefig('claude-debug/fft_library_demo_basic.png', dpi=150)
-    print("\nPlot saved to claude-debug/fft_library_demo_basic.png")
+    plt.savefig('fft_library_demo_basic.png', dpi=150)
+    print("\nPlot saved to fft_library_demo_basic.png")
     plt.close()
 
 
@@ -118,8 +118,8 @@ def demo_spectrogram():
     cbar.set_label('Power (dB)')
 
     plt.tight_layout()
-    plt.savefig('claude-debug/fft_library_demo_spectrogram.png', dpi=150)
-    print("\nPlot saved to claude-debug/fft_library_demo_spectrogram.png")
+    plt.savefig('fft_library_demo_spectrogram.png', dpi=150)
+    print("\nPlot saved to fft_library_demo_spectrogram.png")
     plt.close()
 
 
@@ -190,8 +190,8 @@ def demo_bandpass_filter():
     ax2.legend()
 
     plt.tight_layout()
-    plt.savefig('claude-debug/fft_library_demo_filter.png', dpi=150)
-    print("\nPlot saved to claude-debug/fft_library_demo_filter.png")
+    plt.savefig('fft_library_demo_filter.png', dpi=150)
+    print("\nPlot saved to fft_library_demo_filter.png")
     plt.close()
 
 
@@ -273,8 +273,8 @@ def demo_coherence():
     ax.legend()
 
     plt.tight_layout()
-    plt.savefig('claude-debug/fft_library_demo_coherence.png', dpi=150)
-    print("\nPlot saved to claude-debug/fft_library_demo_coherence.png")
+    plt.savefig('fft_library_demo_coherence.png', dpi=150)
+    print("\nPlot saved to fft_library_demo_coherence.png")
     plt.close()
 
 

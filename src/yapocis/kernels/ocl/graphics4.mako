@@ -26,7 +26,6 @@ __kernel void lines(int width, int height, READWRITE float4 *a, int nelements,
     float2 linestart = *coords++;
     float2 lineend = *coords++;
     float4 rgba = *colors++;
-    float4 alpha = (float4)(rgba.s3, rgba.s3, rgba.s3, 0.0f);
     float linemag2 = dxdy2(lineend, linestart);
     float2 delta = lineend - linestart;
     float2 u2 = (point - linestart) * (delta);
@@ -41,16 +40,22 @@ __kernel void lines(int width, int height, READWRITE float4 *a, int nelements,
         float edge_outer = threshold + aa_width;
         float edge_inner = threshold - aa_width;
         float t = smoothstep(edge_outer, edge_inner, dist);
-        float4 clr = (rgba * alpha) + (color * (ONES - alpha));
-        color = mix(color, clr, t * rgba.s3);
+        // Porter-Duff "over" compositing with edge blending
+        float effective_alpha = t * rgba.s3;
+        float3 rgb = rgba.s012 * effective_alpha + color.s012 * (1.0f - effective_alpha);
+        float alpha = effective_alpha + color.s3 * (1.0f - effective_alpha);
+        color = (float4)(rgb, alpha);
       } else {
-        // Hard edge (original behavior, fast path)
-        float4 clr = (rgba * alpha) + (color * (ONES - alpha));
-        color = (dist2 < threshold2) ? clr : color;
+        // Hard edge - Porter-Duff "over" compositing
+        bool inside = (dist2 < threshold2);
+        if (inside) {
+          float3 rgb = rgba.s012 * rgba.s3 + color.s012 * (1.0f - rgba.s3);
+          float alpha = rgba.s3 + color.s3 * (1.0f - rgba.s3);
+          color = (float4)(rgb, alpha);
+        }
       }
     }
   }
-  color.s3 = 0.0f;
   a[i] = color;
   barrier(CLK_GLOBAL_MEM_FENCE);
 }
@@ -66,7 +71,6 @@ __kernel void rects(int width, int height, READWRITE float4 *a, int nelements,
     float4 region = *coords++;
     float aa_width = *aa_widths++;
     float4 rgba = *colors++;
-    float4 alpha = (float4)(rgba.s3, rgba.s3, rgba.s3, 0.0f);
 
     float l = min(region.x, region.z);
     float b = min(region.y, region.w);
@@ -84,12 +88,16 @@ __kernel void rects(int width, int height, READWRITE float4 *a, int nelements,
       float edge_dist = min(min(dist_l, dist_r), min(dist_b, dist_t));
 
       float blend_t = smoothstep(0.0f, aa_width, edge_dist);
-      float4 clr = (rgba * alpha) + (pixel * (ONES - alpha));
-      pixel = mix(pixel, clr, blend_t * rgba.s3);
+      // Porter-Duff "over" compositing with edge blending
+      float effective_alpha = blend_t * rgba.s3;
+      float3 rgb = rgba.s012 * effective_alpha + pixel.s012 * (1.0f - effective_alpha);
+      float alpha = effective_alpha + pixel.s3 * (1.0f - effective_alpha);
+      pixel = (float4)(rgb, alpha);
     } else if (inside) {
-      // Hard edge (original behavior, fast path)
-      float4 clr = (rgba * alpha) + (pixel * (ONES - alpha));
-      pixel = clr;
+      // Hard edge - Porter-Duff "over" compositing
+      float3 rgb = rgba.s012 * rgba.s3 + pixel.s012 * (1.0f - rgba.s3);
+      float alpha = rgba.s3 + pixel.s3 * (1.0f - rgba.s3);
+      pixel = (float4)(rgb, alpha);
     }
   }
   a[i] = pixel;
@@ -110,7 +118,6 @@ __kernel void circles(int width, int height, READWRITE float4 *a, int nelements,
     float radius = *coords++;
     float aa_width = *aa_widths++;
     float4 rgba = *colors++;
-    float4 alpha = (float4)(rgba.s3, rgba.s3, rgba.s3, 0.0f);
     float2 center = (float2)(cx, cy);
     float dist = sqrt(dxdy2(center, point));
 
@@ -119,12 +126,19 @@ __kernel void circles(int width, int height, READWRITE float4 *a, int nelements,
       float edge_outer = radius + aa_width;
       float edge_inner = radius - aa_width;
       float t = smoothstep(edge_outer, edge_inner, dist);
-      float4 clr = (rgba * alpha) + (pixel * (ONES - alpha));
-      pixel = mix(pixel, clr, t * rgba.s3);
+      // Porter-Duff "over" compositing with edge blending
+      float effective_alpha = t * rgba.s3;
+      float3 rgb = rgba.s012 * effective_alpha + pixel.s012 * (1.0f - effective_alpha);
+      float alpha = effective_alpha + pixel.s3 * (1.0f - effective_alpha);
+      pixel = (float4)(rgb, alpha);
     } else {
-      // Hard edge (original behavior, fast path)
-      float4 clr = (rgba * alpha) + (pixel * (ONES - alpha));
-      pixel = (dist <= radius) ? clr : pixel;
+      // Hard edge - Porter-Duff "over" compositing
+      bool inside = (dist <= radius);
+      if (inside) {
+        float3 rgb = rgba.s012 * rgba.s3 + pixel.s012 * (1.0f - rgba.s3);
+        float alpha = rgba.s3 + pixel.s3 * (1.0f - rgba.s3);
+        pixel = (float4)(rgb, alpha);
+      }
     }
   }
   a[i] = pixel;
@@ -155,7 +169,6 @@ __kernel void triangles(int width, int height, READWRITE float4 *a, int nelement
     float2 v3 = *coords++;
     float aa_width = *aa_widths++;
     float4 rgba = *colors++;
-    float4 alpha = (float4)(rgba.s3, rgba.s3, rgba.s3, 0.0f);
 
     float d1 = signex(point, v1, v2);
     float d2 = signex(point, v2, v3);
@@ -172,12 +185,16 @@ __kernel void triangles(int width, int height, READWRITE float4 *a, int nelement
       float edge_dist = min(min(dist1, dist2), dist3);
 
       float blend_t = smoothstep(0.0f, aa_width, edge_dist);
-      float4 clr = (rgba * alpha) + (pixel * (ONES - alpha));
-      pixel = mix(pixel, clr, blend_t * rgba.s3);
+      // Porter-Duff "over" compositing with edge blending
+      float effective_alpha = blend_t * rgba.s3;
+      float3 rgb = rgba.s012 * effective_alpha + pixel.s012 * (1.0f - effective_alpha);
+      float alpha = effective_alpha + pixel.s3 * (1.0f - effective_alpha);
+      pixel = (float4)(rgb, alpha);
     } else if (inside) {
-      // Hard edge (original behavior, fast path)
-      float4 clr = (rgba * alpha) + (pixel * (ONES - alpha));
-      pixel = clr;
+      // Hard edge - Porter-Duff "over" compositing
+      float3 rgb = rgba.s012 * rgba.s3 + pixel.s012 * (1.0f - rgba.s3);
+      float alpha = rgba.s3 + pixel.s3 * (1.0f - rgba.s3);
+      pixel = (float4)(rgb, alpha);
     }
   }
   a[i] = pixel;
@@ -196,7 +213,6 @@ __kernel void ellipses(int width, int height, READWRITE float4 *a, int nelements
     float4 center_axes = *coords++;
     float aa_width = *aa_widths++;
     float4 rgba = *colors++;
-    float4 alpha = (float4)(rgba.s3, rgba.s3, rgba.s3, 0.0f);
 
     float2 center = (float2)(center_axes.s0,center_axes.s1);
     float2 axes = (float2)(center_axes.s2,center_axes.s3);
@@ -211,12 +227,19 @@ __kernel void ellipses(int width, int height, READWRITE float4 *a, int nelements
       float edge_outer = aa_width;
       float edge_inner = -aa_width;
       float t = smoothstep(edge_outer, edge_inner, dist_to_edge);
-      float4 clr = (rgba * alpha) + (pixel * (ONES - alpha));
-      pixel = mix(pixel, clr, t * rgba.s3);
+      // Porter-Duff "over" compositing with edge blending
+      float effective_alpha = t * rgba.s3;
+      float3 rgb = rgba.s012 * effective_alpha + pixel.s012 * (1.0f - effective_alpha);
+      float alpha = effective_alpha + pixel.s3 * (1.0f - effective_alpha);
+      pixel = (float4)(rgb, alpha);
     } else {
-      // Hard edge (original behavior, fast path)
-      float4 clr = (rgba * alpha) + (pixel * (ONES - alpha));
-      pixel = (d <= 1.0f) ? clr : pixel;
+      // Hard edge - Porter-Duff "over" compositing
+      bool inside = (d <= 1.0f);
+      if (inside) {
+        float3 rgb = rgba.s012 * rgba.s3 + pixel.s012 * (1.0f - rgba.s3);
+        float alpha = rgba.s3 + pixel.s3 * (1.0f - rgba.s3);
+        pixel = (float4)(rgb, alpha);
+      }
     }
   }
   a[i] = pixel;
@@ -246,10 +269,13 @@ __kernel void composite(int width, int height, READWRITE float4 *a, int nelement
     int ipixel_source = ipixel + source_offset;
     int inside = !outside && 0 <= ipixel_source && ipixel_source < npixels;
 
-    float4 rgba = inside ? pixels[ipixel_source] : ZEROS;
-    float4 alpha = (float4)(rgba.s3, rgba.s3, rgba.s3, 0.0f);
-    float4 clr = (rgba * alpha) + (pixel * (ONES - alpha));
-    pixel = inside ? clr : pixel;
+    if (inside) {
+      float4 rgba = pixels[ipixel_source];
+      // Porter-Duff "over" compositing
+      float3 rgb = rgba.s012 * rgba.s3 + pixel.s012 * (1.0f - rgba.s3);
+      float alpha = rgba.s3 + pixel.s3 * (1.0f - rgba.s3);
+      pixel = (float4)(rgb, alpha);
+    }
   }
   a[i] = pixel;
   barrier(CLK_GLOBAL_MEM_FENCE);

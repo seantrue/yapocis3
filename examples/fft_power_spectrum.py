@@ -126,7 +126,7 @@ def plot_power_spectra():
     plt.tight_layout()
 
     # Save and show
-    output_file = 'claude-debug/fft_power_spectrum.png'
+    output_file = 'fft_power_spectrum.png'
     print(f"\nSaving plot to {output_file}...")
     plt.savefig(output_file, dpi=150, bbox_inches='tight')
     print(f"Plot saved!")

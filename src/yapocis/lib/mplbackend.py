@@ -1,17 +1,17 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
+import mapbox_earcut as earcut
+import numpy as np
+from PIL import Image as PILImage
 from matplotlib._pylab_helpers import Gcf
 from matplotlib.backend_bases import (
     FigureCanvasBase, FigureManagerBase, GraphicsContextBase, RendererBase)
 from matplotlib.figure import Figure
 from matplotlib.mathtext import MathTextParser
-from PIL import Image as PILImage
-from yapocis.lib.typeset import extent_freetype
 
 from yapocis.lib.kerneldraw4 import KernelDraw4
-import numpy as np
+from yapocis.lib.typeset import extent_freetype
 from yapocis.utils.logging import get_logger
-import mapbox_earcut as earcut
 
 log = get_logger("mplbackend")
 
@@ -46,7 +46,7 @@ class RendererTemplate(RendererBase):
         # Calculate line length and direction
         dx = x2 - x1
         dy = y2 - y1
-        length = np.sqrt(dx*dx + dy*dy)
+        length = np.sqrt(dx * dx + dy * dy)
 
         if length < 1e-10:
             return  # Line too short
@@ -85,7 +85,9 @@ class RendererTemplate(RendererBase):
                 seg_y1 = y1 + uy * pos
                 seg_x2 = x1 + ux * end_pos
                 seg_y2 = y1 + uy * end_pos
-                line = np.array([seg_x1, seg_y1, seg_x2, seg_y2])
+                line = np.array([seg_y1, seg_x1, seg_y2, seg_x2], dtype=np.float32)
+                self.kd.line(line, color=color, width=linewidth, aa_width=0.5)
+                pos = end_pos
                 self.kd.line(line, color=color, width=linewidth, aa_width=0.5)
                 pos = end_pos
             else:
@@ -146,11 +148,12 @@ class RendererTemplate(RendererBase):
                     x1, y1 = points[i]
                     x2, y2 = points[i + 1]
                     self._draw_dashed_line(x1, y1, x2, y2, color, linewidth_pixels,
-                                          dash_pattern_pixels, dash_offset_pixels)
+                                           dash_pattern_pixels, dash_offset_pixels)
             else:
                 # Draw solid lines
                 for i in range(points.shape[0] - 1):
                     line = flat_points[i * 2:i * 2 + 4]
+                    line = np.array([line[1], line[0], line[3], line[2]], dtype=np.float32)
                     self.kd.line(line, color=color, width=linewidth_pixels, aa_width=0.5)
 
         # Fill closed polygons if face color is provided and visible
@@ -168,6 +171,8 @@ class RendererTemplate(RendererBase):
                 vertices = earcut_points[simplices]
                 for i in range(0, len(vertices), 3):
                     triangle = vertices[i:i + 3].ravel()
+                    triangle = np.array([triangle[1], triangle[0], triangle[3], triangle[2], triangle[5], triangle[4]],
+                                        dtype=np.float32)
                     self.kd.triangle(triangle, color=rgbFace, aa_width=0.5)
 
         self.kd.render()
@@ -365,8 +370,8 @@ class FigureCanvasTemplate(FigureCanvasBase):
         dpi = self.figure.dpi
 
         if (self._renderer is None or
-            self._renderer.dpi != dpi or
-            self._renderer.figsize != (figwidth, figheight)):
+                self._renderer.dpi != dpi or
+                self._renderer.figsize != (figwidth, figheight)):
             # Use get_figwidth/get_figheight instead of bbox_inches to get the correct figure size
             # bbox_inches might not be finalized until after tight_layout is applied
             self._renderer = RendererTemplate(dpi, (figwidth, figheight))
