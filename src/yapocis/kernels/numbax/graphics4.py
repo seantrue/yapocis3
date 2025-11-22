@@ -285,10 +285,12 @@ def lines(
     colors: np.ndarray,
 ):
     for i in range(nelements):
-        x0 = int(coords[i, 0])
-        y0 = int(coords[i, 1])
-        x1 = int(coords[i, 2])
-        y1 = int(coords[i, 3])
+        # Swap coords to match OCL/Metal column-major convention
+        # coords are passed as (row1, col1, row2, col2)
+        x0 = int(coords[i, 1])  # col1
+        y0 = int(coords[i, 0])  # row1
+        x1 = int(coords[i, 3])  # col2
+        y1 = int(coords[i, 2])  # row2
         w = float(widths[i])
         aa_w = float(aa_widths[i])
         rgba = colors[i]
@@ -306,10 +308,12 @@ def rects(
     colors: np.ndarray,
 ):
     for i in range(nelements):
-        x0 = int(coords[i, 0])
-        y0 = int(coords[i, 1])
-        x1 = int(coords[i, 2])
-        y1 = int(coords[i, 3])
+        # Swap coords to match OCL/Metal column-major convention
+        # coords are passed as (row1, col1, row2, col2)
+        x0 = int(coords[i, 1])  # col1
+        y0 = int(coords[i, 0])  # row1
+        x1 = int(coords[i, 3])  # col2
+        y1 = int(coords[i, 2])  # row2
         aa_w = float(aa_widths[i])
         rgba = colors[i]
         _draw_rect_rgba(a, x0, y0, x1, y1, aa_w, rgba)
@@ -326,8 +330,10 @@ def circles(
     colors: np.ndarray,
 ):
     for i in range(nelements):
-        cx = int(coords[i, 0])
-        cy = int(coords[i, 1])
+        # Swap coords to match OCL/Metal column-major convention
+        # coords are passed as (row, col, radius)
+        cx = int(coords[i, 1])  # col
+        cy = int(coords[i, 0])  # row
         r = float(coords[i, 2])
         aa_w = float(aa_widths[i])
         rgba = colors[i]
@@ -345,12 +351,14 @@ def triangles(
     colors: np.ndarray,
 ):
     for i in range(nelements):
-        x0 = int(coords[i, 0])
-        y0 = int(coords[i, 1])
-        x1 = int(coords[i, 2])
-        y1 = int(coords[i, 3])
-        x2 = int(coords[i, 4])
-        y2 = int(coords[i, 5])
+        # Swap coords to match OCL/Metal column-major convention
+        # coords are passed as (row1, col1, row2, col2, row3, col3)
+        x0 = int(coords[i, 1])  # col1
+        y0 = int(coords[i, 0])  # row1
+        x1 = int(coords[i, 3])  # col2
+        y1 = int(coords[i, 2])  # row2
+        x2 = int(coords[i, 5])  # col3
+        y2 = int(coords[i, 4])  # row3
         aa_w = float(aa_widths[i])
         rgba = colors[i]
         _draw_triangle_rgba(a, x0, y0, x1, y1, x2, y2, aa_w, rgba)
@@ -367,10 +375,13 @@ def ellipses(
     colors: np.ndarray,
 ):
     for i in range(nelements):
-        cx = int(coords[i, 0])
-        cy = int(coords[i, 1])
-        rx = float(coords[i, 2])
-        ry = float(coords[i, 3])
+        # Swap coords to match OCL/Metal column-major convention
+        # coords are passed as (row, col, width, height)
+        cx = int(coords[i, 1])  # col
+        cy = int(coords[i, 0])  # row
+        # OCL/Metal also swap width/height for ellipses
+        rx = float(coords[i, 3])  # height (swapped to match OCL)
+        ry = float(coords[i, 2])  # width (swapped to match OCL)
         aa_w = float(aa_widths[i])
         rgba = colors[i]
         _draw_ellipse_rgba(a, cx, cy, rx, ry, aa_w, rgba)
@@ -389,10 +400,12 @@ def composite(
 ):
     # coords: N x 4 (x,y,w,h), pixels: concatenated RGBA per pixel, ipixels: start index
     for i in range(nelements):
-        x = int(coords[i, 0])
-        y = int(coords[i, 1])
-        w = int(coords[i, 2])
-        h = int(coords[i, 3])
+        # coords are passed as (col, row, width, height) = (x, y, w, h)
+        # where x=col (matches X macro) and y=row (matches Y macro)
+        x = int(coords[i, 0])  # col
+        y = int(coords[i, 1])  # row
+        w = int(coords[i, 2])  # width
+        h = int(coords[i, 3])  # height
         # ipixels is provided in units of RGBA pixels; convert to float-index
         start = int(ipixels[i]) * 4
         block = pixels[start : start + (w * h * 4)].reshape(h, w, 4)

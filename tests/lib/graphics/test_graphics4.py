@@ -1,7 +1,9 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
+import os
 import pytest
 
+from yapocis.core import get_test_backends
 from yapocis.lib.graphics4 import Graphics4
 from yapocis.utils.stereo_typing import *
 from . import ASIZE, StopWatcher, text_test_lines, double_shuffle
@@ -34,7 +36,9 @@ def setup_test(device_name=None):
     return np.zeros((ASIZE, ASIZE, 4)).astype(np.float32), Graphics4(device_name)
 
 
-def test_alpha():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_alpha(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     canvas, grph = setup_test()
     with StopWatcher("alpha", kernel=grph) as sw:
         center = ASIZE // 2
@@ -49,7 +53,9 @@ def test_alpha():
 
 
 @pytest.mark.smoke
-def test_lines():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_lines(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     canvas, grph = setup_test()
     random_coords = random_lines()
     coords = []
@@ -71,7 +77,9 @@ def test_lines():
         sw.show(canvas)
 
 
-def test_rects():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_rects(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     canvas, grph = setup_test()
     coords = []
     for i in range(100, ASIZE, 100):
@@ -85,7 +93,9 @@ def test_rects():
         sw.show(canvas)
 
 
-def test_circles():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_circles(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     canvas, grph = setup_test()
     random_coords = random_circles()
     coords = []
@@ -100,7 +110,9 @@ def test_circles():
         sw.show(canvas)
 
 
-def test_triangles():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_triangles(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     canvas, grph = setup_test()
     random_coords = random_triangles()
     coords = []
@@ -115,7 +127,9 @@ def test_triangles():
         sw.show(canvas)
 
 
-def test_ellipses():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_ellipses(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     canvas, grph = setup_test()
     random_coords = random_ellipses()
     coords = []
@@ -136,7 +150,9 @@ def test_ellipses():
         sw.show(canvas)
 
 
-def test_composite():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_composite(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     canvas, grph = setup_test()
     random_coords, random_blocks = random_composites()
     with StopWatcher("composite", kernel=grph) as sw:
@@ -145,7 +161,9 @@ def test_composite():
         sw.show(canvas)
 
 
-def test_composite_sprites():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_composite_sprites(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     canvas, grph = setup_test()
     random_coords, random_sprites_ = random_sprites()
     with StopWatcher("sprites", kernel=grph) as sw:
@@ -154,7 +172,9 @@ def test_composite_sprites():
         sw.show(canvas)
 
 
-def test_composite_mosaic():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_composite_mosaic(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     from random import shuffle
 
     _, grph = setup_test()
@@ -172,7 +192,9 @@ def test_composite_mosaic():
         sw.show(canvas)
 
 
-def test_simple_icons():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_simple_icons(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     canvas, grph = setup_test()
     locations = []
     # canvas[:,:,:] = .5
@@ -189,7 +211,9 @@ def test_simple_icons():
         sw.show(canvas)
 
 
-def test_random_icons():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_random_icons(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     canvas, grph = setup_test()
     locations = random_points()
     blocks = random_icons(len(locations))
@@ -202,7 +226,9 @@ def test_random_icons():
         sw.show(canvas)
 
 
-def test_simple_texts():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_simple_texts(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     canvas, grph = setup_test()
     locations = []
     s = "Hello world"
@@ -216,7 +242,9 @@ def test_simple_texts():
         sw.show(canvas)
 
 
-def test_text_rotation():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_text_rotation(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     canvas, grph = setup_test()
     rotations = list(range(0, 360, 30))
     center = canvas.shape[0] // 2
@@ -238,7 +266,9 @@ def test_text_rotation():
         sw.show(canvas)
 
 
-def test_texts_stressed():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_texts_stressed(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     canvas, grph = setup_test()
     locations, strings, fonts, sizes, rotations, alphas = random_texts(300)
     with StopWatcher("stressed texts", kernel=grph) as sw:
@@ -256,7 +286,9 @@ def test_texts_stressed():
         sw.show(canvas)
 
 
-def test_texts_stressed_rotation():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_texts_stressed_rotation(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     N = 300
     ANGLE_STEP = 30
     canvas, grph = setup_test()
@@ -281,7 +313,9 @@ def test_texts_stressed_rotation():
         sw.show(canvas)
 
 
-def test_typesetting():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_typesetting(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     canvas, grph = setup_test()
     lines = text_test_lines()
     x, y = 60, 60
@@ -300,7 +334,9 @@ def test_typesetting():
         sw.show(canvas)
 
 
-def test_one():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_one(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     canvas, grph = setup_test()
     with StopWatcher("one", kernel=grph) as sw:
         with sw.checkpoint("lines"):

@@ -56,12 +56,21 @@ class Kernel:
                     if p.name in posbyname
                     else args[posbyname[p.derived_from]]
                 )
-                if p.dim in ("size_of", "sizeof"):
+                # Explicit dimension specifiers: dim_0_of through dim_9_of
+                if p.dim.startswith("dim_") and p.dim.endswith("_of"):
+                    # Extract N from "dim_N_of"
+                    n = int(p.dim.split("_")[1])
+                    prepared_args[ip] = int(base.shape[n])
+                elif p.dim in ("size_of", "sizeof"):
                     prepared_args[ip] = int(np.prod(base.shape))
                 elif p.dim in ("width_of", "widthof"):
+                    # For graphics (H, W) or (H, W, C): width = shape[0]
+                    # For 1D: width = shape[0]
                     prepared_args[ip] = int(base.shape[0])
                 elif p.dim in ("height_of", "heightof"):
-                    prepared_args[ip] = int(base.shape[1]) if base.ndim > 1 else 1
+                    # For graphics (H, W) or (H, W, C): height = shape[1] if ndim > 1, else 1
+                    height = base.shape[1] if base.ndim >= 2 else 1
+                    prepared_args[ip] = int(height)
                 elif p.dim in ("depth_of",):
                     prepared_args[ip] = int(base.shape[2]) if base.ndim > 2 else 1
                 elif p.dim in ("length_of", "lengthof"):

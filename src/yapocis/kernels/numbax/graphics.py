@@ -268,10 +268,12 @@ def lines(
     colors: np.ndarray,
 ):
     for i in range(nelements):
-        x0 = int(coords[i, 0])
-        y0 = int(coords[i, 1])
-        x1 = int(coords[i, 2])
-        y1 = int(coords[i, 3])
+        # Swap coords to match OCL/Metal column-major convention
+        # coords are passed as (row1, col1, row2, col2)
+        x0 = int(coords[i, 1])  # col1
+        y0 = int(coords[i, 0])  # row1
+        x1 = int(coords[i, 3])  # col2
+        y1 = int(coords[i, 2])  # row2
         w = float(widths[i])
         aa_w = float(aa_widths[i])
         if colors.ndim == 1:
@@ -294,10 +296,13 @@ def rects(
     colors: np.ndarray,
 ):
     for i in range(nelements):
-        x0 = int(coords[i, 0])
-        y0 = int(coords[i, 1])
-        x1 = int(coords[i, 2])
-        y1 = int(coords[i, 3])
+        # Swap coords to match OCL/Metal column-major convention
+        # coords are passed as (row1, col1, row2, col2)
+        # but OCL treats them in column-major order
+        x0 = int(coords[i, 1])  # col1
+        y0 = int(coords[i, 0])  # row1
+        x1 = int(coords[i, 3])  # col2
+        y1 = int(coords[i, 2])  # row2
         aa_w = float(aa_widths[i])
         if colors.ndim == 1:
             c = float(colors[i])
@@ -319,8 +324,10 @@ def circles(
     colors: np.ndarray,
 ):
     for i in range(nelements):
-        cx = int(coords[i, 0])
-        cy = int(coords[i, 1])
+        # Swap coords to match OCL/Metal column-major convention
+        # coords are passed as (row, col, radius)
+        cx = int(coords[i, 1])  # col
+        cy = int(coords[i, 0])  # row
         r = float(coords[i, 2])
         aa_w = float(aa_widths[i])
         if colors.ndim == 1:
@@ -343,12 +350,14 @@ def triangles(
     colors: np.ndarray,
 ):
     for i in range(nelements):
-        x0 = int(coords[i, 0])
-        y0 = int(coords[i, 1])
-        x1 = int(coords[i, 2])
-        y1 = int(coords[i, 3])
-        x2 = int(coords[i, 4])
-        y2 = int(coords[i, 5])
+        # Swap coords to match OCL/Metal column-major convention
+        # coords are passed as (row1, col1, row2, col2, row3, col3)
+        x0 = int(coords[i, 1])  # col1
+        y0 = int(coords[i, 0])  # row1
+        x1 = int(coords[i, 3])  # col2
+        y1 = int(coords[i, 2])  # row2
+        x2 = int(coords[i, 5])  # col3
+        y2 = int(coords[i, 4])  # row3
         aa_w = float(aa_widths[i])
         if colors.ndim == 1:
             c = float(colors[i])
@@ -370,10 +379,13 @@ def ellipses(
     colors: np.ndarray,
 ):
     for i in range(nelements):
-        cx = int(coords[i, 0])
-        cy = int(coords[i, 1])
-        rx = float(coords[i, 2])
-        ry = float(coords[i, 3])
+        # Swap coords to match OCL/Metal column-major convention
+        # coords are passed as (row, col, width, height)
+        cx = int(coords[i, 1])  # col
+        cy = int(coords[i, 0])  # row
+        # OCL/Metal also swap width/height for ellipses
+        rx = float(coords[i, 3])  # height (swapped to match OCL)
+        ry = float(coords[i, 2])  # width (swapped to match OCL)
         aa_w = float(aa_widths[i])
         if colors.ndim == 1:
             c = float(colors[i])
@@ -395,10 +407,12 @@ def composite(
     ipixels: np.ndarray,
     npixels: int,
 ):
-    # coords: N x 4 (x,y,w,h), pixels: concatenated [val, alpha] pairs per pixel, ipixels: start index per block
+    # coords: N x 4 (row, col, w, h), pixels: concatenated [val, alpha] pairs per pixel, ipixels: start index per block
     for i in range(nelements):
-        x = int(coords[i, 0])
-        y = int(coords[i, 1])
+        # Swap coords to match OCL/Metal column-major convention
+        # coords are passed as (row, col, w, h)
+        x = int(coords[i, 1])  # col
+        y = int(coords[i, 0])  # row
         w = int(coords[i, 2])
         h = int(coords[i, 3])
         start = int(ipixels[i])

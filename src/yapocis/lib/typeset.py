@@ -179,7 +179,7 @@ def render_freetype(text, filename: str, size: float = 12, angle: float = 0):
     return L
 
 def render_text(text: str, font_name: str = "default", size: int = 32, rotation: float | None = None,
-                debug_bbox=False) \
+                debug_bbox=False, crop=True) \
         -> tuple[tuple, Image1]:
     rotation = rotation % 360
     if rotation > 180:
@@ -187,15 +187,45 @@ def render_text(text: str, font_name: str = "default", size: int = 32, rotation:
     font_path = font(font_name)
     size = 32 if size is None else size
     rotation = 0.0 if rotation is None else rotation
+
     rendered = render_freetype(text, font_path, size, rotation)
     rendered = rendered[::-1, :]
-    vprofile = np.nonzero(np.sum(rendered, 0))[0]
-    hprofile = np.nonzero(np.sum(rendered, 1))[0]
-    y1, y2 = hprofile[0], hprofile[-1]
-    x1, x2 = vprofile[0], vprofile[-1]
-    rendered = rendered[max(0, y1 - 1):y2 + 2, max(0, x1 - 1):x2 + 2]
+
+    if crop:
+        # Original behavior: crop to content with small margin
+        vprofile = np.nonzero(np.sum(rendered, 0))[0]
+        hprofile = np.nonzero(np.sum(rendered, 1))[0]
+
+        if len(hprofile) == 0 or len(vprofile) == 0:
+            # Empty text
+            return [0, 0, 1, 1], np.zeros((1, 1), dtype=np.float32)
+
+        y1, y2 = hprofile[0], hprofile[-1]
+        x1, x2 = vprofile[0], vprofile[-1]
+        rendered = rendered[max(0, y1 - 1):y2 + 2, max(0, x1 - 1):x2 + 2]
+    else:
+        # Preserve full bounding box for proper baseline alignment
+        # Get expected dimensions from extent_freetype
+        xmin_expected, ymin_expected, xmax_expected, ymax_expected = extent_freetype(text, font_path, size=size)
+        expected_height = ymax_expected - ymin_expected
+        expected_width = xmax_expected - xmin_expected
+
+        full_height = int(np.ceil(expected_height)) if expected_height > 0 else 1
+        full_width = int(np.ceil(expected_width)) if expected_width > 0 else 1
+
+        # Extract the region that matches expected dimensions
+        h, w = rendered.shape
+        full_rendered = np.zeros((full_height, full_width), dtype=rendered.dtype)
+
+        # Copy the rendered content, accounting for size differences
+        h_copy = min(h, full_height)
+        w_copy = min(w, full_width)
+        full_rendered[:h_copy, :w_copy] = rendered[:h_copy, :w_copy]
+        rendered = full_rendered
+
     if debug_bbox:
         set_margin(rendered, 2, 255)
+
     return [0, 0, *rendered.shape], rendered.astype(np.float32) / 255.0
 
 def compute_offset(angle, h, w):

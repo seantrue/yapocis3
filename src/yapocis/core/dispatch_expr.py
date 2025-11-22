@@ -49,8 +49,8 @@ def evaluate_dispatch_expression(expr: str, args: tuple[Any, ...], params: list)
         pass
 
     # Parse dimension reference: "dimension_of parameter"
-    # e.g., "height_of input", "width_of output", "sizeof input"
-    dim_pattern = r'(width_of|height_of|depth_of|sizeof)\s+(\w+)'
+    # e.g., "height_of input", "width_of output", "sizeof input", "dim_0_of input"
+    dim_pattern = r'(width_of|height_of|depth_of|sizeof|dim_\d+_of)\s+(\w+)'
     match = re.search(dim_pattern, expr)
 
     if match:
@@ -73,11 +73,22 @@ def evaluate_dispatch_expression(expr: str, args: tuple[Any, ...], params: list)
             raise ValueError(f"Parameter '{param_name}' must be a numpy array for {dim_type}")
 
         # Get the dimension value
-        # For yapocis arrays in (C, H, W) format:
+        # dim_N_of: Direct access to shape[N]
+        if dim_type.startswith("dim_"):
+            # Extract N from "dim_N_of"
+            n = int(dim_type.split("_")[1])
+            if n >= len(arg.shape):
+                raise ValueError(f"Array '{param_name}' does not have dimension {n} (shape={arg.shape})")
+            dim_value = arg.shape[n]
+        # Traditional dimension specifiers (for backward compatibility)
+        # For yapocis graphics arrays in (H, W) format:
+        # - width_of → shape[0]
+        # - height_of → shape[1] if ndim > 1, else 1
+        # For yapocis CNN arrays in (C, H, W) format:
         # - depth_of (channels) → shape[0]
         # - height_of → shape[1]
         # - width_of → shape[2]
-        if dim_type == "width_of":
+        elif dim_type == "width_of":
             dim_value = arg.shape[2] if len(arg.shape) > 2 else arg.shape[0]
         elif dim_type == "height_of":
             dim_value = arg.shape[1] if len(arg.shape) > 1 else 1

@@ -90,8 +90,9 @@ class GraphicsSetup4(AbstractGraphicsSetup):
             assert depth == 4
             block = block.ravel()
             pixel_buffer.append(block)
-            x, y = location
-            coords.append((x, y, width, height))
+            row, col = location  # Location is (row, col)
+            # OCL/Metal kernels expect (x, y, w, h) where x=col, y=row (from X/Y macros)
+            coords.append((col, row, width, height))
             ipixels.append(ipixel)
             ipixel += len(block)//4
         buffer = np.concatenate(pixel_buffer)

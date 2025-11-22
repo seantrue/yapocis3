@@ -73,9 +73,12 @@ numba = [
 all-backends = [
     "yapocis[opencl,metal,numba]",
 ]
-gpu-backends = [
-    "yapocis[opencl,metal]",
+mac-backends = [
+    "yapocis[opencl,metal,numba]",
 ]
+linux-backends = [
+    "yapocis[opencl,cuda,numba]",
+]	      
 
 # Development dependencies
 dev = [
@@ -119,6 +122,13 @@ docs = [
     "recommonmark>=0.7.0",
 ]
 
+mac-dev = [
+    "yapocis[mac-backends,dev,test,docs]",
+]
+
+linux-dev = [
+    "yapocis[linux-backends,dev,test,docs]",
+]
 
 [project.scripts]
 # Unified development tools CLI

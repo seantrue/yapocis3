@@ -192,6 +192,8 @@ class RendererTemplate(RendererBase):
             - We need to convert to canvas coordinates (y-down)
             - Image data is already correctly oriented - don't flip it
         """
+        # DEBUG: Uncomment to see draw_image calls
+        # print(f"draw_image: x={x}, y={y}, im.shape={im.shape}, canvas=({self.height},{self.width})")
         # Convert image to float32 [0, 1] if needed
         if im.dtype == np.uint8:
             im = im.astype(np.float32) / 255.0
@@ -224,7 +226,8 @@ class RendererTemplate(RendererBase):
         im = np.flipud(im)
 
         # Composite image onto canvas
-        self.kd.composite([(canvas_x, canvas_y)], [im])
+        # composite expects (row, col) format, so pass (canvas_y, canvas_x)
+        self.kd.composite([(canvas_y, canvas_x)], [im])
 
     def get_text_width_height_descent(self, s, prop, ismath):
         # Handle external LaTeX (not supported)
@@ -246,8 +249,6 @@ class RendererTemplate(RendererBase):
         return w, h, d
 
     def draw_text(self, gc, x, y, s, prop, angle, ismath=False, mtext=None):
-        # Debug logging
-        log.debug(f"draw_text called: s={repr(s)}, ismath={repr(ismath)}")
 
         # Handle math text separately
         if ismath and ismath != "TeX":
@@ -275,22 +276,41 @@ class RendererTemplate(RendererBase):
                 # Use font_array as alpha channel (normalize to 0-1)
                 rgba_image[:, :, 3] = font_array.astype(np.float32) / 255.0
 
-                # Adjust y coordinate for text baseline
-                # y is already in canvas coords (y=0 at top) and represents the baseline
+                # Convert from baseline position to top-left for composite
+                # y is baseline in canvas coords (y=0 at top)
+                # For composite, we need the top-left corner of the image
                 # top of text image is (height - descent) pixels above the baseline
                 # So: y_top = y - (height - descent)
-                y_adjusted = y - height + descent
+                y_top = y - (height - descent)
 
                 # Composite the math text image onto the canvas
-                self.kd.composite([(x, y_adjusted)], [rgba_image])
+                # composite expects (row, col) format
+                self.kd.composite([(y_top, x)], [rgba_image])
 
             return
 
         # Normal text rendering using FreeType
         w, h, d = self.get_text_width_height_descent(s, prop, ismath)
-        # log.debug(f"draw_text {gc}, {x}, {y}, {s}, {prop}, {angle}, {ismath}, {mtext}")
         size = self.points_to_pixels(prop.get_size_in_points())
-        self.kd.draw_string((x, y), s, color=gc._rgb, rotation=angle, size=size)
+
+        # Matplotlib gives us the baseline position (already adjusted for va alignment)
+        # Convert from baseline to top-left corner
+        # Top of text = baseline - (h - d) where (h - d) is the ascent
+        y_top = y - (h - d)
+
+        # Render the text to get the RGBA block
+        # Use crop=False to preserve full bounding box for proper baseline alignment
+        from yapocis.lib.typeset import render_text
+        bbox, text_block = render_text(s, font_name="default", size=int(size), rotation=angle, crop=False)
+
+        # Apply color to the text block
+        rgba_block = np.empty((*text_block.shape, 4), dtype=np.float32)
+        rgba_block[:, :, :3] = text_block[:, :, np.newaxis] * np.array(gc._rgb[:3])
+        rgba_block[:, :, 3] = text_block * gc._rgb[3]
+
+        # Use composite directly to place text at exact position
+        # composite expects locations as (row, col) and handles positioning without offset
+        self.kd.composite([(int(np.round(y_top)), int(np.round(x)))], [rgba_block])
 
     def flipy(self):
         # Return True to indicate canvas uses y-down coordinate system

@@ -1,10 +1,15 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
+import os
+import pytest
 import time
-from typing import Optional
 
 import numpy as np
 
+from yapocis.core import get_test_backends
+from yapocis.lib.kerneldraw4 import KernelDraw4
+from yapocis.utils.stereo_typing import Image4
+from . import ASIZE, StopWatcher
 from ...random_data import (
     random_alpha_4ch as random_alpha,
     random_circles,
@@ -14,12 +19,7 @@ from ...random_data import (
     random_lines,
     random_rects,
     random_sprites_4ch as random_sprites,
-    random_triangles,
 )
-from yapocis.lib.kerneldraw4 import KernelDraw4
-from yapocis.utils.stereo_typing import Image4
-
-from . import ASIZE, StopWatcher, snapshot, snapshow
 
 
 def just_canvas() -> Image4:
@@ -31,7 +31,9 @@ def setup_test(device_name: str | None = None, chunk_size: int | None = None) ->
     return canvas, KernelDraw4(canvas, device_name=device_name, chunk_size=chunk_size)
 
 
-def test_batch():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_batch(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     canvas, ad = setup_test()
     random_coords = random_ellipses()
     circles = random_circles()
@@ -54,7 +56,9 @@ def test_batch():
         sw.show(a)
 
 
-def test_displaylist():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_displaylist(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     canvas, ad = setup_test()
     rects = random_rects()
     lines = random_lines()
@@ -73,7 +77,9 @@ def test_displaylist():
         sw.show(a)
 
 
-def test_chunking():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_chunking(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     ELEMENTS = 1000
     rects = random_rects(ELEMENTS)
     lines = random_lines(ELEMENTS)

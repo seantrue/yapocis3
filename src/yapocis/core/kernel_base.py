@@ -240,7 +240,8 @@ class KernelBase(ABC):
         """
         if not dtype:
             dtype = np.int32
-        return self._package_dimension(arg.shape[1], dtype)
+        height = arg.shape[1] if arg.ndim > 1 else 1
+        return self._package_dimension(height, dtype)
 
     handle_height_of = handle_heightof
 
@@ -260,6 +261,68 @@ class KernelBase(ABC):
         return self._package_dimension(arg.shape[2], dtype)
 
     handle_depth_of = handle_depthof
+
+    # Explicit dimension specifiers: dim_0_of through dim_9_of
+    # These directly access shape[N] without ambiguity
+    def handle_dim_0_of(self, arg, dtype):
+        """Extract dimension 0 (shape[0])."""
+        if not dtype:
+            dtype = np.int32
+        return self._package_dimension(arg.shape[0], dtype)
+
+    def handle_dim_1_of(self, arg, dtype):
+        """Extract dimension 1 (shape[1])."""
+        if not dtype:
+            dtype = np.int32
+        return self._package_dimension(arg.shape[1], dtype)
+
+    def handle_dim_2_of(self, arg, dtype):
+        """Extract dimension 2 (shape[2])."""
+        if not dtype:
+            dtype = np.int32
+        return self._package_dimension(arg.shape[2], dtype)
+
+    def handle_dim_3_of(self, arg, dtype):
+        """Extract dimension 3 (shape[3])."""
+        if not dtype:
+            dtype = np.int32
+        return self._package_dimension(arg.shape[3], dtype)
+
+    def handle_dim_4_of(self, arg, dtype):
+        """Extract dimension 4 (shape[4])."""
+        if not dtype:
+            dtype = np.int32
+        return self._package_dimension(arg.shape[4], dtype)
+
+    def handle_dim_5_of(self, arg, dtype):
+        """Extract dimension 5 (shape[5])."""
+        if not dtype:
+            dtype = np.int32
+        return self._package_dimension(arg.shape[5], dtype)
+
+    def handle_dim_6_of(self, arg, dtype):
+        """Extract dimension 6 (shape[6])."""
+        if not dtype:
+            dtype = np.int32
+        return self._package_dimension(arg.shape[6], dtype)
+
+    def handle_dim_7_of(self, arg, dtype):
+        """Extract dimension 7 (shape[7])."""
+        if not dtype:
+            dtype = np.int32
+        return self._package_dimension(arg.shape[7], dtype)
+
+    def handle_dim_8_of(self, arg, dtype):
+        """Extract dimension 8 (shape[8])."""
+        if not dtype:
+            dtype = np.int32
+        return self._package_dimension(arg.shape[8], dtype)
+
+    def handle_dim_9_of(self, arg, dtype):
+        """Extract dimension 9 (shape[9])."""
+        if not dtype:
+            dtype = np.int32
+        return self._package_dimension(arg.shape[9], dtype)
 
     def __call__(self, *args: tuple[Any], **kwargs):
         """

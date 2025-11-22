@@ -14,17 +14,17 @@ interface cnn {
     // Bias:   (output_channels)
     // Output: (output_channels, input_height, input_width)
     kernel conv2d_3x3(in float input, in float weights, in float bias, out float output,
-                      height_of input, depth_of input, width_of input, int output_channels);
-    with { dispatch_size (height_of input, width_of input, depth_of output); };
+                      dim_1_of input, dim_2_of input, dim_0_of input, int output_channels);
+    with { dispatch_size (dim_1_of input, dim_2_of input, dim_0_of output); };
     extension res as conv2d_3x3(resident float input, resident float weights, resident float bias, resident float output,
-                                 height_of input, depth_of input, width_of input, int output_channels);
+                                 dim_1_of input, dim_2_of input, dim_0_of input, int output_channels);
 
     // Optimized 3x3 Convolution using threadgroup memory
     kernel conv2d_3x3_optimized(in float input, in float weights, in float bias, out float output,
-                                 height_of input, depth_of input, width_of input, int output_channels);
-    with { dispatch_size (height_of input, width_of input, depth_of output); };
+                                 dim_1_of input, dim_2_of input, dim_0_of input, int output_channels);
+    with { dispatch_size (dim_1_of input, dim_2_of input, dim_0_of output); };
     extension res as conv2d_3x3_optimized(resident float input, resident float weights, resident float bias, resident float output,
-                                          height_of input, depth_of input, width_of input, int output_channels);
+                                          dim_1_of input, dim_2_of input, dim_0_of input, int output_channels);
 
     // 1x1 Convolution for channel-wise transformations
     // Used in: ResNet bottleneck blocks, Inception, MobileNet
@@ -33,10 +33,10 @@ interface cnn {
     // Bias:   (output_channels)
     // Output: (output_channels, height, width)
     kernel conv2d_1x1(in float input, in float weights, in float bias, out float output,
-                      height_of input, depth_of input, width_of input, int output_channels);
-    with { dispatch_size (height_of input, width_of input, depth_of output); };
+                      dim_1_of input, dim_2_of input, dim_0_of input, int output_channels);
+    with { dispatch_size (dim_1_of input, dim_2_of input, dim_0_of output); };
     extension res as conv2d_1x1(resident float input, resident float weights, resident float bias, resident float output,
-                                 height_of input, depth_of input, width_of input, int output_channels);
+                                 dim_1_of input, dim_2_of input, dim_0_of input, int output_channels);
 
     // Depthwise 3x3 Convolution - applies 3x3 filter per channel independently
     // Used in: MobileNet, EfficientNet (first part of separable conv)
@@ -45,10 +45,10 @@ interface cnn {
     // Bias:   (channels)
     // Output: (channels, height, width) - same number of channels
     kernel depthwise_conv2d_3x3(in float input, in float weights, in float bias, out float output,
-                                 height_of input, depth_of input, width_of input);
-    with { dispatch_size (height_of input, width_of input, depth_of input); };
+                                 dim_1_of input, dim_2_of input, dim_0_of input);
+    with { dispatch_size (dim_1_of input, dim_2_of input, dim_0_of input); };
     extension res as depthwise_conv2d_3x3(resident float input, resident float weights, resident float bias, resident float output,
-                                           height_of input, depth_of input, width_of input);
+                                           dim_1_of input, dim_2_of input, dim_0_of input);
 
     // 7x7 Convolution with padding=3, stride=2 (ResNet stem)
     // Used in: ResNet initial layer
@@ -57,10 +57,10 @@ interface cnn {
     // Bias:   (output_channels)
     // Output: (output_channels, input_height/2, input_width/2)
     kernel conv2d_7x7_stride2(in float input, in float weights, in float bias, out float output,
-                              height_of input, depth_of input, width_of input, int output_channels);
-    with { dispatch_size (height_of output, depth_of output, width_of output); };
+                              dim_1_of input, dim_2_of input, dim_0_of input, int output_channels);
+    with { dispatch_size (dim_1_of output, dim_0_of output, dim_2_of output); };
     extension res as conv2d_7x7_stride2(resident float input, resident float weights, resident float bias, resident float output,
-                                        height_of input, depth_of input, width_of input, int output_channels);
+                                        dim_1_of input, dim_2_of input, dim_0_of input, int output_channels);
 
     // 3x3 Convolution with padding=1, stride=2 (downsampling)
     // Used in: ResNet downsampling blocks
@@ -69,10 +69,10 @@ interface cnn {
     // Bias:   (output_channels)
     // Output: (output_channels, input_height/2, input_width/2)
     kernel conv2d_3x3_stride2(in float input, in float weights, in float bias, out float output,
-                              height_of input, depth_of input, width_of input, int output_channels);
-    with { dispatch_size (height_of output, depth_of output, width_of output); };
+                              dim_1_of input, dim_2_of input, dim_0_of input, int output_channels);
+    with { dispatch_size (dim_1_of output, dim_0_of output, dim_2_of output); };
     extension res as conv2d_3x3_stride2(resident float input, resident float weights, resident float bias, resident float output,
-                                        height_of input, depth_of input, width_of input, int output_channels);
+                                        dim_1_of input, dim_2_of input, dim_0_of input, int output_channels);
 
     // 1x1 Convolution with stride=2 (projection shortcut)
     // Used in: ResNet projection shortcuts for downsampling
@@ -81,10 +81,10 @@ interface cnn {
     // Bias:   (output_channels)
     // Output: (output_channels, input_height/2, input_width/2)
     kernel conv2d_1x1_stride2(in float input, in float weights, in float bias, out float output,
-                              height_of input, depth_of input, width_of input, int output_channels);
-    with { dispatch_size (height_of output, depth_of output, width_of output); };
+                              dim_1_of input, dim_2_of input, dim_0_of input, int output_channels);
+    with { dispatch_size (dim_1_of output, dim_0_of output, dim_2_of output); };
     extension res as conv2d_1x1_stride2(resident float input, resident float weights, resident float bias, resident float output,
-                                        height_of input, depth_of input, width_of input, int output_channels);
+                                        dim_1_of input, dim_2_of input, dim_0_of input, int output_channels);
 
     // =================================================================
     // Activation Functions
@@ -126,39 +126,39 @@ interface cnn {
     // Input:  (channels, input_height, input_width) - shape is (C, H, W)
     // Output: (channels, input_height/2, input_width/2)
     kernel max_pool_2x2(in float input, out float output,
-                        height_of input, depth_of input, width_of input);
-    with { dispatch_size (height_of input / 2, width_of input / 2, depth_of input); };
+                        dim_1_of input, dim_2_of input, dim_0_of input);
+    with { dispatch_size (dim_1_of input / 2, dim_2_of input / 2, dim_0_of input); };
     extension res as max_pool_2x2(resident float input, resident float output,
-                                   height_of input, depth_of input, width_of input);
+                                   dim_1_of input, dim_2_of input, dim_0_of input);
 
     // 3x3 Max Pooling with stride=2, padding=1
     // Used in: ResNet
     // Input:  (channels, input_height, input_width) - shape is (C, H, W)
     // Output: (channels, input_height/2, input_width/2)
     kernel max_pool_3x3_stride2(in float input, out float output,
-                                height_of input, depth_of input, width_of input);
-    with { dispatch_size (height_of input / 2, width_of input / 2, depth_of input); };
+                                dim_1_of input, dim_2_of input, dim_0_of input);
+    with { dispatch_size (dim_1_of input / 2, dim_2_of input / 2, dim_0_of input); };
     extension res as max_pool_3x3_stride2(resident float input, resident float output,
-                                          height_of input, depth_of input, width_of input);
+                                          dim_1_of input, dim_2_of input, dim_0_of input);
 
     // Global Average Pooling - reduce spatial dimensions to 1x1
     // Used in: ResNet, MobileNet (replaces FC layers)
     // Input:  (channels, height, width)
     // Output: (channels)
     kernel global_avg_pool(in float input, out float output,
-                           height_of input, depth_of input, width_of input);
-    with { dispatch_size (depth_of input); };
+                           dim_1_of input, dim_2_of input, dim_0_of input);
+    with { dispatch_size (dim_0_of input); };
     extension res as global_avg_pool(resident float input, resident float output,
-                                      height_of input, depth_of input, width_of input);
+                                      dim_1_of input, dim_2_of input, dim_0_of input);
 
     // Global Max Pooling - alternative to global average
     // Input:  (channels, height, width)
     // Output: (channels)
     kernel global_max_pool(in float input, out float output,
-                           height_of input, depth_of input, width_of input);
-    with { dispatch_size (depth_of input); };
+                           dim_1_of input, dim_2_of input, dim_0_of input);
+    with { dispatch_size (dim_0_of input); };
     extension res as global_max_pool(resident float input, resident float output,
-                                      height_of input, depth_of input, width_of input);
+                                      dim_1_of input, dim_2_of input, dim_0_of input);
 
     // =================================================================
     // Normalization Layers
@@ -171,11 +171,11 @@ interface cnn {
     // Output: (channels, height, width)
     kernel batch_norm(in float input, in float gamma, in float beta,
                       in float mean, in float variance, out_like input,
-                      height_of input, depth_of input, width_of input, float epsilon);
-    with { dispatch_size (height_of input, depth_of input, width_of input); };
+                      dim_1_of input, dim_2_of input, dim_0_of input, float epsilon);
+    with { dispatch_size (dim_1_of input, dim_2_of input, dim_0_of input); };
     extension res as batch_norm(resident float input, resident float gamma, resident float beta,
                                  resident float mean, resident float variance, resident float output,
-                                 height_of input, depth_of input, width_of input, float epsilon);
+                                 dim_1_of input, dim_2_of input, dim_0_of input, float epsilon);
 
     // Layer Normalization - normalize across features (channels)
     // Used in: Transformers, more stable than BatchNorm for variable batch sizes
@@ -184,10 +184,10 @@ interface cnn {
     // Beta:   (channels) - learned shift
     // Output: (channels, height, width) or (features)
     kernel layer_norm(in float input, in float gamma, in float beta, out float output,
-                      height_of input, depth_of input, width_of input, float epsilon);
-    with { dispatch_size (height_of input, depth_of input); };
+                      dim_1_of input, dim_2_of input, dim_0_of input, float epsilon);
+    with { dispatch_size (dim_1_of input, dim_0_of input); };
     extension res as layer_norm(resident float input, resident float gamma, resident float beta, resident float output,
-                                 height_of input, depth_of input, width_of input, float epsilon);
+                                 dim_1_of input, dim_2_of input, dim_0_of input, float epsilon);
 
     // 1D Layer Normalization for transformers/sequences
     // Input:  (features)
@@ -223,11 +223,12 @@ interface cnn {
     // C: (M, N)
     // C = A * B + bias
     // Uses 1D dispatch with X/Y macros from helpers.mako
+    // For 2D matrices: width_of → shape[0] (rows), height_of → shape[1] (columns)
     kernel matrix_multiply_simd(in float A, in float B, in float bias, out float C,
-                               height_of A, height_of B, width_of A);
+                               width_of A, height_of B, height_of A);
     with { dispatch_size (sizeof C); };
     extension res as matrix_multiply_simd(resident float A, resident float B, resident float bias, resident float C,
-                                          height_of A, height_of B, width_of A);
+                                          width_of A, height_of B, height_of A);
 
     // =================================================================
     // Element-wise Operations
@@ -262,11 +263,11 @@ interface cnn {
     // Input:  (channels, height, width)
     // Output: (channels, height, width)
     kernel spatial_dropout(in float input, out float output,
-                          width_of input, height_of input, depth_of input,
+                          dim_1_of input, dim_2_of input, dim_0_of input,
                           float rate, int seed, int training);
-    with { dispatch_size (height_of input, depth_of input, width_of input); };
+    with { dispatch_size (dim_1_of input, dim_2_of input, dim_0_of input); };
     extension res as spatial_dropout(resident float input, resident float output,
-                                      width_of input, height_of input, depth_of input,
+                                      dim_1_of input, dim_2_of input, dim_0_of input,
                                       float rate, int seed, int training);
 
     // =================================================================
@@ -279,8 +280,8 @@ interface cnn {
     // Input:  (channels, height, width)
     // Output: (channels, height*2, width*2)
     kernel upsample_2x(in float input, out float output,
-                       height_of input, depth_of input, width_of input);
-    with { dispatch_size (height_of output, depth_of output, width_of output); };
+                       dim_1_of input, dim_2_of input, dim_0_of input);
+    with { dispatch_size (dim_1_of output, dim_0_of output, dim_2_of output); };
     extension res as upsample_2x(resident float input, resident float output,
-                                 height_of input, depth_of input, width_of input);
+                                 dim_1_of input, dim_2_of input, dim_0_of input);
 };

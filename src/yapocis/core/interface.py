@@ -131,28 +131,31 @@ def get_interfaces(s: str) -> list[InterfaceSpec]:
                     hint = "out_like"
                     pointer = "*"
                     dtype = ""  # derive later from like param
-                elif role in (
-                        "size_of",
-                        "sizeof",
-                        "length_of",
-                        "lengthof",
-                        "width_of",
-                        "widthof",
-                        "height_of",
-                        "heightof",
-                        "depth_of",
+                # Check for dimension specifiers (including dim_N_of)
+                elif (
+                        role in (
+                            "size_of", "sizeof",
+                            "length_of", "lengthof",
+                            "width_of", "widthof",
+                            "height_of", "heightof",
+                            "depth_of",
+                        ) or
+                        (role.startswith("dim_") and role.endswith("_of"))
                 ):
-                    dim = {
-                        "size_of":   "size_of",
-                        "sizeof":    "sizeof",
-                        "length_of": "length_of",
-                        "lengthof":  "length_of",
-                        "width_of":  "width_of",
-                        "widthof":   "width_of",
-                        "height_of": "height_of",
-                        "heightof":  "height_of",
-                        "depth_of":  "depth_of",
-                    }[role]
+                    if role.startswith("dim_") and role.endswith("_of"):
+                        dim = role
+                    else:
+                        dim = {
+                            "size_of":   "size_of",
+                            "sizeof":    "sizeof",
+                            "length_of": "length_of",
+                            "lengthof":  "length_of",
+                            "width_of":  "width_of",
+                            "widthof":   "width_of",
+                            "height_of": "height_of",
+                            "heightof":  "height_of",
+                            "depth_of":  "depth_of",
+                        }[role]
                     dtype = "int"
                 # scalar form: dtype name
                 elif dtype:
@@ -177,28 +180,36 @@ def get_interfaces(s: str) -> list[InterfaceSpec]:
                 role = (p.role or "").lower() if hasattr(p, "role") else ""
                 name = p.name
                 dtype = (p.dtype or "") if hasattr(p, "dtype") else ""
-                if role in (
-                        "size_of",
-                        "sizeof",
-                        "length_of",
-                        "lengthof",
-                        "width_of",
-                        "widthof",
-                        "height_of",
-                        "heightof",
+                # Check for dimension specifiers (including dim_N_of)
+                is_dim_specifier = (
+                    role in (
+                        "size_of", "sizeof",
+                        "length_of", "lengthof",
+                        "width_of", "widthof",
+                        "height_of", "heightof",
                         "depth_of",
-                ):
-                    dim = {
-                        "size_of":   "size_of",
-                        "sizeof":    "sizeof",
-                        "length_of": "length_of",
-                        "lengthof":  "length_of",
-                        "width_of":  "width_of",
-                        "widthof":   "width_of",
-                        "height_of": "height_of",
-                        "heightof":  "height_of",
-                        "depth_of":  "depth_of",
-                    }[role]
+                    ) or
+                    (role.startswith("dim_") and role.endswith("_of"))
+                )
+
+                if is_dim_specifier:
+                    # Map role to canonical dimension name
+                    if role.startswith("dim_") and role.endswith("_of"):
+                        # dim_N_of maps to itself
+                        dim = role
+                    else:
+                        # Traditional dimension specifiers
+                        dim = {
+                            "size_of":   "size_of",
+                            "sizeof":    "sizeof",
+                            "length_of": "length_of",
+                            "lengthof":  "length_of",
+                            "width_of":  "width_of",
+                            "widthof":   "width_of",
+                            "height_of": "height_of",
+                            "heightof":  "height_of",
+                            "depth_of":  "depth_of",
+                        }[role]
                     kernel_parameters.append(
                         KernelParamSpec(
                             name=name,
@@ -212,7 +223,15 @@ def get_interfaces(s: str) -> list[InterfaceSpec]:
                         )
                     )
                 elif role in ("out_like", "outlike"):
-                    like_dtype = temp_params[name].data_type if not dtype else dtype
+                    # Get dtype from the referenced parameter if not explicitly specified
+                    if dtype:
+                        like_dtype = dtype
+                    elif name in temp_params:
+                        like_dtype = temp_params[name].data_type
+                    else:
+                        # Fallback: try to find the parameter in the current params list
+                        like_dtype = "float"  # default fallback
+
                     kernel_parameters.append(
                         KernelParamSpec(
                             name=f"out_like_{name}",
