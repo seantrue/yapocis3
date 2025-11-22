@@ -1,7 +1,7 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 import pytest
-from yapocis.core import get_backend
+from yapocis.core import get_backend, get_test_backends
 from yapocis.lib.anisodiff import Anisodiff
 from yapocis.lib.channels import join_planes, split_planes
 from yapocis.lib.hsi import HSI
@@ -28,7 +28,9 @@ def setup_test(device_name: str | None = None):
 
 
 @pytest.mark.smoke
-def test_I():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_I(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     rgb, aniso = setup_test()
     hsis = HSI()
     hsi = hsis.rgb2hsi3(rgb)
@@ -49,7 +51,9 @@ def test_I():
         sw.showcheck(rgb2)
 
 
-def test_IS():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_IS(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     rgb, aniso = setup_test()
     with StopWatcher(f"[generator {N}", kernel=aniso) as sw:
         with sw.checkpoint("generate"):
@@ -63,7 +67,9 @@ def test_IS():
         sw.showcheck(rgb2)
 
 
-def test_1plane():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_1plane(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     rgb, aniso = setup_test()
     hsis = HSI()
     hsi = hsis.rgb2hsi3(rgb)
@@ -76,7 +82,9 @@ def test_1plane():
         sw.showcheck(rgb2)
 
 
-def test_2plane():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_2plane(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     if get_backend() == "ocl":
         print("OpenCL does not generally support float2")
         return
@@ -91,8 +99,9 @@ def test_2plane():
         sw.showcheck(rgb2)
 
 
-def test_3plane():
-
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_3plane(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     device_names = get_available_device_names()
     backend = get_backend()
     if backend == "ocl":
@@ -123,7 +132,9 @@ def test_3plane():
             sw.showcheck(rgb2)
 
 
-def test_4plane():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_4plane(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     if get_backend() == "ocl":
         from yapocis.ocl.device import get_available_device_names
 

@@ -3,6 +3,7 @@
 import pytest
 import numpy as np
 
+from yapocis.core import get_test_backends
 from yapocis.lib.imageops import Imageops
 from yapocis.ocl.device import get_available_device_names
 from yapocis.utils.config import get_device_config
@@ -12,7 +13,9 @@ import timeit
 from . import StopWatcher
 
 @pytest.mark.smoke
-def test_clamp():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_clamp(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     imageops = Imageops()
     a = np.random.random(1000).astype(np.float32)
     assert a.min() < .1 and a.max()  > .9
@@ -21,7 +24,9 @@ def test_clamp():
             b = imageops.clamp_pixels(a, .1, .9)
     assert b.min() >= .1 and b.max() <= .9
 
-def test_binarize():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_binarize(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     imageops = Imageops()
     a = np.random.random(1000).astype(np.float32)
     with StopWatcher("binarize", kernel=imageops) as sw:
@@ -29,7 +34,9 @@ def test_binarize():
             b = imageops.binarize(a, .5)
     assert 450 < b.sum() < 550
 
-def test_stretch():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_stretch(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     imageops = Imageops()
     a = np.random.uniform(.1, .9, (2000,2000), ).astype(np.float32)
     assert a.min() >= .1 and a.max() <= .9
@@ -38,7 +45,9 @@ def test_stretch():
             b = imageops.stretch(a, a.min(), a.max(), 0., 1.0)
     assert b.min() == 0.0 and b.max() >= 0.999999
 
-def test_histogram():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_histogram(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     imageops = Imageops(FASTBINS=0)
     a = np.random.uniform(.1, .9, (2000,2000), ).astype(np.float32)
     with StopWatcher("histogram", kernel=imageops) as sw:
@@ -48,7 +57,9 @@ def test_histogram():
             h1 = imageops.histogram(a, n_bins=1500)
     assert h.sum() == a.shape[0]*a.shape[1]
     assert h.sum() == h1.sum()
-def test_histogram_res():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_histogram_res(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     imageops = Imageops()
     a = np.random.uniform(.1, .9, (2000, 2000), ).astype(np.float32)
     with StopWatcher("histogram_res", kernel=imageops) as sw:
@@ -63,7 +74,9 @@ def test_histogram_res():
 
 
 
-def test_ops():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_ops(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     NBINS=1000
     imageops = Imageops(FASTBINS=0)
     a = np.random.normal(.5, .1, (2000,2000), ).astype(np.float32)

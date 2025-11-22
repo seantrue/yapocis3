@@ -1,6 +1,7 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 import pytest
+from yapocis.core import get_test_backends
 from yapocis.lib.channels import join_channels, split_channels
 from yapocis.lib.colormath import Colormath, transform_names
 from yapocis.lib.hsi import HSI
@@ -9,7 +10,9 @@ from . import ASIZE, StopWatcher, image_test, show, assert_closeenough
 
 
 @pytest.mark.smoke
-def test_hsi():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_hsi(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     hsis = HSI()
     r = np.empty((ASIZE, ASIZE), dtype=np.float32)
     g = np.empty_like(r)
@@ -53,7 +56,9 @@ def test_hsi():
     assert_closeenough(i3, i)
 
 
-def test_xyz():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_xyz(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     cm = Colormath()
     r = np.empty((ASIZE, ASIZE), dtype=np.float32)
     g = np.empty_like(r)
@@ -73,7 +78,9 @@ def test_xyz():
         sw.showcheck(rgb2)
 
 
-def test_xyz_view():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_xyz_view(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     cm = Colormath()
     rgb = image_test()
     with StopWatcher("srgb_d50", kernel=cm) as sw:
@@ -98,7 +105,9 @@ def test_xyz_view():
         checkshow(x, y, ones, "xy1")
 
 
-def test_colorspaces():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_colorspaces(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     cm = Colormath()
     rgb = image_test()
     transformed = []
@@ -113,7 +122,9 @@ def test_colorspaces():
             sw.showcheck(rgb2)
 
 
-def test_xyY():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_xyY(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     cm = Colormath()
     r = np.empty((ASIZE, ASIZE), dtype=np.float32)
     g = np.empty_like(r)
