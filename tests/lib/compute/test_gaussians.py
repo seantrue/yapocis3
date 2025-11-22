@@ -1,9 +1,11 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
-import pytest
+import os
 import numpy as np
+import pytest
 from pytest import approx
 
+from yapocis.core import get_test_backends
 from yapocis.lib.channels import split_planes
 from yapocis.lib.gaussian import Gaussian, GaussianWeights
 from yapocis.lib.gradient import Gradient
@@ -25,7 +27,9 @@ def test_weights():
         assert len(g) < mw
 
 
-def test_kernels():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_kernels(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     g = Gaussian()
     a = np.zeros((400, 401), dtype=np.float32)
     a[127, 127] = 1.0
@@ -40,7 +44,9 @@ def test_kernels():
             assert bsum == approx(1.0)
 
 
-def test_image():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_image(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     g = Gaussian()
     a = np.zeros((400, 401), dtype=np.float32)
     a[200, :] = 1.0
@@ -54,7 +60,9 @@ def test_image():
             sw.showcheck(b)
 
 
-def test_zcs():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_zcs(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     g = Gaussian()
     image = np.zeros((512, 513), dtype=np.float32)
     image[255, 240:280] = 1.0
@@ -70,7 +78,9 @@ def test_zcs():
             sw.showcheck(zca, "zcs")
 
 
-def test_multiscale_zcs():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_multiscale_zcs(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     a = np.zeros((400, 401), dtype=np.float32)
     a[150:250, 150:250] = 1.0
     g = Gaussian()
@@ -81,7 +91,9 @@ def test_multiscale_zcs():
             sw.showcheck(zca)
 
 
-def test_gradient():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_gradient(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     img = image_test()
     hsi = HSI()
     g = Gradient()
@@ -95,7 +107,9 @@ def test_gradient():
         gsw.showcheck(gr, "grad")
 
 
-def test_multiscale_zcs_test():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_multiscale_zcs_test(backend):
+    os.environ["YAPOCIS_BACKEND"] = backend
     hsis = HSI()
     img = image_test()
     h, s, i = split_planes(hsis.hsi2rgb3(img))

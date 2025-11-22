@@ -1,7 +1,9 @@
+import os
 import pytest
 import numpy as np
 from PIL import Image, ImageDraw
 
+from yapocis.core import get_test_backends
 from yapocis.lib.truetrace import (
     build_circle_mask,
     trace_bitmap,
@@ -84,7 +86,9 @@ def render_segments_to_array(
 
 
 @pytest.mark.smoke
-def test_truetrace_matches_original_fill_iou_ssim(tmp_path):
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_truetrace_matches_original_fill_iou_ssim(backend, tmp_path):
+    os.environ["YAPOCIS_BACKEND"] = backend
     # Create a simple binary mask (circle)
     W = H = ASIZE
     mask = build_circle_mask(W, H, r=min(W, H) // 3)

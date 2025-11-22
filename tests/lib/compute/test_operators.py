@@ -162,8 +162,11 @@ def test_div_resident(backend):
     np.testing.assert_allclose(result, expected, rtol=1e-6)
 
 
-def test_all_operators():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_all_operators(backend):
     """Test all operators in sequence"""
+    import os
+    os.environ["YAPOCIS_BACKEND"] = backend
     ops = Operators()
 
     a = np.random.uniform(1, 10, (100, 100)).astype(np.float32)
@@ -187,8 +190,11 @@ def test_all_operators():
         np.testing.assert_allclose(r4, a / b, rtol=1e-6)
 
 
-def test_operators_2d_arrays():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_operators_2d_arrays(backend):
     """Test operators with 2D arrays"""
+    import os
+    os.environ["YAPOCIS_BACKEND"] = backend
     ops = Operators()
 
     a = np.random.uniform(0, 10, (512, 512)).astype(np.float32)
@@ -203,8 +209,11 @@ def test_operators_2d_arrays():
         assert result.shape == a.shape
 
 
-def test_operators_edge_cases():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_operators_edge_cases(backend):
     """Test operators with edge cases"""
+    import os
+    os.environ["YAPOCIS_BACKEND"] = backend
     ops = Operators()
 
     # Test with zeros
