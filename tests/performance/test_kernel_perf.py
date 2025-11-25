@@ -295,3 +295,39 @@ class TestKernelPerformance:
                     result = g4.read(canvas)
 
         assert result.shape == canvas.shape
+
+    def test_simplex_performance(self, backend, device, monkeypatch):
+        """Test simplex noise generation performance (2D and 3D)."""
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+        monkeypatch.setenv("YAPOCIS_DEVICE", device)
+
+        from yapocis.lib.simplex import Simplex
+
+        s = Simplex()
+
+        with StopWatcher("simplex", save_perf=True, kernel=s) as sw:
+            # 2D noise - various sizes
+            for size in [256, 512]:
+                for _ in range(REPEATS):
+                    with sw.checkpoint(f"simplex2d_{size}x{size}"):
+                        noise2d = s.simplex2d(size, size, seed=42, octaves=4, scale=0.01)
+
+            # 2D noise - multiple octaves
+            for octaves in [1, 4, 8]:
+                with sw.checkpoint(f"simplex2d_octaves{octaves}"):
+                    noise2d = s.simplex2d(MEDIUM_SIZE, MEDIUM_SIZE, seed=42, octaves=octaves, scale=0.01)
+
+            # 2D tileable
+            for _ in range(REPEATS):
+                with sw.checkpoint("simplex2d_tileable"):
+                    tileable = s.simplex2d(
+                        SMALL_SIZE, SMALL_SIZE, seed=42, octaves=4, scale=0.01, tileable=True
+                    )
+
+            # 3D noise
+            for depth in [32, 64]:
+                with sw.checkpoint(f"simplex3d_{SMALL_SIZE}x{SMALL_SIZE}x{depth}"):
+                    noise3d = s.simplex3d(SMALL_SIZE, SMALL_SIZE, depth, seed=99, octaves=3, scale=0.02)
+
+        assert noise2d.shape == (MEDIUM_SIZE, MEDIUM_SIZE)
+        assert noise3d.shape == (depth, SMALL_SIZE, SMALL_SIZE)

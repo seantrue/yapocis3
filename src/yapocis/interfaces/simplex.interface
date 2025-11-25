@@ -1,0 +1,28 @@
+#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
+
+interface simplex {
+    // 2D Simplex noise generation with optional tiling
+    kernel simplex2d(width_of output, height_of output, out float output,
+                     int seed, float scale, float offset_x, float offset_y,
+                     int octaves, float persistence, float lacunarity,
+                     int tileable);
+
+    extension res2d as simplex2d(width_of output, height_of output, resident float output,
+                                  int seed, float scale, float offset_x, float offset_y,
+                                  int octaves, float persistence, float lacunarity,
+                                  int tileable);
+
+    // 3D Simplex noise generation
+    // Note: Dimensions passed explicitly because width_of/height_of don't correctly
+    //       derive from 3D arrays. Fixed issue where yapocis was passing shape[0:2]
+    //       instead of shape[2] and shape[1] for width and height respectively.
+    kernel simplex3d(int width, int height, int depth,
+                     out float output, int seed, float scale,
+                     float offset_x, float offset_y, float offset_z,
+                     int octaves, float persistence, float lacunarity);
+
+    extension res3d as simplex3d(int width, int height, int depth,
+                                  resident float output, int seed, float scale,
+                                  float offset_x, float offset_y, float offset_z,
+                                  int octaves, float persistence, float lacunarity);
+};
