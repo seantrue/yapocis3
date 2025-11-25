@@ -43,10 +43,9 @@ def blend_over(src_rgba, dst_rgba):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_single_rectangle_opaque(backend):
+def test_single_rectangle_opaque(backend, monkeypatch):
     """Test a single opaque rectangle has correct color values."""
-    import os
-    os.environ["YAPOCIS_BACKEND"] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     g = Graphics4()
     canvas = np.zeros((100, 100, 4), dtype=np.float32)
@@ -63,10 +62,9 @@ def test_single_rectangle_opaque(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_single_rectangle_transparent(backend):
+def test_single_rectangle_transparent(backend, monkeypatch):
     """Test a single semi-transparent rectangle over white background."""
-    import os
-    os.environ["YAPOCIS_BACKEND"] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     g = Graphics4()
     canvas = np.ones((100, 100, 4), dtype=np.float32)  # White background
@@ -87,10 +85,9 @@ def test_single_rectangle_transparent(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_two_overlapping_rectangles(backend):
+def test_two_overlapping_rectangles(backend, monkeypatch):
     """Test two overlapping rectangles with different alpha values."""
-    import os
-    os.environ["YAPOCIS_BACKEND"] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     g = Graphics4()
     canvas = np.zeros((100, 100, 4), dtype=np.float32)
@@ -140,10 +137,9 @@ def test_two_overlapping_rectangles(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_three_overlapping_rectangles(backend):
+def test_three_overlapping_rectangles(backend, monkeypatch):
     """Test three overlapping rectangles with varying alpha values."""
-    import os
-    os.environ["YAPOCIS_BACKEND"] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     g = Graphics4()
     canvas = np.zeros((200, 200, 4), dtype=np.float32)
@@ -189,10 +185,9 @@ def test_three_overlapping_rectangles(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_multiple_alpha_values(backend):
+def test_multiple_alpha_values(backend, monkeypatch):
     """Test rectangles with various alpha values (0.0 to 1.0)."""
-    import os
-    os.environ["YAPOCIS_BACKEND"] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     g = Graphics4()
     canvas = np.ones((100, 500, 4), dtype=np.float32)  # White background
@@ -223,10 +218,9 @@ def test_multiple_alpha_values(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_corner_case_full_transparent(backend):
+def test_corner_case_full_transparent(backend, monkeypatch):
     """Test that fully transparent rectangles don't affect the image."""
-    import os
-    os.environ["YAPOCIS_BACKEND"] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     g = Graphics4()
     # Blue background

@@ -1,6 +1,5 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
-import os
 import pytest
 import time
 
@@ -32,8 +31,8 @@ def setup_test(device_name: str | None = None, chunk_size: int | None = None) ->
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_batch(backend):
-    os.environ["YAPOCIS_BACKEND"] = backend
+def test_batch(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     canvas, ad = setup_test()
     random_coords = random_ellipses()
     circles = random_circles()
@@ -57,8 +56,8 @@ def test_batch(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_displaylist(backend):
-    os.environ["YAPOCIS_BACKEND"] = backend
+def test_displaylist(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     canvas, ad = setup_test()
     rects = random_rects()
     lines = random_lines()
@@ -78,8 +77,8 @@ def test_displaylist(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_chunking(backend):
-    os.environ["YAPOCIS_BACKEND"] = backend
+def test_chunking(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     ELEMENTS = 1000
     rects = random_rects(ELEMENTS)
     lines = random_lines(ELEMENTS)

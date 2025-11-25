@@ -4,25 +4,17 @@ Functional tests for VGG16 kernels.
 Tests each kernel with simple, verifiable inputs to ensure correctness.
 """
 
-import pytest
 import numpy as np
-import os
+import pytest
+
 from yapocis import core
-from yapocis.core.manager import get_backends
-
-
-# Get all available backends
-def get_test_backends():
-    """Get all available backends for testing."""
-    return get_backends()
+from yapocis.core import get_test_backends
 
 
 class TestActivations:
     """Test activation function kernels."""
 
     @pytest.mark.parametrize("backend", get_test_backends())
-
-
     def test_relu_activation_basic(self, backend, monkeypatch):
         """Test ReLU activation: max(0, x)"""
         monkeypatch.setenv('YAPOCIS_BACKEND', backend)
@@ -36,8 +28,6 @@ class TestActivations:
         np.testing.assert_array_almost_equal(output, expected, decimal=5)
 
     @pytest.mark.parametrize("backend", get_test_backends())
-
-
     def test_relu_activation_large(self, backend, monkeypatch):
         """Test ReLU with larger array."""
         monkeypatch.setenv('YAPOCIS_BACKEND', backend)
@@ -50,8 +40,6 @@ class TestActivations:
         np.testing.assert_array_almost_equal(output, expected, decimal=5)
 
     @pytest.mark.parametrize("backend", get_test_backends())
-
-
     def test_relu_activation_3d(self, backend, monkeypatch):
         """Test ReLU with 3D tensor (channels, height, width)."""
         monkeypatch.setenv('YAPOCIS_BACKEND', backend)
@@ -67,8 +55,6 @@ class TestActivations:
         np.testing.assert_array_almost_equal(output, expected, decimal=5)
 
     @pytest.mark.parametrize("backend", get_test_backends())
-
-
     def test_softmax_simple(self, backend, monkeypatch):
         """Test softmax with simple values."""
         monkeypatch.setenv('YAPOCIS_BACKEND', backend)
@@ -88,8 +74,6 @@ class TestActivations:
         assert output[2] > output[1] > output[0]
 
     @pytest.mark.parametrize("backend", get_test_backends())
-
-
     def test_softmax_numerical_stability(self, backend, monkeypatch):
         """Test softmax with large values (numerical stability)."""
         monkeypatch.setenv('YAPOCIS_BACKEND', backend)
@@ -109,8 +93,6 @@ class TestPooling:
     """Test pooling layer kernels."""
 
     @pytest.mark.parametrize("backend", get_test_backends())
-
-
     def test_max_pool_2x2_simple(self, backend, monkeypatch):
         """Test 2x2 max pooling with simple pattern."""
         monkeypatch.setenv('YAPOCIS_BACKEND', backend)
@@ -149,8 +131,6 @@ class TestPooling:
         np.testing.assert_array_almost_equal(output, expected, decimal=5)
 
     @pytest.mark.parametrize("backend", get_test_backends())
-
-
     def test_max_pool_2x2_multi_channel(self, backend, monkeypatch):
         """Test 2x2 max pooling with multiple channels."""
         monkeypatch.setenv('YAPOCIS_BACKEND', backend)
@@ -187,8 +167,6 @@ class TestPooling:
         np.testing.assert_array_almost_equal(output, expected, decimal=5)
 
     @pytest.mark.parametrize("backend", get_test_backends())
-
-
     def test_max_pool_2x2_negative_values(self, backend, monkeypatch):
         """Test max pooling with negative values."""
         monkeypatch.setenv('YAPOCIS_BACKEND', backend)
@@ -218,8 +196,6 @@ class TestFullyConnected:
     """Test fully connected layer kernels."""
 
     @pytest.mark.parametrize("backend", get_test_backends())
-
-
     def test_fully_connected_simple(self, backend, monkeypatch):
         """Test fully connected with simple 2x2 example."""
         monkeypatch.setenv('YAPOCIS_BACKEND', backend)
@@ -252,8 +228,6 @@ class TestFullyConnected:
         np.testing.assert_array_almost_equal(output, expected, decimal=5)
 
     @pytest.mark.parametrize("backend", get_test_backends())
-
-
     def test_fully_connected_identity(self, backend, monkeypatch):
         """Test fully connected with identity matrix."""
         monkeypatch.setenv('YAPOCIS_BACKEND', backend)
@@ -272,8 +246,6 @@ class TestFullyConnected:
         np.testing.assert_array_almost_equal(output, input_data, decimal=5)
 
     @pytest.mark.parametrize("backend", get_test_backends())
-
-
     def test_fully_connected_zero_bias(self, backend, monkeypatch):
         """Test fully connected with zero bias."""
         monkeypatch.setenv('YAPOCIS_BACKEND', backend)
@@ -301,8 +273,6 @@ class TestMatrixMultiply:
     """Test matrix multiplication kernels."""
 
     @pytest.mark.parametrize("backend", get_test_backends())
-
-
     def test_matrix_multiply_simd_simple(self, backend, monkeypatch):
         """Test SIMD matrix multiply with simple 2x2 example."""
         monkeypatch.setenv('YAPOCIS_BACKEND', backend)
@@ -341,8 +311,6 @@ class TestMatrixMultiply:
         np.testing.assert_array_almost_equal(output, expected, decimal=5)
 
     @pytest.mark.parametrize("backend", get_test_backends())
-
-
     def test_matrix_multiply_simd_identity(self, backend, monkeypatch):
         """Test matrix multiply with identity matrix."""
         monkeypatch.setenv('YAPOCIS_BACKEND', backend)
@@ -371,8 +339,6 @@ class TestConvolution:
     """Test convolution kernels."""
 
     @pytest.mark.parametrize("backend", get_test_backends())
-
-
     def test_conv2d_3x3_identity(self, backend, monkeypatch):
         """Test 3x3 convolution with identity kernel."""
         monkeypatch.setenv('YAPOCIS_BACKEND', backend)
@@ -400,8 +366,6 @@ class TestConvolution:
         np.testing.assert_array_almost_equal(output, input_data, decimal=5)
 
     @pytest.mark.parametrize("backend", get_test_backends())
-
-
     def test_conv2d_3x3_uniform_filter(self, backend, monkeypatch):
         """Test 3x3 convolution with uniform (averaging) filter."""
         monkeypatch.setenv('YAPOCIS_BACKEND', backend)
@@ -424,8 +388,6 @@ class TestConvolution:
         assert output[0, 2, 2] == pytest.approx(1.0, abs=1e-5)
 
     @pytest.mark.parametrize("backend", get_test_backends())
-
-
     def test_conv2d_3x3_horizontal_edge(self, backend, monkeypatch):
         """Test 3x3 convolution with horizontal edge detector."""
         monkeypatch.setenv('YAPOCIS_BACKEND', backend)
@@ -438,8 +400,8 @@ class TestConvolution:
         # Horizontal Sobel-like edge detector
         weights = np.array([
             [-1, -1, -1],
-            [ 0,  0,  0],
-            [ 1,  1,  1]
+            [0, 0, 0],
+            [1, 1, 1]
         ], dtype=np.float32).reshape(1, 1, 3, 3)
 
         bias = np.zeros(1, dtype=np.float32)
@@ -454,8 +416,6 @@ class TestConvolution:
         assert abs(output[0, 1, 1]) > 0.5  # Significant edge response
 
     @pytest.mark.parametrize("backend", get_test_backends())
-
-
     def test_conv2d_3x3_multi_channel(self, backend, monkeypatch):
         """Test 3x3 convolution with multiple input and output channels."""
         monkeypatch.setenv('YAPOCIS_BACKEND', backend)
@@ -480,8 +440,6 @@ class TestConvolution:
         assert not np.any(np.isinf(output))
 
     @pytest.mark.parametrize("backend", get_test_backends())
-
-
     def test_conv2d_3x3_vs_optimized(self, backend, monkeypatch):
         """Test that basic and optimized convolution produce same results."""
         monkeypatch.setenv('YAPOCIS_BACKEND', backend)
@@ -514,8 +472,6 @@ class TestBatchNorm:
     """Test batch normalization kernels."""
 
     @pytest.mark.parametrize("backend", get_test_backends())
-
-
     def test_batch_norm_standardize(self, backend, monkeypatch):
         """Test batch norm standardization (mean=0, var=1)."""
         monkeypatch.setenv('YAPOCIS_BACKEND', backend)
@@ -529,10 +485,10 @@ class TestBatchNorm:
 
         # Learned parameters
         gamma = np.array([1.0], dtype=np.float32)  # Scale = 1
-        beta = np.array([0.0], dtype=np.float32)   # Shift = 0
+        beta = np.array([0.0], dtype=np.float32)  # Shift = 0
 
         # Statistics (pre-computed for this channel)
-        mean = np.array([5.0], dtype=np.float32)   # Mean of 1-9
+        mean = np.array([5.0], dtype=np.float32)  # Mean of 1-9
         variance = np.array([6.666667], dtype=np.float32)  # Var of 1-9
 
         epsilon = 1e-5
@@ -550,8 +506,6 @@ class TestBatchNorm:
         np.testing.assert_array_almost_equal(output, expected, decimal=4)
 
     @pytest.mark.parametrize("backend", get_test_backends())
-
-
     def test_batch_norm_scale_shift(self, backend, monkeypatch):
         """Test batch norm with scale and shift."""
         monkeypatch.setenv('YAPOCIS_BACKEND', backend)
@@ -581,8 +535,6 @@ class TestBatchNorm:
         np.testing.assert_array_almost_equal(output, expected, decimal=3)
 
     @pytest.mark.parametrize("backend", get_test_backends())
-
-
     def test_batch_norm_multi_channel(self, backend, monkeypatch):
         """Test batch norm with multiple channels."""
         monkeypatch.setenv('YAPOCIS_BACKEND', backend)
@@ -622,8 +574,6 @@ class TestIntegration:
     """Integration tests combining multiple kernels."""
 
     @pytest.mark.parametrize("backend", get_test_backends())
-
-
     def test_conv_relu_pool_pipeline(self, backend, monkeypatch):
         """Test typical CNN layer: Conv -> ReLU -> Pool."""
         monkeypatch.setenv('YAPOCIS_BACKEND', backend)
@@ -660,8 +610,6 @@ class TestIntegration:
         assert not np.any(np.isinf(pool_out))
 
     @pytest.mark.parametrize("backend", get_test_backends())
-
-
     def test_fc_relu_fc_pipeline(self, backend, monkeypatch):
         """Test typical classifier: FC -> ReLU -> FC."""
         monkeypatch.setenv('YAPOCIS_BACKEND', backend)

@@ -12,11 +12,9 @@ from . import StopWatcher
 
 @pytest.mark.parametrize("backend", get_test_backends())
 @pytest.mark.smoke
-def test_add(backend):
+def test_add(backend, monkeypatch):
     """Test addition operator"""
-    import os
-
-    os.environ["YAPOCIS_BACKEND"] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     ops = Operators()
     a = np.random.uniform(0, 10, 1000).astype(np.float32)
@@ -31,11 +29,9 @@ def test_add(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_sub(backend):
+def test_sub(backend, monkeypatch):
     """Test subtraction operator"""
-    import os
-
-    os.environ["YAPOCIS_BACKEND"] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     ops = Operators()
     a = np.random.uniform(0, 10, 1000).astype(np.float32)
@@ -50,11 +46,9 @@ def test_sub(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_mul(backend):
+def test_mul(backend, monkeypatch):
     """Test multiplication operator"""
-    import os
-
-    os.environ["YAPOCIS_BACKEND"] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     ops = Operators()
     a = np.random.uniform(0, 10, 1000).astype(np.float32)
@@ -69,11 +63,9 @@ def test_mul(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_divop(backend):
+def test_divop(backend, monkeypatch):
     """Test division operator"""
-    import os
-
-    os.environ["YAPOCIS_BACKEND"] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     ops = Operators()
     a = np.random.uniform(1, 10, 1000).astype(np.float32)
@@ -88,11 +80,9 @@ def test_divop(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_div_alias(backend):
+def test_div_alias(backend, monkeypatch):
     """Test div alias (backward compatibility for divop)"""
-    import os
-
-    os.environ["YAPOCIS_BACKEND"] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     ops = Operators()
     a = np.random.uniform(1, 10, 1000).astype(np.float32)
@@ -107,11 +97,9 @@ def test_div_alias(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_add_resident(backend):
+def test_add_resident(backend, monkeypatch):
     """Test addition with resident buffers"""
-    import os
-
-    os.environ["YAPOCIS_BACKEND"] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     ops = Operators()
     a = np.random.uniform(0, 10, 1000).astype(np.float32)
@@ -135,11 +123,9 @@ def test_add_resident(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_div_resident(backend):
+def test_div_resident(backend, monkeypatch):
     """Test division with resident buffers"""
-    import os
-
-    os.environ["YAPOCIS_BACKEND"] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     ops = Operators()
     a = np.random.uniform(1, 10, 1000).astype(np.float32)
@@ -163,10 +149,9 @@ def test_div_resident(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_all_operators(backend):
+def test_all_operators(backend, monkeypatch):
     """Test all operators in sequence"""
-    import os
-    os.environ["YAPOCIS_BACKEND"] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     ops = Operators()
 
     a = np.random.uniform(1, 10, (100, 100)).astype(np.float32)
@@ -191,10 +176,9 @@ def test_all_operators(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_operators_2d_arrays(backend):
+def test_operators_2d_arrays(backend, monkeypatch):
     """Test operators with 2D arrays"""
-    import os
-    os.environ["YAPOCIS_BACKEND"] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     ops = Operators()
 
     a = np.random.uniform(0, 10, (512, 512)).astype(np.float32)
@@ -210,10 +194,9 @@ def test_operators_2d_arrays(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_operators_edge_cases(backend):
+def test_operators_edge_cases(backend, monkeypatch):
     """Test operators with edge cases"""
-    import os
-    os.environ["YAPOCIS_BACKEND"] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     ops = Operators()
 
     # Test with zeros

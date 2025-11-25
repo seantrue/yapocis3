@@ -1,6 +1,5 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
-import os
 import pytest
 
 from yapocis.core import get_test_backends
@@ -34,8 +33,8 @@ def setup_test(device_name: str | None = None) -> tuple[Image1, Graphics1]:
 
 @pytest.mark.smoke
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_lines(backend):
-    os.environ["YAPOCIS_BACKEND"] = backend
+def test_lines(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     canvas, grph = setup_test()
     random_coords = random_lines()
     widths = random_widths()
@@ -59,8 +58,8 @@ def test_lines(backend):
         sw.show(canvas)
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_rects(backend):
-    os.environ["YAPOCIS_BACKEND"] = backend
+def test_rects(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     canvas, grph = setup_test()
     random_coords = random_lines()
     coords = []
@@ -77,8 +76,8 @@ def test_rects(backend):
         sw.show(canvas)
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_circles(backend):
-    os.environ["YAPOCIS_BACKEND"] = backend
+def test_circles(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     canvas, grph = setup_test()
     random_coords = random_circles()
     coords = []
@@ -94,8 +93,8 @@ def test_circles(backend):
         sw.show(canvas)
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_triangles(backend):
-    os.environ["YAPOCIS_BACKEND"] = backend
+def test_triangles(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     canvas, grph = setup_test()
     random_coords = random_triangles()
     coords = []
@@ -112,8 +111,8 @@ def test_triangles(backend):
         sw.show(canvas)
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_ellipses(backend):
-    os.environ["YAPOCIS_BACKEND"] = backend
+def test_ellipses(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     canvas, grph = setup_test()
     random_coords = random_ellipses()
     coords = []
@@ -136,8 +135,8 @@ def test_ellipses(backend):
         sw.show(canvas)
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_composite(backend):
-    os.environ["YAPOCIS_BACKEND"] = backend
+def test_composite(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     canvas, grph = setup_test()
     random_coords, random_blocks = random_composites()
     with StopWatcher("composite", kernel=grph) as sw:
@@ -146,8 +145,8 @@ def test_composite(backend):
         sw.show(canvas)
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_composite_sprites(backend):
-    os.environ["YAPOCIS_BACKEND"] = backend
+def test_composite_sprites(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     canvas, grph = setup_test()
     random_coords, random_sprites_ = random_sprites()
     with StopWatcher("sprites", kernel=grph) as sw:
@@ -156,8 +155,8 @@ def test_composite_sprites(backend):
         sw.show(canvas)
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_composite_mosaic(backend):
-    os.environ["YAPOCIS_BACKEND"] = backend
+def test_composite_mosaic(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     from random import shuffle
     from ...random_data import image_source_1ch
 
@@ -181,8 +180,8 @@ def test_composite_mosaic(backend):
         sw.show(canvas)
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_simple_texts(backend):
-    os.environ["YAPOCIS_BACKEND"] = backend
+def test_simple_texts(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     from . import interesting_words, double_shuffle
 
     canvas, grph = setup_test()
@@ -199,8 +198,8 @@ def test_simple_texts(backend):
         sw.show(canvas)
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_text_rotation_centered(backend):
-    os.environ["YAPOCIS_BACKEND"] = backend
+def test_text_rotation_centered(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     canvas, grph = setup_test()
     rotations = list(range(-180, 180, 30))
     center = canvas.shape[0] // 2
@@ -216,8 +215,8 @@ def test_text_rotation_centered(backend):
     sw.show(canvas)
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_text_rotation(backend):
-    os.environ["YAPOCIS_BACKEND"] = backend
+def test_text_rotation(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     canvas, grph = setup_test()
     rotations = list(range(0, 360, 10))
     center = canvas.shape[0] // 2
@@ -244,8 +243,8 @@ def test_text_rotation(backend):
         sw.show(canvas)
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_texts(backend):
-    os.environ["YAPOCIS_BACKEND"] = backend
+def test_texts(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     canvas, grph = setup_test()
     locations, strings, fonts, sizes, rotations, alphas = random_texts(300)
     with StopWatcher("text", kernel=grph) as sw:
@@ -256,8 +255,8 @@ def test_texts(backend):
         sw.show(canvas)
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_stressed_texts(backend):
-    os.environ["YAPOCIS_BACKEND"] = backend
+def test_stressed_texts(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     canvas, grph = setup_test()
     locations, strings, fonts, sizes, rotations, _ = random_texts(300)
     with StopWatcher("stressed text", kernel=grph) as sw:
@@ -274,8 +273,8 @@ def test_stressed_texts(backend):
         sw.show(canvas)
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_one(backend):
-    os.environ["YAPOCIS_BACKEND"] = backend
+def test_one(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     canvas, grph = setup_test()
     with StopWatcher("one", kernel=grph) as sw:
         with sw.checkpoint("all"):

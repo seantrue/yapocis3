@@ -6,8 +6,6 @@ Comprehensive performance testing for all yapocis library entry points.
 Tests every kernel and library function across all available backends and devices,
 saving performance data to the DuckDB database for analysis.
 """
-import os
-
 import numpy as np
 import pytest
 
@@ -35,10 +33,10 @@ REPEATS = 3  # Number of times to repeat each operation for consistent timing
 class TestKernelPerformance:
     """Test raw kernel performance across all backends and devices."""
 
-    def test_operators_performance(self, backend, device):
+    def test_operators_performance(self, backend, device, monkeypatch):
         """Test all operator kernels: add, sub, mul, divop."""
-        os.environ["YAPOCIS_BACKEND"] = backend
-        os.environ["YAPOCIS_DEVICE"] = device
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+        monkeypatch.setenv("YAPOCIS_DEVICE", device)
         ops = Operators()
 
         # Test data
@@ -63,11 +61,10 @@ class TestKernelPerformance:
         result = ops.add(a, b)
         assert result.shape == a.shape
 
-    def test_mandelbrot_performance(self, backend, device):
+    def test_mandelbrot_performance(self, backend, device, monkeypatch):
         """Test mandelbrot kernel."""
-        os.environ["YAPOCIS_BACKEND"] = backend
-        os.environ["YAPOCIS_DEVICE"] = device
-        os.environ["YAPOCIS_DEVICE"] = device
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+        monkeypatch.setenv("YAPOCIS_DEVICE", device)
         mb = Mandelbrot()
 
         # Complex grid
@@ -85,11 +82,10 @@ class TestKernelPerformance:
 
         assert result.shape == q.shape
 
-    def test_median3x3_performance(self, backend, device):
+    def test_median3x3_performance(self, backend, device, monkeypatch):
         """Test median 3x3 kernel."""
-        os.environ["YAPOCIS_BACKEND"] = backend
-        os.environ["YAPOCIS_DEVICE"] = device
-        os.environ["YAPOCIS_DEVICE"] = device
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+        monkeypatch.setenv("YAPOCIS_DEVICE", device)
         median = Median()
 
         # Noisy image
@@ -102,10 +98,10 @@ class TestKernelPerformance:
 
         assert result.shape == img.shape
 
-    def test_gradient_performance(self, backend, device):
+    def test_gradient_performance(self, backend, device, monkeypatch):
         """Test gradient kernels."""
-        os.environ["YAPOCIS_BACKEND"] = backend
-        os.environ["YAPOCIS_DEVICE"] = device
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+        monkeypatch.setenv("YAPOCIS_DEVICE", device)
 
         grad = Gradient()
 
@@ -120,10 +116,10 @@ class TestKernelPerformance:
         assert gx.shape == img.shape
         assert gy.shape == img.shape
 
-    def test_gaussian_performance(self, backend, device):
+    def test_gaussian_performance(self, backend, device, monkeypatch):
         """Test Gaussian blur at different scales."""
-        os.environ["YAPOCIS_BACKEND"] = backend
-        os.environ["YAPOCIS_DEVICE"] = device
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+        monkeypatch.setenv("YAPOCIS_DEVICE", device)
 
         gaussian = Gaussian()
 
@@ -139,10 +135,10 @@ class TestKernelPerformance:
 
         assert result.shape == img.shape
 
-    def test_hsi_performance(self, backend, device):
+    def test_hsi_performance(self, backend, device, monkeypatch):
         """Test HSI color space conversion kernels."""
-        os.environ["YAPOCIS_BACKEND"] = backend
-        os.environ["YAPOCIS_DEVICE"] = device
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+        monkeypatch.setenv("YAPOCIS_DEVICE", device)
 
         hsi = HSI()
 
@@ -160,10 +156,10 @@ class TestKernelPerformance:
 
         assert hsi_img.shape == rgb.shape
 
-    def test_anisodiff_performance(self, backend, device):
+    def test_anisodiff_performance(self, backend, device, monkeypatch):
         """Test anisotropic diffusion kernel."""
-        os.environ["YAPOCIS_BACKEND"] = backend
-        os.environ["YAPOCIS_DEVICE"] = device
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+        monkeypatch.setenv("YAPOCIS_DEVICE", device)
 
         ad = Anisodiff()
 
@@ -177,10 +173,10 @@ class TestKernelPerformance:
 
         assert result.shape == img.shape
 
-    def test_truetrace_performance(self, backend, device):
+    def test_truetrace_performance(self, backend, device, monkeypatch):
         """Test truetrace segment extraction from binary mask."""
-        os.environ["YAPOCIS_BACKEND"] = backend
-        os.environ["YAPOCIS_DEVICE"] = device
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+        monkeypatch.setenv("YAPOCIS_DEVICE", device)
         # repeats = 1 if backend.startswith("num") else REPEATS
         repeats = REPEATS
         tt = TrueTrace()
@@ -198,10 +194,10 @@ class TestKernelPerformance:
 
         assert segs.shape[1] == 4  # Segments are Nx4
 
-    def test_zcs_performance(self, backend, device):
+    def test_zcs_performance(self, backend, device, monkeypatch):
         """Test zero-crossing detection kernel."""
-        os.environ["YAPOCIS_BACKEND"] = backend
-        os.environ["YAPOCIS_DEVICE"] = device
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+        monkeypatch.setenv("YAPOCIS_DEVICE", device)
 
         zc = ZC()
 
@@ -215,10 +211,10 @@ class TestKernelPerformance:
 
         assert result.shape == img.shape
 
-    def test_graphics4_performance(self, backend, device):
+    def test_graphics4_performance(self, backend, device, monkeypatch):
         """Test all graphics4 functions: shapes, icons, and rotated text."""
-        os.environ["YAPOCIS_BACKEND"] = backend
-        os.environ["YAPOCIS_DEVICE"] = device
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+        monkeypatch.setenv("YAPOCIS_DEVICE", device)
         repeats = REPEATS
         # repeats = 1 if backend.startswith("num") else REPEATS
 

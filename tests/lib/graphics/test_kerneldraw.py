@@ -1,5 +1,4 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
-import os
 import time
 import pytest
 from typing import Optional
@@ -36,8 +35,8 @@ def setup_test(device_name: str | None = None, chunk_size: int | None = None):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_batch(backend):
-    os.environ["YAPOCIS_BACKEND"] = backend
+def test_batch(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     canvas, ad = setup_test()
     locations, strings, fonts, sizes, _, text_alphas = random_texts()
     with StopWatcher("batch", kernel=ad) as sw:
@@ -79,8 +78,8 @@ def fill_display_list(ad: KernelDraw1, n: int = 1000) -> None:
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_display_list(backend):
-    os.environ["YAPOCIS_BACKEND"] = backend
+def test_display_list(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     canvas, ad = setup_test()
     fill_display_list(ad, 100)
     with StopWatcher("display list", kernel=ad) as sw:
@@ -92,8 +91,8 @@ def test_display_list(backend):
 
 # @pytest.mark.skip("Too slow for now")
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_chunking(backend):
-    os.environ["YAPOCIS_BACKEND"] = backend
+def test_chunking(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     times = []
     for chunk_size in (10, 100, 500):
         canvas, ad = setup_test(chunk_size=chunk_size)

@@ -6,8 +6,6 @@ Comprehensive performance testing for all yapocis library entry points.
 Tests every kernel and library function across all available backends and devices,
 saving performance data to the DuckDB database for analysis.
 """
-import os
-
 import numpy as np
 import pytest
 
@@ -33,9 +31,9 @@ REPEATS = 3  # Number of times to repeat each operation for consistent timing
 class TestLibraryPerformance:
     """Test high-level library API performance with realistic workflows."""
 
-    def test_gaussian_multiscale_workflow(self, backend):
+    def test_gaussian_multiscale_workflow(self, backend, monkeypatch):
         """Test Gaussian blur at multiple scales."""
-        os.environ["YAPOCIS_BACKEND"] = backend
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
         gaussian = Gaussian()
         img = np.random.uniform(0, 255, (MEDIUM_SIZE, MEDIUM_SIZE)).astype(np.float32)
@@ -46,9 +44,9 @@ class TestLibraryPerformance:
                 with sw.checkpoint(f"scale_{scale}"):
                     _ = gaussian.gauss_image(img, scale)
 
-    def test_edge_detection_workflow(self, backend):
+    def test_edge_detection_workflow(self, backend, monkeypatch):
         """Test complete edge detection pipeline."""
-        os.environ["YAPOCIS_BACKEND"] = backend
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
         gaussian = Gaussian()
         grad = Gradient()
@@ -65,9 +63,9 @@ class TestLibraryPerformance:
             with sw.checkpoint("magnitude"):
                 magnitude = np.sqrt(gx**2 + gy**2)
 
-    def test_color_conversion_workflow(self, backend):
+    def test_color_conversion_workflow(self, backend, monkeypatch):
         """Test HSI color space conversion pipeline."""
-        os.environ["YAPOCIS_BACKEND"] = backend
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
         hsi = HSI()
 
@@ -81,9 +79,9 @@ class TestLibraryPerformance:
             with sw.checkpoint("hsi2rgb3"):
                 rgb_back = hsi.hsi2rgb3(hsi_img)
 
-    def test_graphics_rendering_workflow(self, backend):
+    def test_graphics_rendering_workflow(self, backend, monkeypatch):
         """Test complete graphics rendering workflow."""
-        os.environ["YAPOCIS_BACKEND"] = backend
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
         g4 = Graphics4()
 
@@ -107,9 +105,9 @@ class TestLibraryPerformance:
             with sw.checkpoint("read_canvas"):
                 result = g4.read(canvas)
 
-    def test_denoise_workflow(self, backend):
+    def test_denoise_workflow(self, backend, monkeypatch):
         """Test denoising workflow with multiple methods."""
-        os.environ["YAPOCIS_BACKEND"] = backend
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
         gaussian = Gaussian()
         median = Median()

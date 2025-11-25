@@ -1,5 +1,8 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
+import pytest
+
+from yapocis.core import get_test_backends
 from yapocis.lib.channels import split_channels
 from yapocis.lib.gradient import Gradient
 from yapocis.lib.hsi import HSI
@@ -25,9 +28,13 @@ def example_test(module, label):
     module.show_arraygrad(f"Grad vectors ({label})", image, a, g)
 
 
-def test_advanced_showarraygrad():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_advanced_showarraygrad(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     example_test(advanced, "advanced")
 
 
-def test_basic_showarraygrad():
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_basic_showarraygrad(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     example_test(basic, "basic")

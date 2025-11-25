@@ -1,4 +1,3 @@
-import os
 import numpy as np
 import pytest
 
@@ -9,9 +8,9 @@ from . import StopWatcher
 @pytest.mark.track_memory
 @pytest.mark.smoke
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_mandelbrot(backend, perf_tracker):
+def test_mandelbrot(backend, perf_tracker, monkeypatch):
     """Test Mandelbrot set computation with performance tracking."""
-    os.environ["YAPOCIS_BACKEND"] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     from yapocis.lib.mandelbrot import Mandelbrot
 
     mb = Mandelbrot()

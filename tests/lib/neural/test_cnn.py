@@ -7,18 +7,9 @@ Verifies compilation, numerical correctness, and cross-backend consistency.
 
 import numpy as np
 import pytest
-import os
+
 from yapocis import core
-from yapocis.core.manager import get_backends
-
-
-# =================================================================
-# Test Helpers
-# =================================================================
-
-def get_test_backends():
-    """Get all available backends for testing."""
-    return get_backends()
+from yapocis.core import get_test_backends
 
 
 # =================================================================
@@ -27,25 +18,25 @@ def get_test_backends():
 
 @pytest.mark.parametrize("backend", get_test_backends())
 @pytest.mark.smoke
-def test_conv2d_3x3_loads(backend):
+def test_conv2d_3x3_loads(backend, monkeypatch):
     """Test that 3x3 convolution kernel compiles."""
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     prog = core.load_program("cnn")
     assert hasattr(prog, 'conv2d_3x3')
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_conv2d_1x1_loads(backend):
+def test_conv2d_1x1_loads(backend, monkeypatch):
     """Test that 1x1 convolution kernel compiles."""
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     prog = core.load_program("cnn")
     assert hasattr(prog, 'conv2d_1x1')
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_depthwise_conv2d_3x3_loads(backend):
+def test_depthwise_conv2d_3x3_loads(backend, monkeypatch):
     """Test that depthwise separable convolution kernel compiles."""
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     prog = core.load_program("cnn")
     assert hasattr(prog, 'depthwise_conv2d_3x3')
 
@@ -55,9 +46,9 @@ def test_depthwise_conv2d_3x3_loads(backend):
 # =================================================================
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_relu_activation(backend):
+def test_relu_activation(backend, monkeypatch):
     """Test ReLU activation."""
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     prog = core.load_program("cnn")
 
     input_arr = np.array([-2.0, -1.0, 0.0, 1.0, 2.0], dtype=np.float32)
@@ -68,9 +59,9 @@ def test_relu_activation(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_gelu_activation(backend):
+def test_gelu_activation(backend, monkeypatch):
     """Test GELU activation."""
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     prog = core.load_program("cnn")
 
     input_arr = np.array([0.0], dtype=np.float32)
@@ -81,9 +72,9 @@ def test_gelu_activation(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_softmax_activation(backend):
+def test_softmax_activation(backend, monkeypatch):
     """Test softmax activation."""
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     prog = core.load_program("cnn")
 
     input_arr = np.array([1.0, 2.0, 3.0], dtype=np.float32)
@@ -100,9 +91,9 @@ def test_softmax_activation(backend):
 # =================================================================
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_max_pool_2x2(backend):
+def test_max_pool_2x2(backend, monkeypatch):
     """Test 2x2 max pooling."""
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     prog = core.load_program("cnn")
 
     # Simple 4x4 input, expect 2x2 output
@@ -119,9 +110,9 @@ def test_max_pool_2x2(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_global_avg_pool(backend):
+def test_global_avg_pool(backend, monkeypatch):
     """Test global average pooling."""
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     prog = core.load_program("cnn")
 
     input_arr = np.ones((2, 4, 4), dtype=np.float32)
@@ -135,9 +126,9 @@ def test_global_avg_pool(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_global_max_pool(backend):
+def test_global_max_pool(backend, monkeypatch):
     """Test global max pooling."""
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     prog = core.load_program("cnn")
 
     input_arr = np.random.randn(2, 4, 4).astype(np.float32)
@@ -157,9 +148,9 @@ def test_global_max_pool(backend):
 # =================================================================
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_batch_norm(backend):
+def test_batch_norm(backend, monkeypatch):
     """Test batch normalization."""
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     prog = core.load_program("cnn")
 
     channels = 2
@@ -176,9 +167,9 @@ def test_batch_norm(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_layer_norm(backend):
+def test_layer_norm(backend, monkeypatch):
     """Test layer normalization."""
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     prog = core.load_program("cnn")
 
     channels = 4
@@ -198,9 +189,9 @@ def test_layer_norm(backend):
 # =================================================================
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_fully_connected(backend):
+def test_fully_connected(backend, monkeypatch):
     """Test fully connected layer."""
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     prog = core.load_program("cnn")
 
     input_size = 10
@@ -220,9 +211,9 @@ def test_fully_connected(backend):
 # =================================================================
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_dropout_inference_mode(backend):
+def test_dropout_inference_mode(backend, monkeypatch):
     """Test dropout in inference mode (should be identity)."""
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     prog = core.load_program("cnn")
 
     input_arr = np.random.randn(100).astype(np.float32)
@@ -238,9 +229,9 @@ def test_dropout_inference_mode(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_dropout_training_mode(backend):
+def test_dropout_training_mode(backend, monkeypatch):
     """Test dropout in training mode."""
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     prog = core.load_program("cnn")
 
     input_arr = np.ones(1000, dtype=np.float32)
@@ -257,14 +248,14 @@ def test_dropout_training_mode(backend):
 
     # Check approximately correct fraction is dropped
     drop_fraction = num_zeros / len(output)
-    assert 0.35 < drop_fraction < 0.65, f"Expected ~50% dropout, got {drop_fraction*100:.1f}%"
+    assert 0.35 < drop_fraction < 0.65, f"Expected ~50% dropout, got {drop_fraction * 100:.1f}%"
 
 
 # =================================================================
 # Cross-Backend Consistency Tests
 # =================================================================
 
-def test_cross_backend_conv2d_1x1():
+def test_cross_backend_conv2d_1x1(monkeypatch):
     """Test that Metal and OpenCL produce identical results for 1x1 conv."""
     backends = get_test_backends()
     if len(backends) < 2:
@@ -276,7 +267,7 @@ def test_cross_backend_conv2d_1x1():
 
     outputs = {}
     for backend in backends[:2]:
-        os.environ['YAPOCIS_BACKEND'] = backend
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         prog = core.load_program("cnn")
 
         if backend == 'ocl':
@@ -293,7 +284,7 @@ def test_cross_backend_conv2d_1x1():
     )
 
 
-def test_cross_backend_gelu():
+def test_cross_backend_gelu(monkeypatch):
     """Test that Metal and OpenCL produce identical GELU results."""
     backends = get_test_backends()
     if len(backends) < 2:
@@ -303,7 +294,7 @@ def test_cross_backend_gelu():
 
     outputs = {}
     for backend in backends[:2]:
-        os.environ['YAPOCIS_BACKEND'] = backend
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         prog = core.load_program("cnn")
         outputs[backend] = prog.gelu(input_arr)
 
@@ -320,9 +311,9 @@ def test_cross_backend_gelu():
 # =================================================================
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_all_kernels_load(backend):
+def test_all_kernels_load(backend, monkeypatch):
     """Test that all expected kernels load successfully."""
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     prog = core.load_program("cnn")
 
     expected_kernels = [

@@ -9,10 +9,9 @@ from . import ASIZE, StopWatcher
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_lines_with_antialiasing(backend):
+def test_lines_with_antialiasing(backend, monkeypatch):
     """Test that lines can be drawn with anti-aliasing enabled."""
-    import os
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     # Create a canvas
     canvas = np.zeros((ASIZE, ASIZE, 4), dtype=np.float32)
@@ -44,10 +43,9 @@ def test_lines_with_antialiasing(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_lines_aa_width_variations(backend):
+def test_lines_aa_width_variations(backend, monkeypatch):
     """Test lines with different anti-aliasing widths."""
-    import os
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     # Create canvas and graphics context
     canvas = np.zeros((ASIZE, ASIZE, 4), dtype=np.float32)
@@ -75,10 +73,9 @@ def test_lines_aa_width_variations(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_lines_backward_compatibility(backend):
+def test_lines_backward_compatibility(backend, monkeypatch):
     """Test that lines work without aa_width parameter (backward compatibility)."""
-    import os
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     # Create a canvas
     canvas = np.zeros((ASIZE, ASIZE, 4), dtype=np.float32)
@@ -108,10 +105,9 @@ def test_lines_backward_compatibility(backend):
 # Graphics1 (1-channel) tests
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_lines_with_antialiasing_1ch(backend):
+def test_lines_with_antialiasing_1ch(backend, monkeypatch):
     """Test that 1-channel lines can be drawn with anti-aliasing enabled."""
-    import os
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     # Create a 1-channel canvas
     canvas = np.zeros((ASIZE, ASIZE), dtype=np.float32)
@@ -143,10 +139,9 @@ def test_lines_with_antialiasing_1ch(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_lines_aa_width_variations_1ch(backend):
+def test_lines_aa_width_variations_1ch(backend, monkeypatch):
     """Test 1-channel lines with different anti-aliasing widths."""
-    import os
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     # Create canvas and graphics context
     canvas = np.zeros((ASIZE, ASIZE), dtype=np.float32)
@@ -173,10 +168,9 @@ def test_lines_aa_width_variations_1ch(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_lines_backward_compatibility_1ch(backend):
+def test_lines_backward_compatibility_1ch(backend, monkeypatch):
     """Test that 1-channel lines work without aa_width parameter (backward compatibility)."""
-    import os
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     # Create a 1-channel canvas
     canvas = np.zeros((ASIZE, ASIZE), dtype=np.float32)
@@ -204,10 +198,9 @@ def test_lines_backward_compatibility_1ch(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_circles_with_antialiasing(backend):
+def test_circles_with_antialiasing(backend, monkeypatch):
     """Test that circles can be drawn with anti-aliasing enabled."""
-    import os
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     canvas = np.zeros((ASIZE, ASIZE, 4), dtype=np.float32)
     g = Graphics4()
@@ -236,10 +229,9 @@ def test_circles_with_antialiasing(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_circles_aa_width_variations(backend):
+def test_circles_aa_width_variations(backend, monkeypatch):
     """Test circles with different anti-aliasing widths."""
-    import os
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     canvas = np.zeros((ASIZE, ASIZE, 4), dtype=np.float32)
     g = Graphics4()
@@ -276,10 +268,9 @@ def test_circles_aa_width_variations(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_circles_backward_compatibility(backend):
+def test_circles_backward_compatibility(backend, monkeypatch):
     """Test that default aa_width=0.0 preserves original behavior."""
-    import os
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     canvas = np.zeros((ASIZE, ASIZE, 4), dtype=np.float32)
     g = Graphics4()
@@ -299,10 +290,9 @@ def test_circles_backward_compatibility(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_circles_with_antialiasing_1ch(backend):
+def test_circles_with_antialiasing_1ch(backend, monkeypatch):
     """Test that 1-channel circles can be drawn with anti-aliasing enabled."""
-    import os
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     canvas = np.zeros((ASIZE, ASIZE), dtype=np.float32)
     g = Graphics1()
@@ -331,10 +321,9 @@ def test_circles_with_antialiasing_1ch(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_circles_aa_width_variations_1ch(backend):
+def test_circles_aa_width_variations_1ch(backend, monkeypatch):
     """Test 1-channel circles with different anti-aliasing widths."""
-    import os
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     canvas = np.zeros((ASIZE, ASIZE), dtype=np.float32)
     g = Graphics1()
@@ -369,10 +358,9 @@ def test_circles_aa_width_variations_1ch(backend):
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
-def test_circles_backward_compatibility_1ch(backend):
+def test_circles_backward_compatibility_1ch(backend, monkeypatch):
     """Test that default aa_width=0.0 preserves original behavior for 1-channel."""
-    import os
-    os.environ['YAPOCIS_BACKEND'] = backend
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     canvas = np.zeros((ASIZE, ASIZE), dtype=np.float32)
     g = Graphics1()
