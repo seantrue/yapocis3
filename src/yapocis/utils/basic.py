@@ -306,6 +306,15 @@ def sign_array(*args, **kwargs) -> tuple[str, PILImage]:
 
 
 def show_array(array: np.ndarray, *args, checkzero=True, **kwargs) -> None:
+    split_args = []
+    for arg in args:
+        arg = str(arg)
+        split_args.extend(arg.split())
+    final_args = [split_args[0]]
+    for arg in split_args[1:]:
+        if arg not in final_args:
+            final_args.append(arg)
+    args = tuple(final_args)
     if BENCHMARKING:
         print(args, file=sys.stderr)
         return

@@ -85,6 +85,7 @@ dev = [
     "pytest>=7.4.0",
     "pytest-cov>=3.0.0",
     "pytest-benchmark>=3.4.0",
+    "pytest-durations",
     "black>=22.0.0",
     "ruff>=0.1.0",
     "isort>=5.0.0",
