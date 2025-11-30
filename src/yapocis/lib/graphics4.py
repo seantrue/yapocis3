@@ -3,7 +3,6 @@ Low level wrappers around the OpenCL graphics kernels.
 """
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
-import os
 import numpy as np
 
 from yapocis.lib.abstract_graphics import (AbstractGraphics,
@@ -20,12 +19,11 @@ def arrayify(scalar_or_vector, size, dtype=np.float32):
             vector = scalar_or_vector
         elif len(scalar_or_vector) == 4:
             vector = np.empty(size, dtype=dtype)
-            vector[:,:] = scalar_or_vector
+            vector[:, :] = scalar_or_vector
     else:
         vector = np.empty(size, dtype=dtype)
-        vector[:,:] = scalar_or_vector
+        vector[:, :] = scalar_or_vector
     return vector
-
 
 
 class GraphicsSetup4(AbstractGraphicsSetup):
@@ -44,9 +42,9 @@ class GraphicsSetup4(AbstractGraphicsSetup):
             raise RuntimeError(f"Missing one of color or colors")
         if color:
             color = to_vector(color, color, self.CHANNELS, default=1.0, dtype=np.float32)
-            colors = np.empty((n,self.CHANNELS), dtype=np.float32)
+            colors = np.empty((n, self.CHANNELS), dtype=np.float32)
             colors[:] = color
-        colors = arrayify(colors, (coords.shape[0],4))
+        colors = arrayify(colors, (coords.shape[0], 4))
         return colors
 
     def coerce_widths(self, coords, width=None, widths=None, distance=None, **kwargs) -> np.ndarray:
@@ -86,7 +84,7 @@ class GraphicsSetup4(AbstractGraphicsSetup):
         coords = []
         ipixels = []
         for block, location in zip(blocks, locations):
-            height,width,depth = block.shape
+            height, width, depth = block.shape
             assert depth == 4
             block = block.ravel()
             pixel_buffer.append(block)
@@ -94,12 +92,11 @@ class GraphicsSetup4(AbstractGraphicsSetup):
             # OCL/Metal kernels expect (x, y, w, h) where x=col, y=row (from X/Y macros)
             coords.append((col, row, width, height))
             ipixels.append(ipixel)
-            ipixel += len(block)//4
+            ipixel += len(block) // 4
         buffer = np.concatenate(pixel_buffer)
         coords = self.coerce_coords(coords, 4, np.int32)
         ipixels = np.array(ipixels, dtype=np.int32)
         return coords, buffer, ipixels
-
 
     def setup_sprites(self, locations, sprites, **kwargs):
         """
@@ -123,14 +120,14 @@ class GraphicsSetup4(AbstractGraphicsSetup):
         for sprite in sprites:
             sprite = sprite.ravel()
             ipixels.append(ipixel)
-            ipixel += len(sprite)//4
+            ipixel += len(sprite) // 4
             pixel_buffer.append(sprite)
         buffer = np.concatenate(pixel_buffer)
         coords = []
         for isprite, x, y in locations:
             sprite = sprites[isprite]
             height, width, depth = sprite.shape
-            assert depth==4
+            assert depth == 4
             coords.append((x, y, width, height))
             ipixels.append(ipixels[isprite])
         coords = self.coerce_coords(coords, 4, np.int32)
@@ -141,41 +138,40 @@ class GraphicsSetup4(AbstractGraphicsSetup):
                     color=None, colors=None, alpha=None, alphas=None, rotation=None, rotations=None, **kwargs):
         n = len(locations)
         n = len(locations)
-        colors = to_list(color, colors, n, default=(1,1,1,1))
-        fonts = to_list(font,fonts,n,default="default")
-        sizes = to_list(size,sizes,n, default=32)
+        colors = to_list(color, colors, n, default=(1, 1, 1, 1))
+        fonts = to_list(font, fonts, n, default="default")
+        sizes = to_list(size, sizes, n, default=32)
         alphas = to_list(alpha, alphas, n, default="mask")
         rotations = to_list(rotation, rotations, n, default=0.0)
         colors = np.asarray(colors, dtype=np.float32)
-        assert colors.shape == (len(locations),4)
+        assert colors.shape == (len(locations), 4)
         rotations = to_list(rotation, rotations, n, default=0)
         rotations = [compute_360_to_180(rotation) for rotation in rotations]
 
         bbox_blocks = [render_text(text, font_name=font_name, size=size, rotation=rotation)
                        for text, font_name, size, rotation in zip(texts, fonts, sizes, rotations)]
         bboxes, blocks = zip(*bbox_blocks)
-        dxdy = [compute_offset(angle, h, w) for ((_, _, h, w), angle) in zip(bboxes, rotations)]
-        locations = [(x + dx, y + dy) for ((x, y), (dx, dy)) in zip(locations, dxdy)]
-
+        dxdy = [compute_offset(angle, w, h) for ((_, _, w, h), angle) in zip(bboxes, rotations)]
+        locations = [(y + dy, x + dx) for ((x, y), (dx, dy)) in zip(locations, dxdy)]
 
         if isinstance(alphas, (list, tuple)):
             new_alphas = []
             assert len(alphas) == len(blocks) == colors.shape[0]
             for itext in range(len(blocks)):
-                alpha  = alphas[itext]
+                alpha = alphas[itext]
                 block = blocks[itext]
-                color = colors[itext,:]
+                color = colors[itext, :]
                 if alpha == "mask":
                     alpha = block
                 elif alpha == "bug":
-                    alpha = np.maximum(block,.33)
+                    alpha = np.maximum(block, .33)
                 elif isinstance(alpha, float):
                     new_alpha = np.empty_like(block)
-                    new_alpha[:,:] = alpha
+                    new_alpha[:, :] = alpha
                     alpha = new_alpha
                 elif alpha is None:
                     new_alpha = np.empty_like(block)
-                    new_alpha[:,:] = color[3]
+                    new_alpha[:, :] = color[3]
                     alpha = new_alpha
                 new_alphas.append(alpha)
             alphas = new_alphas
@@ -187,12 +183,13 @@ class GraphicsSetup4(AbstractGraphicsSetup):
             shape = list(block.shape)
             shape.append(4)
             rgba = np.empty(tuple(shape), dtype=np.float32)
-            rgba[:, :, 0], rgba[:, :, 1], rgba[:, :, 2] = block,block,block
-            rgba[:,:,:3] *= color[:3]
-            rgba[:,:,3] = alpha
+            rgba[:, :, 0], rgba[:, :, 1], rgba[:, :, 2] = block, block, block
+            rgba[:, :, :3] *= color[:3]
+            rgba[:, :, 3] = alpha
             new_blocks.append(rgba)
         return locations, new_blocks, None
 
+
 class Graphics4(AbstractGraphics, GraphicsSetup4):
-    INTERFACE="graphics4"
-    CHANNELS=4
+    INTERFACE = "graphics4"
+    CHANNELS = 4

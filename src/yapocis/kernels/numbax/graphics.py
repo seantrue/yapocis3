@@ -9,6 +9,7 @@ try:
 except Exception:  # pragma: no cover - fallback when numba unavailable
     HAVE_NUMBA = False
 
+
     def njit(*args, **kwargs):  # type: ignore
         def _wrap(f):
             return f
@@ -31,15 +32,15 @@ def _blend_scalar(dst: np.ndarray, x: int, y: int, c: float, alpha: float):
 
 @njit(cache=True, fastmath=True)
 def _draw_line_scalar(
-    img: np.ndarray,
-    x0: int,
-    y0: int,
-    x1: int,
-    y1: int,
-    width: float,
-    aa_width: float,
-    color: float,
-    alpha: float,
+        img: np.ndarray,
+        x0: int,
+        y0: int,
+        x1: int,
+        y1: int,
+        width: float,
+        aa_width: float,
+        color: float,
+        alpha: float,
 ):
     xmin = int(max(0, min(x0, x1) - width - aa_width - 1))
     xmax = int(min(img.shape[1] - 1, max(x0, x1) + width + aa_width + 1))
@@ -82,7 +83,7 @@ def _draw_line_scalar(
 
 @njit(cache=True, fastmath=True)
 def _draw_rect_scalar(
-    img: np.ndarray, x0: int, y0: int, x1: int, y1: int, aa_width: float, color: float, alpha: float
+        img: np.ndarray, x0: int, y0: int, x1: int, y1: int, aa_width: float, color: float, alpha: float
 ):
     if x0 <= x1:
         xmin, xmax = int(x0), int(x1)
@@ -129,7 +130,7 @@ def _draw_rect_scalar(
 
 @njit(cache=True, fastmath=True)
 def _draw_circle_scalar(
-    img: np.ndarray, cx: int, cy: int, r: float, aa_width: float, color: float, alpha: float
+        img: np.ndarray, cx: int, cy: int, r: float, aa_width: float, color: float, alpha: float
 ):
     xmin = int(max(0, cx - r - aa_width - 1))
     xmax = int(min(img.shape[1] - 1, cx + r + aa_width + 1))
@@ -177,7 +178,7 @@ def _dist_to_segment(px: float, py: float, ax: float, ay: float, bx: float, by: 
 
 @njit(cache=True, fastmath=True)
 def _draw_triangle_scalar(
-    img: np.ndarray, x0, y0, x1, y1, x2, y2, aa_width: float, color: float, alpha: float
+        img: np.ndarray, x0, y0, x1, y1, x2, y2, aa_width: float, color: float, alpha: float
 ):
     # Expand bounds for anti-aliasing
     if aa_width > 0.0:
@@ -218,7 +219,7 @@ def _draw_triangle_scalar(
 
 @njit(cache=True, fastmath=True)
 def _draw_ellipse_scalar(
-    img: np.ndarray, cx: int, cy: int, rx: float, ry: float, aa_width: float, color: float, alpha: float
+        img: np.ndarray, cx: int, cy: int, rx: float, ry: float, aa_width: float, color: float, alpha: float
 ):
     # Expand bounds for anti-aliasing
     if aa_width > 0.0:
@@ -258,14 +259,14 @@ def _draw_ellipse_scalar(
 
 
 def lines(
-    width: int,
-    height: int,
-    a: np.ndarray,
-    nelements: int,
-    coords: np.ndarray,
-    widths: np.ndarray,
-    aa_widths: np.ndarray,
-    colors: np.ndarray,
+        width: int,
+        height: int,
+        a: np.ndarray,
+        nelements: int,
+        coords: np.ndarray,
+        widths: np.ndarray,
+        aa_widths: np.ndarray,
+        colors: np.ndarray,
 ):
     for i in range(nelements):
         # Swap coords to match OCL/Metal column-major convention
@@ -287,13 +288,13 @@ def lines(
 
 
 def rects(
-    width: int,
-    height: int,
-    a: np.ndarray,
-    nelements: int,
-    coords: np.ndarray,
-    aa_widths: np.ndarray,
-    colors: np.ndarray,
+        width: int,
+        height: int,
+        a: np.ndarray,
+        nelements: int,
+        coords: np.ndarray,
+        aa_widths: np.ndarray,
+        colors: np.ndarray,
 ):
     for i in range(nelements):
         # Swap coords to match OCL/Metal column-major convention
@@ -315,13 +316,13 @@ def rects(
 
 
 def circles(
-    width: int,
-    height: int,
-    a: np.ndarray,
-    nelements: int,
-    coords: np.ndarray,
-    aa_widths: np.ndarray,
-    colors: np.ndarray,
+        width: int,
+        height: int,
+        a: np.ndarray,
+        nelements: int,
+        coords: np.ndarray,
+        aa_widths: np.ndarray,
+        colors: np.ndarray,
 ):
     for i in range(nelements):
         # Swap coords to match OCL/Metal column-major convention
@@ -341,13 +342,13 @@ def circles(
 
 
 def triangles(
-    width: int,
-    height: int,
-    a: np.ndarray,
-    nelements: int,
-    coords: np.ndarray,
-    aa_widths: np.ndarray,
-    colors: np.ndarray,
+        width: int,
+        height: int,
+        a: np.ndarray,
+        nelements: int,
+        coords: np.ndarray,
+        aa_widths: np.ndarray,
+        colors: np.ndarray,
 ):
     for i in range(nelements):
         # Swap coords to match OCL/Metal column-major convention
@@ -370,13 +371,13 @@ def triangles(
 
 
 def ellipses(
-    width: int,
-    height: int,
-    a: np.ndarray,
-    nelements: int,
-    coords: np.ndarray,
-    aa_widths: np.ndarray,
-    colors: np.ndarray,
+        width: int,
+        height: int,
+        a: np.ndarray,
+        nelements: int,
+        coords: np.ndarray,
+        aa_widths: np.ndarray,
+        colors: np.ndarray,
 ):
     for i in range(nelements):
         # Swap coords to match OCL/Metal column-major convention
@@ -407,23 +408,26 @@ def composite(
     ipixels: np.ndarray,
     npixels: int,
 ):
-    # coords: N x 4 (row, col, w, h), pixels: concatenated [val, alpha] pairs per pixel, ipixels: start index per block
+    # coords: N x 4 (col, row, w, h), pixels: concatenated [val, alpha] pairs per pixel, ipixels: start index per block
+    # In yapocis column-major convention:
+    #   width = shape[0] = number of rows
+    #   height = shape[1] = number of cols
     for i in range(nelements):
-        # Swap coords to match OCL/Metal column-major convention
-        # coords are passed as (row, col, w, h)
-        x = int(coords[i, 1])  # col
-        y = int(coords[i, 0])  # row
-        w = int(coords[i, 2])
-        h = int(coords[i, 3])
+        # coords are passed as (col, row, block_width, block_height)
+        x = int(coords[i, 0])  # col position in canvas
+        y = int(coords[i, 1])  # row position in canvas
+        w = int(coords[i, 2])  # block width (cols)
+        h = int(coords[i, 3])  # block height (rows)
         start = int(ipixels[i])
         block = pixels[start : start + w * h].reshape(h, w, 2)
-        xs0 = max(0, y)
-        ys0 = max(0, x)
-        xs1 = min(height, y + h)
-        ys1 = min(width, x + w)
-        for yy in range(xs0, xs1):
-            for xx in range(ys0, ys1):
-                srcv = block[yy - y, xx - x, 0]
-                al = block[yy - y, xx - x, 1]
-                a[yy, xx] = (1.0 - al) * a[yy, xx] + al * srcv
+        # Clamp row bounds to width (number of rows), col bounds to height (number of cols)
+        row0 = max(0, y)
+        col0 = max(0, x)
+        row1 = min(width, y + h)
+        col1 = min(height, x + w)
+        for row in range(row0, row1):
+            for col in range(col0, col1):
+                srcv = block[row - y, col - x, 0]
+                al = block[row - y, col - x, 1]
+                a[row, col] = (1.0 - al) * a[row, col] + al * srcv
     return a

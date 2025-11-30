@@ -4,7 +4,7 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Summary Statistics
 
-- **Total AI-assisted commits**: ~28
+- **Total AI-assisted commits**: ~29
 - **Major features developed with AI assistance**:
   - Infrastructure: Package modernization (hatchling, modern tooling), automated changelog generation, type annotation modernization, release automation system
   - Backend work: CUDA kernel compilation fixes, CUDA row-major addressing fixes, Metal backend fixes, coordinate system standardization, Numba backend completeness, truetrace kernel port, separable convolution boundary fix
@@ -26,9 +26,46 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~40 lines: HSI alpha channel handling (2025-10-16)
   - ~25 lines: Separable convolution boundary fix (2025-10-17)
   - ~470 lines: Release automation system (2025-10-31)
+  - ~40 lines: Numbax composite bounds fix (2025-11-30)
   - ~100 lines: Documentation updates (2025-10-05, 2025-10-06, 2025-10-08)
 
 ## Detailed Contributions
+
+### 2025-11-30: Numbax Backend Composite Function Bug Fix
+
+**AI Contribution (Claude):**
+- Fixed text rendering truncation in numbax backend by correcting composite function bounds checking
+- Root cause: The composite functions in both graphics.py and graphics4.py had incorrect bounds checking that swapped width/height, causing text to be clipped
+- Problem: In yapocis column-major convention, `width = shape[0] = rows` and `height = shape[1] = cols`, but bounds were checking the opposite
+- Fixed coordinate interpretation in graphics.py (coords are col,row not row,col)
+- Improved variable naming for clarity (row0/col0/row1/col1 instead of xs0/ys0/xs1/ys1)
+- Applied code style/formatting improvements to both files
+- ~40 lines of substantive fixes across 2 files
+
+**Files Modified:**
+- `src/yapocis/kernels/numbax/graphics.py` - Fixed composite function bounds checking and coordinate interpretation
+- `src/yapocis/kernels/numbax/graphics4.py` - Fixed composite function bounds checking
+- `src/yapocis/lib/graphics4.py` - User's fix to setup_texts (compute_offset argument order, location tuple construction) + formatting
+
+**Key Bug Fix Details:**
+- Original graphics4.py composite had: `xs1 = min(height, y + h)` and `ys1 = min(width, x + w)` (WRONG)
+- Fixed to: `row1 = min(width, y + h)` and `col1 = min(height, x + w)` (CORRECT)
+- graphics.py additionally had wrong coordinate swap: thought coords were (row,col) but they're (col,row)
+
+**Testing:**
+- All 28 numbax graphics tests pass
+- All 18 position validation tests pass
+- Metal/OCL tests unaffected (46 tests pass)
+- Text rendering now matches Metal/OCL output
+
+**Human Contribution:**
+- Bug identification: "numbax backend for graphics seems to work well, except for text. X and Y coordinates appear to be reversed for text"
+- Constraint specification: "Fix only files in yapocis/kernels/numbax/, do not change tests or common code"
+- Guidance: "Check other numbax graphics kernels to make sure they are correct. If they are, you can study them for coordinate system insight"
+- Fix to setup_texts in lib/graphics4.py (compute_offset argument order and location tuple)
+- Code formatting/style improvements
+
+---
 
 ### 2025-10-31: PyPI Release Automation System
 

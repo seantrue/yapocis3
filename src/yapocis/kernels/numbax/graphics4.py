@@ -9,6 +9,7 @@ try:
 except Exception:  # pragma: no cover - fallback
     HAVE_NUMBA = False
 
+
     def njit(*args, **kwargs):  # type: ignore
         def _wrap(f):
             return f
@@ -33,21 +34,21 @@ def _blend_rgba(dst: np.ndarray, x: int, y: int, rgba: np.ndarray):
         # Standard alpha blending
         if alpha_out > 0.0:
             dst[y, x, 0] = (
-                rgba[0] * alpha_src + dst[y, x, 0] * alpha_dst * (1.0 - alpha_src)
-            ) / alpha_out
+                                   rgba[0] * alpha_src + dst[y, x, 0] * alpha_dst * (1.0 - alpha_src)
+                           ) / alpha_out
             dst[y, x, 1] = (
-                rgba[1] * alpha_src + dst[y, x, 1] * alpha_dst * (1.0 - alpha_src)
-            ) / alpha_out
+                                   rgba[1] * alpha_src + dst[y, x, 1] * alpha_dst * (1.0 - alpha_src)
+                           ) / alpha_out
             dst[y, x, 2] = (
-                rgba[2] * alpha_src + dst[y, x, 2] * alpha_dst * (1.0 - alpha_src)
-            ) / alpha_out
+                                   rgba[2] * alpha_src + dst[y, x, 2] * alpha_dst * (1.0 - alpha_src)
+                           ) / alpha_out
             dst[y, x, 3] = alpha_out
         # If alpha_out == 0, leave the destination pixel unchanged
 
 
 @njit(cache=True, fastmath=True)
 def _draw_line_rgba(
-    img: np.ndarray, x0: int, y0: int, x1: int, y1: int, width: float, aa_width: float, rgba: np.ndarray
+        img: np.ndarray, x0: int, y0: int, x1: int, y1: int, width: float, aa_width: float, rgba: np.ndarray
 ):
     xmin = int(max(0, min(x0, x1) - width - aa_width - 1))
     xmax = int(min(img.shape[1] - 1, max(x0, x1) + width + aa_width + 1))
@@ -93,7 +94,7 @@ def _draw_line_rgba(
 
 @njit(cache=True, fastmath=True)
 def _draw_rect_rgba(
-    img: np.ndarray, x0: int, y0: int, x1: int, y1: int, aa_width: float, rgba: np.ndarray
+        img: np.ndarray, x0: int, y0: int, x1: int, y1: int, aa_width: float, rgba: np.ndarray
 ):
     if x0 <= x1:
         xmin, xmax = int(x0), int(x1)
@@ -233,7 +234,7 @@ def _draw_triangle_rgba(img: np.ndarray, x0, y0, x1, y1, x2, y2, aa_width: float
 
 @njit(cache=True, fastmath=True)
 def _draw_ellipse_rgba(
-    img: np.ndarray, cx: int, cy: int, rx: float, ry: float, aa_width: float, rgba: np.ndarray
+        img: np.ndarray, cx: int, cy: int, rx: float, ry: float, aa_width: float, rgba: np.ndarray
 ):
     # Expand bounds for anti-aliasing
     if aa_width > 0.0:
@@ -275,14 +276,14 @@ def _draw_ellipse_rgba(
 
 
 def lines(
-    width: int,
-    height: int,
-    a: np.ndarray,
-    nelements: int,
-    coords: np.ndarray,
-    widths: np.ndarray,
-    aa_widths: np.ndarray,
-    colors: np.ndarray,
+        width: int,
+        height: int,
+        a: np.ndarray,
+        nelements: int,
+        coords: np.ndarray,
+        widths: np.ndarray,
+        aa_widths: np.ndarray,
+        colors: np.ndarray,
 ):
     for i in range(nelements):
         # Swap coords to match OCL/Metal column-major convention
@@ -299,13 +300,13 @@ def lines(
 
 
 def rects(
-    width: int,
-    height: int,
-    a: np.ndarray,
-    nelements: int,
-    coords: np.ndarray,
-    aa_widths: np.ndarray,
-    colors: np.ndarray,
+        width: int,
+        height: int,
+        a: np.ndarray,
+        nelements: int,
+        coords: np.ndarray,
+        aa_widths: np.ndarray,
+        colors: np.ndarray,
 ):
     for i in range(nelements):
         # Swap coords to match OCL/Metal column-major convention
@@ -321,13 +322,13 @@ def rects(
 
 
 def circles(
-    width: int,
-    height: int,
-    a: np.ndarray,
-    nelements: int,
-    coords: np.ndarray,
-    aa_widths: np.ndarray,
-    colors: np.ndarray,
+        width: int,
+        height: int,
+        a: np.ndarray,
+        nelements: int,
+        coords: np.ndarray,
+        aa_widths: np.ndarray,
+        colors: np.ndarray,
 ):
     for i in range(nelements):
         # Swap coords to match OCL/Metal column-major convention
@@ -342,13 +343,13 @@ def circles(
 
 
 def triangles(
-    width: int,
-    height: int,
-    a: np.ndarray,
-    nelements: int,
-    coords: np.ndarray,
-    aa_widths: np.ndarray,
-    colors: np.ndarray,
+        width: int,
+        height: int,
+        a: np.ndarray,
+        nelements: int,
+        coords: np.ndarray,
+        aa_widths: np.ndarray,
+        colors: np.ndarray,
 ):
     for i in range(nelements):
         # Swap coords to match OCL/Metal column-major convention
@@ -366,13 +367,13 @@ def triangles(
 
 
 def ellipses(
-    width: int,
-    height: int,
-    a: np.ndarray,
-    nelements: int,
-    coords: np.ndarray,
-    aa_widths: np.ndarray,
-    colors: np.ndarray,
+        width: int,
+        height: int,
+        a: np.ndarray,
+        nelements: int,
+        coords: np.ndarray,
+        aa_widths: np.ndarray,
+        colors: np.ndarray,
 ):
     for i in range(nelements):
         # Swap coords to match OCL/Metal column-major convention
@@ -399,21 +400,25 @@ def composite(
     npixels: int,
 ):
     # coords: N x 4 (x,y,w,h), pixels: concatenated RGBA per pixel, ipixels: start index
+    # In yapocis column-major convention:
+    #   width = shape[0] = number of rows
+    #   height = shape[1] = number of cols
     for i in range(nelements):
-        # coords are passed as (col, row, width, height) = (x, y, w, h)
-        # where x=col (matches X macro) and y=row (matches Y macro)
-        x = int(coords[i, 0])  # col
-        y = int(coords[i, 1])  # row
-        w = int(coords[i, 2])  # width
-        h = int(coords[i, 3])  # height
+        # coords are passed as (col, row, block_width, block_height)
+        # where block_width = block cols, block_height = block rows
+        x = int(coords[i, 0])  # col position in canvas
+        y = int(coords[i, 1])  # row position in canvas
+        w = int(coords[i, 2])  # block width (cols)
+        h = int(coords[i, 3])  # block height (rows)
         # ipixels is provided in units of RGBA pixels; convert to float-index
         start = int(ipixels[i]) * 4
         block = pixels[start : start + (w * h * 4)].reshape(h, w, 4)
-        xs0 = max(0, y)
-        ys0 = max(0, x)
-        xs1 = min(height, y + h)
-        ys1 = min(width, x + w)
-        for yy in range(xs0, xs1):
-            for xx in range(ys0, ys1):
-                _blend_rgba(a, xx, yy, block[yy - y, xx - x])
+        # Clamp row bounds to width (number of rows), col bounds to height (number of cols)
+        row0 = max(0, y)
+        col0 = max(0, x)
+        row1 = min(width, y + h)
+        col1 = min(height, x + w)
+        for row in range(row0, row1):
+            for col in range(col0, col1):
+                _blend_rgba(a, col, row, block[row - y, col - x])
     return a
