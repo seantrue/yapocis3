@@ -310,7 +310,7 @@ def show_array(array: np.ndarray, *args, checkzero=True, **kwargs) -> None:
     for arg in args:
         arg = str(arg)
         split_args.extend(arg.split())
-    final_args = [split_args[0]]
+    final_args = [split_args[0]] if split_args else []
     for arg in split_args[1:]:
         if arg not in final_args:
             final_args.append(arg)

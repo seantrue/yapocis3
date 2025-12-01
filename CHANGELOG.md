@@ -5,6 +5,65 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Add multi-backend CNN kernel support with dispatch traits
+- Add multiscale zero-crossing benchmark and improve median performance
+- Add unified yapocis-performance tool for async benchmarking
+- Add model download command to yapocis-tools
+- Add graphics4 performance benchmark to yapocis-performance
+- Add async_write support with three-level resolution across all backends
+- Add anti-aliasing support for line primitives
+- Complete anti-aliasing support for all graphics primitives
+- Add CNN dimension specifiers and fix coordinate handling
+- Add Simplex noise generation (2D/3D) across all backends
+
+### Documentation
+
+- Add Cython optimization analysis and results
+
+### Fixed
+
+- Correct dimension ordering in OpenCL stride-2 convolution kernels
+- Suppress CUDA warning #177 for unreferenced functions
+- Suppress CUDA warning #68 for integer sign conversions
+- Suppress CUDA warning #550 for unused variables
+- Correct bounds checking in CUDA convolvesep kernels
+- Correct bounds checking in Metal and OpenCL convolvesep kernels
+- Correct coordinate calculation in CUDA ZCS kernels
+- Matplotlib backend coordinate system and DPI handling
+- Add line width support to matplotlib backend
+- Add antialiasing helper functions for CUDA graphics kernels
+- Resolve CUDA context stack cleanup error and pytest deprecation warning
+- Matplotlib backend - dashed lines, image orientation, and rendering
+- Correct alpha blending in graphics4 kernels
+- *(numbax)* Correct composite function bounds checking for text rendering
+
+### Miscellaneous Tasks
+
+- Remove standalone model download scripts
+
+### Refactored
+
+- Extract identical kernel methods to KernelBase (Phase 1)
+- Unify dimension handlers with _package_dimension hook (Phase 2)
+- Phase 3 - template method pattern for kernel execution
+
+### Testing
+
+- Add comprehensive async modes validation and performance tests
+- Parametrize compute tests by backend
+- Parametrize processing tests by backend using monkeypatch
+- Convert backend parameterized tests to use monkeypatch fixture
+
+## [0.3.6] - 2025-10-31
+
+### Miscellaneous Tasks
+
+- Bump version to 0.3.6
+
 ## [0.3.5] - 2025-10-31
 
 ### Miscellaneous Tasks
