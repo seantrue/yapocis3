@@ -21,7 +21,7 @@ def histeq(im:Image1, nbr_bins:int =2 ** 16) -> Image1:
     Returns:
         2d Array, dtype=np.float32
     """
-    imhist, bins = np.histogram(im.ravel(), nbr_bins, normed=True)
+    imhist, bins = np.histogram(im.ravel(), nbr_bins, density=True)
     imhist[0] = 0
 
     cdf = imhist.cumsum() #cumulative distribution function

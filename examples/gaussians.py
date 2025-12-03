@@ -29,14 +29,6 @@ Created on Jul 21, 2011
 @author: seant
 '''
 
-import numpy as np
-from yapocis.lib.channels import join_channels, split_channels
-from yapocis.lib.gaussian import Gaussian
-from yapocis.lib.gradient import Gradient
-from yapocis.lib.hsi import HSI
-from yapocis.lib.median import Median
-from yapocis.utils.basic import imread, show_array, show_arraygrad
-
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 import numpy as np
@@ -46,7 +38,7 @@ from yapocis.lib.gaussian import Gaussian
 from yapocis.lib.gradient import Gradient
 from yapocis.lib.hsi import HSI
 from yapocis.lib.median import Median
-from yapocis.utils.basic import imread, show_array, show_arraygrad
+from yapocis.utils.basic import show_array, show_arraygrad, get_test_image
 
 
 def main():
@@ -55,38 +47,38 @@ def main():
     hsi = HSI()
     gaussian = Gaussian()
     # Load the test image and reduce dimensions
-    image = imread("tests/test.jpg")
+    image = get_test_image()
     image = image[::2, ::2, :]
 
-    show_array("Original", image)
+    show_array(image, "Original")
     # Add noise to the image
-    image = image * .8 + np.random.uniform(0, .2, image.shape)
-    show_array("Noisy", image)
+    noisy = image * .8 + np.random.uniform(0, .2, image.shape)
+    show_array(noisy, "Noisy")
+    r, g, b = split_channels(noisy)
+    r, g, b = median.median3x3(r, 100), median.median3x3(g, 100), median.median3x3(b, 100)
+    filtered = join_channels(r, g, b)
+    show_array(filtered, "Filtered")
 
-    image = median.median3x3(image, 100)
-    show_array("Filtered", image)
-
-    r, g, b = split_channels(image)
     h, s, i = hsi.rgb2hsi(r, g, b)
-    show_array("I", i)
-    show_array("S", s)
-    show_array("H", h)
+    show_array(i, "I")
+    show_array(s, "S")
+    show_array(h, "H")
 
     h, s, i = hsi.rgb2hsi(r, g, b)
     blur = gaussian.gauss_image(i, 3)
-    show_array("Blur", blur)
+    show_array(blur, "Blur")
     more_blurred = gaussian.gauss_image(i, 4)
     dog = blur - more_blurred
     show_array("DOG", dog)
 
     h, s, i = hsi.rgb2hsi(r, g, b)
     g, a = gradient.gradient(i, 5)
-    show_array("Gradient", g)
-    show_array("Angle", a)
+    show_array(g, "Gradient", )
+    show_array(a, "Angle")
     g, a = gradient.gradient(i, 5)
     sat = np.ones_like(i)
     gimg = join_channels(*hsi.hsi2rgb(a, sat, g))
-    show_array("Color gradient with angle", gimg)
+    show_array(gimg, "Color gradient with angle")
     g, a = gradient.gradient(i, 5)
     show_arraygrad("Grad angle", image, a)
     g, a = gradient.gradient(i, 5)

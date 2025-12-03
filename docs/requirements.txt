@@ -9,6 +9,8 @@ PyYAML>=5.3.1
 # Dev dependencies
 pytest>=6.2.1
 # Docs dependencies
-recommonmark>=0.7.1
-Sphinx>=3.4.3
-sphinx-autoapi>=1.5.1
+myst-parser>=2.0.0
+linkify-it-py>=1.0  # Required for myst_parser linkify extension
+Sphinx>=6.0.0
+sphinx-autoapi>=3.0.0
+astroid>=3.0,<4.0  # sphinx-autoapi 3.x requires astroid 3.x (4.x breaks API)

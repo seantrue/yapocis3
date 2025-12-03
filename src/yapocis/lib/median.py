@@ -4,7 +4,6 @@ Provides 2d median filter for 2d arrays
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 # Provision this program with just one median filter, fixed length of 9
-import os
 from yapocis.utils.stereo_typing import *
 
 from .bound_kernels import BoundKernels
@@ -46,7 +45,7 @@ class Median(BoundKernels):
 
         m3 = self.kmgr.median3x3_res
         input = image
-        output = np.empty_like(input)
+        output = np.zeros_like(input)
         m3.write(input)
         m3.write(output)
 
@@ -59,7 +58,7 @@ class Median(BoundKernels):
         else:
             # Synchronous path (traditional)
             for i in range(iterations):
-                m3(input, output, resident=(input, output))
+                m3(input, output)
                 input, output = output, input
 
         # After N iterations with ping-pong, result is in:

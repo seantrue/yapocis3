@@ -181,12 +181,12 @@ def render_freetype(text, filename: str, size: float = 12, angle: float = 0):
 def render_text(text: str, font_name: str = "default", size: int = 32, rotation: float | None = None,
                 debug_bbox=False, crop=True) \
         -> tuple[tuple, Image1]:
-    rotation = rotation % 360
-    if rotation > 180:
-        rotation = -180 + (rotation - 180)
     font_path = font(font_name)
     size = 32 if size is None else size
     rotation = 0.0 if rotation is None else rotation
+    rotation = rotation % 360
+    if rotation > 180:
+        rotation = -180 + (rotation - 180)
 
     rendered = render_freetype(text, font_path, size, rotation)
     rendered = rendered[::-1, :]

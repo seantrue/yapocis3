@@ -22,6 +22,16 @@ DEBUG = False
 BENCHMARKING = os.environ.get('BENCHMARKING', None)
 
 
+def get_test_image() -> "Image3":
+    """Load the standard test image for documentation examples.
+
+    Returns:
+        A float32 RGB image array normalized to [0, 1].
+    """
+    from yapocis.images import find_image
+    return imread(find_image("test"))
+
+
 def _current_backend() -> str:
     """Return the active backend name for labeling output images.
 

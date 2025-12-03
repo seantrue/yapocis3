@@ -59,17 +59,17 @@ Quick Start
 
 .. code-block:: python
 
-   import core
-   from core import get_manager
+   from yapocis import core
+   from yapocis.core import get_manager
    import numpy as np
 
    # Select backend (or use YAPOCIS_BACKEND env var)
-   mgr = get_manager("ocl")  # "ocl", "cuda", "metal", "numba"
+   mgr = get_manager("metal")  # "ocl", "cuda", "metal", "numba"
 
    # Load and execute kernel
    prog = core.load_program("mandelbrot")
    grid = np.mgrid[-2:2:1024j, -2:2:1024j].astype(np.complex64)
-   result = prog.mandelbrot(grid, maxiter=256)
+   result = prog.mandelbrot(grid, 256)  # positional args for kernel params
 
 Supported Backends
 ------------------
@@ -114,37 +114,52 @@ Documentation
 -------------
 
 .. toctree::
-   :maxdepth: 2
-   :caption: User Guide
+   :maxdepth: 1
 
-   summary
-   examples
-   testing
-   intro
+   getting-started/index
 
 .. toctree::
    :maxdepth: 1
-   :caption: Kernel Interfaces
+   :caption: Application Development
 
-   kernels
+   user-guide/index
+   user-guide/summary
+   user-guide/examples
+   user-guide/testing
+   user-guide/intro
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Technical Documentation
+   :maxdepth: 1
+   :caption: Kernel Development
 
-   architecture
-   metal
-   metallic
+   kernel-guide/index
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Reference
+
+   kernels/index
+   reference/index
+   api/index
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Architecture
+
+   architecture/index
+
+.. toctree::
+   :caption: Backends
+   :maxdepth: 1
+
+   backends/index
 
 .. toctree::
    :maxdepth: 1
    :caption: Project Documentation
 
-   README <../README.md>
-   CLAUDE <../CLAUDE.md>
-   OVERVIEW <../OVERVIEW.md>
-   CHANGELOG <../CHANGELOG.md>
-   RENOVATE <../RENOVATE.md>
+   README </../README.md>
+   CHANGELOG </../CHANGELOG.md>
 
 .. toctree::
    :maxdepth: 1
