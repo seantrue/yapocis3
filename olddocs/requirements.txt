@@ -1,0 +1,16 @@
+Mako>=1.1.4
+matplotlib>=3.3.3
+numpy>=1.19.5
+Pillow>=8.1.0
+pyopencl>=2020.3.1
+pyparsing>=2.4.7
+PyYAML>=5.3.1
+#scipy==1.6.0
+# Dev dependencies
+pytest>=6.2.1
+# Docs dependencies
+myst-parser>=2.0.0
+linkify-it-py>=1.0  # Required for myst_parser linkify extension
+Sphinx>=6.0.0
+sphinx-autoapi>=3.0.0
+astroid>=3.0,<4.0  # sphinx-autoapi 3.x requires astroid 3.x (4.x breaks API)
