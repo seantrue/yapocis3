@@ -1397,21 +1397,24 @@ def generate_backend_cross_comparison_report(
         for backend in all_backends:
             if backend in backend_stats:
                 stats = backend_stats[backend]
-                speedup = baseline_mean / stats["mean"]
+                try:
+                    speedup = baseline_mean / stats["mean"]
 
-                # Format: mean±std (speedup) [runs]
-                if stats["std"] > 0:
-                    cell = f"{stats['mean'] * 1000:.2f}±{stats['std'] * 1000:.2f}ms"
-                else:
-                    cell = f"{stats['mean'] * 1000:.2f}ms"
+                    # Format: mean±std (speedup) [runs]
+                    if stats["std"] > 0:
+                        cell = f"{stats['mean'] * 1000:.2f}±{stats['std'] * 1000:.2f}ms"
+                    else:
+                        cell = f"{stats['mean'] * 1000:.2f}ms"
 
-                if speedup != 1.0:
-                    cell += f" ({speedup:.2f}x)"
-                else:
-                    cell += " (baseline)"
+                    if speedup != 1.0:
+                        cell += f" ({speedup:.2f}x)"
+                    else:
+                        cell += " (baseline)"
 
-                cell += f" [{stats['runs']}]"
-                row.append(cell)
+                    cell += f" [{stats['runs']}]"
+                    row.append(cell)
+                except (KeyError, ZeroDivisionError):
+                    row.append("N/A")
             else:
                 row.append("N/A")
 
