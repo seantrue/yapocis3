@@ -26,10 +26,14 @@ _use_cython = os.environ.get("YAPOCIS_USE_CYTHON", "0").lower() in ("1", "true",
 if _use_cython:
     try:
         from yapocis.metallic.kernel_cy import KernelCy as Kernel
+
         print("Using Cython-optimized Metal kernel")
     except ImportError:
         from yapocis.metallic.kernel import Kernel
-        print("Warning: YAPOCIS_USE_CYTHON=1 but Cython extension not built, falling back to Python")
+
+        print(
+            "Warning: YAPOCIS_USE_CYTHON=1 but Cython extension not built, falling back to Python"
+        )
 else:
     from yapocis.metallic.kernel import Kernel
 

@@ -1,6 +1,5 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
-import os
 from yapocis.core.interface_context import load_interface_context
 from yapocis.lib.gradient import Gradient
 from yapocis.lib.operators import Operators
@@ -9,6 +8,7 @@ from yapocis.utils.basic import set_frame, set_margin
 from yapocis.utils.stereo_typing import *
 
 from .bound_kernels import BoundKernels
+
 
 def are_close(a: float, b: float) -> bool:
     eps = 0.00001
@@ -52,12 +52,12 @@ def generate_convolvesep_context(context):
                 ]
             }
     """
-    if 'gaussian_params' in context:
-        gaussian_params = context['gaussian_params']
+    if "gaussian_params" in context:
+        gaussian_params = context["gaussian_params"]
         gw = GaussianWeights(**gaussian_params)
         gws = gw.gaussian_weights()
         convs = [("gauss%s" % len(a), a) for a in gws]
-        context['convs'] = convs
+        context["convs"] = convs
     return context
 
 
@@ -65,11 +65,11 @@ class GaussianWeights:
     def __init__(self, max_width=None, **kwargs):
         # Always load YAML defaults first
         yaml_context = load_interface_context("convolvesep")
-        yaml_params = yaml_context.get('gaussian_params', {})
+        yaml_params = yaml_context.get("gaussian_params", {})
 
         # Use YAML default for max_width if not provided
         if max_width is None:
-            max_width = yaml_params.get('max_width')
+            max_width = yaml_params.get("max_width")
             if max_width is None:
                 raise ValueError(
                     "max_width must be provided explicitly or defined in convolvesep.yml"
@@ -77,7 +77,7 @@ class GaussianWeights:
 
         # Merge YAML params with kwargs (kwargs take precedence)
         final_kwargs = {}
-        for key in ['scale', 'limit', 'sigmas']:
+        for key in ["scale", "limit", "sigmas"]:
             if key in kwargs:
                 # Explicit parameter takes precedence
                 final_kwargs[key] = kwargs[key]
@@ -186,6 +186,7 @@ class GaussianWeights:
     def get_gaussian_width(self, scale: int) -> int:
         return len(self.get_gaussian_weight(scale))
 
+
 # noinspection PyUnresolvedReferences
 class Gaussian(BoundKernels):
     INTERFACE = "convolvesep"
@@ -209,7 +210,7 @@ class Gaussian(BoundKernels):
             device_name=device_name,
             use_async=use_async,
             async_write=async_write,
-            convs=convs
+            convs=convs,
         )
 
         # Initialize with traditional path

@@ -9,10 +9,9 @@ All tests compare yapocis backend output against the Agg backend to verify
 that images are positioned correctly.
 """
 
-import pytest
-import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
 from PIL import Image
 
 
@@ -55,24 +54,29 @@ def create_corner_test_figure(backend_name):
     ax = fig.add_axes([0, 0, 1, 1])  # Fill entire figure
     ax.set_xlim(0, 500)
     ax.set_ylim(0, 400)
-    ax.axis('off')
-
+    ax.axis("off")
 
     # Place images at four corners using extent
     # extent = [left, right, bottom, top] in data coordinates
     # matplotlib uses y-up coordinates (bottom=0, top=400)
 
     # Top-left: red at x=[20, 60], y=[360, 400]
-    ax.imshow(red_img, extent=[20, 60, 360, 400], origin='upper', interpolation='nearest')
+    ax.imshow(
+        red_img, extent=[20, 60, 360, 400], origin="upper", interpolation="nearest"
+    )
 
     # Top-right: green at x=[440, 480], y=[360, 400]
-    ax.imshow(green_img, extent=[440, 480, 360, 400], origin='upper', interpolation='nearest')
+    ax.imshow(
+        green_img, extent=[440, 480, 360, 400], origin="upper", interpolation="nearest"
+    )
 
     # Bottom-left: blue at x=[20, 60], y=[0, 40]
-    ax.imshow(blue_img, extent=[20, 60, 0, 40], origin='upper', interpolation='nearest')
+    ax.imshow(blue_img, extent=[20, 60, 0, 40], origin="upper", interpolation="nearest")
 
     # Bottom-right: yellow at x=[440, 480], y=[0, 40]
-    ax.imshow(yellow_img, extent=[440, 480, 0, 40], origin='upper', interpolation='nearest')
+    ax.imshow(
+        yellow_img, extent=[440, 480, 0, 40], origin="upper", interpolation="nearest"
+    )
 
     # Render to array
     fig.canvas.draw()
@@ -90,12 +94,13 @@ def create_corner_test_figure(backend_name):
 def test_imshow_position_consistency():
     """Test that yapocis backend places images at same positions as Agg backend."""
     # Create figures with both backends (Agg is reference standard)
-    agg_output = create_corner_test_figure('agg')
-    yapocis_output = create_corner_test_figure('module://yapocis.lib.mplbackend')
+    agg_output = create_corner_test_figure("agg")
+    yapocis_output = create_corner_test_figure("module://yapocis.lib.mplbackend")
 
     # Check shapes match
-    assert agg_output.shape == yapocis_output.shape, \
-        f"Output shapes don't match: {agg_output.shape} vs {yapocis_output.shape}"
+    assert (
+        agg_output.shape == yapocis_output.shape
+    ), f"Output shapes don't match: {agg_output.shape} vs {yapocis_output.shape}"
 
     # Calculate pixel difference
     diff = np.abs(agg_output.astype(float) - yapocis_output.astype(float))
@@ -105,18 +110,18 @@ def test_imshow_position_consistency():
     # Calculate percentage of similar pixels
     close_pixels = (diff < 20).sum() / diff.size * 100
 
-    print(f"\nImage positioning comparison:")
+    print("\nImage positioning comparison:")
     print(f"  Output shape: {agg_output.shape}")
     print(f"  Mean pixel difference: {mean_diff:.2f} (0-255 scale)")
     print(f"  Max pixel difference: {max_diff:.2f}")
     print(f"  Pixels within 20 units: {close_pixels:.2f}%")
 
     # Most pixels should be very close (allowing for minor rendering differences)
-    assert close_pixels > 95.0, \
-        f"Too many different pixels: {100 - close_pixels:.2f}% differ by >20 units"
+    assert (
+        close_pixels > 95.0
+    ), f"Too many different pixels: {100 - close_pixels:.2f}% differ by >20 units"
 
-    assert mean_diff < 10.0, \
-        f"Mean pixel difference too high: {mean_diff:.2f} > 10.0"
+    assert mean_diff < 10.0, f"Mean pixel difference too high: {mean_diff:.2f} > 10.0"
 
     print("✓ Yapocis backend image positioning matches Agg backend")
 
@@ -131,10 +136,10 @@ def test_imshow_simple_position():
     ax = fig.add_axes([0, 0, 1, 1])
     ax.set_xlim(0, 200)
     ax.set_ylim(0, 200)
-    ax.axis('off')
+    ax.axis("off")
 
     # Place red square at bottom-left: x=[10,60], y=[10,60]
-    ax.imshow(red_img, extent=[10, 60, 10, 60], origin='upper', interpolation='nearest')
+    ax.imshow(red_img, extent=[10, 60, 10, 60], origin="upper", interpolation="nearest")
 
     # Get output
     fig.canvas.draw()
@@ -163,14 +168,22 @@ def test_imshow_simple_position():
     expected_rows = (140, 189)  # Allow -1 for pixel boundaries
     expected_cols = (10, 59)
 
-    print(f"\nSimple image position test:")
+    print("\nSimple image position test:")
     print(f"  Red square at rows [{min_row},{max_row}], cols [{min_col},{max_col}]")
     print(f"  Expected: rows {expected_rows}, cols {expected_cols}")
 
-    assert abs(min_row - expected_rows[0]) <= 1, f"Top edge wrong: {min_row} vs {expected_rows[0]}"
-    assert abs(max_row - expected_rows[1]) <= 1, f"Bottom edge wrong: {max_row} vs {expected_rows[1]}"
-    assert abs(min_col - expected_cols[0]) <= 1, f"Left edge wrong: {min_col} vs {expected_cols[0]}"
-    assert abs(max_col - expected_cols[1]) <= 1, f"Right edge wrong: {max_col} vs {expected_cols[1]}"
+    assert (
+        abs(min_row - expected_rows[0]) <= 1
+    ), f"Top edge wrong: {min_row} vs {expected_rows[0]}"
+    assert (
+        abs(max_row - expected_rows[1]) <= 1
+    ), f"Bottom edge wrong: {max_row} vs {expected_rows[1]}"
+    assert (
+        abs(min_col - expected_cols[0]) <= 1
+    ), f"Left edge wrong: {min_col} vs {expected_cols[0]}"
+    assert (
+        abs(max_col - expected_cols[1]) <= 1
+    ), f"Right edge wrong: {max_col} vs {expected_cols[1]}"
 
     print("✓ Simple image positioned correctly")
 
@@ -194,43 +207,49 @@ def test_imshow_single_image_position():
     test_img[30:, 40:, 1] = 1.0
 
     # Create figures with both backends (Agg is reference standard)
-    for backend_name in ['agg', 'module://yapocis.lib.mplbackend']:
+    for backend_name in ["agg", "module://yapocis.lib.mplbackend"]:
         matplotlib.use(backend_name, force=True)
 
         fig = plt.figure(figsize=(4, 3))  # 400x300 pixels
         ax = fig.add_axes([0, 0, 1, 1])
         ax.set_xlim(0, 400)
         ax.set_ylim(0, 300)
-        ax.axis('off')
+        ax.axis("off")
 
         # Place image at center: x=[160, 240], y=[120, 180]
-        ax.imshow(test_img, extent=[160, 240, 120, 180], origin='upper', interpolation='nearest')
+        ax.imshow(
+            test_img,
+            extent=[160, 240, 120, 180],
+            origin="upper",
+            interpolation="nearest",
+        )
 
-        backend_label = 'yapocis' if 'yapocis' in backend_name else 'agg'
-        output_path = f'claude-debug/imshow_single_{backend_label}.png'
-        plt.savefig(output_path, dpi=100, bbox_inches='tight', pad_inches=0)
+        backend_label = "yapocis" if "yapocis" in backend_name else "agg"
+        output_path = f"claude-debug/imshow_single_{backend_label}.png"
+        plt.savefig(output_path, dpi=100, bbox_inches="tight", pad_inches=0)
         plt.close(fig)
 
         print(f"✓ Saved {backend_label} output: {output_path}")
 
     # Compare outputs
-    img_agg = np.array(Image.open('claude-debug/imshow_single_agg.png'))
-    img_yapocis = np.array(Image.open('claude-debug/imshow_single_yapocis.png'))
+    img_agg = np.array(Image.open("claude-debug/imshow_single_agg.png"))
+    img_yapocis = np.array(Image.open("claude-debug/imshow_single_yapocis.png"))
 
     # Check they're similar
     diff = np.abs(img_agg[:, :, :3].astype(float) - img_yapocis[:, :, :3].astype(float))
     mean_diff = diff.mean()
 
-    print(f"\nSingle image comparison:")
+    print("\nSingle image comparison:")
     print(f"  Mean difference: {mean_diff:.2f}")
 
-    assert mean_diff < 15.0, \
-        f"Single image positioning differs too much: {mean_diff:.2f} > 15.0"
+    assert (
+        mean_diff < 15.0
+    ), f"Single image positioning differs too much: {mean_diff:.2f} > 15.0"
 
     print("✓ Single image positioning matches between backends")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Run tests directly
     print("=" * 60)
     print("Testing matplotlib backend imshow positioning")

@@ -9,6 +9,7 @@ from yapocis.lib.channels import split_planes
 from yapocis.lib.gaussian import Gaussian, GaussianWeights
 from yapocis.lib.gradient import Gradient
 from yapocis.lib.hsi import HSI
+
 from . import StopWatcher, image_test
 
 

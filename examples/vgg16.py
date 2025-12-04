@@ -54,10 +54,10 @@ def load_image(image_path: str) -> np.ndarray:
 
 
 def classify_image(
-    vgg: VGG16,
-    image_path: str,
-    labels: list[str],
-    show_embeddings: bool = False
+        vgg: VGG16,
+        image_path: str,
+        labels: list[str],
+        show_embeddings: bool = False
 ) -> None:
     """
     Classify a single image and print results.
@@ -83,7 +83,7 @@ def classify_image(
     start = time.time()
     preprocessed = vgg.preprocess_image(image)
     preprocess_time = time.time() - start
-    print(f"Preprocessing time: {preprocess_time*1000:.2f} ms")
+    print(f"Preprocessing time: {preprocess_time * 1000:.2f} ms")
 
     if show_embeddings:
         # Extract embeddings
@@ -91,7 +91,7 @@ def classify_image(
         features = vgg.extract_features(image, layer='fc6')
         inference_time = time.time() - start
 
-        print(f"Inference time: {inference_time*1000:.2f} ms")
+        print(f"Inference time: {inference_time * 1000:.2f} ms")
         print(f"\nFC6 Embeddings: shape={features.shape}")
         print(f"  Mean: {features.mean():.4f}")
         print(f"  Std:  {features.std():.4f}")
@@ -110,20 +110,20 @@ def classify_image(
         top_indices, top_probs = vgg.predict(image, top_k=5)
         inference_time = time.time() - start
 
-        print(f"Inference time: {inference_time*1000:.2f} ms")
-        print(f"Total time: {(preprocess_time + inference_time)*1000:.2f} ms")
+        print(f"Inference time: {inference_time * 1000:.2f} ms")
+        print(f"Total time: {(preprocess_time + inference_time) * 1000:.2f} ms")
 
         print(f"\nTop 5 predictions:")
         for i, (idx, prob) in enumerate(zip(top_indices, top_probs), 1):
             class_name = labels[idx] if idx < len(labels) else f"class_{idx}"
-            print(f"  {i}. {class_name:30s}  {prob*100:6.2f}%")
+            print(f"  {i}. {class_name:30s}  {prob * 100:6.2f}%")
 
 
 def test_on_assets(
-    vgg: VGG16,
-    labels: list[str],
-    show_embeddings: bool = False,
-    max_images: int = None
+        vgg: VGG16,
+        labels: list[str],
+        show_embeddings: bool = False,
+        max_images: int = None
 ) -> None:
     """
     Test VGG16 on all available image assets.
@@ -138,7 +138,7 @@ def test_on_assets(
 
     if not image_names:
         print("No image assets found!")
-        print("Image assets should be in src/yapocis/images/")
+        print("Image assets should be in yapocis/images/")
         return
 
     print(f"\nFound {len(image_names)} image assets")
@@ -173,8 +173,8 @@ def test_on_assets(
     print(f"Processed {successful}/{len(image_names)} images successfully")
     if successful > 0:
         avg_time = total_time / successful
-        print(f"Average time per image: {avg_time*1000:.2f} ms")
-        print(f"Throughput: {1.0/avg_time:.2f} images/sec")
+        print(f"Average time per image: {avg_time * 1000:.2f} ms")
+        print(f"Throughput: {1.0 / avg_time:.2f} images/sec")
 
 
 def resolve_model_paths(weights_arg: str = None, labels_arg: str = None, model_name: str = 'vgg16'):

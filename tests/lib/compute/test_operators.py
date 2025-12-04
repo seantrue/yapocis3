@@ -5,8 +5,9 @@
 import numpy as np
 import pytest
 
-from yapocis.core import get_backends, get_test_backends
+from yapocis.core import get_test_backends
 from yapocis.lib.operators import Operators
+
 from . import StopWatcher
 
 

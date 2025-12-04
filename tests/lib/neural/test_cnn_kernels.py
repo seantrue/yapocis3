@@ -17,7 +17,7 @@ class TestActivations:
     @pytest.mark.parametrize("backend", get_test_backends())
     def test_relu_activation_basic(self, backend, monkeypatch):
         """Test ReLU activation: max(0, x)"""
-        monkeypatch.setenv('YAPOCIS_BACKEND', backend)
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         vgg16_program = core.load_program("cnn")
         # Simple test with known values
         input_data = np.array([-2.0, -1.0, 0.0, 1.0, 2.0], dtype=np.float32)
@@ -30,7 +30,7 @@ class TestActivations:
     @pytest.mark.parametrize("backend", get_test_backends())
     def test_relu_activation_large(self, backend, monkeypatch):
         """Test ReLU with larger array."""
-        monkeypatch.setenv('YAPOCIS_BACKEND', backend)
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         vgg16_program = core.load_program("cnn")
         input_data = np.random.randn(1000).astype(np.float32)
         expected = np.maximum(0, input_data)
@@ -42,7 +42,7 @@ class TestActivations:
     @pytest.mark.parametrize("backend", get_test_backends())
     def test_relu_activation_3d(self, backend, monkeypatch):
         """Test ReLU with 3D tensor (channels, height, width)."""
-        monkeypatch.setenv('YAPOCIS_BACKEND', backend)
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         vgg16_program = core.load_program("cnn")
         input_data = np.random.randn(3, 4, 4).astype(np.float32)
         expected = np.maximum(0, input_data)
@@ -57,7 +57,7 @@ class TestActivations:
     @pytest.mark.parametrize("backend", get_test_backends())
     def test_softmax_simple(self, backend, monkeypatch):
         """Test softmax with simple values."""
-        monkeypatch.setenv('YAPOCIS_BACKEND', backend)
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         vgg16_program = core.load_program("cnn")
         # Simple 3-class example
         input_data = np.array([1.0, 2.0, 3.0], dtype=np.float32)
@@ -76,7 +76,7 @@ class TestActivations:
     @pytest.mark.parametrize("backend", get_test_backends())
     def test_softmax_numerical_stability(self, backend, monkeypatch):
         """Test softmax with large values (numerical stability)."""
-        monkeypatch.setenv('YAPOCIS_BACKEND', backend)
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         vgg16_program = core.load_program("cnn")
         # Large values that would overflow without max subtraction
         input_data = np.array([1000.0, 1001.0, 1002.0], dtype=np.float32)
@@ -95,7 +95,7 @@ class TestPooling:
     @pytest.mark.parametrize("backend", get_test_backends())
     def test_max_pool_2x2_simple(self, backend, monkeypatch):
         """Test 2x2 max pooling with simple pattern."""
-        monkeypatch.setenv('YAPOCIS_BACKEND', backend)
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         vgg16_program = core.load_program("cnn")
         # Create 4x4 input with known max values in each 2x2 block
         # Block layout:
@@ -104,12 +104,9 @@ class TestPooling:
         #
         #   [5 0]  [7 0]
         #   [0 0]  [0 0]
-        input_data = np.array([
-            [1, 0, 3, 0],
-            [0, 0, 0, 0],
-            [5, 0, 7, 0],
-            [0, 0, 0, 0]
-        ], dtype=np.float32)
+        input_data = np.array(
+            [[1, 0, 3, 0], [0, 0, 0, 0], [5, 0, 7, 0], [0, 0, 0, 0]], dtype=np.float32
+        )
 
         # Single channel: reshape to (1, 4, 4)
         input_3d = input_data.reshape(1, 4, 4)
@@ -123,31 +120,25 @@ class TestPooling:
         vgg16_program.max_pool_2x2(input_3d, output, global_size=(2, 2, 1))
 
         # Expected output: 2x2 with max from each block
-        expected = np.array([
-            [1, 3],
-            [5, 7]
-        ], dtype=np.float32).reshape(1, 2, 2)
+        expected = np.array([[1, 3], [5, 7]], dtype=np.float32).reshape(1, 2, 2)
 
         np.testing.assert_array_almost_equal(output, expected, decimal=5)
 
     @pytest.mark.parametrize("backend", get_test_backends())
     def test_max_pool_2x2_multi_channel(self, backend, monkeypatch):
         """Test 2x2 max pooling with multiple channels."""
-        monkeypatch.setenv('YAPOCIS_BACKEND', backend)
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         vgg16_program = core.load_program("cnn")
         # 2 channels, 4x4 each
-        input_data = np.array([
-            # Channel 0
-            [[1, 2, 3, 4],
-             [5, 6, 7, 8],
-             [9, 10, 11, 12],
-             [13, 14, 15, 16]],
-            # Channel 1
-            [[16, 15, 14, 13],
-             [12, 11, 10, 9],
-             [8, 7, 6, 5],
-             [4, 3, 2, 1]]
-        ], dtype=np.float32)
+        input_data = np.array(
+            [
+                # Channel 0
+                [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]],
+                # Channel 1
+                [[16, 15, 14, 13], [12, 11, 10, 9], [8, 7, 6, 5], [4, 3, 2, 1]],
+            ],
+            dtype=np.float32,
+        )
 
         # Pre-allocate output
         output = np.zeros((2, 2, 2), dtype=np.float32)
@@ -155,28 +146,34 @@ class TestPooling:
         vgg16_program.max_pool_2x2(input_data, output, global_size=(2, 2, 2))
 
         # Expected: max of each 2x2 block per channel
-        expected = np.array([
-            # Channel 0
-            [[6, 8],
-             [14, 16]],
-            # Channel 1
-            [[16, 14],
-             [8, 6]]
-        ], dtype=np.float32)
+        expected = np.array(
+            [
+                # Channel 0
+                [[6, 8], [14, 16]],
+                # Channel 1
+                [[16, 14], [8, 6]],
+            ],
+            dtype=np.float32,
+        )
 
         np.testing.assert_array_almost_equal(output, expected, decimal=5)
 
     @pytest.mark.parametrize("backend", get_test_backends())
     def test_max_pool_2x2_negative_values(self, backend, monkeypatch):
         """Test max pooling with negative values."""
-        monkeypatch.setenv('YAPOCIS_BACKEND', backend)
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         vgg16_program = core.load_program("cnn")
-        input_data = np.array([
-            [[-1, -2, -3, -4],
-             [-5, -6, -7, -8],
-             [-9, -10, -11, -12],
-             [-13, -14, -15, -16]]
-        ], dtype=np.float32)
+        input_data = np.array(
+            [
+                [
+                    [-1, -2, -3, -4],
+                    [-5, -6, -7, -8],
+                    [-9, -10, -11, -12],
+                    [-13, -14, -15, -16],
+                ]
+            ],
+            dtype=np.float32,
+        )
 
         # Pre-allocate output
         output = np.zeros((1, 2, 2), dtype=np.float32)
@@ -184,10 +181,7 @@ class TestPooling:
         vgg16_program.max_pool_2x2(input_data, output, global_size=(2, 2, 1))
 
         # Max of negative values
-        expected = np.array([
-            [[-1, -3],
-             [-9, -11]]
-        ], dtype=np.float32)
+        expected = np.array([[[-1, -3], [-9, -11]]], dtype=np.float32)
 
         np.testing.assert_array_almost_equal(output, expected, decimal=5)
 
@@ -198,18 +192,21 @@ class TestFullyConnected:
     @pytest.mark.parametrize("backend", get_test_backends())
     def test_fully_connected_simple(self, backend, monkeypatch):
         """Test fully connected with simple 2x2 example."""
-        monkeypatch.setenv('YAPOCIS_BACKEND', backend)
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         vgg16_program = core.load_program("cnn")
         # Input: 2 features
         input_data = np.array([1.0, 2.0], dtype=np.float32)
 
         # Weights: 3 output neurons, 2 input features
         # Each row is one neuron's weights
-        weights = np.array([
-            [1.0, 0.0],  # Neuron 0: picks first input
-            [0.0, 1.0],  # Neuron 1: picks second input
-            [1.0, 1.0],  # Neuron 2: sums both inputs
-        ], dtype=np.float32)
+        weights = np.array(
+            [
+                [1.0, 0.0],  # Neuron 0: picks first input
+                [0.0, 1.0],  # Neuron 1: picks second input
+                [1.0, 1.0],  # Neuron 2: sums both inputs
+            ],
+            dtype=np.float32,
+        )
 
         # Bias: one per output neuron
         bias = np.array([0.5, 0.5, 0.5], dtype=np.float32)
@@ -217,7 +214,9 @@ class TestFullyConnected:
         # Pre-allocate output
         output = np.zeros(3, dtype=np.float32)
         # Global size must match output size
-        vgg16_program.fully_connected(input_data, weights, bias, output, global_size=(3,))
+        vgg16_program.fully_connected(
+            input_data, weights, bias, output, global_size=(3,)
+        )
 
         # Expected: Wx + b
         # [1, 0] · [1, 2] + 0.5 = 1 + 0.5 = 1.5
@@ -230,7 +229,7 @@ class TestFullyConnected:
     @pytest.mark.parametrize("backend", get_test_backends())
     def test_fully_connected_identity(self, backend, monkeypatch):
         """Test fully connected with identity matrix."""
-        monkeypatch.setenv('YAPOCIS_BACKEND', backend)
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         vgg16_program = core.load_program("cnn")
         input_data = np.array([1.0, 2.0, 3.0], dtype=np.float32)
 
@@ -241,28 +240,35 @@ class TestFullyConnected:
         # Pre-allocate output
         output = np.zeros(3, dtype=np.float32)
         # Global size must match output size
-        vgg16_program.fully_connected(input_data, weights, bias, output, global_size=(3,))
+        vgg16_program.fully_connected(
+            input_data, weights, bias, output, global_size=(3,)
+        )
 
         np.testing.assert_array_almost_equal(output, input_data, decimal=5)
 
     @pytest.mark.parametrize("backend", get_test_backends())
     def test_fully_connected_zero_bias(self, backend, monkeypatch):
         """Test fully connected with zero bias."""
-        monkeypatch.setenv('YAPOCIS_BACKEND', backend)
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         vgg16_program = core.load_program("cnn")
         input_data = np.array([2.0, 3.0], dtype=np.float32)
 
-        weights = np.array([
-            [1.0, 2.0],  # 1*2 + 2*3 = 8
-            [3.0, 4.0],  # 3*2 + 4*3 = 18
-        ], dtype=np.float32)
+        weights = np.array(
+            [
+                [1.0, 2.0],  # 1*2 + 2*3 = 8
+                [3.0, 4.0],  # 3*2 + 4*3 = 18
+            ],
+            dtype=np.float32,
+        )
 
         bias = np.zeros(2, dtype=np.float32)
 
         # Pre-allocate output
         output = np.zeros(2, dtype=np.float32)
         # Global size must match output size
-        vgg16_program.fully_connected(input_data, weights, bias, output, global_size=(2,))
+        vgg16_program.fully_connected(
+            input_data, weights, bias, output, global_size=(2,)
+        )
 
         expected = np.array([8.0, 18.0], dtype=np.float32)
 
@@ -275,18 +281,12 @@ class TestMatrixMultiply:
     @pytest.mark.parametrize("backend", get_test_backends())
     def test_matrix_multiply_simd_simple(self, backend, monkeypatch):
         """Test SIMD matrix multiply with simple 2x2 example."""
-        monkeypatch.setenv('YAPOCIS_BACKEND', backend)
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         vgg16_program = core.load_program("cnn")
         # A: 2x2, B: 2x3, C: 2x3
-        A = np.array([
-            [1.0, 2.0],
-            [3.0, 4.0]
-        ], dtype=np.float32)
+        A = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
 
-        B = np.array([
-            [1.0, 2.0, 3.0],
-            [4.0, 5.0, 6.0]
-        ], dtype=np.float32)
+        B = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], dtype=np.float32)
 
         bias = np.array([0.1, 0.2, 0.3], dtype=np.float32)
 
@@ -303,24 +303,17 @@ class TestMatrixMultiply:
         # C[1,0] = 3*1 + 4*4 + 0.1 = 19.1
         # C[1,1] = 3*2 + 4*5 + 0.2 = 26.2
         # C[1,2] = 3*3 + 4*6 + 0.3 = 33.3
-        expected = np.array([
-            [9.1, 12.2, 15.3],
-            [19.1, 26.2, 33.3]
-        ], dtype=np.float32)
+        expected = np.array([[9.1, 12.2, 15.3], [19.1, 26.2, 33.3]], dtype=np.float32)
 
         np.testing.assert_array_almost_equal(output, expected, decimal=5)
 
     @pytest.mark.parametrize("backend", get_test_backends())
     def test_matrix_multiply_simd_identity(self, backend, monkeypatch):
         """Test matrix multiply with identity matrix."""
-        monkeypatch.setenv('YAPOCIS_BACKEND', backend)
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         vgg16_program = core.load_program("cnn")
         A = np.eye(3, dtype=np.float32)
-        B = np.array([
-            [1.0, 2.0],
-            [3.0, 4.0],
-            [5.0, 6.0]
-        ], dtype=np.float32)
+        B = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]], dtype=np.float32)
         bias = np.zeros(2, dtype=np.float32)
 
         # Pre-allocate output (M×N matrix) - shape is (3, 2)
@@ -341,15 +334,13 @@ class TestConvolution:
     @pytest.mark.parametrize("backend", get_test_backends())
     def test_conv2d_3x3_identity(self, backend, monkeypatch):
         """Test 3x3 convolution with identity kernel."""
-        monkeypatch.setenv('YAPOCIS_BACKEND', backend)
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         vgg16_program = core.load_program("cnn")
         # 4x4 input, single channel
-        input_data = np.array([
-            [1, 2, 3, 4],
-            [5, 6, 7, 8],
-            [9, 10, 11, 12],
-            [13, 14, 15, 16]
-        ], dtype=np.float32).reshape(1, 4, 4)
+        input_data = np.array(
+            [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]],
+            dtype=np.float32,
+        ).reshape(1, 4, 4)
 
         # Identity kernel: center weight = 1, others = 0
         weights = np.zeros((1, 1, 3, 3), dtype=np.float32)
@@ -360,7 +351,9 @@ class TestConvolution:
         # Pre-allocate output (same spatial size due to padding, different channels)
         output = np.zeros((1, 4, 4), dtype=np.float32)
         # Global size must be (height, width, channels) for output shape (C, H, W)
-        vgg16_program.conv2d_3x3(input_data, weights, bias, output, 1, global_size=(4, 4, 1))
+        vgg16_program.conv2d_3x3(
+            input_data, weights, bias, output, 1, global_size=(4, 4, 1)
+        )
 
         # With padding=1, output should be same as input
         np.testing.assert_array_almost_equal(output, input_data, decimal=5)
@@ -368,7 +361,7 @@ class TestConvolution:
     @pytest.mark.parametrize("backend", get_test_backends())
     def test_conv2d_3x3_uniform_filter(self, backend, monkeypatch):
         """Test 3x3 convolution with uniform (averaging) filter."""
-        monkeypatch.setenv('YAPOCIS_BACKEND', backend)
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         vgg16_program = core.load_program("cnn")
         # 4x4 input, single channel - all ones
         input_data = np.ones((1, 4, 4), dtype=np.float32)
@@ -380,7 +373,9 @@ class TestConvolution:
         # Pre-allocate output (same spatial size due to padding, different channels)
         output = np.zeros((1, 4, 4), dtype=np.float32)
         # Global size must be (height, width, channels) for output shape (C, H, W)
-        vgg16_program.conv2d_3x3(input_data, weights, bias, output, 1, global_size=(4, 4, 1))
+        vgg16_program.conv2d_3x3(
+            input_data, weights, bias, output, 1, global_size=(4, 4, 1)
+        )
 
         # Edges have fewer neighbors due to padding
         # But interior should be 1.0 (average of nine 1.0s)
@@ -390,7 +385,7 @@ class TestConvolution:
     @pytest.mark.parametrize("backend", get_test_backends())
     def test_conv2d_3x3_horizontal_edge(self, backend, monkeypatch):
         """Test 3x3 convolution with horizontal edge detector."""
-        monkeypatch.setenv('YAPOCIS_BACKEND', backend)
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         vgg16_program = core.load_program("cnn")
         # Create horizontal edge: white top, black bottom
         input_data = np.zeros((1, 4, 4), dtype=np.float32)
@@ -398,18 +393,18 @@ class TestConvolution:
         input_data[0, 2:4, :] = 0.0  # Bottom two rows black
 
         # Horizontal Sobel-like edge detector
-        weights = np.array([
-            [-1, -1, -1],
-            [0, 0, 0],
-            [1, 1, 1]
-        ], dtype=np.float32).reshape(1, 1, 3, 3)
+        weights = np.array(
+            [[-1, -1, -1], [0, 0, 0], [1, 1, 1]], dtype=np.float32
+        ).reshape(1, 1, 3, 3)
 
         bias = np.zeros(1, dtype=np.float32)
 
         # Pre-allocate output (same spatial size due to padding, different channels)
         output = np.zeros((1, 4, 4), dtype=np.float32)
         # Global size must be (height, width, channels) for output shape (C, H, W)
-        vgg16_program.conv2d_3x3(input_data, weights, bias, output, 1, global_size=(4, 4, 1))
+        vgg16_program.conv2d_3x3(
+            input_data, weights, bias, output, 1, global_size=(4, 4, 1)
+        )
 
         # Strong response at the edge (row 1-2 boundary)
         # Center of edge should have high magnitude
@@ -418,7 +413,7 @@ class TestConvolution:
     @pytest.mark.parametrize("backend", get_test_backends())
     def test_conv2d_3x3_multi_channel(self, backend, monkeypatch):
         """Test 3x3 convolution with multiple input and output channels."""
-        monkeypatch.setenv('YAPOCIS_BACKEND', backend)
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         vgg16_program = core.load_program("cnn")
         # 2 input channels, 4x4 each
         input_data = np.random.randn(2, 4, 4).astype(np.float32)
@@ -430,7 +425,9 @@ class TestConvolution:
         # Pre-allocate output
         output = np.zeros((3, 4, 4), dtype=np.float32)
         # Global size: (height, width, channels) for output (3, 4, 4)
-        vgg16_program.conv2d_3x3(input_data, weights, bias, output, 3, global_size=(4, 4, 3))
+        vgg16_program.conv2d_3x3(
+            input_data, weights, bias, output, 3, global_size=(4, 4, 3)
+        )
 
         # Check output shape
         assert output.shape == (3, 4, 4)
@@ -442,7 +439,7 @@ class TestConvolution:
     @pytest.mark.parametrize("backend", get_test_backends())
     def test_conv2d_3x3_vs_optimized(self, backend, monkeypatch):
         """Test that basic and optimized convolution produce same results."""
-        monkeypatch.setenv('YAPOCIS_BACKEND', backend)
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         vgg16_program = core.load_program("cnn")
         # Random input
         input_data = np.random.randn(3, 8, 8).astype(np.float32)
@@ -455,16 +452,21 @@ class TestConvolution:
 
         # Global size: (height, width, channels) for output (4, 8, 8)
         # Run basic version (dimensions auto-derived)
-        vgg16_program.conv2d_3x3(input_data, weights, bias, output_basic, 4, global_size=(8, 8, 4))
+        vgg16_program.conv2d_3x3(
+            input_data, weights, bias, output_basic, 4, global_size=(8, 8, 4)
+        )
 
         # Run optimized version (dimensions auto-derived)
-        vgg16_program.conv2d_3x3_optimized(input_data, weights, bias, output_optimized, 4, global_size=(8, 8, 4))
+        vgg16_program.conv2d_3x3_optimized(
+            input_data, weights, bias, output_optimized, 4, global_size=(8, 8, 4)
+        )
 
         # Should produce identical results
         np.testing.assert_array_almost_equal(
-            output_basic, output_optimized,
+            output_basic,
+            output_optimized,
             decimal=4,  # Allow small floating point differences
-            err_msg="Basic and optimized convolution should match"
+            err_msg="Basic and optimized convolution should match",
         )
 
 
@@ -474,14 +476,12 @@ class TestBatchNorm:
     @pytest.mark.parametrize("backend", get_test_backends())
     def test_batch_norm_standardize(self, backend, monkeypatch):
         """Test batch norm standardization (mean=0, var=1)."""
-        monkeypatch.setenv('YAPOCIS_BACKEND', backend)
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         vgg16_program = core.load_program("cnn")
         # Single channel, 3x3 spatial
-        input_data = np.array([
-            [1, 2, 3],
-            [4, 5, 6],
-            [7, 8, 9]
-        ], dtype=np.float32).reshape(1, 3, 3)
+        input_data = np.array(
+            [[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=np.float32
+        ).reshape(1, 3, 3)
 
         # Learned parameters
         gamma = np.array([1.0], dtype=np.float32)  # Scale = 1
@@ -496,8 +496,13 @@ class TestBatchNorm:
         # Dimensions auto-derived from input shape
         # Global size: (height, width, channels) matching input shape
         output = vgg16_program.batch_norm(
-            input_data, gamma, beta, mean, variance, epsilon,
-            global_size=(input_data.shape[1], input_data.shape[2], input_data.shape[0])
+            input_data,
+            gamma,
+            beta,
+            mean,
+            variance,
+            epsilon,
+            global_size=(input_data.shape[1], input_data.shape[2], input_data.shape[0]),
         )
 
         # Output should be standardized: (x - mean) / sqrt(var + eps)
@@ -508,7 +513,7 @@ class TestBatchNorm:
     @pytest.mark.parametrize("backend", get_test_backends())
     def test_batch_norm_scale_shift(self, backend, monkeypatch):
         """Test batch norm with scale and shift."""
-        monkeypatch.setenv('YAPOCIS_BACKEND', backend)
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         vgg16_program = core.load_program("cnn")
         input_data = np.ones((1, 2, 2), dtype=np.float32) * 5.0
 
@@ -525,8 +530,13 @@ class TestBatchNorm:
         # Dimensions auto-derived from input shape
         # Global size: (height, width, channels) matching input shape
         output = vgg16_program.batch_norm(
-            input_data, gamma, beta, mean, variance, epsilon,
-            global_size=(input_data.shape[1], input_data.shape[2], input_data.shape[0])
+            input_data,
+            gamma,
+            beta,
+            mean,
+            variance,
+            epsilon,
+            global_size=(input_data.shape[1], input_data.shape[2], input_data.shape[0]),
         )
 
         # (5 - 5) / sqrt(0 + eps) * 2 + 3 ≈ 3
@@ -537,15 +547,10 @@ class TestBatchNorm:
     @pytest.mark.parametrize("backend", get_test_backends())
     def test_batch_norm_multi_channel(self, backend, monkeypatch):
         """Test batch norm with multiple channels."""
-        monkeypatch.setenv('YAPOCIS_BACKEND', backend)
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         vgg16_program = core.load_program("cnn")
         # 2 channels, 2x2 each
-        input_data = np.array([
-            [[1, 2],
-             [3, 4]],
-            [[5, 6],
-             [7, 8]]
-        ], dtype=np.float32)
+        input_data = np.array([[[1, 2], [3, 4]], [[5, 6], [7, 8]]], dtype=np.float32)
 
         # Different parameters per channel
         gamma = np.array([1.0, 2.0], dtype=np.float32)
@@ -558,8 +563,13 @@ class TestBatchNorm:
         # Dimensions auto-derived from input shape
         # Global size: (height, width, channels) matching input shape
         output = vgg16_program.batch_norm(
-            input_data, gamma, beta, mean, variance, epsilon,
-            global_size=(input_data.shape[1], input_data.shape[2], input_data.shape[0])
+            input_data,
+            gamma,
+            beta,
+            mean,
+            variance,
+            epsilon,
+            global_size=(input_data.shape[1], input_data.shape[2], input_data.shape[0]),
         )
 
         # Check shape preserved
@@ -576,7 +586,7 @@ class TestIntegration:
     @pytest.mark.parametrize("backend", get_test_backends())
     def test_conv_relu_pool_pipeline(self, backend, monkeypatch):
         """Test typical CNN layer: Conv -> ReLU -> Pool."""
-        monkeypatch.setenv('YAPOCIS_BACKEND', backend)
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         vgg16_program = core.load_program("cnn")
         # Small input: 1 channel, 4x4
         input_data = np.random.randn(1, 4, 4).astype(np.float32)
@@ -588,7 +598,9 @@ class TestIntegration:
         # Step 1: Convolution (pre-allocate output)
         conv_out = np.zeros((2, 4, 4), dtype=np.float32)
         # Global size: (height, width, channels) for output (2, 4, 4)
-        vgg16_program.conv2d_3x3(input_data, weights, bias, conv_out, 2, global_size=(4, 4, 2))
+        vgg16_program.conv2d_3x3(
+            input_data, weights, bias, conv_out, 2, global_size=(4, 4, 2)
+        )
         assert conv_out.shape == (2, 4, 4)
 
         # Step 2: ReLU
@@ -612,7 +624,7 @@ class TestIntegration:
     @pytest.mark.parametrize("backend", get_test_backends())
     def test_fc_relu_fc_pipeline(self, backend, monkeypatch):
         """Test typical classifier: FC -> ReLU -> FC."""
-        monkeypatch.setenv('YAPOCIS_BACKEND', backend)
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         vgg16_program = core.load_program("cnn")
         # Input features
         input_data = np.random.randn(10).astype(np.float32)
@@ -624,7 +636,9 @@ class TestIntegration:
         # Pre-allocate output
         fc1_out = np.zeros(5, dtype=np.float32)
         # Global size must match output size
-        vgg16_program.fully_connected(input_data, weights1, bias1, fc1_out, global_size=(5,))
+        vgg16_program.fully_connected(
+            input_data, weights1, bias1, fc1_out, global_size=(5,)
+        )
         assert fc1_out.shape == (5,)
 
         # ReLU
@@ -638,7 +652,9 @@ class TestIntegration:
         # Pre-allocate output
         fc2_out = np.zeros(3, dtype=np.float32)
         # Global size must match output size
-        vgg16_program.fully_connected(relu_out, weights2, bias2, fc2_out, global_size=(3,))
+        vgg16_program.fully_connected(
+            relu_out, weights2, bias2, fc2_out, global_size=(3,)
+        )
         assert fc2_out.shape == (3,)
 
         # Softmax for probabilities

@@ -6,6 +6,7 @@ from matplotlib import pyplot as plt
 from yapocis.core import get_test_backends
 from yapocis.lib.convolve import Convolve1D
 from yapocis.utils.stereo_typing import *
+
 from . import StopWatcher
 
 

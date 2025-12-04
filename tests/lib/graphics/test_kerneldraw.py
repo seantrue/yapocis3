@@ -1,11 +1,12 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 import time
-import pytest
-from typing import Optional
 
 import numpy as np
+import pytest
 
 from yapocis.core import get_test_backends
+from yapocis.lib.kerneldraw1 import KernelDraw1
+from yapocis.utils.stereo_typing import Image1
 
 from ...random_data import (
     random_alpha,
@@ -18,9 +19,6 @@ from ...random_data import (
     random_sprites,
     random_texts,
 )
-from yapocis.lib.kerneldraw1 import KernelDraw1
-from yapocis.utils.stereo_typing import Image1
-
 from . import ASIZE, StopWatcher
 
 
@@ -43,11 +41,15 @@ def test_batch(backend, monkeypatch):
         with sw.checkpoint("display_list"):
             ad.composite(*random_composites(), alpha=1.0)
             ad.sprites(*random_sprites(), alpha=1.0)
-            ad.ellipses(random_ellipses(), colors=random_colors(), alphas=random_alpha())
+            ad.ellipses(
+                random_ellipses(), colors=random_colors(), alphas=random_alpha()
+            )
             ad.circles(random_circles(), colors=random_colors(), alphas=random_alpha())
             ad.rects(random_rects(), colors=random_colors(), alphas=random_alpha())
             ad.lines(random_lines(), colors=random_colors(), alphas=random_alpha())
-            ad.draw_strings(locations, strings, fonts=fonts, sizes=sizes, alphas=text_alphas)
+            ad.draw_strings(
+                locations, strings, fonts=fonts, sizes=sizes, alphas=text_alphas
+            )
         with sw.checkpoint("render"):
             ad.render()
         with sw.checkpoint("read"):
@@ -63,18 +65,22 @@ def fill_display_list(ad: KernelDraw1, n: int = 1000) -> None:
     colors = random_colors(n)
     alphas = random_alpha(n)
     locations, strings, fonts, sizes, rotations, text_alphas = random_texts()
-    for xyxy, color, alpha in zip(lines, colors, alphas):
+    for xyxy, color, alpha in zip(lines, colors, alphas, strict=False):
         ad.line(xyxy, width=1.5, color=color, alpha=alpha)
-    for rect, color, alpha in zip(rects, colors, alphas):
+    for rect, color, alpha in zip(rects, colors, alphas, strict=False):
         ad.rect(rect, color=color, alpha=alpha)
     for x in range(0, ASIZE, 100):
         ad.draw_string((x, x), "Hello world!")
-    for circle, color, alpha in zip(circles, colors, alphas):
+    for circle, color, alpha in zip(circles, colors, alphas, strict=False):
         ad.circle(circle, color=color, alpha=alpha)
-    for ellipse, color, alpha in zip(ellipses, colors, alphas):
+    for ellipse, color, alpha in zip(ellipses, colors, alphas, strict=False):
         ad.ellipse(ellipse, color=color, alpha=alpha)
-    for location, s, font, size, rotation, alpha in zip(locations, strings, fonts, sizes, rotations, text_alphas):
-        ad.draw_string(location, s, font=font, alpha="mask", rotation=rotation, size=size)
+    for location, s, font, size, rotation, alpha in zip(
+        locations, strings, fonts, sizes, rotations, text_alphas, strict=False
+    ):
+        ad.draw_string(
+            location, s, font=font, alpha="mask", rotation=rotation, size=size
+        )
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -88,6 +94,7 @@ def test_display_list(backend, monkeypatch):
         with sw.checkpoint("read"):
             a = ad.read()
         sw.show(a)
+
 
 # @pytest.mark.skip("Too slow for now")
 @pytest.mark.parametrize("backend", get_test_backends())

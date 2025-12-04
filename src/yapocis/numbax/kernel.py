@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
+
 
 class Kernel:
     """Callable wrapper for a Python/Numba kernel.
@@ -11,7 +12,15 @@ class Kernel:
     for out_like and handling derived dims.
     """
 
-    def __init__(self, name: str, func, params: list[tuple], kernel_manager=None, async_write: bool = False, traits: dict | None = None):
+    def __init__(
+        self,
+        name: str,
+        func,
+        params: list[tuple],
+        kernel_manager=None,
+        async_write: bool = False,
+        traits: dict | None = None,
+    ):
         self.name = name
         self.func = func
         self.params = params  # list of KernelParamSpec-like tuples/objects
@@ -35,7 +44,9 @@ class Kernel:
     def __call__(self, *args: tuple[Any], **kwargs):
         # Consume async_exec parameter for API compatibility (no-op for CPU)
         # Honor kernel_manager's default async mode if available
-        default_async = self.kernel_manager._default_async if self.kernel_manager else False
+        default_async = (
+            self.kernel_manager._default_async if self.kernel_manager else False
+        )
         async_exec = kwargs.pop("async_exec", default_async)
 
         prepared_args: list[Any] = [None] * len(self._norm)

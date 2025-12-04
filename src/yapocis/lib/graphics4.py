@@ -1,13 +1,17 @@
 """
 Low level wrappers around the OpenCL graphics kernels.
 """
+
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 import numpy as np
 
-from yapocis.lib.abstract_graphics import (AbstractGraphics,
-                                           AbstractGraphicsSetup, to_list,
-                                           to_vector)
+from yapocis.lib.abstract_graphics import (
+    AbstractGraphics,
+    AbstractGraphicsSetup,
+    to_list,
+    to_vector,
+)
 from yapocis.lib.typeset import compute_offset, render_text
 from yapocis.utils.basic import compute_360_to_180
 
@@ -39,15 +43,19 @@ class GraphicsSetup4(AbstractGraphicsSetup):
         if color and colors:
             raise RuntimeError(f"Only one of color {color} and {colors}")
         if color is None and colors is None:
-            raise RuntimeError(f"Missing one of color or colors")
+            raise RuntimeError("Missing one of color or colors")
         if color:
-            color = to_vector(color, color, self.CHANNELS, default=1.0, dtype=np.float32)
+            color = to_vector(
+                color, color, self.CHANNELS, default=1.0, dtype=np.float32
+            )
             colors = np.empty((n, self.CHANNELS), dtype=np.float32)
             colors[:] = color
         colors = arrayify(colors, (coords.shape[0], 4))
         return colors
 
-    def coerce_widths(self, coords, width=None, widths=None, distance=None, **kwargs) -> np.ndarray:
+    def coerce_widths(
+        self, coords, width=None, widths=None, distance=None, **kwargs
+    ) -> np.ndarray:
         n = coords.shape[0]
         if width and widths:
             raise RuntimeError(f"Only one of width {width} and {widths}")
@@ -57,7 +65,9 @@ class GraphicsSetup4(AbstractGraphicsSetup):
         widths = to_vector(width, widths, n, default=1.0, dtype=np.float32)
         return widths
 
-    def coerce_aa_widths(self, coords, aa_width=None, aa_widths=None, **kwargs) -> np.ndarray:
+    def coerce_aa_widths(
+        self, coords, aa_width=None, aa_widths=None, **kwargs
+    ) -> np.ndarray:
         n = coords.shape[0]
         if aa_width is not None and aa_widths is not None:
             raise RuntimeError(f"Only one of aa_width {aa_width} and {aa_widths}")
@@ -83,7 +93,7 @@ class GraphicsSetup4(AbstractGraphicsSetup):
         ipixel = 0
         coords = []
         ipixels = []
-        for block, location in zip(blocks, locations):
+        for block, location in zip(blocks, locations, strict=False):
             height, width, depth = block.shape
             assert depth == 4
             block = block.ravel()
@@ -134,8 +144,22 @@ class GraphicsSetup4(AbstractGraphicsSetup):
         ipixels = np.array(ipixels, dtype=np.int32)
         return coords, buffer, ipixels
 
-    def setup_texts(lself, locations, texts, font=None, fonts=None, size=None, sizes=None,
-                    color=None, colors=None, alpha=None, alphas=None, rotation=None, rotations=None, **kwargs):
+    def setup_texts(
+        lself,
+        locations,
+        texts,
+        font=None,
+        fonts=None,
+        size=None,
+        sizes=None,
+        color=None,
+        colors=None,
+        alpha=None,
+        alphas=None,
+        rotation=None,
+        rotations=None,
+        **kwargs,
+    ):
         n = len(locations)
         n = len(locations)
         colors = to_list(color, colors, n, default=(1, 1, 1, 1))
@@ -148,11 +172,21 @@ class GraphicsSetup4(AbstractGraphicsSetup):
         rotations = to_list(rotation, rotations, n, default=0)
         rotations = [compute_360_to_180(rotation) for rotation in rotations]
 
-        bbox_blocks = [render_text(text, font_name=font_name, size=size, rotation=rotation)
-                       for text, font_name, size, rotation in zip(texts, fonts, sizes, rotations)]
-        bboxes, blocks = zip(*bbox_blocks)
-        dxdy = [compute_offset(angle, w, h) for ((_, _, w, h), angle) in zip(bboxes, rotations)]
-        locations = [(y + dy, x + dx) for ((x, y), (dx, dy)) in zip(locations, dxdy)]
+        bbox_blocks = [
+            render_text(text, font_name=font_name, size=size, rotation=rotation)
+            for text, font_name, size, rotation in zip(
+                texts, fonts, sizes, rotations, strict=False
+            )
+        ]
+        bboxes, blocks = zip(*bbox_blocks, strict=False)
+        dxdy = [
+            compute_offset(angle, w, h)
+            for ((_, _, w, h), angle) in zip(bboxes, rotations, strict=False)
+        ]
+        locations = [
+            (y + dy, x + dx)
+            for ((x, y), (dx, dy)) in zip(locations, dxdy, strict=False)
+        ]
 
         if isinstance(alphas, (list, tuple)):
             new_alphas = []
@@ -164,7 +198,7 @@ class GraphicsSetup4(AbstractGraphicsSetup):
                 if alpha == "mask":
                     alpha = block
                 elif alpha == "bug":
-                    alpha = np.maximum(block, .33)
+                    alpha = np.maximum(block, 0.33)
                 elif isinstance(alpha, float):
                     new_alpha = np.empty_like(block)
                     new_alpha[:, :] = alpha

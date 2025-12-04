@@ -19,6 +19,7 @@ import pytest
 from yapocis.core import get_test_backends
 from yapocis.lib.graphics4 import Graphics4
 from yapocis.utils.basic import to_image
+
 from .. import StopWatcher
 
 # Canvas dimensions: odd numbers, asymmetric
@@ -29,18 +30,18 @@ CANVAS_HEIGHT = 317
 # NOTE: Graphics4 coordinates are (row, col) not (col, row)!
 # Quadrants relative to center (row=158, col=200)
 POSITIONS = {
-    'q1_top_left':     (59, 73),  # Upper-left: row=59, col=73
-    'q2_top_right':    (71, 307),  # Upper-right: row=71, col=307
-    'q3_bottom_left':  (241, 89),  # Lower-left: row=241, col=89
-    'q4_bottom_right': (269, 331)  # Lower-right: row=269, col=331
+    "q1_top_left": (59, 73),  # Upper-left: row=59, col=73
+    "q2_top_right": (71, 307),  # Upper-right: row=71, col=307
+    "q3_bottom_left": (241, 89),  # Lower-left: row=241, col=89
+    "q4_bottom_right": (269, 331),  # Lower-right: row=269, col=331
 }
 
 # Unique colors for each quadrant (RGBA, values 0-1)
 COLORS = {
-    'q1_top_left':     [1.0, 0.0, 0.0, 1.0],  # Red
-    'q2_top_right':    [0.0, 1.0, 0.0, 1.0],  # Green
-    'q3_bottom_left':  [0.0, 0.0, 1.0, 1.0],  # Blue
-    'q4_bottom_right': [1.0, 1.0, 0.0, 1.0]  # Yellow
+    "q1_top_left": [1.0, 0.0, 0.0, 1.0],  # Red
+    "q2_top_right": [0.0, 1.0, 0.0, 1.0],  # Green
+    "q3_bottom_left": [0.0, 0.0, 1.0, 1.0],  # Blue
+    "q4_bottom_right": [1.0, 1.0, 0.0, 1.0],  # Yellow
 }
 
 
@@ -98,8 +99,10 @@ def test_rects_position_validation(backend, monkeypatch):
 
     # Export to PIL
     pil_img = to_image(result)
-    assert pil_img.size == (CANVAS_WIDTH, CANVAS_HEIGHT), \
-        f"PIL image size {pil_img.size} != canvas size ({CANVAS_WIDTH}, {CANVAS_HEIGHT})"
+    assert pil_img.size == (
+        CANVAS_WIDTH,
+        CANVAS_HEIGHT,
+    ), f"PIL image size {pil_img.size} != canvas size ({CANVAS_WIDTH}, {CANVAS_HEIGHT})"
 
     # Verify each rectangle position and color
     # PIL uses (x, y) = (col, row)
@@ -109,19 +112,23 @@ def test_rects_position_validation(backend, monkeypatch):
         # Check center of rectangle (should be the quadrant color)
         center_row = row + rect_size // 2
         center_col = col + rect_size // 2
-        assert verify_pixel_color(pil_img, center_col, center_row, expected_color), \
-            f"{backend}: Rectangle at {name} (row={row}, col={col}) - center should be {expected_color[:3]}"
+        assert verify_pixel_color(
+            pil_img, center_col, center_row, expected_color
+        ), f"{backend}: Rectangle at {name} (row={row}, col={col}) - center should be {expected_color[:3]}"
 
         # Check corners (should be the quadrant color)
-        assert verify_pixel_color(pil_img, col + 1, row + 1, expected_color), \
-            f"{backend}: Rectangle at {name} - top-left corner should be {expected_color[:3]}"
-        assert verify_pixel_color(pil_img, col + rect_size - 2, row + rect_size - 2, expected_color), \
-            f"{backend}: Rectangle at {name} - bottom-right corner should be {expected_color[:3]}"
+        assert verify_pixel_color(
+            pil_img, col + 1, row + 1, expected_color
+        ), f"{backend}: Rectangle at {name} - top-left corner should be {expected_color[:3]}"
+        assert verify_pixel_color(
+            pil_img, col + rect_size - 2, row + rect_size - 2, expected_color
+        ), f"{backend}: Rectangle at {name} - bottom-right corner should be {expected_color[:3]}"
 
         # Check outside rectangle (should be white)
         if col > 2 and row > 2:
-            assert verify_pixel_is_white(pil_img, col - 2, row - 2), \
-                f"{backend}: Pixel outside rectangle at {name} should be white"
+            assert verify_pixel_is_white(
+                pil_img, col - 2, row - 2
+            ), f"{backend}: Pixel outside rectangle at {name} should be white"
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -149,15 +156,22 @@ def test_circles_position_validation(backend, monkeypatch):
         expected_color = COLORS[name]
 
         # Check center (should be the quadrant color)
-        assert verify_pixel_color(pil_img, col, row, expected_color), \
-            f"{backend}: Circle at {name} (row={row}, col={col}) - center should be {expected_color[:3]}"
+        assert verify_pixel_color(
+            pil_img, col, row, expected_color
+        ), f"{backend}: Circle at {name} (row={row}, col={col}) - center should be {expected_color[:3]}"
 
         # Check pixels at cardinal directions (should be the quadrant color)
-        for drow, dcol in [(0, radius - 1), (0, -radius + 1), (radius - 1, 0), (-radius + 1, 0)]:
+        for drow, dcol in [
+            (0, radius - 1),
+            (0, -radius + 1),
+            (radius - 1, 0),
+            (-radius + 1, 0),
+        ]:
             prow, pcol = row + drow, col + dcol
             if 0 <= pcol < CANVAS_WIDTH and 0 <= prow < CANVAS_HEIGHT:
-                assert verify_pixel_color(pil_img, pcol, prow, expected_color), \
-                    f"{backend}: Circle at {name} - point at (row={prow}, col={pcol}) should be {expected_color[:3]}"
+                assert verify_pixel_color(
+                    pil_img, pcol, prow, expected_color
+                ), f"{backend}: Circle at {name} - point at (row={prow}, col={pcol}) should be {expected_color[:3]}"
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -191,13 +205,16 @@ def test_lines_position_validation(backend, monkeypatch):
             for dcol in range(-3, 4):
                 prow, pcol = row + drow, col + dcol
                 if 0 <= pcol < CANVAS_WIDTH and 0 <= prow < CANVAS_HEIGHT:
-                    if verify_pixel_color(pil_img, pcol, prow, expected_color, tolerance=50):
+                    if verify_pixel_color(
+                        pil_img, pcol, prow, expected_color, tolerance=50
+                    ):
                         found_colored = True
                         break
             if found_colored:
                 break
-        assert found_colored, \
-            f"{backend}: Line endpoint region at {name} (row={row}, col={col}) should have pixels colored {expected_color[:3]}"
+        assert (
+            found_colored
+        ), f"{backend}: Line endpoint region at {name} (row={row}, col={col}) should have pixels colored {expected_color[:3]}"
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -227,16 +244,19 @@ def test_ellipses_position_validation(backend, monkeypatch):
         expected_color = COLORS[name]
 
         # Check center (should be the quadrant color)
-        assert verify_pixel_color(pil_img, col, row, expected_color), \
-            f"{backend}: Ellipse at {name} (row={row}, col={col}) - center should be {expected_color[:3]}"
+        assert verify_pixel_color(
+            pil_img, col, row, expected_color
+        ), f"{backend}: Ellipse at {name} (row={row}, col={col}) - center should be {expected_color[:3]}"
 
         # Check points along major/minor axes
         # Major axis (horizontal)
-        assert verify_pixel_color(pil_img, col + width // 2 - 1, row, expected_color), \
-            f"{backend}: Ellipse at {name} - point on major axis should be {expected_color[:3]}"
+        assert verify_pixel_color(
+            pil_img, col + width // 2 - 1, row, expected_color
+        ), f"{backend}: Ellipse at {name} - point on major axis should be {expected_color[:3]}"
         # Minor axis (vertical)
-        assert verify_pixel_color(pil_img, col, row + height // 2 - 1, expected_color), \
-            f"{backend}: Ellipse at {name} - point on minor axis should be {expected_color[:3]}"
+        assert verify_pixel_color(
+            pil_img, col, row + height // 2 - 1, expected_color
+        ), f"{backend}: Ellipse at {name} - point on minor axis should be {expected_color[:3]}"
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -253,11 +273,16 @@ def test_triangles_position_validation(backend, monkeypatch):
     with StopWatcher("triangles_position", kernel=g) as sw:
         for name, (row, col) in POSITIONS.items():
             color = COLORS[name]
-            triangles = [(
-                row, col,  # Vertex 1
-                row, col + triangle_size,  # Vertex 2 (same row, moved right)
-                row + triangle_size, col + triangle_size // 2  # Vertex 3 (moved down)
-            )]
+            triangles = [
+                (
+                    row,
+                    col,  # Vertex 1
+                    row,
+                    col + triangle_size,  # Vertex 2 (same row, moved right)
+                    row + triangle_size,
+                    col + triangle_size // 2,  # Vertex 3 (moved down)
+                )
+            ]
             g.triangles(canvas, triangles, color=color, aa_width=0.0)
 
         result = g.read(canvas)
@@ -270,14 +295,16 @@ def test_triangles_position_validation(backend, monkeypatch):
         expected_color = COLORS[name]
 
         # Check first vertex (should be the quadrant color)
-        assert verify_pixel_color(pil_img, col, row, expected_color, tolerance=20), \
-            f"{backend}: Triangle at {name} (row={row}, col={col}) - first vertex should be {expected_color[:3]}"
+        assert verify_pixel_color(
+            pil_img, col, row, expected_color, tolerance=20
+        ), f"{backend}: Triangle at {name} (row={row}, col={col}) - first vertex should be {expected_color[:3]}"
 
         # Check interior point (centroid-ish)
         interior_col = col + triangle_size // 2
         interior_row = row + triangle_size // 3
-        assert verify_pixel_color(pil_img, interior_col, interior_row, expected_color), \
-            f"{backend}: Triangle at {name} - interior point should be {expected_color[:3]}"
+        assert verify_pixel_color(
+            pil_img, interior_col, interior_row, expected_color
+        ), f"{backend}: Triangle at {name} - interior point should be {expected_color[:3]}"
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -293,12 +320,27 @@ def test_coordinate_system_validation(backend, monkeypatch):
     corner_size = 20
     corner_data = [
         (0, 0, corner_size, corner_size, [1.0, 0.0, 0.0, 1.0]),  # Top-left: Red
-        (0, CANVAS_WIDTH - corner_size, corner_size, CANVAS_WIDTH - 1,
-         [0.0, 1.0, 0.0, 1.0]),  # Top-right: Green
-        (CANVAS_HEIGHT - corner_size, 0, CANVAS_HEIGHT - 1, corner_size,
-         [0.0, 0.0, 1.0, 1.0]),  # Bottom-left: Blue
-        (CANVAS_HEIGHT - corner_size, CANVAS_WIDTH - corner_size,
-         CANVAS_HEIGHT - 1, CANVAS_WIDTH - 1, [1.0, 1.0, 0.0, 1.0])  # Bottom-right: Yellow
+        (
+            0,
+            CANVAS_WIDTH - corner_size,
+            corner_size,
+            CANVAS_WIDTH - 1,
+            [0.0, 1.0, 0.0, 1.0],
+        ),  # Top-right: Green
+        (
+            CANVAS_HEIGHT - corner_size,
+            0,
+            CANVAS_HEIGHT - 1,
+            corner_size,
+            [0.0, 0.0, 1.0, 1.0],
+        ),  # Bottom-left: Blue
+        (
+            CANVAS_HEIGHT - corner_size,
+            CANVAS_WIDTH - corner_size,
+            CANVAS_HEIGHT - 1,
+            CANVAS_WIDTH - 1,
+            [1.0, 1.0, 0.0, 1.0],
+        ),  # Bottom-right: Yellow
     ]
 
     with StopWatcher("coordinate_system", kernel=g) as sw:
@@ -310,25 +352,30 @@ def test_coordinate_system_validation(backend, monkeypatch):
     pil_img = to_image(result)
 
     # Verify (0, 0) is upper-left - should be red
-    assert verify_pixel_color(pil_img, 5, 5, [1.0, 0.0, 0.0]), \
-        f"{backend}: Pixel near (0, 0) should be red, confirming upper-left origin"
+    assert verify_pixel_color(
+        pil_img, 5, 5, [1.0, 0.0, 0.0]
+    ), f"{backend}: Pixel near (0, 0) should be red, confirming upper-left origin"
 
     # Verify top-right corner - should be green
-    assert verify_pixel_color(pil_img, CANVAS_WIDTH - 5, 5, [0.0, 1.0, 0.0]), \
-        f"{backend}: Top-right corner should be green"
+    assert verify_pixel_color(
+        pil_img, CANVAS_WIDTH - 5, 5, [0.0, 1.0, 0.0]
+    ), f"{backend}: Top-right corner should be green"
 
     # Verify bottom-left corner - should be blue
-    assert verify_pixel_color(pil_img, 5, CANVAS_HEIGHT - 5, [0.0, 0.0, 1.0]), \
-        f"{backend}: Bottom-left corner should be blue"
+    assert verify_pixel_color(
+        pil_img, 5, CANVAS_HEIGHT - 5, [0.0, 0.0, 1.0]
+    ), f"{backend}: Bottom-left corner should be blue"
 
     # Verify bottom-right corner - should be yellow
-    assert verify_pixel_color(pil_img, CANVAS_WIDTH - 5, CANVAS_HEIGHT - 5, [1.0, 1.0, 0.0]), \
-        f"{backend}: Bottom-right corner should be yellow"
+    assert verify_pixel_color(
+        pil_img, CANVAS_WIDTH - 5, CANVAS_HEIGHT - 5, [1.0, 1.0, 0.0]
+    ), f"{backend}: Bottom-right corner should be yellow"
 
     # Verify center is white (no corners drawn there)
     center_row, center_col = CANVAS_HEIGHT // 2, CANVAS_WIDTH // 2
-    assert verify_pixel_is_white(pil_img, center_col, center_row), \
-        f"{backend}: Center should be white (no rectangles drawn there)"
+    assert verify_pixel_is_white(
+        pil_img, center_col, center_row
+    ), f"{backend}: Center should be white (no rectangles drawn there)"
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -346,7 +393,11 @@ def test_edge_positions_validation(backend, monkeypatch):
         (5, 5, [1.0, 0.0, 0.0, 1.0]),  # Near origin (top-left): Red
         (5, CANVAS_WIDTH - 6, [0.0, 1.0, 0.0, 1.0]),  # Near top-right: Green
         (CANVAS_HEIGHT - 6, 5, [0.0, 0.0, 1.0, 1.0]),  # Near bottom-left: Blue
-        (CANVAS_HEIGHT - 6, CANVAS_WIDTH - 6, [1.0, 1.0, 0.0, 1.0])  # Near bottom-right: Yellow
+        (
+            CANVAS_HEIGHT - 6,
+            CANVAS_WIDTH - 6,
+            [1.0, 1.0, 0.0, 1.0],
+        ),  # Near bottom-right: Yellow
     ]
 
     with StopWatcher("edge_positions", kernel=g) as sw:
@@ -360,8 +411,9 @@ def test_edge_positions_validation(backend, monkeypatch):
     # Verify each edge circle with its expected color
     # PIL uses (x, y) = (col, row)
     for row, col, expected_color in edge_data:
-        assert verify_pixel_color(pil_img, col, row, expected_color), \
-            f"{backend}: Circle at edge position (row={row}, col={col}) should be colored {expected_color[:3]}"
+        assert verify_pixel_color(
+            pil_img, col, row, expected_color
+        ), f"{backend}: Circle at edge position (row={row}, col={col}) should be colored {expected_color[:3]}"
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -401,14 +453,17 @@ def test_composite_position_validation(backend, monkeypatch):
         # Check center of block
         center_col = col + block_size // 2
         center_row = row + block_size // 2
-        assert verify_pixel_color(pil_img, center_col, center_row, expected_color), \
-            f"{backend}: Composite block at {name} (row={row}, col={col}) - center should be {expected_color[:3]}"
+        assert verify_pixel_color(
+            pil_img, center_col, center_row, expected_color
+        ), f"{backend}: Composite block at {name} (row={row}, col={col}) - center should be {expected_color[:3]}"
 
         # Check corners of block
-        assert verify_pixel_color(pil_img, col + 1, row + 1, expected_color), \
-            f"{backend}: Composite block at {name} - top-left should be {expected_color[:3]}"
-        assert verify_pixel_color(pil_img, col + block_size - 2, row + block_size - 2, expected_color), \
-            f"{backend}: Composite block at {name} - bottom-right should be {expected_color[:3]}"
+        assert verify_pixel_color(
+            pil_img, col + 1, row + 1, expected_color
+        ), f"{backend}: Composite block at {name} - top-left should be {expected_color[:3]}"
+        assert verify_pixel_color(
+            pil_img, col + block_size - 2, row + block_size - 2, expected_color
+        ), f"{backend}: Composite block at {name} - bottom-right should be {expected_color[:3]}"
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -430,7 +485,9 @@ def test_text_position_validation(backend, monkeypatch):
 
     with StopWatcher("text_position", kernel=g) as sw:
         for row, col, text, color in text_data:
-            g.draw_strings(canvas, [(row, col)], [text], color=color, size=16, alpha="mask")
+            g.draw_strings(
+                canvas, [(row, col)], [text], color=color, size=16, alpha="mask"
+            )
 
         result = g.read(canvas)
         sw.show(result)
@@ -457,21 +514,26 @@ def test_text_position_validation(backend, monkeypatch):
                     pixel = pil_img.getpixel((test_col, test_row))
                     # Check if this pixel has the expected color (not white background)
                     # Allow some tolerance for anti-aliasing
-                    if (abs(pixel[0] - int(expected_color[0] * 255)) < 30 and
-                        abs(pixel[1] - int(expected_color[1] * 255)) < 30 and
-                        abs(pixel[2] - int(expected_color[2] * 255)) < 30):
+                    if (
+                        abs(pixel[0] - int(expected_color[0] * 255)) < 30
+                        and abs(pixel[1] - int(expected_color[1] * 255)) < 30
+                        and abs(pixel[2] - int(expected_color[2] * 255)) < 30
+                    ):
                         # Found a pixel with expected color
-                        if not (pixel[0] > 250 and pixel[1] > 250 and pixel[2] > 250):  # Not white
+                        if not (
+                            pixel[0] > 250 and pixel[1] > 250 and pixel[2] > 250
+                        ):  # Not white
                             found_colored_pixel = True
                             break
             if found_colored_pixel:
                 break
 
-        assert found_colored_pixel, \
-            f"{backend}: Text at {name} (row={row}, col={col}) - should find {expected_color[:3]} colored pixels in region"
+        assert (
+            found_colored_pixel
+        ), f"{backend}: Text at {name} (row={row}, col={col}) - should find {expected_color[:3]} colored pixels in region"
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Run tests manually for debugging
     import sys
 

@@ -26,15 +26,20 @@ def _get_connection():
     conn = duckdb.connect(str(DB_PATH))
 
     # Create tables if they don't exist
-    conn.execute("""
+    conn.execute(
+        """
         CREATE SEQUENCE IF NOT EXISTS runs_seq START 1
-    """)
+    """
+    )
 
-    conn.execute("""
+    conn.execute(
+        """
         CREATE SEQUENCE IF NOT EXISTS checkpoints_seq START 1
-    """)
+    """
+    )
 
-    conn.execute("""
+    conn.execute(
+        """
                  CREATE TABLE IF NOT EXISTS performance_runs
                  (
                      id
@@ -63,7 +68,8 @@ def _get_connection():
                      slowest_operation VARCHAR,
                      fastest_operation VARCHAR
                      )
-                 """)
+                 """
+    )
 
     # Migrate existing schema: add device_name and driver_version columns if they don't exist
     try:
@@ -76,7 +82,8 @@ def _get_connection():
     except Exception:
         pass  # Column already exists
 
-    conn.execute("""
+    conn.execute(
+        """
                  CREATE TABLE IF NOT EXISTS performance_checkpoints
                  (
                      id
@@ -99,18 +106,23 @@ def _get_connection():
                      id
                  )
                      )
-                 """)
+                 """
+    )
 
     # Create indexes for common queries
-    conn.execute("""
+    conn.execute(
+        """
                  CREATE INDEX IF NOT EXISTS idx_test_backend_branch
                      ON performance_runs(test_name, backend, branch, commit, file_status)
-                 """)
+                 """
+    )
 
-    conn.execute("""
+    conn.execute(
+        """
                  CREATE INDEX IF NOT EXISTS idx_timestamp
                      ON performance_runs(timestamp_unix DESC)
-                 """)
+                 """
+    )
 
     return conn
 
@@ -129,11 +141,7 @@ def get_git_info(file_path: str) -> dict[str, str]:
         file_status is "clean" ONLY if there are NO uncommitted changes or untracked files
         anywhere in the repository. This ensures "clean" results are fully replicable.
     """
-    info = {
-        "branch":      "unknown",
-        "commit":      "unknown",
-        "file_status": "unknown"
-    }
+    info = {"branch": "unknown", "commit": "unknown", "file_status": "unknown"}
 
     try:
         repo_dir = os.path.dirname(file_path)
@@ -144,7 +152,7 @@ def get_git_info(file_path: str) -> dict[str, str]:
             capture_output=True,
             text=True,
             check=True,
-            cwd=repo_dir
+            cwd=repo_dir,
         )
         info["branch"] = result.stdout.strip()
 
@@ -154,7 +162,7 @@ def get_git_info(file_path: str) -> dict[str, str]:
             capture_output=True,
             text=True,
             check=True,
-            cwd=repo_dir
+            cwd=repo_dir,
         )
         info["commit"] = result.stdout.strip()
 
@@ -165,7 +173,7 @@ def get_git_info(file_path: str) -> dict[str, str]:
             capture_output=True,
             text=True,
             check=True,
-            cwd=repo_dir
+            cwd=repo_dir,
         )
 
         # If there's ANY output, repository has uncommitted changes
@@ -173,7 +181,9 @@ def get_git_info(file_path: str) -> dict[str, str]:
             info["file_status"] = "clean"
         else:
             # Check if there are untracked files
-            has_untracked = any(line.startswith('??') for line in result.stdout.strip().split('\n'))
+            has_untracked = any(
+                line.startswith("??") for line in result.stdout.strip().split("\n")
+            )
             info["file_status"] = "untracked" if has_untracked else "modified"
 
     except subprocess.CalledProcessError:
@@ -187,14 +197,14 @@ def get_git_info(file_path: str) -> dict[str, str]:
 
 
 def save_performance_data(
-        test_name: str,
-        file_path: str,
-        backend: str,
-        timing_data: dict[str, float],
-        metadata: dict | None = None,
-        test_start_time: float | None = None,
-        device_name: str | None = None,
-        driver_version: str | None = None
+    test_name: str,
+    file_path: str,
+    backend: str,
+    timing_data: dict[str, float],
+    metadata: dict | None = None,
+    test_start_time: float | None = None,
+    device_name: str | None = None,
+    driver_version: str | None = None,
 ) -> int:
     """
     Save performance data to DuckDB.
@@ -229,9 +239,9 @@ def save_performance_data(
     stats = {}
     if times:
         stats = {
-            "min_time":          min(times),
-            "max_time":          max(times),
-            "mean_time":         sum(times) / len(times),
+            "min_time": min(times),
+            "max_time": max(times),
+            "mean_time": sum(times) / len(times),
             "slowest_operation": max(timing_data.items(), key=lambda x: x[1])[0],
             "fastest_operation": min(timing_data.items(), key=lambda x: x[1])[0],
         }
@@ -239,51 +249,57 @@ def save_performance_data(
     conn = _get_connection()
 
     # Insert run
-    result = conn.execute("""
+    result = conn.execute(
+        """
                           INSERT INTO performance_runs (test_name, test_file, backend, device_name, driver_version,
                                                         branch, commit, file_status,
                                                         timestamp, timestamp_unix, total_time, min_time, max_time,
                                                         mean_time, slowest_operation, fastest_operation)
                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id
-                          """, [
-                              test_name,
-                              os.path.basename(file_path),
-                              backend,
-                              device_name,
-                              driver_version,
-                              git_info["branch"],
-                              git_info["commit"],
-                              git_info["file_status"],
-                              timestamp,
-                              timestamp_unix,
-                              total_time,
-                              stats.get("min_time"),
-                              stats.get("max_time"),
-                              stats.get("mean_time"),
-                              stats.get("slowest_operation"),
-                              stats.get("fastest_operation"),
-                          ]).fetchone()
+                          """,
+        [
+            test_name,
+            os.path.basename(file_path),
+            backend,
+            device_name,
+            driver_version,
+            git_info["branch"],
+            git_info["commit"],
+            git_info["file_status"],
+            timestamp,
+            timestamp_unix,
+            total_time,
+            stats.get("min_time"),
+            stats.get("max_time"),
+            stats.get("mean_time"),
+            stats.get("slowest_operation"),
+            stats.get("fastest_operation"),
+        ],
+    ).fetchone()
 
     run_id = result[0]
 
     # Insert checkpoints
     for checkpoint_name, elapsed_time in timing_data.items():
-        conn.execute("""
+        conn.execute(
+            """
                      INSERT INTO performance_checkpoints (run_id, checkpoint_name, elapsed_time)
                      VALUES (?, ?, ?)
-                     """, [run_id, checkpoint_name, elapsed_time])
+                     """,
+            [run_id, checkpoint_name, elapsed_time],
+        )
 
     conn.close()
     return run_id
 
 
 def load_performance_data(
-        backend: str | None = None,
-        test_name: str | None = None,
-        branch: str | None = None,
-        file_status: str | None = None,
-        limit: int | None = None,
-        exact_match: bool = False
+    backend: str | None = None,
+    test_name: str | None = None,
+    branch: str | None = None,
+    file_status: str | None = None,
+    limit: int | None = None,
+    exact_match: bool = False,
 ) -> list[dict]:
     """
     Load and filter performance data from DuckDB.
@@ -358,39 +374,42 @@ def load_performance_data(
         run_id = row[0]
 
         # Get checkpoints for this run
-        checkpoints_result = conn.execute("""
+        checkpoints_result = conn.execute(
+            """
                                           SELECT checkpoint_name, elapsed_time
                                           FROM performance_checkpoints
                                           WHERE run_id = ?
-                                          """, [run_id]).fetchall()
+                                          """,
+            [run_id],
+        ).fetchall()
 
         checkpoints = {name: time for name, time in checkpoints_result}
 
         # Build data structure
         entry = {
             "metadata": {
-                "test_name":      row[1],
-                "test_file":      row[2],
-                "backend":        row[3],
-                "device_name":    row[4],
+                "test_name": row[1],
+                "test_file": row[2],
+                "backend": row[3],
+                "device_name": row[4],
                 "driver_version": row[5],
-                "branch":         row[6],
-                "commit":         row[7],
-                "file_status":    row[8],
-                "timestamp":      row[9].isoformat(),
+                "branch": row[6],
+                "commit": row[7],
+                "file_status": row[8],
+                "timestamp": row[9].isoformat(),
                 "timestamp_unix": row[10],
             },
-            "timing":   {
+            "timing": {
                 "checkpoints": checkpoints,
-                "total":       row[11],
+                "total": row[11],
             },
-            "stats":    {
-                "min":               row[12],
-                "max":               row[13],
-                "mean":              row[14],
+            "stats": {
+                "min": row[12],
+                "max": row[13],
+                "mean": row[14],
                 "slowest_operation": row[15],
                 "fastest_operation": row[16],
-            }
+            },
         }
 
         data.append(entry)
@@ -400,10 +419,10 @@ def load_performance_data(
 
 
 def purge_performance_data(
-        older_than_days: int | None = None,
-        backend: str | None = None,
-        test_name: str | None = None,
-        dry_run: bool = False
+    older_than_days: int | None = None,
+    backend: str | None = None,
+    test_name: str | None = None,
+    dry_run: bool = False,
 ) -> tuple[int, list[str]]:
     """
     Delete old performance data from DuckDB.
@@ -447,16 +466,22 @@ def purge_performance_data(
         run_ids = [row[0] for row in results]
 
         # Delete checkpoints first (foreign key constraint)
-        conn.execute(f"""
+        conn.execute(
+            f"""
             DELETE FROM performance_checkpoints
             WHERE run_id IN ({','.join('?' * len(run_ids))})
-        """, run_ids)
+        """,
+            run_ids,
+        )
 
         # Delete runs
-        conn.execute(f"""
+        conn.execute(
+            f"""
             DELETE FROM performance_runs
             WHERE id IN ({','.join('?' * len(run_ids))})
-        """, run_ids)
+        """,
+            run_ids,
+        )
 
     conn.close()
     return len(results), deleted_descriptions
@@ -481,7 +506,16 @@ def generate_summary_table(data: list[dict]) -> str:
         return "No performance data found."
 
     # Build table rows with unique combinations only
-    headers = ["Test Name", "Backend", "Device", "Branch", "Commit", "Status", "Total (ms)", "Timestamp"]
+    headers = [
+        "Test Name",
+        "Backend",
+        "Device",
+        "Branch",
+        "Commit",
+        "Status",
+        "Total (ms)",
+        "Timestamp",
+    ]
     rows = []
     seen = set()
 
@@ -494,23 +528,25 @@ def generate_summary_table(data: list[dict]) -> str:
             meta["test_name"],
             meta["backend"],
             meta.get("device_name", "N/A"),
-            meta["timestamp"]
+            meta["timestamp"],
         )
 
         if key in seen:
             continue
         seen.add(key)
 
-        rows.append([
-            meta["test_name"],
-            meta["backend"],
-            meta.get("device_name", "N/A"),
-            meta["branch"],
-            meta["commit"][:7],  # Short commit hash
-            meta["file_status"],
-            f"{timing['total'] * 1000:.2f}",  # Convert to milliseconds
-            datetime.fromisoformat(meta["timestamp"]).strftime("%Y-%m-%d %H:%M")
-        ])
+        rows.append(
+            [
+                meta["test_name"],
+                meta["backend"],
+                meta.get("device_name", "N/A"),
+                meta["branch"],
+                meta["commit"][:7],  # Short commit hash
+                meta["file_status"],
+                f"{timing['total'] * 1000:.2f}",  # Convert to milliseconds
+                datetime.fromisoformat(meta["timestamp"]).strftime("%Y-%m-%d %H:%M"),
+            ]
+        )
 
     return tabulate(rows, headers=headers, tablefmt="github")
 
@@ -564,9 +600,9 @@ def generate_checkpoint_comparison_table(data: list[dict]) -> str:
 
 
 def plot_backend_comparison(
-        data: list[dict],
-        output_path: Path | None = None,
-        checkpoint_name: str | None = None
+    data: list[dict],
+    output_path: Path | None = None,
+    checkpoint_name: str | None = None,
 ) -> Path | None:
     """
     Generate a bar chart comparing performance across backends.
@@ -583,7 +619,9 @@ def plot_backend_comparison(
         import matplotlib.pyplot as plt
         import seaborn as sns
     except ImportError:
-        print("Error: matplotlib and seaborn required. Run: pip install matplotlib seaborn")
+        print(
+            "Error: matplotlib and seaborn required. Run: pip install matplotlib seaborn"
+        )
         return None
 
     if not data:
@@ -615,7 +653,7 @@ def plot_backend_comparison(
         if len(times) > 1:
             mean = sum(times) / len(times)
             variance = sum((t - mean) ** 2 for t in times) / len(times)
-            stds.append(variance ** 0.5)
+            stds.append(variance**0.5)
         else:
             stds.append(0)
 
@@ -627,12 +665,12 @@ def plot_backend_comparison(
 
     # Color bars
     colors = sns.color_palette("husl", len(backends))
-    for bar, color in zip(bars, colors):
+    for bar, color in zip(bars, colors, strict=False):
         bar.set_color(color)
 
     ax.set_xlabel("Backend", fontsize=12)
     ax.set_ylabel("Time (seconds)", fontsize=12)
-    title = f"Backend Comparison"
+    title = "Backend Comparison"
     if checkpoint_name:
         title += f" - {checkpoint_name}"
     else:
@@ -642,11 +680,11 @@ def plot_backend_comparison(
     ax.set_xticklabels(backends)
 
     # Add value labels on bars
-    for i, (mean, std) in enumerate(zip(means, stds)):
+    for i, (mean, std) in enumerate(zip(means, stds, strict=False)):
         label = f"{mean:.3f}s"
         if std > 0:
             label += f"\n±{std:.3f}s"
-        ax.text(i, mean, label, ha='center', va='bottom', fontsize=9)
+        ax.text(i, mean, label, ha="center", va="bottom", fontsize=9)
 
     plt.tight_layout()
 
@@ -660,9 +698,9 @@ def plot_backend_comparison(
 
 
 def plot_longitudinal_trend(
-        data: list[dict],
-        output_path: Path | None = None,
-        checkpoint_name: str | None = None
+    data: list[dict],
+    output_path: Path | None = None,
+    checkpoint_name: str | None = None,
 ) -> Path | None:
     """
     Generate a line graph showing performance trends over time.
@@ -676,11 +714,13 @@ def plot_longitudinal_trend(
         Path to saved plot, or None if matplotlib not available
     """
     try:
-        import matplotlib.pyplot as plt
         import matplotlib.dates as mdates
+        import matplotlib.pyplot as plt
         import seaborn as sns
     except ImportError:
-        print("Error: matplotlib and seaborn required. Run: pip install matplotlib seaborn")
+        print(
+            "Error: matplotlib and seaborn required. Run: pip install matplotlib seaborn"
+        )
         return None
 
     if not data:
@@ -710,9 +750,16 @@ def plot_longitudinal_trend(
     fig, ax = plt.subplots(figsize=(12, 6))
     colors = sns.color_palette("husl", len(backend_data))
 
-    for (backend, bd), color in zip(sorted(backend_data.items()), colors):
-        ax.plot(bd["timestamps"], bd["times"], marker='o', label=backend,
-                color=color, linewidth=2, markersize=6)
+    for (backend, bd), color in zip(sorted(backend_data.items()), colors, strict=False):
+        ax.plot(
+            bd["timestamps"],
+            bd["times"],
+            marker="o",
+            label=backend,
+            color=color,
+            linewidth=2,
+            markersize=6,
+        )
 
     ax.set_xlabel("Date/Time", fontsize=12)
     ax.set_ylabel("Time (seconds)", fontsize=12)
@@ -724,8 +771,8 @@ def plot_longitudinal_trend(
     ax.set_title(title, fontsize=14)
 
     # Format x-axis
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d %H:%M'))
-    plt.xticks(rotation=45, ha='right')
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d %H:%M"))
+    plt.xticks(rotation=45, ha="right")
 
     ax.legend()
     ax.grid(True, alpha=0.3)
@@ -742,9 +789,7 @@ def plot_longitudinal_trend(
 
 
 def plot_checkpoint_breakdown(
-        data: dict,
-        output_path: Path | None = None,
-        plot_type: str = "bar"
+    data: dict, output_path: Path | None = None, plot_type: str = "bar"
 ) -> Path | None:
     """
     Generate a breakdown chart of checkpoint times for a single test run.
@@ -761,7 +806,9 @@ def plot_checkpoint_breakdown(
         import matplotlib.pyplot as plt
         import seaborn as sns
     except ImportError:
-        print("Error: matplotlib and seaborn required. Run: pip install matplotlib seaborn")
+        print(
+            "Error: matplotlib and seaborn required. Run: pip install matplotlib seaborn"
+        )
         return None
 
     checkpoints = data["timing"]["checkpoints"]
@@ -787,17 +834,17 @@ def plot_checkpoint_breakdown(
             labels=names,
             autopct=lambda pct: f"{pct:.1f}%\n({pct / 100 * sum(times):.3f}s)",
             colors=colors,
-            startangle=90
+            startangle=90,
         )
         # Make percentage text more readable
         for autotext in autotexts:
-            autotext.set_color('white')
+            autotext.set_color("white")
             autotext.set_fontsize(9)
-            autotext.set_weight('bold')
+            autotext.set_weight("bold")
         ax.set_title(
             f"Checkpoint Breakdown - {data['metadata']['test_name']}\n"
             f"{data['metadata']['backend']} - Total: {sum(times):.3f}s",
-            fontsize=12
+            fontsize=12,
         )
     else:  # bar chart
         colors = sns.color_palette("husl", len(names))
@@ -809,14 +856,15 @@ def plot_checkpoint_breakdown(
         ax.set_title(
             f"Checkpoint Breakdown - {data['metadata']['test_name']}\n"
             f"{data['metadata']['backend']} - Total: {sum(times):.3f}s",
-            fontsize=12
+            fontsize=12,
         )
 
         # Add value labels
-        for i, (time, bar) in enumerate(zip(times, bars)):
-            percentage = (time / sum(times) * 100)
-            ax.text(time, i, f" {time:.3f}s ({percentage:.1f}%)",
-                    va='center', fontsize=9)
+        for i, (time, bar) in enumerate(zip(times, bars, strict=False)):
+            percentage = time / sum(times) * 100
+            ax.text(
+                time, i, f" {time:.3f}s ({percentage:.1f}%)", va="center", fontsize=9
+            )
 
         ax.invert_yaxis()  # Highest value on top
 
@@ -832,8 +880,7 @@ def plot_checkpoint_breakdown(
 
 
 def generate_backend_comparison_report(
-        test_name: str,
-        output_path: Path | None = None
+    test_name: str, output_path: Path | None = None
 ) -> Path:
     """
     Generate a comprehensive markdown report comparing backend performance.
@@ -856,7 +903,10 @@ def generate_backend_comparison_report(
         output_path = REPORTS_DIR / f"backend_comparison_{timestamp}.md"
 
     # Generate visualizations
-    plot_path = REPORTS_DIR / f"backend_comparison_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+    plot_path = (
+        REPORTS_DIR
+        / f"backend_comparison_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+    )
     plot_backend_comparison(data, output_path=plot_path)
 
     # Generate markdown report
@@ -908,22 +958,22 @@ def generate_backend_comparison_report(
             mean = sum(times) / len(times)
             if len(times) > 1:
                 variance = sum((t - mean) ** 2 for t in times) / len(times)
-                std = variance ** 0.5
-                lines.append(f"- **{backend}**: {mean:.3f}s ± {std:.3f}s ({len(times)} runs)")
+                std = variance**0.5
+                lines.append(
+                    f"- **{backend}**: {mean:.3f}s ± {std:.3f}s ({len(times)} runs)"
+                )
             else:
                 lines.append(f"- **{backend}**: {mean:.3f}s ({len(times)} run)")
 
     # Write report
-    with open(output_path, 'w') as f:
-        f.write('\n'.join(lines))
+    with open(output_path, "w") as f:
+        f.write("\n".join(lines))
 
     return output_path
 
 
 def generate_longitudinal_report(
-        test_name: str,
-        backend: str | None = None,
-        output_path: Path | None = None
+    test_name: str, backend: str | None = None, output_path: Path | None = None
 ) -> Path:
     """
     Generate a markdown report showing performance trends over time.
@@ -937,7 +987,9 @@ def generate_longitudinal_report(
         Path to saved report
     """
     # Load data (exact match)
-    data = load_performance_data(test_name=test_name, backend=backend, limit=100, exact_match=True)
+    data = load_performance_data(
+        test_name=test_name, backend=backend, limit=100, exact_match=True
+    )
 
     if not data:
         raise ValueError(f"No performance data found for test: {test_name}")
@@ -947,7 +999,9 @@ def generate_longitudinal_report(
         output_path = REPORTS_DIR / f"longitudinal_{timestamp}.md"
 
     # Generate visualizations
-    plot_path = REPORTS_DIR / f"longitudinal_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+    plot_path = (
+        REPORTS_DIR / f"longitudinal_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+    )
     plot_longitudinal_trend(data, output_path=plot_path)
 
     # Build report
@@ -964,19 +1018,21 @@ def generate_longitudinal_report(
     if backend:
         lines.append(f"- Backend: {backend}")
 
-    lines.extend([
-        f"- Total runs analyzed: {len(data)}",
-        f"- Time range: {datetime.fromisoformat(data[-1]['metadata']['timestamp']).strftime('%Y-%m-%d')} to {datetime.fromisoformat(data[0]['metadata']['timestamp']).strftime('%Y-%m-%d')}",
-        "",
-        "## Performance Trend",
-        "",
-        f"![Longitudinal Trend]({plot_path.name})",
-        "",
-        "## Recent Results",
-        "",
-        f"{generate_summary_table(data[:10])}",
-        "",
-    ])
+    lines.extend(
+        [
+            f"- Total runs analyzed: {len(data)}",
+            f"- Time range: {datetime.fromisoformat(data[-1]['metadata']['timestamp']).strftime('%Y-%m-%d')} to {datetime.fromisoformat(data[0]['metadata']['timestamp']).strftime('%Y-%m-%d')}",
+            "",
+            "## Performance Trend",
+            "",
+            f"![Longitudinal Trend]({plot_path.name})",
+            "",
+            "## Recent Results",
+            "",
+            f"{generate_summary_table(data[:10])}",
+            "",
+        ]
+    )
 
     # Regression detection
     lines.append("## Regression Analysis")
@@ -988,22 +1044,30 @@ def generate_longitudinal_report(
         b = entry["metadata"]["backend"]
         if b not in backend_data:
             backend_data[b] = []
-        backend_data[b].append((
-            datetime.fromisoformat(entry["metadata"]["timestamp"]),
-            entry["timing"]["total"]
-        ))
+        backend_data[b].append(
+            (
+                datetime.fromisoformat(entry["metadata"]["timestamp"]),
+                entry["timing"]["total"],
+            )
+        )
 
     for b in sorted(backend_data.keys()):
         runs = sorted(backend_data[b], key=lambda x: x[0])  # Sort by timestamp
         if len(runs) >= 3:
             # Compare recent vs historical
             recent_times = [t for _, t in runs[-3:]]
-            historical_times = [t for _, t in runs[:-3]] if len(runs) > 3 else recent_times
+            historical_times = (
+                [t for _, t in runs[:-3]] if len(runs) > 3 else recent_times
+            )
 
             recent_mean = sum(recent_times) / len(recent_times)
             historical_mean = sum(historical_times) / len(historical_times)
 
-            change_pct = ((recent_mean - historical_mean) / historical_mean * 100) if historical_mean > 0 else 0
+            change_pct = (
+                ((recent_mean - historical_mean) / historical_mean * 100)
+                if historical_mean > 0
+                else 0
+            )
 
             if abs(change_pct) > 10:
                 direction = "slower" if change_pct > 0 else "faster"
@@ -1014,18 +1078,19 @@ def generate_longitudinal_report(
             else:
                 lines.append(f"- **{b}**: Performance stable ({recent_mean:.3f}s)")
         else:
-            lines.append(f"- **{b}**: Insufficient data for regression analysis ({len(runs)} runs)")
+            lines.append(
+                f"- **{b}**: Insufficient data for regression analysis ({len(runs)} runs)"
+            )
 
     # Write report
-    with open(output_path, 'w') as f:
-        f.write('\n'.join(lines))
+    with open(output_path, "w") as f:
+        f.write("\n".join(lines))
 
     return output_path
 
 
 def generate_comprehensive_report(
-        test_name: str | None = None,
-        output_path: Path | None = None
+    test_name: str | None = None, output_path: Path | None = None
 ) -> Path:
     """
     Generate a comprehensive performance report with all available data.
@@ -1038,11 +1103,13 @@ def generate_comprehensive_report(
         Path to saved report
     """
     try:
-        from tabulate import tabulate
         import matplotlib.pyplot as plt
         import seaborn as sns
+        from tabulate import tabulate
     except ImportError:
-        raise ImportError("matplotlib, seaborn, and tabulate required for comprehensive reports")
+        raise ImportError(
+            "matplotlib, seaborn, and tabulate required for comprehensive reports"
+        )
 
     # Load all data or filtered by test name
     data = load_performance_data(test_name=test_name, limit=1000)
@@ -1063,15 +1130,11 @@ def generate_comprehensive_report(
             meta["backend"],
             meta["branch"],
             meta["commit"],
-            meta["file_status"]
+            meta["file_status"],
         )
 
         if key not in aggregated:
-            aggregated[key] = {
-                "times":       [],
-                "metadata":    meta,
-                "checkpoints": {}
-            }
+            aggregated[key] = {"times": [], "metadata": meta, "checkpoints": {}}
 
         aggregated[key]["times"].append(entry["timing"]["total"])
 
@@ -1090,21 +1153,25 @@ def generate_comprehensive_report(
 
         if len(times) > 1:
             variance = sum((t - mean_time) ** 2 for t in times) / len(times)
-            std_time = variance ** 0.5
+            std_time = variance**0.5
         else:
             std_time = 0.0
 
-        agg_data.append({
-            "test_name":   test_name_key,
-            "backend":     backend,
-            "branch":      branch,
-            "commit":      commit,
-            "status":      status,
-            "mean":        mean_time,
-            "std":         std_time,
-            "runs":        len(times),
-            "checkpoints": {k: sum(v) / len(v) for k, v in values["checkpoints"].items()}
-        })
+        agg_data.append(
+            {
+                "test_name": test_name_key,
+                "backend": backend,
+                "branch": branch,
+                "commit": commit,
+                "status": status,
+                "mean": mean_time,
+                "std": std_time,
+                "runs": len(times),
+                "checkpoints": {
+                    k: sum(v) / len(v) for k, v in values["checkpoints"].items()
+                },
+            }
+        )
 
     # Sort by test name, then backend
     agg_data.sort(key=lambda x: (x["test_name"], x["backend"]))
@@ -1117,20 +1184,30 @@ def generate_comprehensive_report(
         else:
             time_str = f"{item['mean']:.3f}"
 
-        table_rows.append([
-            item["test_name"],
-            item["backend"],
-            item["branch"],
-            item["commit"][:7],
-            item["status"],
-            time_str,
-            item["runs"]
-        ])
+        table_rows.append(
+            [
+                item["test_name"],
+                item["backend"],
+                item["branch"],
+                item["commit"][:7],
+                item["status"],
+                time_str,
+                item["runs"],
+            ]
+        )
 
     aggregated_table = tabulate(
         table_rows,
-        headers=["Test Name", "Backend", "Branch", "Commit", "Status", "Time (s)", "Runs"],
-        tablefmt="github"
+        headers=[
+            "Test Name",
+            "Backend",
+            "Branch",
+            "Commit",
+            "Status",
+            "Time (s)",
+            "Runs",
+        ],
+        tablefmt="github",
     )
 
     # Generate comparison graph across all tests
@@ -1154,7 +1231,9 @@ def generate_comprehensive_report(
         # Limit to first 20 tests for readability
         plot_tests = dict(list(multi_backend_tests.items())[:20])
 
-        backends = sorted(set(b for test_data in plot_tests.values() for b in test_data.keys()))
+        backends = sorted(
+            set(b for test_data in plot_tests.values() for b in test_data.keys())
+        )
         test_names = list(plot_tests.keys())
 
         fig, ax = plt.subplots(figsize=(max(12, len(test_names) * 0.5), 8))
@@ -1166,14 +1245,24 @@ def generate_comprehensive_report(
         for i, backend in enumerate(backends):
             times = [plot_tests[tn].get(backend, 0) for tn in test_names]
             offset = (i - len(backends) / 2) * width + width / 2
-            ax.bar([pos + offset for pos in x], times, width, label=backend, color=colors[i], alpha=0.8)
+            ax.bar(
+                [pos + offset for pos in x],
+                times,
+                width,
+                label=backend,
+                color=colors[i],
+                alpha=0.8,
+            )
 
         ax.set_xlabel("Test", fontsize=12)
         ax.set_ylabel("Time (seconds)", fontsize=12)
         ax.set_title("Performance Comparison Across Tests and Backends", fontsize=14)
         ax.set_xticks(x)
-        ax.set_xticklabels([tn.split('.')[-1] if '.' in tn else tn for tn in test_names],
-                           rotation=45, ha='right')
+        ax.set_xticklabels(
+            [tn.split(".")[-1] if "." in tn else tn for tn in test_names],
+            rotation=45,
+            ha="right",
+        )
         ax.legend(title="Backend")
         ax.grid(True, alpha=0.3)
 
@@ -1202,25 +1291,29 @@ def generate_comprehensive_report(
         lines.append(f"- Filtered by test: `{test_name}`")
 
     if graph_path:
-        lines.extend([
-            "",
-            "## Performance Comparison",
-            "",
-            f"![Performance Comparison]({graph_path.name})",
-        ])
+        lines.extend(
+            [
+                "",
+                "## Performance Comparison",
+                "",
+                f"![Performance Comparison]({graph_path.name})",
+            ]
+        )
 
-    lines.extend([
-        "",
-        "## Aggregated Results",
-        "",
-        "Results are aggregated by (Test Name, Backend, Branch, Commit, Status).",
-        "Multiple runs with the same key are averaged together.",
-        "",
-        aggregated_table,
-        "",
-        "## Performance by Test",
-        "",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Aggregated Results",
+            "",
+            "Results are aggregated by (Test Name, Backend, Branch, Commit, Status).",
+            "Multiple runs with the same key are averaged together.",
+            "",
+            aggregated_table,
+            "",
+            "## Performance by Test",
+            "",
+        ]
+    )
 
     # Group by test name for detailed breakdown
     test_groups = {}
@@ -1238,33 +1331,38 @@ def generate_comprehensive_report(
         for item in test_items:
             if item["std"] > 0:
                 lines.append(
-                    f"- **{item['backend']}** ({item['status']}): {item['mean']:.3f}s ± {item['std']:.3f}s ({item['runs']} runs)")
+                    f"- **{item['backend']}** ({item['status']}): {item['mean']:.3f}s ± {item['std']:.3f}s ({item['runs']} runs)"
+                )
             else:
-                lines.append(f"- **{item['backend']}** ({item['status']}): {item['mean']:.3f}s ({item['runs']} run)")
+                lines.append(
+                    f"- **{item['backend']}** ({item['status']}): {item['mean']:.3f}s ({item['runs']} run)"
+                )
         lines.append("")
 
-    lines.extend([
-        "## Notes",
-        "",
-        "- Performance data is tracked automatically when tests use `StopWatcher(save_perf=True)`",
-        "- Results are aggregated by test name, backend, branch, commit, and file status",
-        "- Times shown are mean ± standard deviation across multiple runs",
-        "- Use `scripts/performance_report.py compare <test>` for detailed backend comparisons",
-    ])
+    lines.extend(
+        [
+            "## Notes",
+            "",
+            "- Performance data is tracked automatically when tests use `StopWatcher(save_perf=True)`",
+            "- Results are aggregated by test name, backend, branch, commit, and file status",
+            "- Times shown are mean ± standard deviation across multiple runs",
+            "- Use `scripts/performance_report.py compare <test>` for detailed backend comparisons",
+        ]
+    )
 
     # Write report
-    with open(output_path, 'w') as f:
-        f.write('\n'.join(lines))
+    with open(output_path, "w") as f:
+        f.write("\n".join(lines))
 
     return output_path
 
 
 def generate_backend_cross_comparison_report(
-        test_pattern: str | None = None,
-        branch: str | None = None,
-        component: str | None = None,
-        limit: int = 100,
-        output_path: Path | None = None
+    test_pattern: str | None = None,
+    branch: str | None = None,
+    component: str | None = None,
+    limit: int = 100,
+    output_path: Path | None = None,
 ) -> Path:
     """
     Generate a comprehensive cross-backend comparison report.
@@ -1283,11 +1381,13 @@ def generate_backend_cross_comparison_report(
         Path to saved report
     """
     try:
-        from tabulate import tabulate
         import matplotlib.pyplot as plt
         import seaborn as sns
+        from tabulate import tabulate
     except ImportError:
-        raise ImportError("matplotlib, seaborn, and tabulate required for backend comparison reports")
+        raise ImportError(
+            "matplotlib, seaborn, and tabulate required for backend comparison reports"
+        )
 
     # Load data from database
     conn = _get_connection()
@@ -1324,25 +1424,30 @@ def generate_backend_cross_comparison_report(
 
     if not result:
         raise ValueError(
-            f"No performance data found (test_pattern={test_pattern}, component={component}, branch={branch})")
+            f"No performance data found (test_pattern={test_pattern}, component={component}, branch={branch})"
+        )
 
     # Convert to dict format
     data = []
     for row in result:
-        data.append({
-            "metadata": {
-                "test_name":   row[0],
-                "backend":     row[1],
-                "device_name": row[2] or "N/A",
-                "branch":      row[3],
-                "commit":      row[4],
-                "file_status": row[5],
-                "timestamp":   row[7].isoformat() if hasattr(row[7], 'isoformat') else str(row[7])
-            },
-            "timing":   {
-                "total": row[6]
+        data.append(
+            {
+                "metadata": {
+                    "test_name": row[0],
+                    "backend": row[1],
+                    "device_name": row[2] or "N/A",
+                    "branch": row[3],
+                    "commit": row[4],
+                    "file_status": row[5],
+                    "timestamp": (
+                        row[7].isoformat()
+                        if hasattr(row[7], "isoformat")
+                        else str(row[7])
+                    ),
+                },
+                "timing": {"total": row[6]},
             }
-        })
+        )
 
     if output_path is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -1370,27 +1475,31 @@ def generate_backend_cross_comparison_report(
             mean = sum(times) / len(times)
             if len(times) > 1:
                 variance = sum((t - mean) ** 2 for t in times) / len(times)
-                std = variance ** 0.5
+                std = variance**0.5
             else:
                 std = 0.0
 
             test_stats[test_name][backend] = {
                 "mean": mean,
-                "std":  std,
-                "min":  min(times),
-                "max":  max(times),
-                "runs": len(times)
+                "std": std,
+                "min": min(times),
+                "max": max(times),
+                "runs": len(times),
             }
 
     # Create comparison table
-    all_backends = sorted(set(b for backends in test_backend_data.values() for b in backends.keys()))
+    all_backends = sorted(
+        set(b for backends in test_backend_data.values() for b in backends.keys())
+    )
 
     table_rows = []
     for test_name in sorted(test_stats.keys()):
         backend_stats = test_stats[test_name]
 
         # Find baseline (fastest backend)
-        baseline_backend = min(backend_stats.keys(), key=lambda b: backend_stats[b]["mean"])
+        baseline_backend = min(
+            backend_stats.keys(), key=lambda b: backend_stats[b]["mean"]
+        )
         baseline_mean = backend_stats[baseline_backend]["mean"]
 
         row = [test_name]
@@ -1421,9 +1530,7 @@ def generate_backend_cross_comparison_report(
         table_rows.append(row)
 
     comparison_table = tabulate(
-        table_rows,
-        headers=["Test"] + all_backends,
-        tablefmt="github"
+        table_rows, headers=["Test"] + all_backends, tablefmt="github"
     )
 
     # Create visualization
@@ -1445,7 +1552,9 @@ def generate_backend_cross_comparison_report(
             stds = []
             for tn in test_names:
                 if backend in plot_tests[tn]:
-                    means.append(plot_tests[tn][backend]["mean"] * 1000)  # Convert to ms
+                    means.append(
+                        plot_tests[tn][backend]["mean"] * 1000
+                    )  # Convert to ms
                     stds.append(plot_tests[tn][backend]["std"] * 1000)
                 else:
                     means.append(0)
@@ -1460,7 +1569,7 @@ def generate_backend_cross_comparison_report(
                 label=backend,
                 color=colors[i],
                 alpha=0.8,
-                capsize=3
+                capsize=3,
             )
 
         ax.set_xlabel("Test", fontsize=12)
@@ -1468,12 +1577,12 @@ def generate_backend_cross_comparison_report(
         ax.set_title("Backend Performance Comparison", fontsize=14)
         ax.set_xticks(x)
         ax.set_xticklabels(
-            [tn.split('.')[-1] if '.' in tn else tn for tn in test_names],
+            [tn.split(".")[-1] if "." in tn else tn for tn in test_names],
             rotation=45,
-            ha='right'
+            ha="right",
         )
-        ax.legend(title="Backend", loc='upper left')
-        ax.grid(True, alpha=0.3, axis='y')
+        ax.legend(title="Backend", loc="upper left")
+        ax.grid(True, alpha=0.3, axis="y")
 
         plt.tight_layout()
         timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -1503,26 +1612,30 @@ def generate_backend_cross_comparison_report(
     if branch:
         lines.append(f"- Filtered by branch: `{branch}`")
 
-    lines.extend([
-        "",
-        "## Performance Comparison",
-        "",
-        "Times shown as: mean±std (speedup vs baseline) [number of runs]",
-        "",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Performance Comparison",
+            "",
+            "Times shown as: mean±std (speedup vs baseline) [number of runs]",
+            "",
+        ]
+    )
 
     if graph_path:
         lines.append(f"![Backend Comparison]({graph_path.name})")
         lines.append("")
 
-    lines.extend([
-        "## Results Table",
-        "",
-        comparison_table,
-        "",
-        "## Backend Summary",
-        "",
-    ])
+    lines.extend(
+        [
+            "## Results Table",
+            "",
+            comparison_table,
+            "",
+            "## Backend Summary",
+            "",
+        ]
+    )
 
     # Overall backend statistics
     backend_totals = {}
@@ -1535,39 +1648,43 @@ def generate_backend_cross_comparison_report(
     for backend in sorted(backend_totals.keys()):
         times = backend_totals[backend]
         mean = sum(times) / len(times)
-        lines.append(f"- **{backend}**: Average {mean * 1000:.2f}ms across {len(times)} tests")
+        lines.append(
+            f"- **{backend}**: Average {mean * 1000:.2f}ms across {len(times)} tests"
+        )
 
-    lines.extend([
-        "",
-        "## Interpretation",
-        "",
-        "- **Speedup**: Ratio of baseline (fastest) backend time to current backend time",
-        "- **Baseline**: The fastest backend for each test (shown as speedup 1.0x)",
-        "- **N/A**: Backend has no performance data for this test",
-        "- Lower times and higher speedups indicate better performance",
-        "",
-        "## Notes",
-        "",
-        "- Results are averaged across multiple runs when available",
-        "- Standard deviation shows consistency (lower is more consistent)",
-        "- Compare backends on same hardware for fairest results",
-        "- Different tests may favor different backends based on workload characteristics",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Interpretation",
+            "",
+            "- **Speedup**: Ratio of baseline (fastest) backend time to current backend time",
+            "- **Baseline**: The fastest backend for each test (shown as speedup 1.0x)",
+            "- **N/A**: Backend has no performance data for this test",
+            "- Lower times and higher speedups indicate better performance",
+            "",
+            "## Notes",
+            "",
+            "- Results are averaged across multiple runs when available",
+            "- Standard deviation shows consistency (lower is more consistent)",
+            "- Compare backends on same hardware for fairest results",
+            "- Different tests may favor different backends based on workload characteristics",
+        ]
+    )
 
     # Write report
-    with open(output_path, 'w') as f:
-        f.write('\n'.join(lines))
+    with open(output_path, "w") as f:
+        f.write("\n".join(lines))
 
     return output_path
 
 
 def generate_branch_comparison_report(
-        test_pattern: str | None = None,
-        backend: str | None = None,
-        component: str | None = None,
-        branches: list[str] | None = None,
-        limit: int = 100,
-        output_path: Path | None = None
+    test_pattern: str | None = None,
+    backend: str | None = None,
+    component: str | None = None,
+    branches: list[str] | None = None,
+    limit: int = 100,
+    output_path: Path | None = None,
 ) -> Path:
     """
     Generate a comprehensive cross-branch comparison report.
@@ -1587,11 +1704,13 @@ def generate_branch_comparison_report(
         Path to saved report
     """
     try:
-        from tabulate import tabulate
         import matplotlib.pyplot as plt
         import seaborn as sns
+        from tabulate import tabulate
     except ImportError:
-        raise ImportError("matplotlib, seaborn, and tabulate required for branch comparison reports")
+        raise ImportError(
+            "matplotlib, seaborn, and tabulate required for branch comparison reports"
+        )
 
     # Load data from database
     conn = _get_connection()
@@ -1620,7 +1739,7 @@ def generate_branch_comparison_report(
         params.append(backend)
 
     if branches:
-        placeholders = ','.join(['?' for _ in branches])
+        placeholders = ",".join(["?" for _ in branches])
         query += f" AND branch IN ({placeholders})"
         params.extend(branches)
 
@@ -1631,24 +1750,29 @@ def generate_branch_comparison_report(
 
     if not result:
         raise ValueError(
-            f"No performance data found (test_pattern={test_pattern}, component={component}, backend={backend}, branches={branches})")
+            f"No performance data found (test_pattern={test_pattern}, component={component}, backend={backend}, branches={branches})"
+        )
 
     # Convert to dict format
     data = []
     for row in result:
-        data.append({
-            "metadata": {
-                "test_name":   row[0],
-                "backend":     row[1],
-                "branch":      row[2],
-                "commit":      row[3],
-                "file_status": row[4],
-                "timestamp":   row[6].isoformat() if hasattr(row[6], 'isoformat') else str(row[6])
-            },
-            "timing":   {
-                "total": row[5]
+        data.append(
+            {
+                "metadata": {
+                    "test_name": row[0],
+                    "backend": row[1],
+                    "branch": row[2],
+                    "commit": row[3],
+                    "file_status": row[4],
+                    "timestamp": (
+                        row[6].isoformat()
+                        if hasattr(row[6], "isoformat")
+                        else str(row[6])
+                    ),
+                },
+                "timing": {"total": row[5]},
             }
-        })
+        )
 
     if output_path is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -1670,7 +1794,9 @@ def generate_branch_comparison_report(
         if backend_name not in test_branch_backend_data[test_name][branch]:
             test_branch_backend_data[test_name][branch][backend_name] = []
 
-        test_branch_backend_data[test_name][branch][backend_name].append(entry["timing"]["total"])
+        test_branch_backend_data[test_name][branch][backend_name].append(
+            entry["timing"]["total"]
+        )
 
     # Calculate statistics
     test_stats = {}
@@ -1682,25 +1808,34 @@ def generate_branch_comparison_report(
                 mean = sum(times) / len(times)
                 if len(times) > 1:
                     variance = sum((t - mean) ** 2 for t in times) / len(times)
-                    std = variance ** 0.5
+                    std = variance**0.5
                 else:
                     std = 0.0
 
                 test_stats[test_name][branch_name][backend_name] = {
                     "mean": mean,
-                    "std":  std,
-                    "min":  min(times),
-                    "max":  max(times),
-                    "runs": len(times)
+                    "std": std,
+                    "min": min(times),
+                    "max": max(times),
+                    "runs": len(times),
                 }
 
     # Get all branches and backends
-    all_branches = sorted(set(b for test_data in test_branch_backend_data.values() for b in test_data.keys()))
-    all_backends = sorted(set(
-        be for test_data in test_branch_backend_data.values()
-        for branch_data in test_data.values()
-        for be in branch_data.keys()
-    ))
+    all_branches = sorted(
+        set(
+            b
+            for test_data in test_branch_backend_data.values()
+            for b in test_data.keys()
+        )
+    )
+    all_backends = sorted(
+        set(
+            be
+            for test_data in test_branch_backend_data.values()
+            for branch_data in test_data.values()
+            for be in branch_data.keys()
+        )
+    )
 
     # Create comparison table
     # If single backend, show branches as columns; if multiple backends, show backend:branch combinations
@@ -1714,16 +1849,25 @@ def generate_branch_comparison_report(
             backend_name = all_backends[0]
 
             # Find baseline (fastest branch)
-            valid_branches = [b for b in all_branches if b in branch_stats and backend_name in branch_stats[b]]
+            valid_branches = [
+                b
+                for b in all_branches
+                if b in branch_stats and backend_name in branch_stats[b]
+            ]
             if not valid_branches:
                 continue
 
-            baseline_branch = min(valid_branches, key=lambda b: branch_stats[b][backend_name]["mean"])
+            baseline_branch = min(
+                valid_branches, key=lambda b: branch_stats[b][backend_name]["mean"]
+            )
             baseline_mean = branch_stats[baseline_branch][backend_name]["mean"]
 
             row = [test_name]
             for branch_name in all_branches:
-                if branch_name in branch_stats and backend_name in branch_stats[branch_name]:
+                if (
+                    branch_name in branch_stats
+                    and backend_name in branch_stats[branch_name]
+                ):
                     stats = branch_stats[branch_name][backend_name]
                     speedup = baseline_mean / stats["mean"]
 
@@ -1762,7 +1906,9 @@ def generate_branch_comparison_report(
                 if branch_name in branch_stats:
                     for backend_name in all_backends:
                         if backend_name in branch_stats[branch_name]:
-                            all_times.append(branch_stats[branch_name][backend_name]["mean"])
+                            all_times.append(
+                                branch_stats[branch_name][backend_name]["mean"]
+                            )
 
             if not all_times:
                 continue
@@ -1772,7 +1918,10 @@ def generate_branch_comparison_report(
             row = [test_name]
             for backend_name in all_backends:
                 for branch_name in all_branches:
-                    if branch_name in branch_stats and backend_name in branch_stats[branch_name]:
+                    if (
+                        branch_name in branch_stats
+                        and backend_name in branch_stats[branch_name]
+                    ):
                         stats = branch_stats[branch_name][backend_name]
                         speedup = baseline_mean / stats["mean"]
 
@@ -1793,11 +1942,7 @@ def generate_branch_comparison_report(
 
             table_rows.append(row)
 
-    comparison_table = tabulate(
-        table_rows,
-        headers=table_headers,
-        tablefmt="github"
-    )
+    comparison_table = tabulate(table_rows, headers=table_headers, tablefmt="github")
 
     # Create visualization
     sns.set_style("whitegrid")
@@ -1822,9 +1967,16 @@ def generate_branch_comparison_report(
                 means = []
                 stds = []
                 for tn in test_names:
-                    if branch_name in plot_tests[tn] and backend_name in plot_tests[tn][branch_name]:
-                        means.append(plot_tests[tn][branch_name][backend_name]["mean"] * 1000)
-                        stds.append(plot_tests[tn][branch_name][backend_name]["std"] * 1000)
+                    if (
+                        branch_name in plot_tests[tn]
+                        and backend_name in plot_tests[tn][branch_name]
+                    ):
+                        means.append(
+                            plot_tests[tn][branch_name][backend_name]["mean"] * 1000
+                        )
+                        stds.append(
+                            plot_tests[tn][branch_name][backend_name]["std"] * 1000
+                        )
                     else:
                         means.append(0)
                         stds.append(0)
@@ -1838,7 +1990,7 @@ def generate_branch_comparison_report(
                     label=branch_name,
                     color=colors[i],
                     alpha=0.8,
-                    capsize=3
+                    capsize=3,
                 )
 
             ax.set_title(f"Branch Performance Comparison ({backend_name})", fontsize=14)
@@ -1853,9 +2005,16 @@ def generate_branch_comparison_report(
                 means = []
                 stds = []
                 for tn in test_names:
-                    if branch_name in plot_tests[tn] and backend_name in plot_tests[tn][branch_name]:
-                        means.append(plot_tests[tn][branch_name][backend_name]["mean"] * 1000)
-                        stds.append(plot_tests[tn][branch_name][backend_name]["std"] * 1000)
+                    if (
+                        branch_name in plot_tests[tn]
+                        and backend_name in plot_tests[tn][branch_name]
+                    ):
+                        means.append(
+                            plot_tests[tn][branch_name][backend_name]["mean"] * 1000
+                        )
+                        stds.append(
+                            plot_tests[tn][branch_name][backend_name]["std"] * 1000
+                        )
                     else:
                         means.append(0)
                         stds.append(0)
@@ -1869,7 +2028,7 @@ def generate_branch_comparison_report(
                     label=f"{backend_name}:{branch_name}",
                     color=colors[i],
                     alpha=0.8,
-                    capsize=3
+                    capsize=3,
                 )
 
             ax.set_title("Branch Performance Comparison (All Backends)", fontsize=14)
@@ -1878,12 +2037,15 @@ def generate_branch_comparison_report(
         ax.set_ylabel("Time (milliseconds)", fontsize=12)
         ax.set_xticks(x)
         ax.set_xticklabels(
-            [tn.split('.')[-1] if '.' in tn else tn for tn in test_names],
+            [tn.split(".")[-1] if "." in tn else tn for tn in test_names],
             rotation=45,
-            ha='right'
+            ha="right",
         )
-        ax.legend(title="Branch" if len(all_backends) == 1 else "Backend:Branch", loc='upper left')
-        ax.grid(True, alpha=0.3, axis='y')
+        ax.legend(
+            title="Branch" if len(all_backends) == 1 else "Backend:Branch",
+            loc="upper left",
+        )
+        ax.grid(True, alpha=0.3, axis="y")
 
         plt.tight_layout()
         timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -1912,26 +2074,30 @@ def generate_branch_comparison_report(
     if backend:
         lines.append(f"- Filtered by backend: `{backend}`")
 
-    lines.extend([
-        "",
-        "## Performance Comparison",
-        "",
-        "Times shown as: mean±std (speedup vs baseline) [number of runs]",
-        "",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Performance Comparison",
+            "",
+            "Times shown as: mean±std (speedup vs baseline) [number of runs]",
+            "",
+        ]
+    )
 
     if graph_path:
         lines.append(f"![Branch Comparison]({graph_path.name})")
         lines.append("")
 
-    lines.extend([
-        "## Results Table",
-        "",
-        comparison_table,
-        "",
-        "## Branch Summary",
-        "",
-    ])
+    lines.extend(
+        [
+            "## Results Table",
+            "",
+            comparison_table,
+            "",
+            "## Branch Summary",
+            "",
+        ]
+    )
 
     # Overall branch statistics
     branch_totals = {}
@@ -1945,33 +2111,37 @@ def generate_branch_comparison_report(
     for branch_name in sorted(branch_totals.keys()):
         times = branch_totals[branch_name]
         mean = sum(times) / len(times)
-        lines.append(f"- **{branch_name}**: Average {mean * 1000:.2f}ms across {len(times)} test-backend combinations")
+        lines.append(
+            f"- **{branch_name}**: Average {mean * 1000:.2f}ms across {len(times)} test-backend combinations"
+        )
 
-    lines.extend([
-        "",
-        "## Interpretation",
-        "",
-        "- **Speedup**: Ratio of baseline (fastest) time to current time",
-        "- **Baseline**: The fastest branch (or backend:branch combination) for each test",
-        "- **N/A**: Branch has no performance data for this test",
-        "- Lower times and higher speedups indicate better performance",
-        "",
-        "## Use Cases",
-        "",
-        "- **Feature branch comparison**: See if your feature branch introduced performance regressions",
-        "- **Before/after comparison**: Compare performance before and after a specific change",
-        "- **Release validation**: Ensure release branches maintain or improve performance",
-        "",
-        "## Notes",
-        "",
-        "- Results are averaged across multiple runs when available",
-        "- Standard deviation shows consistency (lower is more consistent)",
-        "- Compare same backend across branches for fairest comparison",
-        "- File status (clean/modified) may affect results - check individual runs if needed",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Interpretation",
+            "",
+            "- **Speedup**: Ratio of baseline (fastest) time to current time",
+            "- **Baseline**: The fastest branch (or backend:branch combination) for each test",
+            "- **N/A**: Branch has no performance data for this test",
+            "- Lower times and higher speedups indicate better performance",
+            "",
+            "## Use Cases",
+            "",
+            "- **Feature branch comparison**: See if your feature branch introduced performance regressions",
+            "- **Before/after comparison**: Compare performance before and after a specific change",
+            "- **Release validation**: Ensure release branches maintain or improve performance",
+            "",
+            "## Notes",
+            "",
+            "- Results are averaged across multiple runs when available",
+            "- Standard deviation shows consistency (lower is more consistent)",
+            "- Compare same backend across branches for fairest comparison",
+            "- File status (clean/modified) may affect results - check individual runs if needed",
+        ]
+    )
 
     # Write report
-    with open(output_path, 'w') as f:
-        f.write('\n'.join(lines))
+    with open(output_path, "w") as f:
+        f.write("\n".join(lines))
 
     return output_path

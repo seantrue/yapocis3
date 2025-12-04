@@ -12,8 +12,9 @@ import os
 
 import pytest
 
-from yapocis.core import get_backends, get_test_backends, get_manager, load_program
-from yapocis.interfaces import interfaces as list_interfaces, find_interface
+from yapocis.core import get_manager, get_test_backends, load_program
+from yapocis.interfaces import find_interface
+from yapocis.interfaces import interfaces as list_interfaces
 
 
 def _list_interface_names() -> list[str]:

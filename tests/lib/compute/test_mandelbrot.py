@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from yapocis.core import get_test_backends
+
 from . import StopWatcher
 
 

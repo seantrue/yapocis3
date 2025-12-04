@@ -9,10 +9,11 @@ import pytest
 
 from yapocis.lib.convolve_kernels import (
     KERNEL_GENERATORS,
-    generate_blackman,
     generate_bartlett,
     generate_binomial,
+    generate_blackman,
     generate_box,
+    generate_convs_from_spec,
     generate_deriv1,
     generate_deriv2,
     generate_dog,
@@ -24,7 +25,6 @@ from yapocis.lib.convolve_kernels import (
     generate_sobel,
     generate_triangle,
     generate_unsharp,
-    generate_convs_from_spec,
 )
 
 
@@ -109,7 +109,7 @@ class TestKernelGenerators:
         # Size 5: [1, 4, 6, 4, 1] / 16
         kernel5 = generate_binomial(5)
         assert len(kernel5) == 5
-        assert np.allclose(kernel5, [1/16, 4/16, 6/16, 4/16, 1/16])
+        assert np.allclose(kernel5, [1 / 16, 4 / 16, 6 / 16, 4 / 16, 1 / 16])
         assert np.sum(kernel5) == pytest.approx(1.0)
 
     def test_deriv1_kernels(self):
@@ -195,10 +195,20 @@ class TestKernelRegistry:
     def test_all_generators_registered(self):
         """Test that all expected generators are registered."""
         expected_types = [
-            "hamming", "hann", "blackman", "bartlett",
-            "box", "triangle", "binomial",
-            "deriv1", "deriv2", "sobel", "prewitt",
-            "sharpen", "unsharp", "dog"
+            "hamming",
+            "hann",
+            "blackman",
+            "bartlett",
+            "box",
+            "triangle",
+            "binomial",
+            "deriv1",
+            "deriv2",
+            "sobel",
+            "prewitt",
+            "sharpen",
+            "unsharp",
+            "dog",
         ]
         for kernel_type in expected_types:
             assert kernel_type in KERNEL_GENERATORS
@@ -218,56 +228,68 @@ class TestKernelRegistry:
 class TestKernelProperties:
     """Test mathematical properties of generated kernels."""
 
-    @pytest.mark.parametrize("kernel_type,size", [
-        ("box", 5),
-        ("triangle", 7),
-        ("binomial", 9),
-        ("hamming", 11),
-        ("hann", 13),
-        ("blackman", 15),
-        ("bartlett", 9),
-    ])
+    @pytest.mark.parametrize(
+        "kernel_type,size",
+        [
+            ("box", 5),
+            ("triangle", 7),
+            ("binomial", 9),
+            ("hamming", 11),
+            ("hann", 13),
+            ("blackman", 15),
+            ("bartlett", 9),
+        ],
+    )
     def test_smoothing_kernels_sum_to_one(self, kernel_type, size):
         """Test that smoothing kernels sum to 1."""
         kernel = generate_kernel(kernel_type, size)
         assert np.sum(kernel) == pytest.approx(1.0, abs=1e-6)
 
-    @pytest.mark.parametrize("kernel_type,size", [
-        ("deriv1", 3),
-        ("deriv1", 5),
-        ("deriv2", 3),
-        ("deriv2", 5),
-        ("sobel", 3),
-        ("prewitt", 3),
-        ("dog", 7),
-    ])
+    @pytest.mark.parametrize(
+        "kernel_type,size",
+        [
+            ("deriv1", 3),
+            ("deriv1", 5),
+            ("deriv2", 3),
+            ("deriv2", 5),
+            ("sobel", 3),
+            ("prewitt", 3),
+            ("dog", 7),
+        ],
+    )
     def test_derivative_kernels_sum_to_zero(self, kernel_type, size):
         """Test that derivative kernels sum to 0."""
         kernel = generate_kernel(kernel_type, size)
         assert np.sum(kernel) == pytest.approx(0.0, abs=1e-6)
 
-    @pytest.mark.parametrize("kernel_type,size", [
-        ("hamming", 9),
-        ("hann", 9),
-        ("blackman", 9),
-        ("bartlett", 9),
-        ("box", 9),
-        ("triangle", 9),
-        ("binomial", 9),
-        ("deriv2", 9),
-    ])
+    @pytest.mark.parametrize(
+        "kernel_type,size",
+        [
+            ("hamming", 9),
+            ("hann", 9),
+            ("blackman", 9),
+            ("bartlett", 9),
+            ("box", 9),
+            ("triangle", 9),
+            ("binomial", 9),
+            ("deriv2", 9),
+        ],
+    )
     def test_kernel_symmetry(self, kernel_type, size):
         """Test that symmetric kernels are actually symmetric."""
         kernel = generate_kernel(kernel_type, size)
         # Check if symmetric (equal to reversed)
         assert np.allclose(kernel, kernel[::-1])
 
-    @pytest.mark.parametrize("kernel_type,size", [
-        ("deriv1", 3),
-        ("deriv1", 5),
-        ("sobel", 3),
-        ("prewitt", 3),
-    ])
+    @pytest.mark.parametrize(
+        "kernel_type,size",
+        [
+            ("deriv1", 3),
+            ("deriv1", 5),
+            ("sobel", 3),
+            ("prewitt", 3),
+        ],
+    )
     def test_first_derivative_antisymmetry(self, kernel_type, size):
         """Test that first derivative kernels are antisymmetric."""
         kernel = generate_kernel(kernel_type, size)
@@ -281,12 +303,8 @@ class TestConvsGeneration:
     def test_generate_convs_from_simple_spec(self):
         """Test generating convs from a simple specification."""
         spec = {
-            "smoothing": [
-                {"type": "box", "sizes": [3, 5, 7]}
-            ],
-            "derivatives": [
-                {"type": "deriv1", "sizes": [3, 5]}
-            ]
+            "smoothing": [{"type": "box", "sizes": [3, 5, 7]}],
+            "derivatives": [{"type": "deriv1", "sizes": [3, 5]}],
         }
 
         convs = generate_convs_from_spec(spec)
@@ -314,16 +332,12 @@ class TestConvsGeneration:
         """Test generating convs with custom kernel specifications."""
         spec = {
             "custom": [
-                {
-                    "name": "test3",
-                    "weights": [-1.0, 0.0, 1.0],
-                    "normalize": False
-                },
+                {"name": "test3", "weights": [-1.0, 0.0, 1.0], "normalize": False},
                 {
                     "name": "test5_norm",
                     "weights": [1.0, 2.0, 3.0, 2.0, 1.0],
-                    "normalize": True
-                }
+                    "normalize": True,
+                },
             ]
         }
 
@@ -346,24 +360,12 @@ class TestConvsGeneration:
     def test_generate_convs_from_full_spec(self):
         """Test generating convs from a full specification with all categories."""
         spec = {
-            "windows": [
-                {"type": "hamming", "sizes": [5, 9]}
-            ],
-            "smoothing": [
-                {"type": "box", "sizes": [3, 5]}
-            ],
-            "derivatives": [
-                {"type": "deriv1", "sizes": [3]}
-            ],
-            "highpass": [
-                {"type": "sharpen", "sizes": [3]}
-            ],
-            "bandpass": [
-                {"type": "dog", "sizes": [5]}
-            ],
-            "custom": [
-                {"name": "edge3", "weights": [-1.0, 0.0, 1.0]}
-            ]
+            "windows": [{"type": "hamming", "sizes": [5, 9]}],
+            "smoothing": [{"type": "box", "sizes": [3, 5]}],
+            "derivatives": [{"type": "deriv1", "sizes": [3]}],
+            "highpass": [{"type": "sharpen", "sizes": [3]}],
+            "bandpass": [{"type": "dog", "sizes": [5]}],
+            "custom": [{"name": "edge3", "weights": [-1.0, 0.0, 1.0]}],
         }
 
         convs = generate_convs_from_spec(spec)
@@ -393,7 +395,7 @@ class TestKernelApplications:
         kernel = generate_kernel("box", 3)
 
         # Apply convolution (valid mode to avoid edge effects)
-        result = np.convolve(signal, kernel, mode='valid')
+        result = np.convolve(signal, kernel, mode="valid")
 
         # Result should be smoother
         assert len(result) == len(signal) - len(kernel) + 1
@@ -409,7 +411,7 @@ class TestKernelApplications:
 
         # Apply correlation (not convolution) for derivative
         # Convolution reverses the kernel, correlation doesn't
-        result = np.correlate(ramp, kernel, mode='valid')
+        result = np.correlate(ramp, kernel, mode="valid")
 
         # Derivative of linear function is constant
         # For [-0.5, 0, 0.5] on [0,1,2,3,4,5], middle values should all be 1.0
@@ -424,7 +426,7 @@ class TestKernelApplications:
         kernel = generate_kernel("deriv2", 3)
 
         # Apply convolution
-        result = np.convolve(quadratic, kernel, mode='valid')
+        result = np.convolve(quadratic, kernel, mode="valid")
 
         # Second derivative of x^2 is 2
         assert np.allclose(result, 2.0, atol=1e-5)
@@ -438,14 +440,14 @@ class TestKernelApplications:
         kernel = generate_kernel("hamming", 9)
 
         # Apply convolution
-        result = np.convolve(impulse, kernel, mode='same')
+        result = np.convolve(impulse, kernel, mode="same")
 
         # Result should have Hamming window shape centered at position 10
         # Since kernel sums to 1, the impulse response reproduces the kernel shape
         assert result[10] == pytest.approx(np.max(kernel), abs=1e-5)  # Peak at center
         assert result[10] > result[9]  # Peak is maximum
         assert result[10] > result[11]
-        assert result[5] < 0.01   # Low values far from center
+        assert result[5] < 0.01  # Low values far from center
         assert result[15] < 0.01
 
     def test_binomial_approximates_gaussian(self):
@@ -457,7 +459,7 @@ class TestKernelApplications:
         kernel = generate_kernel("binomial", 9)
 
         # Apply convolution
-        result = np.convolve(impulse, kernel, mode='same')
+        result = np.convolve(impulse, kernel, mode="same")
 
         # Result should be smooth and symmetric
         assert result[10] == np.max(result)  # Peak at center
@@ -491,16 +493,16 @@ class TestInterfaceIntegration:
 
     def test_interface_rendering(self):
         """Test that interface can be rendered with generated kernels."""
-        from yapocis.core.interface import get_interface
-        from yapocis.core.interface_context import load_interface_context
-        from yapocis.core.interface import load_interface
         from mako.template import Template
+
+        from yapocis.core.interface import get_interface, load_interface
+        from yapocis.core.interface_context import load_interface_context
 
         # Load and render interface
         interface_text = load_interface("convolves.interface")
         context = load_interface_context("convolves")
         convs = generate_convs_from_spec(context)
-        context['convs'] = convs
+        context["convs"] = convs
 
         template = Template(interface_text)
         rendered = template.render(**context)
@@ -520,5 +522,5 @@ class TestInterfaceIntegration:
         assert "edge3" in kernel_names
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

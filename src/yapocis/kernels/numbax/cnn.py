@@ -4,6 +4,7 @@ Unified CNN kernels for Numbax backend.
 Implements all CNN layers: convolution, activation, pooling, normalization,
 fully connected, and regularization for VGG16, ResNet, MobileNet, and Transformers.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -18,6 +19,7 @@ except Exception:  # pragma: no cover
     def njit(*args, **kwargs):  # type: ignore
         def _wrap(f):
             return f
+
         return _wrap
 
     def prange(*args, **kwargs):  # type: ignore
@@ -28,13 +30,14 @@ except Exception:  # pragma: no cover
 # Convolutional Layers
 # =================================================================
 
+
 @njit(cache=True, fastmath=True, parallel=True)
 def _conv2d_3x3_njit(
     input: np.ndarray,
     weights: np.ndarray,
     bias: np.ndarray,
     output: np.ndarray,
-    output_channels: int
+    output_channels: int,
 ) -> None:
     """3x3 convolution with padding=1, stride=1."""
     # Input: (C_in, H, W)
@@ -55,7 +58,9 @@ def _conv2d_3x3_njit(
                             px = x + kx - 1
                             # Zero padding
                             if 0 <= py < H and 0 <= px < W:
-                                sum_val += input[c_in, py, px] * weights[c_out, c_in, ky, kx]
+                                sum_val += (
+                                    input[c_in, py, px] * weights[c_out, c_in, ky, kx]
+                                )
                 output[c_out, y, x] = sum_val
 
 
@@ -67,7 +72,7 @@ def conv2d_3x3(
     input_height: int,
     input_depth: int,
     input_width: int,
-    output_channels: int
+    output_channels: int,
 ) -> np.ndarray:
     """3x3 convolution with padding=1, stride=1."""
     if HAVE_NUMBA:
@@ -80,12 +85,12 @@ def conv2d_3x3(
             output[c_out] = bias[c_out]
             for c_in in range(C_in):
                 # Pad input
-                padded = np.pad(input[c_in], ((1, 1), (1, 1)), mode='constant')
+                padded = np.pad(input[c_in], ((1, 1), (1, 1)), mode="constant")
                 # Convolve
                 for y in range(H):
                     for x in range(W):
                         output[c_out, y, x] += np.sum(
-                            padded[y:y+3, x:x+3] * weights[c_out, c_in, :, :]
+                            padded[y : y + 3, x : x + 3] * weights[c_out, c_in, :, :]
                         )
     return output
 
@@ -98,10 +103,19 @@ def conv2d_3x3_res(
     input_height: int,
     input_depth: int,
     input_width: int,
-    output_channels: int
+    output_channels: int,
 ) -> None:
     """Resident version of conv2d_3x3."""
-    conv2d_3x3(input, weights, bias, output, input_height, input_depth, input_width, output_channels)
+    conv2d_3x3(
+        input,
+        weights,
+        bias,
+        output,
+        input_height,
+        input_depth,
+        input_width,
+        output_channels,
+    )
     return None
 
 
@@ -114,10 +128,19 @@ def conv2d_3x3_optimized(
     input_height: int,
     input_depth: int,
     input_width: int,
-    output_channels: int
+    output_channels: int,
 ) -> np.ndarray:
     """Optimized 3x3 convolution (same as standard for Numbax)."""
-    return conv2d_3x3(input, weights, bias, output, input_height, input_depth, input_width, output_channels)
+    return conv2d_3x3(
+        input,
+        weights,
+        bias,
+        output,
+        input_height,
+        input_depth,
+        input_width,
+        output_channels,
+    )
 
 
 def conv2d_3x3_optimized_res(
@@ -128,10 +151,19 @@ def conv2d_3x3_optimized_res(
     input_height: int,
     input_depth: int,
     input_width: int,
-    output_channels: int
+    output_channels: int,
 ) -> None:
     """Resident version of conv2d_3x3_optimized."""
-    conv2d_3x3_optimized(input, weights, bias, output, input_height, input_depth, input_width, output_channels)
+    conv2d_3x3_optimized(
+        input,
+        weights,
+        bias,
+        output,
+        input_height,
+        input_depth,
+        input_width,
+        output_channels,
+    )
     return None
 
 
@@ -141,7 +173,7 @@ def _conv2d_1x1_njit(
     weights: np.ndarray,
     bias: np.ndarray,
     output: np.ndarray,
-    output_channels: int
+    output_channels: int,
 ) -> None:
     """1x1 convolution for channel-wise transformations."""
     # Input: (C_in, H, W)
@@ -167,7 +199,7 @@ def conv2d_1x1(
     input_height: int,
     input_depth: int,
     input_width: int,
-    output_channels: int
+    output_channels: int,
 ) -> np.ndarray:
     """1x1 convolution for channel-wise transformations."""
     if HAVE_NUMBA:
@@ -190,19 +222,25 @@ def conv2d_1x1_res(
     input_height: int,
     input_depth: int,
     input_width: int,
-    output_channels: int
+    output_channels: int,
 ) -> None:
     """Resident version of conv2d_1x1."""
-    conv2d_1x1(input, weights, bias, output, input_height, input_depth, input_width, output_channels)
+    conv2d_1x1(
+        input,
+        weights,
+        bias,
+        output,
+        input_height,
+        input_depth,
+        input_width,
+        output_channels,
+    )
     return None
 
 
 @njit(cache=True, fastmath=True, parallel=True)
 def _depthwise_conv2d_3x3_njit(
-    input: np.ndarray,
-    weights: np.ndarray,
-    bias: np.ndarray,
-    output: np.ndarray
+    input: np.ndarray, weights: np.ndarray, bias: np.ndarray, output: np.ndarray
 ) -> None:
     """Depthwise 3x3 convolution - one filter per channel."""
     # Input: (C, H, W)
@@ -230,7 +268,7 @@ def depthwise_conv2d_3x3(
     output: np.ndarray,
     input_height: int,
     input_depth: int,
-    input_width: int
+    input_width: int,
 ) -> np.ndarray:
     """Depthwise 3x3 convolution - one filter per channel."""
     if HAVE_NUMBA:
@@ -239,10 +277,12 @@ def depthwise_conv2d_3x3(
         C, H, W = input.shape
         for c in range(C):
             output[c] = bias[c]
-            padded = np.pad(input[c], ((1, 1), (1, 1)), mode='constant')
+            padded = np.pad(input[c], ((1, 1), (1, 1)), mode="constant")
             for y in range(H):
                 for x in range(W):
-                    output[c, y, x] += np.sum(padded[y:y+3, x:x+3] * weights[c, 0, :, :])
+                    output[c, y, x] += np.sum(
+                        padded[y : y + 3, x : x + 3] * weights[c, 0, :, :]
+                    )
     return output
 
 
@@ -253,16 +293,19 @@ def depthwise_conv2d_3x3_res(
     output: np.ndarray,
     input_height: int,
     input_depth: int,
-    input_width: int
+    input_width: int,
 ) -> None:
     """Resident version of depthwise_conv2d_3x3."""
-    depthwise_conv2d_3x3(input, weights, bias, output, input_height, input_depth, input_width)
+    depthwise_conv2d_3x3(
+        input, weights, bias, output, input_height, input_depth, input_width
+    )
     return None
 
 
 # =================================================================
 # Activation Functions
 # =================================================================
+
 
 @njit(cache=True, fastmath=True, parallel=True)
 def _relu_activation_njit(input: np.ndarray, output: np.ndarray) -> None:
@@ -395,6 +438,7 @@ def sigmoid_res(input: np.ndarray, output: np.ndarray, size: int) -> None:
 # Pooling Layers
 # =================================================================
 
+
 @njit(cache=True, fastmath=True, parallel=True)
 def _max_pool_2x2_njit(input: np.ndarray, output: np.ndarray) -> None:
     """2x2 max pooling with stride=2."""
@@ -423,7 +467,7 @@ def max_pool_2x2(
     output: np.ndarray,
     input_height: int,
     input_depth: int,
-    input_width: int
+    input_width: int,
 ) -> np.ndarray:
     """2x2 max pooling with stride=2."""
     if HAVE_NUMBA:
@@ -437,7 +481,9 @@ def max_pool_2x2(
                 for x_out in range(W_out):
                     y_in = y_out * 2
                     x_in = x_out * 2
-                    output[c, y_out, x_out] = np.max(input[c, y_in:y_in+2, x_in:x_in+2])
+                    output[c, y_out, x_out] = np.max(
+                        input[c, y_in : y_in + 2, x_in : x_in + 2]
+                    )
     return output
 
 
@@ -446,7 +492,7 @@ def max_pool_2x2_res(
     output: np.ndarray,
     input_height: int,
     input_depth: int,
-    input_width: int
+    input_width: int,
 ) -> None:
     """Resident version of max_pool_2x2."""
     max_pool_2x2(input, output, input_height, input_depth, input_width)
@@ -469,7 +515,7 @@ def _max_pool_3x3_stride2_njit(input: np.ndarray, output: np.ndarray) -> None:
                 y_in_start = y_out * 2 - 1
                 x_in_start = x_out * 2 - 1
 
-                max_val = float('-inf')
+                max_val = float("-inf")
 
                 # 3x3 pooling window
                 for dy in range(3):
@@ -491,7 +537,7 @@ def max_pool_3x3_stride2(
     output: np.ndarray,
     input_height: int,
     input_depth: int,
-    input_width: int
+    input_width: int,
 ) -> np.ndarray:
     """3x3 max pooling with stride=2, padding=1 (ResNet)."""
     if HAVE_NUMBA:
@@ -505,7 +551,7 @@ def max_pool_3x3_stride2(
                 for x_out in range(W_out):
                     y_in_start = y_out * 2 - 1
                     x_in_start = x_out * 2 - 1
-                    max_val = float('-inf')
+                    max_val = float("-inf")
                     for dy in range(3):
                         for dx in range(3):
                             y_in = y_in_start + dy
@@ -521,7 +567,7 @@ def max_pool_3x3_stride2_res(
     output: np.ndarray,
     input_height: int,
     input_depth: int,
-    input_width: int
+    input_width: int,
 ) -> None:
     """Resident version of max_pool_3x3_stride2."""
     max_pool_3x3_stride2(input, output, input_height, input_depth, input_width)
@@ -549,7 +595,7 @@ def global_avg_pool(
     output: np.ndarray,
     input_height: int,
     input_depth: int,
-    input_width: int
+    input_width: int,
 ) -> np.ndarray:
     """Global average pooling."""
     if HAVE_NUMBA:
@@ -566,7 +612,7 @@ def global_avg_pool_res(
     output: np.ndarray,
     input_height: int,
     input_depth: int,
-    input_width: int
+    input_width: int,
 ) -> None:
     """Resident version of global_avg_pool."""
     global_avg_pool(input, output, input_height, input_depth, input_width)
@@ -595,7 +641,7 @@ def global_max_pool(
     output: np.ndarray,
     input_height: int,
     input_depth: int,
-    input_width: int
+    input_width: int,
 ) -> np.ndarray:
     """Global max pooling."""
     if HAVE_NUMBA:
@@ -612,7 +658,7 @@ def global_max_pool_res(
     output: np.ndarray,
     input_height: int,
     input_depth: int,
-    input_width: int
+    input_width: int,
 ) -> None:
     """Resident version of global_max_pool."""
     global_max_pool(input, output, input_height, input_depth, input_width)
@@ -623,6 +669,7 @@ def global_max_pool_res(
 # Normalization Layers
 # =================================================================
 
+
 @njit(cache=True, fastmath=True, parallel=True)
 def _batch_norm_njit(
     input: np.ndarray,
@@ -631,7 +678,7 @@ def _batch_norm_njit(
     mean: np.ndarray,
     variance: np.ndarray,
     output: np.ndarray,
-    epsilon: float
+    epsilon: float,
 ) -> None:
     """Batch normalization."""
     # Input: (C, H, W)
@@ -656,7 +703,7 @@ def batch_norm(
     input_height: int,
     input_depth: int,
     input_width: int,
-    epsilon: float
+    epsilon: float,
 ) -> np.ndarray:
     """Batch normalization."""
     if HAVE_NUMBA:
@@ -680,10 +727,21 @@ def batch_norm_res(
     input_height: int,
     input_depth: int,
     input_width: int,
-    epsilon: float
+    epsilon: float,
 ) -> None:
     """Resident version of batch_norm."""
-    batch_norm(input, gamma, beta, mean, variance, output, input_height, input_depth, input_width, epsilon)
+    batch_norm(
+        input,
+        gamma,
+        beta,
+        mean,
+        variance,
+        output,
+        input_height,
+        input_depth,
+        input_width,
+        epsilon,
+    )
     return None
 
 
@@ -693,7 +751,7 @@ def _layer_norm_njit(
     gamma: np.ndarray,
     beta: np.ndarray,
     output: np.ndarray,
-    epsilon: float
+    epsilon: float,
 ) -> None:
     """Layer normalization for 2D/3D tensors."""
     # Input: (C, H, W)
@@ -730,7 +788,7 @@ def layer_norm(
     input_height: int,
     input_depth: int,
     input_width: int,
-    epsilon: float
+    epsilon: float,
 ) -> np.ndarray:
     """Layer normalization for 2D/3D tensors."""
     if HAVE_NUMBA:
@@ -756,10 +814,12 @@ def layer_norm_res(
     input_height: int,
     input_depth: int,
     input_width: int,
-    epsilon: float
+    epsilon: float,
 ) -> None:
     """Resident version of layer_norm."""
-    layer_norm(input, gamma, beta, output, input_height, input_depth, input_width, epsilon)
+    layer_norm(
+        input, gamma, beta, output, input_height, input_depth, input_width, epsilon
+    )
     return None
 
 
@@ -769,7 +829,7 @@ def _layer_norm_1d_njit(
     gamma: np.ndarray,
     beta: np.ndarray,
     output: np.ndarray,
-    epsilon: float
+    epsilon: float,
 ) -> None:
     """1D layer normalization for transformers."""
     # Input: (features,)
@@ -803,7 +863,7 @@ def layer_norm_1d(
     beta: np.ndarray,
     output: np.ndarray,
     size: int,
-    epsilon: float
+    epsilon: float,
 ) -> np.ndarray:
     """1D layer normalization for transformers."""
     if HAVE_NUMBA:
@@ -823,7 +883,7 @@ def layer_norm_1d_res(
     beta: np.ndarray,
     output: np.ndarray,
     size: int,
-    epsilon: float
+    epsilon: float,
 ) -> None:
     """Resident version of layer_norm_1d."""
     layer_norm_1d(input, gamma, beta, output, size, epsilon)
@@ -834,6 +894,7 @@ def layer_norm_1d_res(
 # Fully Connected Layers
 # =================================================================
 
+
 @njit(cache=True, fastmath=True, parallel=True)
 def _fully_connected_njit(
     input: np.ndarray,
@@ -841,7 +902,7 @@ def _fully_connected_njit(
     bias: np.ndarray,
     output: np.ndarray,
     input_size: int,
-    output_size: int
+    output_size: int,
 ) -> None:
     """Fully connected layer: y = Wx + b."""
     # Weights: (output_size, input_size)
@@ -858,7 +919,7 @@ def fully_connected(
     bias: np.ndarray,
     output: np.ndarray,
     input_size: int,
-    output_size: int
+    output_size: int,
 ) -> np.ndarray:
     """Fully connected layer: y = Wx + b."""
     if HAVE_NUMBA:
@@ -874,7 +935,7 @@ def fully_connected_res(
     bias: np.ndarray,
     output: np.ndarray,
     input_size: int,
-    output_size: int
+    output_size: int,
 ) -> None:
     """Resident version of fully_connected."""
     fully_connected(input, weights, bias, output, input_size, output_size)
@@ -889,7 +950,7 @@ def _matrix_multiply_simd_njit(
     C: np.ndarray,
     M: int,
     N: int,
-    K: int
+    K: int,
 ) -> None:
     """Matrix multiplication with bias: C = A * B + bias."""
     # A: (M, K), B: (K, N), C: (M, N)
@@ -908,7 +969,7 @@ def matrix_multiply_simd(
     C: np.ndarray,
     M: int,
     N: int,
-    K: int
+    K: int,
 ) -> np.ndarray:
     """Matrix multiplication with bias: C = A * B + bias."""
     if HAVE_NUMBA:
@@ -925,7 +986,7 @@ def matrix_multiply_simd_res(
     C: np.ndarray,
     M: int,
     N: int,
-    K: int
+    K: int,
 ) -> None:
     """Resident version of matrix_multiply_simd."""
     matrix_multiply_simd(A, B, bias, C, M, N, K)
@@ -936,13 +997,10 @@ def matrix_multiply_simd_res(
 # Regularization
 # =================================================================
 
+
 @njit(cache=True, fastmath=True, parallel=True)
 def _dropout_njit(
-    input: np.ndarray,
-    output: np.ndarray,
-    rate: float,
-    seed: int,
-    training: int
+    input: np.ndarray, output: np.ndarray, rate: float, seed: int, training: int
 ) -> None:
     """Dropout - randomly zero out elements during training."""
     inp_flat = input.ravel()
@@ -973,7 +1031,7 @@ def dropout(
     rate: float,
     seed: int,
     training: int,
-    size: int
+    size: int,
 ) -> np.ndarray:
     """Dropout - randomly zero out elements during training."""
     if HAVE_NUMBA:
@@ -995,7 +1053,7 @@ def dropout_res(
     rate: float,
     seed: int,
     training: int,
-    size: int
+    size: int,
 ) -> None:
     """Resident version of dropout."""
     dropout(input, output, rate, seed, training, size)
@@ -1004,11 +1062,7 @@ def dropout_res(
 
 @njit(cache=True, fastmath=True, parallel=True)
 def _spatial_dropout_njit(
-    input: np.ndarray,
-    output: np.ndarray,
-    rate: float,
-    seed: int,
-    training: int
+    input: np.ndarray, output: np.ndarray, rate: float, seed: int, training: int
 ) -> None:
     """Spatial dropout - drops entire feature maps (channels)."""
     # Input: (C, H, W)
@@ -1048,7 +1102,7 @@ def spatial_dropout(
     depth: int,
     rate: float,
     seed: int,
-    training: int
+    training: int,
 ) -> np.ndarray:
     """Spatial dropout - drops entire feature maps (channels)."""
     if HAVE_NUMBA:
@@ -1077,15 +1131,17 @@ def spatial_dropout_res(
     depth: int,
     rate: float,
     seed: int,
-    training: int
+    training: int,
 ) -> None:
     """Resident version of spatial_dropout."""
     spatial_dropout(input, output, width, height, depth, rate, seed, training)
     return None
 
+
 # =================================================================
 # ResNet-specific Convolution Kernels
 # =================================================================
+
 
 @njit(cache=True, fastmath=True, parallel=True)
 def _conv2d_7x7_stride2_njit(
@@ -1093,7 +1149,7 @@ def _conv2d_7x7_stride2_njit(
     weights: np.ndarray,
     bias: np.ndarray,
     output: np.ndarray,
-    output_channels: int
+    output_channels: int,
 ) -> None:
     """7x7 convolution with padding=3, stride=2."""
     # Input: (C_in, H_in, W_in)
@@ -1119,7 +1175,10 @@ def _conv2d_7x7_stride2_njit(
                             x_in = x_in_start + kx
                             # Zero padding
                             if 0 <= y_in < H_in and 0 <= x_in < W_in:
-                                sum_val += input[c_in, y_in, x_in] * weights[c_out, c_in, ky, kx]
+                                sum_val += (
+                                    input[c_in, y_in, x_in]
+                                    * weights[c_out, c_in, ky, kx]
+                                )
                 output[c_out, y_out, x_out] = sum_val
 
 
@@ -1131,7 +1190,7 @@ def conv2d_7x7_stride2(
     input_height: int,
     input_depth: int,
     input_width: int,
-    output_channels: int
+    output_channels: int,
 ) -> np.ndarray:
     """7x7 convolution with padding=3, stride=2."""
     if HAVE_NUMBA:
@@ -1154,7 +1213,10 @@ def conv2d_7x7_stride2(
                                 y_in = y_in_start + ky
                                 x_in = x_in_start + kx
                                 if 0 <= y_in < H_in and 0 <= x_in < W_in:
-                                    sum_val += input[c_in, y_in, x_in] * weights[c_out, c_in, ky, kx]
+                                    sum_val += (
+                                        input[c_in, y_in, x_in]
+                                        * weights[c_out, c_in, ky, kx]
+                                    )
                     output[c_out, y_out, x_out] = sum_val
     return output
 
@@ -1167,10 +1229,19 @@ def conv2d_7x7_stride2_res(
     input_height: int,
     input_depth: int,
     input_width: int,
-    output_channels: int
+    output_channels: int,
 ) -> None:
     """Resident version of conv2d_7x7_stride2."""
-    conv2d_7x7_stride2(input, weights, bias, output, input_height, input_depth, input_width, output_channels)
+    conv2d_7x7_stride2(
+        input,
+        weights,
+        bias,
+        output,
+        input_height,
+        input_depth,
+        input_width,
+        output_channels,
+    )
     return None
 
 
@@ -1180,7 +1251,7 @@ def _conv2d_3x3_stride2_njit(
     weights: np.ndarray,
     bias: np.ndarray,
     output: np.ndarray,
-    output_channels: int
+    output_channels: int,
 ) -> None:
     """3x3 convolution with padding=1, stride=2."""
     # Input: (C_in, H_in, W_in)
@@ -1206,7 +1277,10 @@ def _conv2d_3x3_stride2_njit(
                             x_in = x_in_start + kx
                             # Zero padding
                             if 0 <= y_in < H_in and 0 <= x_in < W_in:
-                                sum_val += input[c_in, y_in, x_in] * weights[c_out, c_in, ky, kx]
+                                sum_val += (
+                                    input[c_in, y_in, x_in]
+                                    * weights[c_out, c_in, ky, kx]
+                                )
                 output[c_out, y_out, x_out] = sum_val
 
 
@@ -1218,7 +1292,7 @@ def conv2d_3x3_stride2(
     input_height: int,
     input_depth: int,
     input_width: int,
-    output_channels: int
+    output_channels: int,
 ) -> np.ndarray:
     """3x3 convolution with padding=1, stride=2."""
     if HAVE_NUMBA:
@@ -1241,7 +1315,10 @@ def conv2d_3x3_stride2(
                                 y_in = y_in_start + ky
                                 x_in = x_in_start + kx
                                 if 0 <= y_in < H_in and 0 <= x_in < W_in:
-                                    sum_val += input[c_in, y_in, x_in] * weights[c_out, c_in, ky, kx]
+                                    sum_val += (
+                                        input[c_in, y_in, x_in]
+                                        * weights[c_out, c_in, ky, kx]
+                                    )
                     output[c_out, y_out, x_out] = sum_val
     return output
 
@@ -1254,10 +1331,19 @@ def conv2d_3x3_stride2_res(
     input_height: int,
     input_depth: int,
     input_width: int,
-    output_channels: int
+    output_channels: int,
 ) -> None:
     """Resident version of conv2d_3x3_stride2."""
-    conv2d_3x3_stride2(input, weights, bias, output, input_height, input_depth, input_width, output_channels)
+    conv2d_3x3_stride2(
+        input,
+        weights,
+        bias,
+        output,
+        input_height,
+        input_depth,
+        input_width,
+        output_channels,
+    )
     return None
 
 
@@ -1267,7 +1353,7 @@ def _conv2d_1x1_stride2_njit(
     weights: np.ndarray,
     bias: np.ndarray,
     output: np.ndarray,
-    output_channels: int
+    output_channels: int,
 ) -> None:
     """1x1 convolution with stride=2."""
     # Input: (C_in, H_in, W_in)
@@ -1299,7 +1385,7 @@ def conv2d_1x1_stride2(
     input_height: int,
     input_depth: int,
     input_width: int,
-    output_channels: int
+    output_channels: int,
 ) -> np.ndarray:
     """1x1 convolution with stride=2."""
     if HAVE_NUMBA:
@@ -1330,10 +1416,19 @@ def conv2d_1x1_stride2_res(
     input_height: int,
     input_depth: int,
     input_width: int,
-    output_channels: int
+    output_channels: int,
 ) -> None:
     """Resident version of conv2d_1x1_stride2."""
-    conv2d_1x1_stride2(input, weights, bias, output, input_height, input_depth, input_width, output_channels)
+    conv2d_1x1_stride2(
+        input,
+        weights,
+        bias,
+        output,
+        input_height,
+        input_depth,
+        input_width,
+        output_channels,
+    )
     return None
 
 
@@ -1341,12 +1436,10 @@ def conv2d_1x1_stride2_res(
 # Element-wise Operations
 # =================================================================
 
+
 @njit(cache=True, fastmath=True, parallel=True)
 def _add_tensors_njit(
-    input1: np.ndarray,
-    input2: np.ndarray,
-    output: np.ndarray,
-    size: int
+    input1: np.ndarray, input2: np.ndarray, output: np.ndarray, size: int
 ) -> None:
     """Element-wise addition for residual connections."""
     for i in prange(size):
@@ -1354,10 +1447,7 @@ def _add_tensors_njit(
 
 
 def add_tensors(
-    input1: np.ndarray,
-    input2: np.ndarray,
-    output: np.ndarray,
-    size: int
+    input1: np.ndarray, input2: np.ndarray, output: np.ndarray, size: int
 ) -> np.ndarray:
     """Element-wise addition (for residual connections)."""
     if HAVE_NUMBA:
@@ -1369,10 +1459,7 @@ def add_tensors(
 
 
 def add_tensors_res(
-    input1: np.ndarray,
-    input2: np.ndarray,
-    output: np.ndarray,
-    size: int
+    input1: np.ndarray, input2: np.ndarray, output: np.ndarray, size: int
 ) -> None:
     """Resident version of add_tensors."""
     add_tensors(input1, input2, output, size)
@@ -1382,6 +1469,7 @@ def add_tensors_res(
 # =================================================================
 # Upsampling / Spatial Operations
 # =================================================================
+
 
 @njit(cache=True, fastmath=True, parallel=True)
 def _upsample_2x_njit(input: np.ndarray, output: np.ndarray) -> None:
@@ -1434,7 +1522,7 @@ def upsample_2x(
     output: np.ndarray,
     input_height: int,
     input_depth: int,
-    input_width: int
+    input_width: int,
 ) -> np.ndarray:
     """2x bilinear upsampling (FPN, U-Net, semantic segmentation)."""
     if HAVE_NUMBA:
@@ -1442,6 +1530,7 @@ def upsample_2x(
     else:
         # NumPy fallback using scipy or manual implementation
         from scipy import ndimage
+
         C, H, W = input.shape
         for c in range(C):
             output[c] = ndimage.zoom(input[c], 2.0, order=1)
@@ -1453,7 +1542,7 @@ def upsample_2x_res(
     output: np.ndarray,
     input_height: int,
     input_depth: int,
-    input_width: int
+    input_width: int,
 ) -> None:
     """Resident version of upsample_2x."""
     upsample_2x(input, output, input_height, input_depth, input_width)

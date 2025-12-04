@@ -7,12 +7,13 @@ Uses asymmetric canvas (401x317, both odd, height ≠ width) and asymmetric posi
 in all 4 quadrants to verify coordinate system (0,0 = upper-left).
 """
 
-import pytest
 import numpy as np
-from PIL import Image
+import pytest
+
+from yapocis.core import get_test_backends
 from yapocis.lib.graphics import Graphics1
 from yapocis.utils.basic import to_image
-from yapocis.core import get_test_backends
+
 from .. import StopWatcher
 
 # Canvas dimensions: odd numbers, asymmetric
@@ -23,10 +24,10 @@ CANVAS_HEIGHT = 317
 # NOTE: Graphics coordinates are (row, col) not (col, row)!
 # Quadrants relative to center (row=158, col=200)
 POSITIONS = {
-    'q1_top_left': (59, 73),      # Upper-left: row=59, col=73
-    'q2_top_right': (71, 307),    # Upper-right: row=71, col=307
-    'q3_bottom_left': (241, 89),  # Lower-left: row=241, col=89
-    'q4_bottom_right': (269, 331) # Lower-right: row=269, col=331
+    "q1_top_left": (59, 73),  # Upper-left: row=59, col=73
+    "q2_top_right": (71, 307),  # Upper-right: row=71, col=307
+    "q3_bottom_left": (241, 89),  # Lower-left: row=241, col=89
+    "q4_bottom_right": (269, 331),  # Lower-right: row=269, col=331
 }
 
 
@@ -85,8 +86,10 @@ def test_rects_position_validation(backend, monkeypatch):
 
     # Export to PIL
     pil_img = to_image(result)
-    assert pil_img.size == (CANVAS_WIDTH, CANVAS_HEIGHT), \
-        f"PIL image size {pil_img.size} != canvas size ({CANVAS_WIDTH}, {CANVAS_HEIGHT})"
+    assert pil_img.size == (
+        CANVAS_WIDTH,
+        CANVAS_HEIGHT,
+    ), f"PIL image size {pil_img.size} != canvas size ({CANVAS_WIDTH}, {CANVAS_HEIGHT})"
 
     # Verify each rectangle position
     # PIL uses (x, y) = (col, row) coordinates
@@ -94,19 +97,23 @@ def test_rects_position_validation(backend, monkeypatch):
         # Check center of rectangle (should be white)
         center_row = row + rect_size // 2
         center_col = col + rect_size // 2
-        assert verify_pixel_is_white(pil_img, center_col, center_row), \
-            f"{backend}: Rectangle at {name} (row={row}, col={col}) - center should be white"
+        assert verify_pixel_is_white(
+            pil_img, center_col, center_row
+        ), f"{backend}: Rectangle at {name} (row={row}, col={col}) - center should be white"
 
         # Check corners (should be white)
-        assert verify_pixel_is_white(pil_img, col + 1, row + 1), \
-            f"{backend}: Rectangle at {name} - top-left corner should be white"
-        assert verify_pixel_is_white(pil_img, col + rect_size - 2, row + rect_size - 2), \
-            f"{backend}: Rectangle at {name} - bottom-right corner should be white"
+        assert verify_pixel_is_white(
+            pil_img, col + 1, row + 1
+        ), f"{backend}: Rectangle at {name} - top-left corner should be white"
+        assert verify_pixel_is_white(
+            pil_img, col + rect_size - 2, row + rect_size - 2
+        ), f"{backend}: Rectangle at {name} - bottom-right corner should be white"
 
         # Check outside rectangle (should be black)
         if col > 2 and row > 2:
-            assert verify_pixel_is_black(pil_img, col - 2, row - 2), \
-                f"{backend}: Pixel outside rectangle at {name} should be black"
+            assert verify_pixel_is_black(
+                pil_img, col - 2, row - 2
+            ), f"{backend}: Pixel outside rectangle at {name} should be black"
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -135,16 +142,23 @@ def test_circles_position_validation(backend, monkeypatch):
     # PIL uses (x, y) = (col, row) coordinates
     for name, (row, col) in POSITIONS.items():
         # Check center (should be white)
-        assert verify_pixel_is_white(pil_img, col, row), \
-            f"{backend}: Circle at {name} (row={row}, col={col}) - center should be white"
+        assert verify_pixel_is_white(
+            pil_img, col, row
+        ), f"{backend}: Circle at {name} (row={row}, col={col}) - center should be white"
 
         # Check pixels at cardinal directions (approximate, accounting for rasterization)
         # These should be near the circle edge, likely white
-        for drow, dcol in [(0, radius-1), (0, -radius+1), (radius-1, 0), (-radius+1, 0)]:
+        for drow, dcol in [
+            (0, radius - 1),
+            (0, -radius + 1),
+            (radius - 1, 0),
+            (-radius + 1, 0),
+        ]:
             prow, pcol = row + drow, col + dcol
             if 0 <= pcol < CANVAS_WIDTH and 0 <= prow < CANVAS_HEIGHT:
-                assert verify_pixel_is_white(pil_img, pcol, prow), \
-                    f"{backend}: Circle at {name} - point at (row={prow}, col={pcol}) should be white"
+                assert verify_pixel_is_white(
+                    pil_img, pcol, prow
+                ), f"{backend}: Circle at {name} - point at (row={prow}, col={pcol}) should be white"
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -171,8 +185,9 @@ def test_lines_position_validation(backend, monkeypatch):
 
     # Verify center point is white (all lines pass through it)
     # PIL uses (x, y) = (col, row)
-    assert verify_pixel_is_white(pil_img, center_col, center_row), \
-        f"{backend}: Center point (row={center_row}, col={center_col}) should be white"
+    assert verify_pixel_is_white(
+        pil_img, center_col, center_row
+    ), f"{backend}: Center point (row={center_row}, col={center_col}) should be white"
 
     # Verify endpoint regions are white
     for name, (row, col) in POSITIONS.items():
@@ -187,8 +202,9 @@ def test_lines_position_validation(backend, monkeypatch):
                         break
             if found_white:
                 break
-        assert found_white, \
-            f"{backend}: Line endpoint region at {name} (row={row}, col={col}) should have white pixels"
+        assert (
+            found_white
+        ), f"{backend}: Line endpoint region at {name} (row={row}, col={col}) should have white pixels"
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -217,16 +233,19 @@ def test_ellipses_position_validation(backend, monkeypatch):
     # PIL uses (x, y) = (col, row)
     for name, (row, col) in POSITIONS.items():
         # Check center (should be white)
-        assert verify_pixel_is_white(pil_img, col, row), \
-            f"{backend}: Ellipse at {name} (row={row}, col={col}) - center should be white"
+        assert verify_pixel_is_white(
+            pil_img, col, row
+        ), f"{backend}: Ellipse at {name} (row={row}, col={col}) - center should be white"
 
         # Check points along major/minor axes (approximate)
         # Major axis (horizontal)
-        assert verify_pixel_is_white(pil_img, col + width//2 - 1, row), \
-            f"{backend}: Ellipse at {name} - point on major axis should be white"
+        assert verify_pixel_is_white(
+            pil_img, col + width // 2 - 1, row
+        ), f"{backend}: Ellipse at {name} - point on major axis should be white"
         # Minor axis (vertical)
-        assert verify_pixel_is_white(pil_img, col, row + height//2 - 1), \
-            f"{backend}: Ellipse at {name} - point on minor axis should be white"
+        assert verify_pixel_is_white(
+            pil_img, col, row + height // 2 - 1
+        ), f"{backend}: Ellipse at {name} - point on minor axis should be white"
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -243,11 +262,16 @@ def test_triangles_position_validation(backend, monkeypatch):
     triangles = []
     for name, (row, col) in POSITIONS.items():
         # Create a triangle with one vertex at (row, col)
-        triangles.append((
-            row, col,                                        # Vertex 1
-            row, col + triangle_size,                        # Vertex 2 (same row, moved right)
-            row + triangle_size, col + triangle_size // 2    # Vertex 3 (moved down)
-        ))
+        triangles.append(
+            (
+                row,
+                col,  # Vertex 1
+                row,
+                col + triangle_size,  # Vertex 2 (same row, moved right)
+                row + triangle_size,
+                col + triangle_size // 2,  # Vertex 3 (moved down)
+            )
+        )
 
     with StopWatcher("triangles_position", kernel=g) as sw:
         g.triangles(canvas, triangles, color=1.0, alpha=1.0, aa_width=0.0)
@@ -260,14 +284,16 @@ def test_triangles_position_validation(backend, monkeypatch):
     # PIL uses (x, y) = (col, row)
     for name, (row, col) in POSITIONS.items():
         # Check first vertex (should be white or near it)
-        assert verify_pixel_is_white(pil_img, col, row), \
-            f"{backend}: Triangle at {name} (row={row}, col={col}) - first vertex should be white"
+        assert verify_pixel_is_white(
+            pil_img, col, row
+        ), f"{backend}: Triangle at {name} (row={row}, col={col}) - first vertex should be white"
 
         # Check interior point (centroid-ish)
         interior_col = col + triangle_size // 2
         interior_row = row + triangle_size // 3
-        assert verify_pixel_is_white(pil_img, interior_col, interior_row), \
-            f"{backend}: Triangle at {name} - interior point should be white"
+        assert verify_pixel_is_white(
+            pil_img, interior_col, interior_row
+        ), f"{backend}: Triangle at {name} - interior point should be white"
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -282,11 +308,15 @@ def test_coordinate_system_validation(backend, monkeypatch):
     # Coordinates are (row, col, row2, col2)
     corner_size = 20
     corners = [
-        (0, 0, corner_size, corner_size),                                      # Top-left
-        (0, CANVAS_WIDTH - corner_size, corner_size, CANVAS_WIDTH - 1),      # Top-right
-        (CANVAS_HEIGHT - corner_size, 0, CANVAS_HEIGHT - 1, corner_size),    # Bottom-left
-        (CANVAS_HEIGHT - corner_size, CANVAS_WIDTH - corner_size,
-         CANVAS_HEIGHT - 1, CANVAS_WIDTH - 1)                                 # Bottom-right
+        (0, 0, corner_size, corner_size),  # Top-left
+        (0, CANVAS_WIDTH - corner_size, corner_size, CANVAS_WIDTH - 1),  # Top-right
+        (CANVAS_HEIGHT - corner_size, 0, CANVAS_HEIGHT - 1, corner_size),  # Bottom-left
+        (
+            CANVAS_HEIGHT - corner_size,
+            CANVAS_WIDTH - corner_size,
+            CANVAS_HEIGHT - 1,
+            CANVAS_WIDTH - 1,
+        ),  # Bottom-right
     ]
 
     with StopWatcher("coordinate_system", kernel=g) as sw:
@@ -298,25 +328,30 @@ def test_coordinate_system_validation(backend, monkeypatch):
 
     # PIL uses (x, y) = (col, row)
     # Verify (row=0, col=0) is upper-left - should be white
-    assert verify_pixel_is_white(pil_img, 5, 5), \
-        f"{backend}: Pixel near (row=0, col=0) should be white, confirming upper-left origin"
+    assert verify_pixel_is_white(
+        pil_img, 5, 5
+    ), f"{backend}: Pixel near (row=0, col=0) should be white, confirming upper-left origin"
 
     # Verify top-right corner - should be white
-    assert verify_pixel_is_white(pil_img, CANVAS_WIDTH - 5, 5), \
-        f"{backend}: Top-right corner should be white"
+    assert verify_pixel_is_white(
+        pil_img, CANVAS_WIDTH - 5, 5
+    ), f"{backend}: Top-right corner should be white"
 
     # Verify bottom-left corner - should be white
-    assert verify_pixel_is_white(pil_img, 5, CANVAS_HEIGHT - 5), \
-        f"{backend}: Bottom-left corner should be white"
+    assert verify_pixel_is_white(
+        pil_img, 5, CANVAS_HEIGHT - 5
+    ), f"{backend}: Bottom-left corner should be white"
 
     # Verify bottom-right corner - should be white
-    assert verify_pixel_is_white(pil_img, CANVAS_WIDTH - 5, CANVAS_HEIGHT - 5), \
-        f"{backend}: Bottom-right corner should be white"
+    assert verify_pixel_is_white(
+        pil_img, CANVAS_WIDTH - 5, CANVAS_HEIGHT - 5
+    ), f"{backend}: Bottom-right corner should be white"
 
     # Verify center is black (no corners drawn there)
     center_col, center_row = CANVAS_WIDTH // 2, CANVAS_HEIGHT // 2
-    assert verify_pixel_is_black(pil_img, center_col, center_row), \
-        f"{backend}: Center should be black (no rectangles drawn there)"
+    assert verify_pixel_is_black(
+        pil_img, center_col, center_row
+    ), f"{backend}: Center should be black (no rectangles drawn there)"
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -331,15 +366,20 @@ def test_edge_positions_validation(backend, monkeypatch):
     # Coordinates are (row, col, radius)
     radius = 5
     edge_positions = [
-        (5, 5),                              # Near origin (top-left)
-        (5, CANVAS_WIDTH - 6),               # Near top-right
-        (CANVAS_HEIGHT - 6, 5),              # Near bottom-left
-        (CANVAS_HEIGHT - 6, CANVAS_WIDTH - 6)  # Near bottom-right
+        (5, 5),  # Near origin (top-left)
+        (5, CANVAS_WIDTH - 6),  # Near top-right
+        (CANVAS_HEIGHT - 6, 5),  # Near bottom-left
+        (CANVAS_HEIGHT - 6, CANVAS_WIDTH - 6),  # Near bottom-right
     ]
 
     with StopWatcher("edge_positions", kernel=g) as sw:
-        g.circles(canvas, [(row, col, radius) for row, col in edge_positions],
-                  color=1.0, alpha=1.0, aa_width=0.0)
+        g.circles(
+            canvas,
+            [(row, col, radius) for row, col in edge_positions],
+            color=1.0,
+            alpha=1.0,
+            aa_width=0.0,
+        )
         result = g.read(canvas)
         sw.show(result)
 
@@ -348,13 +388,15 @@ def test_edge_positions_validation(backend, monkeypatch):
     # Verify each edge circle
     # PIL uses (x, y) = (col, row)
     for row, col in edge_positions:
-        assert verify_pixel_is_white(pil_img, col, row), \
-            f"{backend}: Circle at edge position (row={row}, col={col}) should be white"
+        assert verify_pixel_is_white(
+            pil_img, col, row
+        ), f"{backend}: Circle at edge position (row={row}, col={col}) should be white"
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Run tests manually for debugging
     import sys
+
     backend = sys.argv[1] if len(sys.argv) > 1 else "metal"
 
     print(f"Testing Graphics position validation on {backend} backend...")

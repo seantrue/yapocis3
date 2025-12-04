@@ -4,12 +4,12 @@ VGG16 neural network implementation using yapocis CNN kernels.
 Provides classification and embedding extraction for the VGG16 architecture.
 Supports GPU-resident buffers for efficient inference.
 """
+
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
 
 from __future__ import annotations
 
 import os
-from typing import Optional, Tuple
 
 import numpy as np
 
@@ -40,7 +40,7 @@ class VGG16:
         embedding = vgg.extract_features(image)
     """
 
-    def __init__(self, weights_path: Optional[str] = None):
+    def __init__(self, weights_path: str | None = None):
         """
         Initialize VGG16 network.
 
@@ -48,7 +48,7 @@ class VGG16:
             weights_path: Path to weights file (.npz format). If None, must call load_weights() later.
         """
         self.prog = core.load_program("cnn")
-        self.weights: Optional[dict] = None
+        self.weights: dict | None = None
 
         if weights_path is not None:
             self.load_weights(weights_path)
@@ -91,6 +91,7 @@ class VGG16:
         if image.shape[:2] != (224, 224):
             try:
                 from PIL import Image
+
                 pil_image = Image.fromarray((image * 255).astype(np.uint8))
                 pil_image = pil_image.resize((224, 224), Image.BILINEAR)
                 image = np.array(pil_image).astype(np.float32) / 255.0
@@ -149,7 +150,7 @@ class VGG16:
         input_tensor: np.ndarray,
         block_num: int,
         num_layers: int,
-        out_channels: int
+        out_channels: int,
     ) -> np.ndarray:
         """
         Execute a VGG convolutional block.
@@ -164,10 +165,12 @@ class VGG16:
             Output feature map after convolutions and pooling
         """
         # Check if async mode is enabled
-        use_async = os.environ.get('YAPOCIS_ASYNC', '').lower() in ('1', 'true', 'yes')
+        use_async = os.environ.get("YAPOCIS_ASYNC", "").lower() in ("1", "true", "yes")
 
         if use_async:
-            return self._conv_block_async(input_tensor, block_num, num_layers, out_channels)
+            return self._conv_block_async(
+                input_tensor, block_num, num_layers, out_channels
+            )
 
         # Synchronous path (original implementation)
         x = np.ascontiguousarray(input_tensor)
@@ -179,7 +182,9 @@ class VGG16:
             bias = np.ascontiguousarray(self.weights[f"conv{conv_idx}_bias"])
 
             # Allocate contiguous output buffer
-            output_buf = np.ascontiguousarray(np.zeros((out_channels, H, W), dtype=np.float32))
+            output_buf = np.ascontiguousarray(
+                np.zeros((out_channels, H, W), dtype=np.float32)
+            )
 
             # 3x3 convolution
             x = self.prog.conv2d_3x3(x, weights, bias, output_buf, out_channels)
@@ -192,7 +197,9 @@ class VGG16:
         # Max pooling 2x2
         H_out = H // 2
         W_out = W // 2
-        pool_buf = np.ascontiguousarray(np.zeros((out_channels, H_out, W_out), dtype=np.float32))
+        pool_buf = np.ascontiguousarray(
+            np.zeros((out_channels, H_out, W_out), dtype=np.float32)
+        )
         x = self.prog.max_pool_2x2(x, pool_buf)
 
         return x
@@ -202,7 +209,7 @@ class VGG16:
         input_tensor: np.ndarray,
         block_num: int,
         num_layers: int,
-        out_channels: int
+        out_channels: int,
     ) -> np.ndarray:
         """
         Execute a VGG convolutional block using async execution.
@@ -230,12 +237,18 @@ class VGG16:
         relu_buffers = []
 
         for i in range(num_layers):
-            conv_buffers.append(np.ascontiguousarray(np.zeros((out_channels, H, W), dtype=np.float32)))
-            relu_buffers.append(np.ascontiguousarray(np.zeros((out_channels, H, W), dtype=np.float32)))
+            conv_buffers.append(
+                np.ascontiguousarray(np.zeros((out_channels, H, W), dtype=np.float32))
+            )
+            relu_buffers.append(
+                np.ascontiguousarray(np.zeros((out_channels, H, W), dtype=np.float32))
+            )
 
         H_out = H // 2
         W_out = W // 2
-        pool_buf = np.ascontiguousarray(np.zeros((out_channels, H_out, W_out), dtype=np.float32))
+        pool_buf = np.ascontiguousarray(
+            np.zeros((out_channels, H_out, W_out), dtype=np.float32)
+        )
 
         # Ensure input is contiguous
         input_buf = np.ascontiguousarray(input_tensor)
@@ -273,7 +286,7 @@ class VGG16:
         self.prog.read(pool_buf)
         return pool_buf
 
-    def forward(self, image: np.ndarray, stop_at: Optional[str] = None) -> np.ndarray:
+    def forward(self, image: np.ndarray, stop_at: str | None = None) -> np.ndarray:
         """
         Forward pass through VGG16 network.
 
@@ -287,46 +300,46 @@ class VGG16:
         self._check_weights()
 
         # Block 1: 64 channels (conv0, conv1)
-        x = self._conv_block(image, 1, 2, 64)    # (64, 112, 112)
+        x = self._conv_block(image, 1, 2, 64)  # (64, 112, 112)
 
         # Block 2: 128 channels (conv2, conv3)
-        x = self._conv_block(x, 2, 2, 128)       # (128, 56, 56)
+        x = self._conv_block(x, 2, 2, 128)  # (128, 56, 56)
 
         # Block 3: 256 channels (conv4, conv5, conv6)
-        x = self._conv_block(x, 3, 3, 256)       # (256, 28, 28)
+        x = self._conv_block(x, 3, 3, 256)  # (256, 28, 28)
 
         # Block 4: 512 channels (conv7, conv8, conv9)
-        x = self._conv_block(x, 4, 3, 512)       # (512, 14, 14)
+        x = self._conv_block(x, 4, 3, 512)  # (512, 14, 14)
 
         # Block 5: 512 channels (conv10, conv11, conv12)
-        x = self._conv_block(x, 5, 3, 512)       # (512, 7, 7)
+        x = self._conv_block(x, 5, 3, 512)  # (512, 7, 7)
 
         # Flatten
         x = np.ascontiguousarray(x.reshape(-1))  # (512 * 7 * 7 = 25088,)
 
         # FC6 (fc0)
-        fc6_W = np.ascontiguousarray(self.weights['fc0_weights'])  # (4096, 25088)
-        fc6_b = np.ascontiguousarray(self.weights['fc0_bias'])     # (4096,)
+        fc6_W = np.ascontiguousarray(self.weights["fc0_weights"])  # (4096, 25088)
+        fc6_b = np.ascontiguousarray(self.weights["fc0_bias"])  # (4096,)
         fc6_out = np.ascontiguousarray(np.zeros(4096, dtype=np.float32))
         x = self.prog.fully_connected(x, fc6_W, fc6_b, fc6_out)
         x = self.prog.relu_activation(x)
 
-        if stop_at == 'fc6':
+        if stop_at == "fc6":
             return x
 
         # FC7 (fc1)
-        fc7_W = np.ascontiguousarray(self.weights['fc1_weights'])  # (4096, 4096)
-        fc7_b = np.ascontiguousarray(self.weights['fc1_bias'])     # (4096,)
+        fc7_W = np.ascontiguousarray(self.weights["fc1_weights"])  # (4096, 4096)
+        fc7_b = np.ascontiguousarray(self.weights["fc1_bias"])  # (4096,)
         fc7_out = np.ascontiguousarray(np.zeros(4096, dtype=np.float32))
         x = self.prog.fully_connected(x, fc7_W, fc7_b, fc7_out)
         x = self.prog.relu_activation(x)
 
-        if stop_at == 'fc7':
+        if stop_at == "fc7":
             return x
 
         # FC8 (fc2)
-        fc8_W = np.ascontiguousarray(self.weights['fc2_weights'])  # (1000, 4096)
-        fc8_b = np.ascontiguousarray(self.weights['fc2_bias'])     # (1000,)
+        fc8_W = np.ascontiguousarray(self.weights["fc2_weights"])  # (1000, 4096)
+        fc8_b = np.ascontiguousarray(self.weights["fc2_bias"])  # (1000,)
         fc8_out = np.ascontiguousarray(np.zeros(1000, dtype=np.float32))
         x = self.prog.fully_connected(x, fc8_W, fc8_b, fc8_out)
 
@@ -335,7 +348,9 @@ class VGG16:
 
         return x
 
-    def predict(self, image: np.ndarray, top_k: int = 5) -> Tuple[np.ndarray, np.ndarray]:
+    def predict(
+        self, image: np.ndarray, top_k: int = 5
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Classify an image and return top predictions.
 
@@ -358,7 +373,7 @@ class VGG16:
 
         return top_indices, top_probs
 
-    def extract_features(self, image: np.ndarray, layer: str = 'fc6') -> np.ndarray:
+    def extract_features(self, image: np.ndarray, layer: str = "fc6") -> np.ndarray:
         """
         Extract feature embeddings from FC6 or FC7 layer.
 
@@ -369,7 +384,7 @@ class VGG16:
         Returns:
             Feature vector (4096-dimensional)
         """
-        if layer not in ['fc6', 'fc7']:
+        if layer not in ["fc6", "fc7"]:
             raise ValueError(f"Layer must be 'fc6' or 'fc7', got: {layer}")
 
         # Preprocess
@@ -393,43 +408,38 @@ class VGG16Resident(VGG16):
     with async execution mode.
     """
 
-    def __init__(self, weights_path: Optional[str] = None):
+    def __init__(self, weights_path: str | None = None):
         super().__init__(weights_path)
-        self.buffers: Optional[dict] = None
+        self.buffers: dict | None = None
         self._buffers_written = False
 
     def allocate_buffers(self) -> None:
         """Pre-allocate all intermediate activation buffers."""
         self.buffers = {
             # Conv blocks - using naming: conv{block}_{layer}
-            'conv1_1': np.zeros((64, 224, 224), dtype=np.float32),
-            'conv1_2': np.zeros((64, 224, 224), dtype=np.float32),
-            'pool1': np.zeros((64, 112, 112), dtype=np.float32),
-
-            'conv2_1': np.zeros((128, 112, 112), dtype=np.float32),
-            'conv2_2': np.zeros((128, 112, 112), dtype=np.float32),
-            'pool2': np.zeros((128, 56, 56), dtype=np.float32),
-
-            'conv3_1': np.zeros((256, 56, 56), dtype=np.float32),
-            'conv3_2': np.zeros((256, 56, 56), dtype=np.float32),
-            'conv3_3': np.zeros((256, 56, 56), dtype=np.float32),
-            'pool3': np.zeros((256, 28, 28), dtype=np.float32),
-
-            'conv4_1': np.zeros((512, 28, 28), dtype=np.float32),
-            'conv4_2': np.zeros((512, 28, 28), dtype=np.float32),
-            'conv4_3': np.zeros((512, 28, 28), dtype=np.float32),
-            'pool4': np.zeros((512, 14, 14), dtype=np.float32),
-
-            'conv5_1': np.zeros((512, 14, 14), dtype=np.float32),
-            'conv5_2': np.zeros((512, 14, 14), dtype=np.float32),
-            'conv5_3': np.zeros((512, 14, 14), dtype=np.float32),
-            'pool5': np.zeros((512, 7, 7), dtype=np.float32),
-
+            "conv1_1": np.zeros((64, 224, 224), dtype=np.float32),
+            "conv1_2": np.zeros((64, 224, 224), dtype=np.float32),
+            "pool1": np.zeros((64, 112, 112), dtype=np.float32),
+            "conv2_1": np.zeros((128, 112, 112), dtype=np.float32),
+            "conv2_2": np.zeros((128, 112, 112), dtype=np.float32),
+            "pool2": np.zeros((128, 56, 56), dtype=np.float32),
+            "conv3_1": np.zeros((256, 56, 56), dtype=np.float32),
+            "conv3_2": np.zeros((256, 56, 56), dtype=np.float32),
+            "conv3_3": np.zeros((256, 56, 56), dtype=np.float32),
+            "pool3": np.zeros((256, 28, 28), dtype=np.float32),
+            "conv4_1": np.zeros((512, 28, 28), dtype=np.float32),
+            "conv4_2": np.zeros((512, 28, 28), dtype=np.float32),
+            "conv4_3": np.zeros((512, 28, 28), dtype=np.float32),
+            "pool4": np.zeros((512, 14, 14), dtype=np.float32),
+            "conv5_1": np.zeros((512, 14, 14), dtype=np.float32),
+            "conv5_2": np.zeros((512, 14, 14), dtype=np.float32),
+            "conv5_3": np.zeros((512, 14, 14), dtype=np.float32),
+            "pool5": np.zeros((512, 7, 7), dtype=np.float32),
             # FC layers
-            'flatten': np.zeros(25088, dtype=np.float32),
-            'fc6': np.zeros(4096, dtype=np.float32),
-            'fc7': np.zeros(4096, dtype=np.float32),
-            'fc8': np.zeros(1000, dtype=np.float32),
+            "flatten": np.zeros(25088, dtype=np.float32),
+            "fc6": np.zeros(4096, dtype=np.float32),
+            "fc7": np.zeros(4096, dtype=np.float32),
+            "fc8": np.zeros(1000, dtype=np.float32),
         }
         for _, weight in self.weights.items():
             self.prog.write(weight)
@@ -453,7 +463,7 @@ class VGG16Resident(VGG16):
         input_tensor: np.ndarray,
         block_num: int,
         num_layers: int,
-        out_channels: int
+        out_channels: int,
     ) -> np.ndarray:
         """
         Execute a VGG convolutional block using pre-allocated resident buffers.
@@ -476,9 +486,9 @@ class VGG16Resident(VGG16):
         # Get buffer names for this block
         buffer_names = []
         for i in range(1, num_layers + 1):
-            buffer_names.append(f'conv{block_num}_{i}')
+            buffer_names.append(f"conv{block_num}_{i}")
 
-        pool_buffer_name = f'pool{block_num}'
+        pool_buffer_name = f"pool{block_num}"
 
         # Write input to GPU
         input_buf = np.ascontiguousarray(input_tensor)
@@ -509,7 +519,7 @@ class VGG16Resident(VGG16):
         self.prog.read(pool_buf)
         return pool_buf
 
-    def forward(self, image: np.ndarray, stop_at: Optional[str] = None) -> np.ndarray:
+    def forward(self, image: np.ndarray, stop_at: str | None = None) -> np.ndarray:
         """
         Forward pass through VGG16 using resident buffers.
 
@@ -526,7 +536,7 @@ class VGG16Resident(VGG16):
         self._ensure_buffers_on_gpu()
 
         # Check if async mode is enabled
-        use_async = os.environ.get('YAPOCIS_ASYNC', '').lower() in ('1', 'true', 'yes')
+        use_async = os.environ.get("YAPOCIS_ASYNC", "").lower() in ("1", "true", "yes")
 
         # Write input image
         input_buf = np.ascontiguousarray(image)
@@ -561,39 +571,39 @@ class VGG16Resident(VGG16):
             x = self._conv_block(x, 5, 3, 512)
 
         # Flatten
-        flatten_buf = self.buffers['flatten']
+        flatten_buf = self.buffers["flatten"]
         flatten_buf[:] = x.reshape(-1)
         # Write flattened data to GPU
         self.prog.write(flatten_buf)
 
         # FC layers
-        fc6_buf = self.buffers['fc6']
-        fc7_buf = self.buffers['fc7']
-        fc8_buf = self.buffers['fc8']
+        fc6_buf = self.buffers["fc6"]
+        fc7_buf = self.buffers["fc7"]
+        fc8_buf = self.buffers["fc8"]
 
         # FC6
-        fc6_W = self.weights['fc0_weights']
-        fc6_b = self.weights['fc0_bias']
+        fc6_W = self.weights["fc0_weights"]
+        fc6_b = self.weights["fc0_bias"]
         self.prog.fully_connected_res(flatten_buf, fc6_W, fc6_b, fc6_buf)
         self.prog.relu_activation_res(fc6_buf, fc6_buf)
 
-        if stop_at == 'fc6':
+        if stop_at == "fc6":
             self.prog.read(fc6_buf)
             return fc6_buf.copy()
 
         # FC7
-        fc7_W = self.weights['fc1_weights']
-        fc7_b = self.weights['fc1_bias']
+        fc7_W = self.weights["fc1_weights"]
+        fc7_b = self.weights["fc1_bias"]
         self.prog.fully_connected_res(fc6_buf, fc7_W, fc7_b, fc7_buf)
         self.prog.relu_activation_res(fc7_buf, fc7_buf)
 
-        if stop_at == 'fc7':
+        if stop_at == "fc7":
             self.prog.read(fc7_buf)
             return fc7_buf.copy()
 
         # FC8
-        fc8_W = self.weights['fc2_weights']
-        fc8_b = self.weights['fc2_bias']
+        fc8_W = self.weights["fc2_weights"]
+        fc8_b = self.weights["fc2_bias"]
         self.prog.fully_connected_res(fc7_buf, fc8_W, fc8_b, fc8_buf)
 
         # Softmax
@@ -608,7 +618,7 @@ class VGG16Resident(VGG16):
         input_tensor: np.ndarray,
         block_num: int,
         num_layers: int,
-        out_channels: int
+        out_channels: int,
     ) -> np.ndarray:
         """
         Helper for async conv block execution within a larger async context.
@@ -621,9 +631,9 @@ class VGG16Resident(VGG16):
         # Get buffer names for this block
         buffer_names = []
         for i in range(1, num_layers + 1):
-            buffer_names.append(f'conv{block_num}_{i}')
+            buffer_names.append(f"conv{block_num}_{i}")
 
-        pool_buffer_name = f'pool{block_num}'
+        pool_buffer_name = f"pool{block_num}"
 
         current_input = input_tensor
 
@@ -648,7 +658,7 @@ class VGG16Resident(VGG16):
         return pool_buf
 
 
-def load_imagenet_labels(path: str = None, model_name: str = 'vgg16') -> list[str]:
+def load_imagenet_labels(path: str = None, model_name: str = "vgg16") -> list[str]:
     """
     Load ImageNet class labels.
 
@@ -663,6 +673,7 @@ def load_imagenet_labels(path: str = None, model_name: str = 'vgg16') -> list[st
         # Try to get from model asset manager
         try:
             from yapocis.models import get_classes_path
+
             classes_path = get_classes_path(model_name)
             if classes_path:
                 path = str(classes_path)
@@ -673,7 +684,7 @@ def load_imagenet_labels(path: str = None, model_name: str = 'vgg16') -> list[st
         # Return dummy labels if file not found
         return [f"class_{i}" for i in range(1000)]
 
-    with open(path, 'r') as f:
+    with open(path) as f:
         labels = [line.strip() for line in f]
 
     return labels

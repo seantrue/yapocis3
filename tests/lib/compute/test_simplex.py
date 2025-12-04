@@ -12,9 +12,9 @@ Validates 2D and 3D simplex noise across all backends, including:
 import numpy as np
 import pytest
 
+from tests import StopWatcher
 from yapocis.core import get_test_backends
 from yapocis.lib.simplex import Simplex, make_simplex2d, make_simplex3d
-from tests import StopWatcher
 
 
 @pytest.mark.smoke
@@ -47,7 +47,9 @@ def test_simplex2d_deterministic(backend, monkeypatch):
     noise1 = s.simplex2d(128, 128, seed=123, octaves=3)
     noise2 = s.simplex2d(128, 128, seed=123, octaves=3)
 
-    np.testing.assert_array_equal(noise1, noise2, err_msg=f"{backend}: Same seed produced different output")
+    np.testing.assert_array_equal(
+        noise1, noise2, err_msg=f"{backend}: Same seed produced different output"
+    )
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -60,7 +62,9 @@ def test_simplex2d_different_seeds(backend, monkeypatch):
     noise2 = s.simplex2d(128, 128, seed=2)
 
     # Should be different
-    assert not np.allclose(noise1, noise2, rtol=0.01), f"{backend}: Different seeds produced similar output"
+    assert not np.allclose(
+        noise1, noise2, rtol=0.01
+    ), f"{backend}: Different seeds produced similar output"
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -72,11 +76,15 @@ def test_simplex2d_visual(backend, monkeypatch):
 
     with StopWatcher("simplex2d_visual", kernel=s) as sw:
         with sw.checkpoint("clouds"):
-            clouds = s.simplex2d(512, 512, seed=1, scale=0.005, octaves=6, persistence=0.5)
+            clouds = s.simplex2d(
+                512, 512, seed=1, scale=0.005, octaves=6, persistence=0.5
+            )
             sw.show(clouds, "clouds")
 
         with sw.checkpoint("detail"):
-            detail = s.simplex2d(512, 512, seed=2, scale=0.02, octaves=8, persistence=0.6, lacunarity=2.5)
+            detail = s.simplex2d(
+                512, 512, seed=2, scale=0.02, octaves=8, persistence=0.6, lacunarity=2.5
+            )
             sw.show(detail, "detail")
 
 
@@ -93,13 +101,17 @@ def test_simplex2d_tileable(backend, monkeypatch):
     top_edge = noise[0, :]
     bottom_edge = noise[-1, :]
     edge_diff = np.abs(top_edge - bottom_edge).mean()
-    assert edge_diff < 0.1, f"{backend}: Top/bottom edges don't match (diff={edge_diff:.4f})"
+    assert (
+        edge_diff < 0.1
+    ), f"{backend}: Top/bottom edges don't match (diff={edge_diff:.4f})"
 
     # Left edge should match right edge
     left_edge = noise[:, 0]
     right_edge = noise[:, -1]
     edge_diff = np.abs(left_edge - right_edge).mean()
-    assert edge_diff < 0.1, f"{backend}: Left/right edges don't match (diff={edge_diff:.4f})"
+    assert (
+        edge_diff < 0.1
+    ), f"{backend}: Left/right edges don't match (diff={edge_diff:.4f})"
 
     with StopWatcher("tileable", kernel=s) as sw:
         sw.show(noise, "tileable_noise")
@@ -174,7 +186,9 @@ def test_simplex3d_deterministic(backend, monkeypatch):
     noise1 = s.simplex3d(32, 32, 32, seed=123, octaves=3)
     noise2 = s.simplex3d(32, 32, 32, seed=123, octaves=3)
 
-    np.testing.assert_array_equal(noise1, noise2, err_msg=f"{backend}: 3D noise not deterministic")
+    np.testing.assert_array_equal(
+        noise1, noise2, err_msg=f"{backend}: 3D noise not deterministic"
+    )
 
 
 @pytest.mark.parametrize("backend", get_test_backends())

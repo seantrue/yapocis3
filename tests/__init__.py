@@ -13,9 +13,9 @@ random.seed(42)
 
 import pytest
 
+from yapocis.core import get_backend, get_backend_device, get_manager
 from yapocis.images import find_image
 from yapocis.utils.basic import imread, show_array
-from yapocis.core import get_backend, get_manager, get_backend_device
 
 ASIZE = 980
 
@@ -46,7 +46,7 @@ def text_test():
     uninteresting = set(string.printable) - set(
         string.ascii_lowercase + string.ascii_uppercase
     )
-    translator = s.maketrans({c: " " for c in uninteresting})
+    translator = s.maketrans(dict.fromkeys(uninteresting, " "))
     s = s.translate(translator)
     words = sorted(set(word for word in s.split() if len(word) > 2))
     return words
@@ -141,7 +141,7 @@ def snapshot(snapper):
 
 
 def snapshow(
-        snapper: "BoundKernel", a: np.ndarray, *args, depth=2, checkzero=True, **kwargs
+    snapper: "BoundKernel", a: np.ndarray, *args, depth=2, checkzero=True, **kwargs
 ):
     tname, fname = name_of_test(depth)
     snapper.snapshot(name=f"{fname}/{tname}")
@@ -236,12 +236,12 @@ class StopWatcher:
         return False
 
     def __call__(
-            self,
-            array: np.ndarray,
-            *args,
-            checkzero=False,
-            depth=0,
-            kernel=None,
+        self,
+        array: np.ndarray,
+        *args,
+        checkzero=False,
+        depth=0,
+        kernel=None,
     ):
         t = time.time() - self.t
         kernel = kernel if kernel else self.kernel
@@ -258,7 +258,7 @@ class StopWatcher:
     show = __call__
 
     def showcheck(
-            self, array: np.ndarray, *args, checkzero=False, depth=0, kernel=None
+        self, array: np.ndarray, *args, checkzero=False, depth=0, kernel=None
     ):
         kernel = kernel if kernel else self.kernel
         self.show(
@@ -304,14 +304,14 @@ class StopWatcher:
             return {"total": total_time, "checkpoints": {}}
 
         return {
-            "total":       sum(self.checkpoints.values()),
+            "total": sum(self.checkpoints.values()),
             "checkpoints": self.checkpoints.copy(),
-            "slowest":     (
+            "slowest": (
                 max(self.checkpoints.items(), key=lambda x: x[1])
                 if self.checkpoints
                 else None
             ),
-            "fastest":     (
+            "fastest": (
                 min(self.checkpoints.items(), key=lambda x: x[1])
                 if self.checkpoints
                 else None
@@ -458,18 +458,18 @@ class PerformanceTracker:
                 ]
 
                 op_stats = {
-                    "count":  len(times),
-                    "mean":   np.mean(times),
-                    "std":    np.std(times),
-                    "min":    np.min(times),
-                    "max":    np.max(times),
+                    "count": len(times),
+                    "mean": np.mean(times),
+                    "std": np.std(times),
+                    "min": np.min(times),
+                    "max": np.max(times),
                     "median": np.median(times),
                 }
 
                 if self.memory_enabled and any(memories):
                     op_stats["memory"] = {
                         "mean_mb": np.mean(memories),
-                        "max_mb":  np.max(memories),
+                        "max_mb": np.max(memories),
                     }
 
                 backend_stats[op] = op_stats
@@ -520,9 +520,9 @@ class PerformanceTracker:
 
                 # Add memory info if available
                 if (
-                        backend in stats
-                        and operation in stats[backend]
-                        and "memory" in stats[backend][operation]
+                    backend in stats
+                    and operation in stats[backend]
+                    and "memory" in stats[backend][operation]
                 ):
                     mem_info = stats[backend][operation]["memory"]
                     lines.append(
@@ -549,9 +549,9 @@ class PerformanceTracker:
         existing_data = {}
         if os.path.exists(filepath):
             try:
-                with open(filepath, "r") as f:
+                with open(filepath) as f:
                     existing_data = json.load(f)
-            except (json.JSONDecodeError, IOError):
+            except (OSError, json.JSONDecodeError):
                 pass
 
         # Add current results with timestamp
@@ -561,9 +561,9 @@ class PerformanceTracker:
 
         existing_data["runs"].append(
             {
-                "timestamp":   timestamp,
-                "test_name":   self.test_name,
-                "results":     self.results,
+                "timestamp": timestamp,
+                "test_name": self.test_name,
+                "results": self.results,
                 "environment": self.environment,
             }
         )
@@ -577,7 +577,7 @@ class PerformanceTracker:
         return filepath
 
     def detect_regressions(
-            self, baseline_file: str = None, threshold: float = 1.2
+        self, baseline_file: str = None, threshold: float = 1.2
     ) -> dict:
         """Detect performance regressions by comparing with historical data.
 
@@ -601,14 +601,14 @@ class PerformanceTracker:
 
         if not os.path.exists(baseline_file):
             return {
-                "status":  "no_baseline",
+                "status": "no_baseline",
                 "message": f"No baseline file found: {baseline_file}",
             }
 
         try:
-            with open(baseline_file, "r") as f:
+            with open(baseline_file) as f:
                 baseline_data = json.load(f)
-        except (json.JSONDecodeError, IOError) as e:
+        except (OSError, json.JSONDecodeError) as e:
             return {"status": "error", "message": f"Failed to load baseline: {e}"}
 
         # Get baseline statistics (median of last 10 runs for stability)
@@ -657,21 +657,21 @@ class PerformanceTracker:
 
                     if slowdown >= threshold:
                         backend_regressions[operation] = {
-                            "baseline_ms":    baseline_time * 1000,
-                            "current_ms":     current_time * 1000,
-                            "slowdown":       slowdown,
+                            "baseline_ms": baseline_time * 1000,
+                            "current_ms": current_time * 1000,
+                            "slowdown": slowdown,
                             "regression_pct": (slowdown - 1) * 100,
-                            "threshold":      threshold,
+                            "threshold": threshold,
                         }
 
             if backend_regressions:
                 regressions[backend] = backend_regressions
 
         return {
-            "status":          "complete",
-            "regressions":     regressions,
-            "threshold":       threshold,
-            "baseline_runs":   len(baseline_data.get("runs", [])),
+            "status": "complete",
+            "regressions": regressions,
+            "threshold": threshold,
+            "baseline_runs": len(baseline_data.get("runs", [])),
             "has_regressions": len(regressions) > 0,
         }
 

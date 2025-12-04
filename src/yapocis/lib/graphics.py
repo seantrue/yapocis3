@@ -1,6 +1,7 @@
 """
 Low level wrappers around the OpenCL graphics kernels.
 """
+
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 import numpy as np
@@ -8,20 +9,27 @@ import numpy as np
 from yapocis.lib.typeset import compute_offset, render_text
 from yapocis.utils.basic import compute_360_to_180
 
-from .abstract_graphics import (AbstractGraphics, AbstractGraphicsSetup,
-                                arrayify1d, to_list, to_vector)
+from .abstract_graphics import (
+    AbstractGraphics,
+    AbstractGraphicsSetup,
+    arrayify1d,
+    to_list,
+    to_vector,
+)
 
 
 class Graphics1Setup(AbstractGraphicsSetup):
-    CHANNELS=1
+    CHANNELS = 1
+
     def coerce_coords(self, coords, width, dtype=np.int32, **kwargs):
         if not hasattr(coords, "dtype"):
             coords = np.array(coords, dtype=dtype)
         assert len(coords.shape) == 2 and coords.shape[1] == width
         return coords
 
-
-    def coerce_colors(self, coords, color=None, colors=None, alpha=None, alphas=None, **kwargs) -> np.ndarray:
+    def coerce_colors(
+        self, coords, color=None, colors=None, alpha=None, alphas=None, **kwargs
+    ) -> np.ndarray:
         n = coords.shape[0]
         if color and colors:
             raise RuntimeError(f"Only one of color {color} and {colors}")
@@ -32,7 +40,9 @@ class Graphics1Setup(AbstractGraphicsSetup):
         ca = np.column_stack([colors, alphas])
         return ca
 
-    def coerce_widths(self, coords, width=None, widths=None, distance=None, **kwargs) -> np.ndarray:
+    def coerce_widths(
+        self, coords, width=None, widths=None, distance=None, **kwargs
+    ) -> np.ndarray:
         n = coords.shape[0]
         if width and widths:
             raise RuntimeError(f"Only one of width {width} and {widths}")
@@ -42,7 +52,9 @@ class Graphics1Setup(AbstractGraphicsSetup):
         widths = to_vector(width, widths, n, default=1.0, dtype=np.float32)
         return widths
 
-    def coerce_aa_widths(self, coords, aa_width=None, aa_widths=None, **kwargs) -> np.ndarray:
+    def coerce_aa_widths(
+        self, coords, aa_width=None, aa_widths=None, **kwargs
+    ) -> np.ndarray:
         n = coords.shape[0]
         if aa_width is not None and aa_widths is not None:
             raise RuntimeError(f"Only one of aa_width {aa_width} and {aa_widths}")
@@ -74,7 +86,9 @@ class Graphics1Setup(AbstractGraphicsSetup):
         ipixel = 0
         coords = np.empty((len(locations), 4), dtype=np.int32)
         ipixels = np.empty(len(locations), dtype=np.int32)
-        for i, (block, location, alpha) in enumerate(zip(blocks, locations, alphas)):
+        for i, (block, location, alpha) in enumerate(
+            zip(blocks, locations, alphas, strict=False)
+        ):
             height, width = block.shape[0], block.shape[1]
             x, y = location
             coords[i, :] = [x, y, width, height]
@@ -88,7 +102,6 @@ class Graphics1Setup(AbstractGraphicsSetup):
         alpha_buffer = np.concatenate(alpha_buffer)
         buffer = np.column_stack([pixel_buffer, alpha_buffer])
         return coords, buffer, ipixels
-
 
     def setup_sprites(self, locations, sprites, alpha=None, alphas=None, **kwargs):
         """
@@ -113,7 +126,7 @@ class Graphics1Setup(AbstractGraphicsSetup):
         alpha_buffer = []
         ipixel = 0
         ipixels = []
-        for sprite, alpha in zip(sprites, alphas):
+        for sprite, alpha in zip(sprites, alphas, strict=False):
             sprite = sprite.ravel()
             ipixels.append(ipixel)
             ipixel += len(sprite)
@@ -134,8 +147,22 @@ class Graphics1Setup(AbstractGraphicsSetup):
         ipixels = np.array(ipixels, dtype=np.int32)
         return coords, buffer, ipixels
 
-    def setup_texts(self, locations, texts, font=None, fonts=None, size=None, sizes=None, alpha=None, alphas=None, color=None,
-                    colors=None, rotation=None, rotations=None, **kwargs):
+    def setup_texts(
+        self,
+        locations,
+        texts,
+        font=None,
+        fonts=None,
+        size=None,
+        sizes=None,
+        alpha=None,
+        alphas=None,
+        color=None,
+        colors=None,
+        rotation=None,
+        rotations=None,
+        **kwargs,
+    ):
         n = len(locations)
         fonts = to_list(font, fonts, n, default="default")
         sizes = to_list(size, sizes, n, default=32)
@@ -143,26 +170,34 @@ class Graphics1Setup(AbstractGraphicsSetup):
         rotations = to_list(rotation, rotations, n, default=0)
         rotations = [compute_360_to_180(rotation) for rotation in rotations]
 
-        bbox_blocks = [render_text(text, font_name=font_name, size=size, rotation=rotation)
-                       for text, font_name, size, rotation in zip(texts, fonts, sizes, rotations)]
-        bboxes, blocks = zip(*bbox_blocks)
-        dxdy = [compute_offset(angle, h, w) for ((_, _, h, w), angle) in zip(bboxes, rotations)]
-        locations = [(x + dx, y + dy) for ((x, y), (dx, dy)) in zip(locations, dxdy)]
+        bbox_blocks = [
+            render_text(text, font_name=font_name, size=size, rotation=rotation)
+            for text, font_name, size, rotation in zip(
+                texts, fonts, sizes, rotations, strict=False
+            )
+        ]
+        bboxes, blocks = zip(*bbox_blocks, strict=False)
+        dxdy = [
+            compute_offset(angle, h, w)
+            for ((_, _, h, w), angle) in zip(bboxes, rotations, strict=False)
+        ]
+        locations = [
+            (x + dx, y + dy)
+            for ((x, y), (dx, dy)) in zip(locations, dxdy, strict=False)
+        ]
 
         if isinstance(alphas, (list, tuple)):
             new_alphas = []
-            for alpha_, block in zip(alphas, blocks):
+            for alpha_, block in zip(alphas, blocks, strict=False):
                 if alpha_ == "mask":
                     alpha_ = block
                 elif alpha_ == "bug":
-                    alpha_ = np.maximum(block, .33)
+                    alpha_ = np.maximum(block, 0.33)
                 new_alphas.append(alpha_)
             alphas = new_alphas
         return locations, blocks, alphas
 
 
-
 class Graphics1(AbstractGraphics, Graphics1Setup):
-    CHANNELS=1
-    INTERFACE="graphics"
-
+    CHANNELS = 1
+    INTERFACE = "graphics"

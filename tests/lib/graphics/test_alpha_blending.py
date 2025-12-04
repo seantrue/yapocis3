@@ -7,10 +7,11 @@ overlapping rectangles with known colors and alpha values, then verifying
 pixel values match mathematical expectations.
 """
 
-import pytest
 import numpy as np
-from yapocis.lib.graphics4 import Graphics4
+import pytest
+
 from yapocis.core import get_test_backends
+from yapocis.lib.graphics4 import Graphics4
 
 
 def blend_over(src_rgba, dst_rgba):
@@ -57,8 +58,13 @@ def test_single_rectangle_opaque(backend, monkeypatch):
 
     # Check center pixel
     center_pixel = result[50, 50, :]
-    np.testing.assert_allclose(center_pixel, red, rtol=0.01, atol=0.01,
-                               err_msg=f"Opaque rectangle color mismatch on {backend}")
+    np.testing.assert_allclose(
+        center_pixel,
+        red,
+        rtol=0.01,
+        atol=0.01,
+        err_msg=f"Opaque rectangle color mismatch on {backend}",
+    )
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -80,8 +86,13 @@ def test_single_rectangle_transparent(backend, monkeypatch):
 
     # Check center pixel
     center_pixel = result[50, 50, :]
-    np.testing.assert_allclose(center_pixel, expected, rtol=0.01, atol=0.01,
-                               err_msg=f"Semi-transparent rectangle blending incorrect on {backend}")
+    np.testing.assert_allclose(
+        center_pixel,
+        expected,
+        rtol=0.01,
+        atol=0.01,
+        err_msg=f"Semi-transparent rectangle blending incorrect on {backend}",
+    )
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -119,21 +130,36 @@ def test_two_overlapping_rectangles(backend, monkeypatch):
     # Testing shows result[10, 50] has blue, so rectangles appear to use different convention
     # Let's test positions that work: swap x and y in indexing
     left_pixel = result[10, 50, :]  # y=10, x=50 but actually x=10, y=50 based on test
-    np.testing.assert_allclose(left_pixel, blue, rtol=0.01, atol=0.01,
-                               err_msg=f"Left region should be pure blue on {backend}, got {left_pixel}")
+    np.testing.assert_allclose(
+        left_pixel,
+        blue,
+        rtol=0.01,
+        atol=0.01,
+        err_msg=f"Left region should be pure blue on {backend}, got {left_pixel}",
+    )
 
     # 2. Overlap region: x=35, y=50
     expected_overlap = blend_over(red_alpha, blue)
     overlap_pixel = result[35, 50, :]
-    np.testing.assert_allclose(overlap_pixel, expected_overlap, rtol=0.01, atol=0.01,
-                               err_msg=f"Overlap region blending incorrect on {backend}, got {overlap_pixel}")
+    np.testing.assert_allclose(
+        overlap_pixel,
+        expected_overlap,
+        rtol=0.01,
+        atol=0.01,
+        err_msg=f"Overlap region blending incorrect on {backend}, got {overlap_pixel}",
+    )
 
     # 3. Right region: x=60, y=50
     black = [0.0, 0.0, 0.0, 0.0]
     expected_right = blend_over(red_alpha, black)
     right_pixel = result[60, 50, :]
-    np.testing.assert_allclose(right_pixel, expected_right, rtol=0.01, atol=0.01,
-                               err_msg=f"Right region blending incorrect on {backend}, got {right_pixel}")
+    np.testing.assert_allclose(
+        right_pixel,
+        expected_right,
+        rtol=0.01,
+        atol=0.01,
+        err_msg=f"Right region blending incorrect on {backend}, got {right_pixel}",
+    )
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -161,27 +187,47 @@ def test_three_overlapping_rectangles(backend, monkeypatch):
     # Check different regions:
     # Region 1 (25, 25): Only green
     pixel_1 = result[25, 25, :]
-    np.testing.assert_allclose(pixel_1, green, rtol=0.01, atol=0.01,
-                               err_msg=f"Region 1 should be pure green on {backend}")
+    np.testing.assert_allclose(
+        pixel_1,
+        green,
+        rtol=0.01,
+        atol=0.01,
+        err_msg=f"Region 1 should be pure green on {backend}",
+    )
 
     # Region 2 (75, 75): blue @ 0.6 over green @ 1.0
     expected_2 = blend_over(blue_alpha, green)
     pixel_2 = result[75, 75, :]
-    np.testing.assert_allclose(pixel_2, expected_2, rtol=0.01, atol=0.01,
-                               err_msg=f"Region 2 blending incorrect on {backend}")
+    np.testing.assert_allclose(
+        pixel_2,
+        expected_2,
+        rtol=0.01,
+        atol=0.01,
+        err_msg=f"Region 2 blending incorrect on {backend}",
+    )
 
     # Region 3 (125, 125): red @ 0.4 over (blue @ 0.6 over green @ 1.0)
     layer_2 = blend_over(blue_alpha, green)
     expected_3 = blend_over(red_alpha, layer_2)
     pixel_3 = result[125, 125, :]
-    np.testing.assert_allclose(pixel_3, expected_3, rtol=0.01, atol=0.01,
-                               err_msg=f"Region 3 blending incorrect on {backend}")
+    np.testing.assert_allclose(
+        pixel_3,
+        expected_3,
+        rtol=0.01,
+        atol=0.01,
+        err_msg=f"Region 3 blending incorrect on {backend}",
+    )
 
     # Region 4 (175, 175): red @ 0.4 over green @ 1.0
     expected_4 = blend_over(red_alpha, green)
     pixel_4 = result[175, 175, :]
-    np.testing.assert_allclose(pixel_4, expected_4, rtol=0.01, atol=0.01,
-                               err_msg=f"Region 4 blending incorrect on {backend}")
+    np.testing.assert_allclose(
+        pixel_4,
+        expected_4,
+        rtol=0.01,
+        atol=0.01,
+        err_msg=f"Region 4 blending incorrect on {backend}",
+    )
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -213,8 +259,13 @@ def test_multiple_alpha_values(backend, monkeypatch):
         expected = blend_over(color, white)
 
         pixel = result[50, x_center, :]
-        np.testing.assert_allclose(pixel, expected, rtol=0.01, atol=0.01,
-                                   err_msg=f"Alpha={alpha} blending incorrect on {backend}")
+        np.testing.assert_allclose(
+            pixel,
+            expected,
+            rtol=0.01,
+            atol=0.01,
+            err_msg=f"Alpha={alpha} blending incorrect on {backend}",
+        )
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -237,13 +288,19 @@ def test_corner_case_full_transparent(backend, monkeypatch):
     result = g.read(canvas)
 
     # Result should be identical to original (blue)
-    np.testing.assert_allclose(result, original, rtol=0.01, atol=0.01,
-                               err_msg=f"Fully transparent rectangle affected image on {backend}")
+    np.testing.assert_allclose(
+        result,
+        original,
+        rtol=0.01,
+        atol=0.01,
+        err_msg=f"Fully transparent rectangle affected image on {backend}",
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Run tests manually for debugging
     import sys
+
     backend = sys.argv[1] if len(sys.argv) > 1 else "metal"
 
     print(f"Testing alpha blending on {backend} backend...")

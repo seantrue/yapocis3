@@ -1,12 +1,12 @@
-
 #!/usr/bin/env python3
 """Analyze NPZ files in queue/raw for dtype, min/max, and NaN status"""
 
 import argparse
-import numpy as np
-import os
-from pathlib import Path
 import sys
+from pathlib import Path
+
+import numpy as np
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -80,10 +80,10 @@ def main():
 
     if args.summary:
         print(f"Analyzing {total_files} NPZ files from {queue_dir}")
-        print("="*80)
+        print("=" * 80)
     elif not args.nan_only:
         print(f"Found {total_files} NPZ files\n")
-        print("="*80)
+        print("=" * 80)
 
     for npz_file in npz_files:
         file_has_nan = False
@@ -138,7 +138,7 @@ def main():
 
             # Print file header
             print(f"\nFile: {npz_file.name}")
-            print("-"*80)
+            print("-" * 80)
             print(f"Arrays: {arrays_to_show}")
 
             for name in arrays_to_show:
@@ -157,10 +157,14 @@ def main():
                             print(f"    ⚠️  Has Inf: {has_inf}")
                             if has_nan:
                                 nan_count = np.sum(np.isnan(arr))
-                                print(f"    NaN count: {nan_count} ({100*nan_count/arr.size:.2f}%)")
+                                print(
+                                    f"    NaN count: {nan_count} ({100*nan_count/arr.size:.2f}%)"
+                                )
                             if has_inf:
                                 inf_count = np.sum(np.isinf(arr))
-                                print(f"    Inf count: {inf_count} ({100*inf_count/arr.size:.2f}%)")
+                                print(
+                                    f"    Inf count: {inf_count} ({100*inf_count/arr.size:.2f}%)"
+                                )
 
                         # Get min/max excluding NaN/Inf
                         finite_vals = arr[np.isfinite(arr)]
@@ -170,7 +174,7 @@ def main():
                             if args.verbose:
                                 print(f"    Mean (finite): {np.mean(finite_vals):.6f}")
                         else:
-                            print(f"    ⚠️  No finite values!")
+                            print("    ⚠️  No finite values!")
                 else:
                     if args.verbose:
                         print(f"    Min: {np.min(arr)}")
@@ -187,17 +191,18 @@ def main():
             print(f"\n  Error reading file {npz_file.name}: {e}")
 
     # Print summary
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     if args.summary or args.nan_only or args.dtype:
-        print(f"\nSummary:")
+        print("\nSummary:")
         print(f"  Total files analyzed: {total_files}")
         print(f"  Total arrays shown: {total_arrays}")
         print(f"  Files with NaN: {files_with_nan}")
         print(f"  Files with Inf: {files_with_inf}")
-        print(f"\n  Arrays by dtype:")
+        print("\n  Arrays by dtype:")
         for dtype_name in sorted(dtype_counts.keys()):
             count = dtype_counts[dtype_name]
             print(f"    {dtype_name}: {count}")
+
 
 if __name__ == "__main__":
     main()

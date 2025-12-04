@@ -23,16 +23,18 @@ Example:
 
 import importlib
 import os
+from collections.abc import Callable
+from typing import Any
+
 import yaml
-from typing import Any, Callable, Dict
 
 from yapocis.interfaces import find_interface
 
 # Type alias for context generator functions
-ContextGenerator = Callable[[Dict[str, Any]], Dict[str, Any]]
+ContextGenerator = Callable[[dict[str, Any]], dict[str, Any]]
 
 
-def load_interface_context(interface_name: str) -> Dict[str, Any]:
+def load_interface_context(interface_name: str) -> dict[str, Any]:
     """
     Load template context from YAML file for given interface.
 
@@ -64,7 +66,7 @@ def load_interface_context(interface_name: str) -> Dict[str, Any]:
 
     # Load YAML context
     try:
-        with open(yaml_path, 'r') as f:
+        with open(yaml_path) as f:
             context = yaml.safe_load(f)
             if context is None:
                 return {}
@@ -75,16 +77,12 @@ def load_interface_context(interface_name: str) -> Dict[str, Any]:
                 )
             return context
     except yaml.YAMLError as e:
-        raise RuntimeError(
-            f"Failed to parse YAML context from {yaml_path}: {e}"
-        ) from e
+        raise RuntimeError(f"Failed to parse YAML context from {yaml_path}: {e}") from e
     except Exception as e:
-        raise RuntimeError(
-            f"Failed to load YAML context from {yaml_path}: {e}"
-        ) from e
+        raise RuntimeError(f"Failed to load YAML context from {yaml_path}: {e}") from e
 
 
-def merge_context(yaml_context: Dict[str, Any], **kwargs: Any) -> Dict[str, Any]:
+def merge_context(yaml_context: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
     """
     Merge YAML context with programmatically-passed context.
 
@@ -111,7 +109,7 @@ def merge_context(yaml_context: Dict[str, Any], **kwargs: Any) -> Dict[str, Any]
     return merged
 
 
-def get_interface_context(interface_name: str, **kwargs: Any) -> Dict[str, Any]:
+def get_interface_context(interface_name: str, **kwargs: Any) -> dict[str, Any]:
     """
     Get complete template context for an interface.
 
@@ -140,7 +138,7 @@ def get_interface_context(interface_name: str, **kwargs: Any) -> Dict[str, Any]:
     return merge_context(yaml_context, **kwargs)
 
 
-def apply_context_generator(context: Dict[str, Any]) -> Dict[str, Any]:
+def apply_context_generator(context: dict[str, Any]) -> dict[str, Any]:
     """
     Apply context generator if specified in metadata.
 
@@ -174,29 +172,27 @@ def apply_context_generator(context: Dict[str, Any]) -> Dict[str, Any]:
         The function `yapocis.lib.gaussian.generate_convolvesep_context(context)`
         will be called to transform the context before template rendering.
     """
-    if '_generator' not in context:
+    if "_generator" not in context:
         return context
 
     # Extract and remove metadata
-    gen_spec = context.pop('_generator')
+    gen_spec = context.pop("_generator")
 
     # Validate generator spec
     if not isinstance(gen_spec, dict):
         raise ValueError(f"_generator must be a dict, got {type(gen_spec).__name__}")
 
-    if 'module' not in gen_spec or 'function' not in gen_spec:
+    if "module" not in gen_spec or "function" not in gen_spec:
         raise ValueError("_generator must have 'module' and 'function' keys")
 
-    module_name = gen_spec['module']
-    function_name = gen_spec['function']
+    module_name = gen_spec["module"]
+    function_name = gen_spec["function"]
 
     # Import module and get function
     try:
         module = importlib.import_module(module_name)
     except ImportError as e:
-        raise ImportError(
-            f"Cannot import generator module '{module_name}': {e}"
-        ) from e
+        raise ImportError(f"Cannot import generator module '{module_name}': {e}") from e
 
     try:
         generator_func = getattr(module, function_name)

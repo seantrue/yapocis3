@@ -4,8 +4,7 @@ from __future__ import annotations
 Callable wrapper for PyMetallic kernels, mirroring the OpenCL Kernel wrapper.
 """
 
-import time
-from typing import Any, Callable, Union
+from typing import Any
 
 import numpy as np
 
@@ -14,16 +13,16 @@ try:
 except Exception as e:  # pragma: no cover
     raise RuntimeError("PyMetallic is required for the metallic backend") from e
 
-from yapocis.core.kernel_base import KernelBase
-from yapocis.utils.stereo_typing import Array
 from yapocis.core import infer_wh_from_args
+from yapocis.core.kernel_base import KernelBase
+
 
 class Kernel(KernelBase):
     def __init__(
         self,
         name,
-        kernel_manager: "KernelManager",
-        kernel: "pm.Kernel",
+        kernel_manager: KernelManager,
+        kernel: pm.Kernel,
         params: list[tuple],
         async_write: bool = False,
         local_size: tuple | None = None,
@@ -106,8 +105,11 @@ class Kernel(KernelBase):
         if self.global_size is None:
             if "dispatch_size" in self.traits:
                 from yapocis.core.dispatch_expr import evaluate_dispatch_size
+
                 dispatch_expr = self.traits["dispatch_size"]
-                self.global_size = evaluate_dispatch_size(dispatch_expr, self._current_args, self.params)
+                self.global_size = evaluate_dispatch_size(
+                    dispatch_expr, self._current_args, self.params
+                )
             else:
                 # Default behavior: infer from first array
                 shape = infer_wh_from_args(self._current_args)
@@ -160,6 +162,7 @@ class Kernel(KernelBase):
 
     def _execute_kernel_with_args(self, prepared_args, original_args, extra_kwargs):
         """Execute Metal kernel with prepared arguments."""
+
         def show_args():
             print("Python arguments")
             for iarg, arg in enumerate(original_args):

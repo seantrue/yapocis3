@@ -4,6 +4,7 @@ import os
 
 from pyopencl._cl import get_platforms
 
+
 def get_available_device_names():
     platforms = get_platforms()
     device_names = []
@@ -14,6 +15,7 @@ def get_available_device_names():
             else:
                 device_names.append(f"{platform.name}:{device.name}")
     return device_names
+
 
 def get_available_devices(aliases: bool = True) -> dict[str, "Device"]:
     """
@@ -37,6 +39,7 @@ def get_available_devices(aliases: bool = True) -> dict[str, "Device"]:
             i += 1
     return devices
 
+
 def pick_default_device(device_names: list[str]) -> str:
     dns = {dn.lower(): dn for dn in device_names if isinstance(dn, str)}
     preferences = ("nvidia", "amd", "intel")
@@ -49,6 +52,7 @@ def pick_default_device(device_names: list[str]) -> str:
             if preference in dn and "cpu" in dn:
                 return dns[dn]
     return device_names[-1]
+
 
 def get_device(device_name: str | None = None) -> "Device":
     """

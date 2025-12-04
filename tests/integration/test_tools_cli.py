@@ -5,17 +5,22 @@ Comprehensive tests for yapocis-tools unified CLI.
 Tests all subcommands: assets, backends, devices, interfaces
 """
 import json
-import sys
-from io import StringIO
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
-from yapocis.scripts.tools import cmd_assets, cmd_backends, cmd_devices, cmd_interfaces, main
+from yapocis.scripts.tools import (
+    cmd_assets,
+    cmd_backends,
+    cmd_devices,
+    cmd_interfaces,
+    main,
+)
 
 
 class MockArgs:
     """Mock argument object for testing."""
+
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -35,7 +40,7 @@ class TestAssetsCommand:
             icons=False,
             fonts=False,
             kernels=False,
-            interfaces=False
+            interfaces=False,
         )
 
         result = cmd_assets(args)
@@ -58,7 +63,7 @@ class TestAssetsCommand:
             icons=False,
             fonts=False,
             kernels=False,
-            interfaces=False
+            interfaces=False,
         )
 
         result = cmd_assets(args)
@@ -78,7 +83,7 @@ class TestAssetsCommand:
             icons=False,
             fonts=False,
             kernels=False,
-            interfaces=False
+            interfaces=False,
         )
 
         result = cmd_assets(args)
@@ -98,7 +103,7 @@ class TestAssetsCommand:
             icons=False,
             fonts=False,
             kernels=False,
-            interfaces=False
+            interfaces=False,
         )
 
         result = cmd_assets(args)
@@ -118,7 +123,7 @@ class TestAssetsCommand:
             icons=False,
             fonts=False,
             kernels=False,
-            interfaces=False
+            interfaces=False,
         )
 
         result = cmd_assets(args)
@@ -138,7 +143,7 @@ class TestAssetsCommand:
             icons=False,
             fonts=False,
             kernels=False,
-            interfaces=False
+            interfaces=False,
         )
 
         result = cmd_assets(args)
@@ -157,7 +162,7 @@ class TestAssetsCommand:
             icons=False,
             fonts=False,
             kernels=False,
-            interfaces=False
+            interfaces=False,
         )
 
         with pytest.raises(SystemExit):
@@ -239,7 +244,7 @@ class TestDevicesCommand:
 
         assert result == 0
         # Should have at least one line of output (device name)
-        assert len(captured.out.strip().split('\n')) >= 1
+        assert len(captured.out.strip().split("\n")) >= 1
 
     def test_list_devices_with_config(self, capsys):
         """Test listing devices with full config."""
@@ -291,7 +296,7 @@ class TestInterfacesCommand:
             explain=False,
             opencl=False,
             python=False,
-            interfaces=[]
+            interfaces=[],
         )
 
         result = cmd_interfaces(args)
@@ -309,7 +314,7 @@ class TestInterfacesCommand:
             explain=True,
             opencl=False,
             python=False,
-            interfaces=["mandelbrot"]
+            interfaces=["mandelbrot"],
         )
 
         result = cmd_interfaces(args)
@@ -327,7 +332,7 @@ class TestInterfacesCommand:
             explain=False,
             opencl=True,
             python=False,
-            interfaces=["mandelbrot"]
+            interfaces=["mandelbrot"],
         )
 
         result = cmd_interfaces(args)
@@ -344,7 +349,7 @@ class TestInterfacesCommand:
             explain=False,
             opencl=False,
             python=True,
-            interfaces=["mandelbrot"]
+            interfaces=["mandelbrot"],
         )
 
         result = cmd_interfaces(args)
@@ -361,7 +366,7 @@ class TestInterfacesCommand:
             explain=False,
             opencl=False,
             python=False,
-            interfaces=["mandelbrot"]
+            interfaces=["mandelbrot"],
         )
 
         result = cmd_interfaces(args)
@@ -379,7 +384,7 @@ class TestInterfacesCommand:
             explain=True,
             opencl=False,
             python=False,
-            interfaces=[]  # Empty means all
+            interfaces=[],  # Empty means all
         )
 
         result = cmd_interfaces(args)
@@ -395,16 +400,18 @@ class TestMainFunction:
 
     def test_main_no_args(self, capsys):
         """Test main with no arguments shows help."""
-        with patch('sys.argv', ['yapocis-tools']):
+        with patch("sys.argv", ["yapocis-tools"]):
             result = main()
             captured = capsys.readouterr()
 
             assert result == 1
-            assert "usage:" in captured.out or "Yapocis development tools" in captured.out
+            assert (
+                "usage:" in captured.out or "Yapocis development tools" in captured.out
+            )
 
     def test_main_backends_subcommand(self, capsys):
         """Test main with backends subcommand."""
-        with patch('sys.argv', ['yapocis-tools', 'backends']):
+        with patch("sys.argv", ["yapocis-tools", "backends"]):
             result = main()
             captured = capsys.readouterr()
 
@@ -413,7 +420,7 @@ class TestMainFunction:
 
     def test_main_assets_list(self, capsys):
         """Test main with assets list subcommand."""
-        with patch('sys.argv', ['yapocis-tools', 'assets', '--list', '--all']):
+        with patch("sys.argv", ["yapocis-tools", "assets", "--list", "--all"]):
             result = main()
             captured = capsys.readouterr()
 
@@ -422,7 +429,7 @@ class TestMainFunction:
 
     def test_main_interfaces_list(self, capsys):
         """Test main with interfaces list subcommand."""
-        with patch('sys.argv', ['yapocis-tools', 'interfaces', '--list']):
+        with patch("sys.argv", ["yapocis-tools", "interfaces", "--list"]):
             result = main()
             captured = capsys.readouterr()
 
@@ -431,7 +438,7 @@ class TestMainFunction:
 
     def test_main_devices_list(self, capsys):
         """Test main with devices list subcommand."""
-        with patch('sys.argv', ['yapocis-tools', 'devices', '--list']):
+        with patch("sys.argv", ["yapocis-tools", "devices", "--list"]):
             result = main()
             captured = capsys.readouterr()
 
@@ -440,14 +447,14 @@ class TestMainFunction:
 
     def test_main_help(self, capsys):
         """Test main with --help flag."""
-        with patch('sys.argv', ['yapocis-tools', '--help']):
+        with patch("sys.argv", ["yapocis-tools", "--help"]):
             with pytest.raises(SystemExit) as exc:
                 main()
             assert exc.value.code == 0
 
     def test_main_subcommand_help(self, capsys):
         """Test main with subcommand --help."""
-        with patch('sys.argv', ['yapocis-tools', 'backends', '--help']):
+        with patch("sys.argv", ["yapocis-tools", "backends", "--help"]):
             with pytest.raises(SystemExit) as exc:
                 main()
             assert exc.value.code == 0
@@ -458,7 +465,7 @@ class TestIntegration:
 
     def test_full_workflow_backends(self, capsys):
         """Test full workflow: list backends and verify output structure."""
-        with patch('sys.argv', ['yapocis-tools', 'backends']):
+        with patch("sys.argv", ["yapocis-tools", "backends"]):
             result = main()
             captured = capsys.readouterr()
 
@@ -468,12 +475,16 @@ class TestIntegration:
             # Should have legend
             assert "Legend:" in captured.out
             # Should list at least one backend
-            assert ("OCL" in captured.out or "METAL" in captured.out or
-                    "CUDA" in captured.out or "NUMBAX" in captured.out)
+            assert (
+                "OCL" in captured.out
+                or "METAL" in captured.out
+                or "CUDA" in captured.out
+                or "NUMBAX" in captured.out
+            )
 
     def test_full_workflow_assets(self, capsys):
         """Test full workflow: list all assets and verify structure."""
-        with patch('sys.argv', ['yapocis-tools', 'assets', '--list', '--all']):
+        with patch("sys.argv", ["yapocis-tools", "assets", "--list", "--all"]):
             result = main()
             captured = capsys.readouterr()
 
@@ -491,7 +502,7 @@ class TestIntegration:
     def test_full_workflow_interfaces(self, capsys):
         """Test full workflow: list interfaces and explain one."""
         # First list
-        with patch('sys.argv', ['yapocis-tools', 'interfaces', '--list']):
+        with patch("sys.argv", ["yapocis-tools", "interfaces", "--list"]):
             result = main()
             captured = capsys.readouterr()
 
@@ -499,7 +510,9 @@ class TestIntegration:
             assert "Available Interfaces" in captured.out
 
         # Then explain
-        with patch('sys.argv', ['yapocis-tools', 'interfaces', 'mandelbrot', '--explain']):
+        with patch(
+            "sys.argv", ["yapocis-tools", "interfaces", "mandelbrot", "--explain"]
+        ):
             result = main()
             captured = capsys.readouterr()
 
@@ -508,7 +521,7 @@ class TestIntegration:
 
     def test_error_handling_invalid_subcommand(self, capsys):
         """Test error handling for invalid subcommand."""
-        with patch('sys.argv', ['yapocis-tools', 'invalid_command']):
+        with patch("sys.argv", ["yapocis-tools", "invalid_command"]):
             # Argparse exits with status 2 for invalid command
             with pytest.raises(SystemExit) as exc:
                 main()
@@ -516,7 +529,7 @@ class TestIntegration:
 
     def test_backend_json_output_valid(self, capsys):
         """Test that backend JSON output is valid and parseable."""
-        with patch('sys.argv', ['yapocis-tools', 'backends', '--json']):
+        with patch("sys.argv", ["yapocis-tools", "backends", "--json"]):
             result = main()
             captured = capsys.readouterr()
 
@@ -532,7 +545,7 @@ class TestIntegration:
 
     def test_assets_find_existing(self, capsys):
         """Test finding an asset that definitely exists."""
-        with patch('sys.argv', ['yapocis-tools', 'assets', 'test', '--images']):
+        with patch("sys.argv", ["yapocis-tools", "assets", "test", "--images"]):
             result = main()
             captured = capsys.readouterr()
 
@@ -554,7 +567,7 @@ class TestErrorConditions:
             icons=False,
             fonts=False,
             kernels=False,
-            interfaces=False
+            interfaces=False,
         )
 
         with pytest.raises(SystemExit):
@@ -562,7 +575,9 @@ class TestErrorConditions:
 
     def test_backends_exception_handling(self, capsys):
         """Test backends command handles exceptions gracefully."""
-        with patch('yapocis.core.get_backend_infos', side_effect=Exception("Test error")):
+        with patch(
+            "yapocis.core.get_backend_infos", side_effect=Exception("Test error")
+        ):
             args = MockArgs(json=False, verbose=False)
             result = cmd_backends(args)
             captured = capsys.readouterr()
@@ -578,7 +593,7 @@ class TestErrorConditions:
             explain=True,
             opencl=False,
             python=False,
-            interfaces=["nonexistent_interface_xyz"]
+            interfaces=["nonexistent_interface_xyz"],
         )
 
         # Should not crash, may produce error or skip
@@ -590,5 +605,5 @@ class TestErrorConditions:
             pass
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

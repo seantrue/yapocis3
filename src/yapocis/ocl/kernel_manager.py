@@ -59,7 +59,7 @@ class KernelManager(KernelManagerBase):
             pyopencl.Kernel object (cached instance)
         """
         # Initialize kernel cache on first use
-        if not hasattr(program, '_kernel_cache'):
+        if not hasattr(program, "_kernel_cache"):
             program._kernel_cache = {}
 
         # Return cached kernel or create and cache new one

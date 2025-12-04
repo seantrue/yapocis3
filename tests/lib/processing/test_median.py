@@ -7,6 +7,7 @@ from numpy.testing import assert_allclose
 
 from yapocis.core import get_test_backends
 from yapocis.lib.median import Median
+
 from . import StopWatcher, image_test
 
 
@@ -78,7 +79,9 @@ def test_median3x3_single_iteration(backend, monkeypatch):
 def test_median3x3_multiple_iterations(backend, monkeypatch):
     """Test median3x3 with multiple iterations."""
     monkeypatch.setenv("YAPOCIS_BACKEND", backend)
-    noisy, original = create_noisy_image(noise_fraction=0.15)  # Higher noise for visible effect
+    noisy, original = create_noisy_image(
+        noise_fraction=0.15
+    )  # Higher noise for visible effect
     median = Median()
 
     with StopWatcher("median3x3 multi", kernel=median) as sw:
@@ -93,9 +96,9 @@ def test_median3x3_multiple_iterations(backend, monkeypatch):
     variance_result = np.var(result)
     # Median filter should reduce variance (smooth the image)
     # Allow 1% tolerance for floating point and backend differences
-    assert variance_result <= variance_noisy * 1.01, (
-        f"Variance should decrease: noisy={variance_noisy:.6f}, result={variance_result:.6f}"
-    )
+    assert (
+        variance_result <= variance_noisy * 1.01
+    ), f"Variance should decrease: noisy={variance_noisy:.6f}, result={variance_result:.6f}"
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -187,9 +190,9 @@ def test_median3x3_removes_salt_pepper(backend, monkeypatch):
 
     # Filter should reduce error (get closer to original)
     # Allow small tolerance for backend differences
-    assert mae_after <= mae_before * 1.05, (
-        f"MAE should decrease: before={mae_before:.4f}, after={mae_after:.4f}"
-    )
+    assert (
+        mae_after <= mae_before * 1.05
+    ), f"MAE should decrease: before={mae_before:.4f}, after={mae_after:.4f}"
 
 
 @pytest.mark.parametrize("backend", get_test_backends())

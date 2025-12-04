@@ -2,14 +2,15 @@
 
 import numpy as np
 
-from yapocis.lib.abstract_graphics import AbstractKernelDraw, to_list
+from yapocis.lib.abstract_graphics import AbstractKernelDraw
 from yapocis.lib.channels import split_planes
 from yapocis.lib.kerneldraw1 import KernelDraw1
 
 
 class KernelDraw3(AbstractKernelDraw):
     COLOR_WIDTH = 3
-    def __init__(self, a: np.ndarray,**kwargs):
+
+    def __init__(self, a: np.ndarray, **kwargs):
         super(KernelDraw3, self).__init__(a, **kwargs)
         self.a = a
         self.color = (None, None, None)
@@ -22,7 +23,6 @@ class KernelDraw3(AbstractKernelDraw):
             coords = np.array(coords, dtype=dtype)
         assert len(coords.shape) == 2 and coords.shape[1] == width
         return coords
-
 
     def set_color(self, color, alpha=None):
         self.color = color
@@ -38,10 +38,12 @@ class KernelDraw3(AbstractKernelDraw):
     def render_immediate(self, handle, width, coords, **kwargs):
         if not coords:
             return
-        coords, colors, alphas, widths = self.prepare_args(coords, width,  **kwargs)
+        coords, colors, alphas, widths = self.prepare_args(coords, width, **kwargs)
         for dimension, ad in enumerate(self.ads):
             color_vector = colors[:, dimension]
-            getattr(ad, handle)(coords, colors=color_vector, alphas=alphas, widths=widths)
+            getattr(ad, handle)(
+                coords, colors=color_vector, alphas=alphas, widths=widths
+            )
 
     def lines(self, coords, distance=1.0, **kwargs):
         self.render_immediate("lines", 4, coords, distance=distance, **kwargs)

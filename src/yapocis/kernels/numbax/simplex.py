@@ -89,7 +89,9 @@ GRAD3 = np.array(
 
 
 @njit(cache=True, fastmath=True)
-def _simplex2d_single(x: float, y: float, seed: int, tileable: int, tile_w: int, tile_h: int) -> float:
+def _simplex2d_single(
+    x: float, y: float, seed: int, tileable: int, tile_w: int, tile_h: int
+) -> float:
     """Single octave 2D simplex noise."""
     F2 = 0.3660254037844386  # (sqrt(3) - 1) / 2
     G2 = 0.21132486540518713  # (3 - sqrt(3)) / 6
@@ -210,7 +212,9 @@ def _simplex2d_njit(
                 if tile_h < 1:
                     tile_h = 1
 
-                noise = _simplex2d_single(nx, ny, seed + octave, tileable, tile_w, tile_h)
+                noise = _simplex2d_single(
+                    nx, ny, seed + octave, tileable, tile_w, tile_h
+                )
                 total += noise * amplitude
 
                 max_value += amplitude
@@ -423,7 +427,9 @@ def simplex2d(
                     tile_w = max(1, int(height / frequency))
                     tile_h = max(1, int(width / frequency))
 
-                    noise = _simplex2d_single(nx, ny, seed + octave, tileable, tile_w, tile_h)
+                    noise = _simplex2d_single(
+                        nx, ny, seed + octave, tileable, tile_w, tile_h
+                    )
                     total += noise * amplitude
 
                     max_value += amplitude

@@ -1,6 +1,7 @@
 """
 Helpers around the PyOpenCL wrappers for OpenCL
 """
+
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 import os
@@ -40,18 +41,24 @@ class DeviceManager(DeviceManagerBase):
             timed: Enable performance timing
             **kwargs: Additional arguments for DeviceManagerBase
         """
-        assert device_name is None or isinstance(device_name, (str, int, bytes)), device_name
+        assert device_name is None or isinstance(
+            device_name, (str, int, bytes)
+        ), device_name
         device_name_str, device = get_device(device_name=device_name)
         try:
             context = pyopencl.Context([device])
             queue = pyopencl.CommandQueue(context)
-            super().__init__(context, queue, device_name_str, device, timed=timed, **kwargs)
-        except RuntimeError as e:
+            super().__init__(
+                context, queue, device_name_str, device, timed=timed, **kwargs
+            )
+        except RuntimeError:
             print(f"Failed to initialize `{device_name_str}', trying default")
             device_name_str, device = get_device()
             context = pyopencl.Context([device])
             queue = pyopencl.CommandQueue(context)
-            super().__init__(context, queue, device_name_str, device, timed=timed, **kwargs)
+            super().__init__(
+                context, queue, device_name_str, device, timed=timed, **kwargs
+            )
 
     def build(self, source: str, options: list[str] | None = None) -> pyopencl.Program:
         """
@@ -66,8 +73,13 @@ class DeviceManager(DeviceManagerBase):
         """
         binary = pyopencl.Program(self.ctx, source)
         if options is None:
-            options = ["-w", "-cl-fast-relaxed-math", "-cl-mad-enable",
-                      "-cl-no-signed-zeros", "-cl-finite-math-only"]
+            options = [
+                "-w",
+                "-cl-fast-relaxed-math",
+                "-cl-mad-enable",
+                "-cl-no-signed-zeros",
+                "-cl-finite-math-only",
+            ]
         program = binary.build(options=options, cache_dir=YAPOCIS_CACHE)
         return program
 
@@ -143,7 +155,8 @@ class DeviceManager(DeviceManagerBase):
             # Reading an array back with no matching buffer is fatal
             if op == self.READ:
                 raise ValueError(
-                    "Array not in yapocis management, you may have written to it, or be using an assigned or .copy")
+                    "Array not in yapocis management, you may have written to it, or be using an assigned or .copy"
+                )
             return None
         raise RuntimeError(f"Failed to find a buffer for {op} {a}")
 
@@ -157,7 +170,9 @@ class DeviceManager(DeviceManagerBase):
         if events:
             pyopencl.wait_for_events(events)
 
+
 _device_managers: dict[str, DeviceManager] = {}
+
 
 def get_device_manager(device_name: str | None = None) -> DeviceManager:
     """
@@ -170,9 +185,11 @@ def get_device_manager(device_name: str | None = None) -> DeviceManager:
         _device_managers[device_name] = dmgr = DeviceManager(device_name)
     return dmgr
 
+
 def display_stats():
     device_stats = {dn: dmgr.stats for dn, dmgr in _device_managers.items()}
     print(yaml.safe_dump(device_stats))
+
 
 def display_snapshots():
     print()

@@ -5,7 +5,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from yapocis.core import load_program, get_backends, get_test_backends
+from yapocis.core import get_test_backends, load_program
+
 from . import StopWatcher
 
 
@@ -41,7 +42,9 @@ def test_fft1d_forward(backend, monkeypatch):
     expected = np.fft.fft(complex_signal).astype(np.complex64)
 
     # Check shape
-    assert result.shape == expected.shape, f"Shape mismatch: {result.shape} vs {expected.shape}"
+    assert (
+        result.shape == expected.shape
+    ), f"Shape mismatch: {result.shape} vs {expected.shape}"
 
     # Check magnitude (allow some tolerance for numerical differences)
     np.testing.assert_allclose(np.abs(result), np.abs(expected), rtol=0.01, atol=1e-3)
@@ -111,7 +114,9 @@ def test_window_functions(backend, monkeypatch):
         with sw.checkpoint("hann"):
             hann = prog.window(signal, 1)  # window_type=1
         # Hann window should have zeros at endpoints
-        assert hann[0] < 0.1 and hann[-1] < 0.1, "Hann window should be near zero at endpoints"
+        assert (
+            hann[0] < 0.1 and hann[-1] < 0.1
+        ), "Hann window should be near zero at endpoints"
         assert hann[n // 2] > 0.9, "Hann window should be near 1 at center"
 
         # Test Hamming window
@@ -122,7 +127,9 @@ def test_window_functions(backend, monkeypatch):
         # Test Blackman window
         with sw.checkpoint("blackman"):
             blackman = prog.window(signal, 3)  # window_type=3
-        assert blackman[0] < 0.1 and blackman[-1] < 0.1, "Blackman window should be near zero at endpoints"
+        assert (
+            blackman[0] < 0.1 and blackman[-1] < 0.1
+        ), "Blackman window should be near zero at endpoints"
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -143,8 +150,12 @@ def test_power_spectrum(backend, monkeypatch):
             power = prog.power_spectrum(fft_output)
 
     # Check power at specific frequencies
-    assert np.isclose(power[10], 25.0, rtol=0.01), f"Expected power 25.0 at index 10, got {power[10]}"
-    assert np.isclose(power[20], 169.0, rtol=0.01), f"Expected power 169.0 at index 20, got {power[20]}"
+    assert np.isclose(
+        power[10], 25.0, rtol=0.01
+    ), f"Expected power 25.0 at index 10, got {power[10]}"
+    assert np.isclose(
+        power[20], 169.0, rtol=0.01
+    ), f"Expected power 169.0 at index 20, got {power[20]}"
     # Other bins should be near zero
     assert power[0] < 0.1 and power[30] < 0.1
 
@@ -165,8 +176,11 @@ def test_different_sizes(backend, monkeypatch):
         expected = np.fft.fft(signal).astype(np.complex64)
 
         np.testing.assert_allclose(
-            np.abs(result), np.abs(expected), rtol=0.01, atol=1e-2,
-            err_msg=f"FFT failed for size {n}"
+            np.abs(result),
+            np.abs(expected),
+            rtol=0.01,
+            atol=1e-2,
+            err_msg=f"FFT failed for size {n}",
         )
 
 
@@ -213,6 +227,7 @@ def test_fft_smoke():
     """Smoke test - just ensure the FFT program loads."""
     # Use whatever backend is currently configured
     import os
+
     backend = os.environ.get("YAPOCIS_BACKEND", "numbax")
     prog = _load_fft_program(backend)
     assert prog is not None

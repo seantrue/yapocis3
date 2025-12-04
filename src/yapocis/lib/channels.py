@@ -1,4 +1,3 @@
-
 """
 Accommodate the differences between PIL, Numpy, and convenient programming models for OpenCL
 HWC <-> CHW ordering, conceptually.
@@ -10,7 +9,8 @@ import numpy as np
 
 from yapocis.utils.stereo_typing import *
 
-def histeq(im:Image1, nbr_bins:int =2 ** 16) -> Image1:
+
+def histeq(im: Image1, nbr_bins: int = 2**16) -> Image1:
     """
     Histogram equalization of a 2D array
 
@@ -24,14 +24,15 @@ def histeq(im:Image1, nbr_bins:int =2 ** 16) -> Image1:
     imhist, bins = np.histogram(im.ravel(), nbr_bins, density=True)
     imhist[0] = 0
 
-    cdf = imhist.cumsum() #cumulative distribution function
+    cdf = imhist.cumsum()  # cumulative distribution function
     cdf = (nbr_bins - 1) * cdf / cdf[-1]
     cdf = cdf / nbr_bins
 
     im2 = np.interp(im.flatten(), bins[:-1], cdf)
     return np.array(im2, np.float32).reshape(im.shape)
 
-def split_channels(rgb:Image3) -> tuple[Image1,Image1,Image1]:
+
+def split_channels(rgb: Image3) -> tuple[Image1, Image1, Image1]:
     """
     Split a WxHx3 array into WxH, WxH, WxH
 
@@ -41,8 +42,9 @@ def split_channels(rgb:Image3) -> tuple[Image1,Image1,Image1]:
     Returns:
         tuple of 2D arrays that are copies of the original data
     """
-    channels =  np.dsplit(rgb, indices_or_sections=3)
+    channels = np.dsplit(rgb, indices_or_sections=3)
     return [np.ascontiguousarray(np.squeeze(channel)) for channel in channels]
+
 
 def join_channels(r: Image1, g: Image1, b: Image1) -> Image3:
     """
@@ -57,16 +59,20 @@ def join_channels(r: Image1, g: Image1, b: Image1) -> Image3:
         3xWxH array
 
     """
-    rgb = np.ascontiguousarray(np.dstack((r,g,b)))
+    rgb = np.ascontiguousarray(np.dstack((r, g, b)))
     return rgb
+
 
 def split_planes(image: Image1234) -> tuple:
     if len(image.shape) == 2:
         return image.copy()
-    planes = [np.ascontiguousarray(np.squeeze(plane)) for plane in np.dsplit(image, indices_or_sections=image.shape[-1])]
+    planes = [
+        np.ascontiguousarray(np.squeeze(plane))
+        for plane in np.dsplit(image, indices_or_sections=image.shape[-1])
+    ]
     return planes
+
 
 def join_planes(*planes) -> Image1234:
     image = np.ascontiguousarray(np.dstack(planes))
     return image
-

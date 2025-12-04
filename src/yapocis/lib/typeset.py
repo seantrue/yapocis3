@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 # Adapted from wordle.py from freetype-py and used under the following terms:
@@ -9,10 +8,7 @@
 import math
 
 import numpy as np
-from typing import Optional
-
-from freetype import (FT_LOAD_RENDER, Face, FT_Matrix, FT_Set_Transform,
-                      FT_Vector, byref)
+from freetype import FT_LOAD_RENDER, Face, FT_Matrix, FT_Set_Transform, FT_Vector, byref
 
 from yapocis.fonts import font
 from yapocis.utils.basic import set_margin
@@ -22,6 +18,7 @@ from yapocis.utils.stereo_typing import Image1
 _glyph_cache = {}
 _kerning_cache = {}
 _extent_cache = {}
+
 
 def extent_freetype(text, filename: str, size: float = 12, angle: float = 0) -> tuple:
     """
@@ -41,7 +38,7 @@ def extent_freetype(text, filename: str, size: float = 12, angle: float = 0) -> 
         angle = -180 + (angle - 180)
     font_path = font(filename)
     size = 32 if size is None else size
-    key = (text,filename,size,angle)
+    key = (text, filename, size, angle)
     value = _extent_cache.get(key)
     if value is not None:
         return value
@@ -50,10 +47,12 @@ def extent_freetype(text, filename: str, size: float = 12, angle: float = 0) -> 
     face = Face(font_path)
     face.set_char_size(int(size * 64))
     angle = (angle / 180.0) * math.pi
-    matrix = FT_Matrix((int)(math.cos(angle) * 0x10000),
-                       (int)(-math.sin(angle) * 0x10000),
-                       (int)(math.sin(angle) * 0x10000),
-                       (int)(math.cos(angle) * 0x10000))
+    matrix = FT_Matrix(
+        (int)(math.cos(angle) * 0x10000),
+        (int)(-math.sin(angle) * 0x10000),
+        (int)(math.sin(angle) * 0x10000),
+        (int)(math.cos(angle) * 0x10000),
+    )
     flags = FT_LOAD_RENDER
     pen = FT_Vector(0, 0)
     FT_Set_Transform(face._FT_Face, byref(matrix), byref(pen))
@@ -63,7 +62,8 @@ def extent_freetype(text, filename: str, size: float = 12, angle: float = 0) -> 
     for c in text:
         try:
             kerning_x, left, rows, top, width, advance_x, advance_y = _kerning_cache[
-                (filename, size, angle, previous, c)]
+                (filename, size, angle, previous, c)
+            ]
         except KeyError:
             face.load_char(c, flags)
             kerning_x = face.get_kerning(previous, c).x
@@ -75,8 +75,15 @@ def extent_freetype(text, filename: str, size: float = 12, angle: float = 0) -> 
             rows = glyph.bitmap.rows
             top = glyph.bitmap_top
             left = glyph.bitmap_left
-            _kerning_cache[
-                (filename, size, angle, previous, c)] = kerning_x, left, rows, top, width, advance_x, advance_y
+            _kerning_cache[(filename, size, angle, previous, c)] = (
+                kerning_x,
+                left,
+                rows,
+                top,
+                width,
+                advance_x,
+                advance_y,
+            )
         previous = c
         pen.x += kerning_x
         x0 = (pen.x >> 6) + left
@@ -87,8 +94,9 @@ def extent_freetype(text, filename: str, size: float = 12, angle: float = 0) -> 
         ymin, ymax = min(ymin, y0), max(ymax, y1)
         pen.x += advance_x
         pen.y += advance_y
-    _extent_cache[key] = xmin,ymin,xmax,ymax
-    return xmin,ymin,xmax,ymax
+    _extent_cache[key] = xmin, ymin, xmax, ymax
+    return xmin, ymin, xmax, ymax
+
 
 def render_freetype(text, filename: str, size: float = 12, angle: float = 0):
     """
@@ -107,10 +115,12 @@ def render_freetype(text, filename: str, size: float = 12, angle: float = 0):
     face = Face(filename)
     face.set_char_size(int(size * 64))
     angle = (angle / 180.0) * math.pi
-    matrix = FT_Matrix((int)(math.cos(angle) * 0x10000),
-                       (int)(-math.sin(angle) * 0x10000),
-                       (int)(math.sin(angle) * 0x10000),
-                       (int)(math.cos(angle) * 0x10000))
+    matrix = FT_Matrix(
+        (int)(math.cos(angle) * 0x10000),
+        (int)(-math.sin(angle) * 0x10000),
+        (int)(math.sin(angle) * 0x10000),
+        (int)(math.cos(angle) * 0x10000),
+    )
     flags = FT_LOAD_RENDER
     pen = FT_Vector(0, 0)
     FT_Set_Transform(face._FT_Face, byref(matrix), byref(pen))
@@ -120,7 +130,8 @@ def render_freetype(text, filename: str, size: float = 12, angle: float = 0):
     for c in text:
         try:
             kerning_x, left, rows, top, width, advance_x, advance_y = _kerning_cache[
-                (filename, size, angle, previous, c)]
+                (filename, size, angle, previous, c)
+            ]
         except KeyError:
             face.load_char(c, flags)
             kerning_x = face.get_kerning(previous, c).x
@@ -132,8 +143,15 @@ def render_freetype(text, filename: str, size: float = 12, angle: float = 0):
             rows = glyph.bitmap.rows
             top = glyph.bitmap_top
             left = glyph.bitmap_left
-            _kerning_cache[
-                (filename, size, angle, previous, c)] = kerning_x, left, rows, top, width, advance_x, advance_y
+            _kerning_cache[(filename, size, angle, previous, c)] = (
+                kerning_x,
+                left,
+                rows,
+                top,
+                width,
+                advance_x,
+                advance_y,
+            )
         previous = c
         pen.x += kerning_x
         x0 = (pen.x >> 6) + left
@@ -168,19 +186,27 @@ def render_freetype(text, filename: str, size: float = 12, angle: float = 0):
             data = np.empty(rows * width, dtype=np.ubyte)
             buffer = bitmap.buffer.copy()
             for j in range(rows):
-                data[j * width:j * width + width] = buffer[j * pitch:j * pitch + width]
+                data[j * width : j * width + width] = buffer[
+                    j * pitch : j * pitch + width
+                ]
             _glyph_cache[(filename, size, angle, c)] = data
         if len(data):
             Z = data.reshape(rows, width)
-            L[y:y + rows, x:x + width] |= Z[::-1, ::1]
+            L[y : y + rows, x : x + width] |= Z[::-1, ::1]
         pen.x += face.glyph.advance.x
         pen.y += face.glyph.advance.y
 
     return L
 
-def render_text(text: str, font_name: str = "default", size: int = 32, rotation: float | None = None,
-                debug_bbox=False, crop=True) \
-        -> tuple[tuple, Image1]:
+
+def render_text(
+    text: str,
+    font_name: str = "default",
+    size: int = 32,
+    rotation: float | None = None,
+    debug_bbox=False,
+    crop=True,
+) -> tuple[tuple, Image1]:
     font_path = font(font_name)
     size = 32 if size is None else size
     rotation = 0.0 if rotation is None else rotation
@@ -202,11 +228,13 @@ def render_text(text: str, font_name: str = "default", size: int = 32, rotation:
 
         y1, y2 = hprofile[0], hprofile[-1]
         x1, x2 = vprofile[0], vprofile[-1]
-        rendered = rendered[max(0, y1 - 1):y2 + 2, max(0, x1 - 1):x2 + 2]
+        rendered = rendered[max(0, y1 - 1) : y2 + 2, max(0, x1 - 1) : x2 + 2]
     else:
         # Preserve full bounding box for proper baseline alignment
         # Get expected dimensions from extent_freetype
-        xmin_expected, ymin_expected, xmax_expected, ymax_expected = extent_freetype(text, font_path, size=size)
+        xmin_expected, ymin_expected, xmax_expected, ymax_expected = extent_freetype(
+            text, font_path, size=size
+        )
         expected_height = ymax_expected - ymin_expected
         expected_width = xmax_expected - xmin_expected
 
@@ -227,6 +255,7 @@ def render_text(text: str, font_name: str = "default", size: int = 32, rotation:
         set_margin(rendered, 2, 255)
 
     return [0, 0, *rendered.shape], rendered.astype(np.float32) / 255.0
+
 
 def compute_offset(angle, h, w):
     dx = dy = 0

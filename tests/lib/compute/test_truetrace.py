@@ -1,20 +1,20 @@
-import pytest
 import numpy as np
+import pytest
 from PIL import Image, ImageDraw
 
 from yapocis.core import get_test_backends
 from yapocis.lib.truetrace import (
-    build_circle_mask,
-    trace_bitmap,
-    chain_segments_to_polylines,
-    douglas_peucker,
-    close_and_filter_polylines,
-    build_regions_with_holes,
     TrueTrace,
+    build_circle_mask,
+    build_regions_with_holes,
+    chain_segments_to_polylines,
+    close_and_filter_polylines,
+    douglas_peucker,
+    trace_bitmap,
 )
+
 from . import (
     ASIZE,
-    show,
     StopWatcher,
 )
 

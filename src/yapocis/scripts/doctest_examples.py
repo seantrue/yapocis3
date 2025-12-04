@@ -34,10 +34,10 @@ import os
 import re
 import sys
 import traceback
-from contextlib import redirect_stdout, redirect_stderr
+from collections.abc import Iterator
+from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterator
 
 
 @dataclass
@@ -187,14 +187,14 @@ def contains_graphics_chars_outside_strings(source: str) -> bool:
             i += 1
             continue
 
-        if char == '\\' and in_string:
+        if char == "\\" and in_string:
             escape_next = True
             i += 1
             continue
 
         # Check for triple quotes
         if not in_string and i + 2 < len(source):
-            triple = source[i:i+3]
+            triple = source[i : i + 3]
             if triple in ('"""', "'''"):
                 in_string = True
                 string_char = triple
@@ -203,7 +203,7 @@ def contains_graphics_chars_outside_strings(source: str) -> bool:
 
         # Check for end of triple-quoted string
         if in_string and len(string_char) == 3 and i + 2 < len(source):
-            if source[i:i+3] == string_char:
+            if source[i : i + 3] == string_char:
                 in_string = False
                 string_char = None
                 i += 3
@@ -244,7 +244,11 @@ def should_skip_block(block: CodeBlock) -> tuple[bool, str | None]:
         return True, "marked {.no-exec}"
 
     # Check for explicit skip markers
-    if "# notest" in source or "# doctest: skip" in source or "# skip" in source.split("\n")[0]:
+    if (
+        "# notest" in source
+        or "# doctest: skip" in source
+        or "# skip" in source.split("\n")[0]
+    ):
         return True, "explicit skip marker"
 
     # Check for empty blocks first
@@ -289,7 +293,9 @@ def should_skip_block(block: CodeBlock) -> tuple[bool, str | None]:
     lines = source.split("\n")
     if len(lines) <= 12 and re.match(r"^\w+\s*=\s*\w+\.\w+\s*\($", lines[0].strip()):
         # Check if most lines are just parameter documentation
-        param_lines = sum(1 for line in lines[1:] if re.match(r"^\s+\w+.*[,)]?\s*(#.*)?$", line))
+        param_lines = sum(
+            1 for line in lines[1:] if re.match(r"^\s+\w+.*[,)]?\s*(#.*)?$", line)
+        )
         if param_lines >= len(lines) - 2:  # Most lines are params
             return True, "method signature documentation"
 
@@ -302,8 +308,12 @@ def should_skip_block(block: CodeBlock) -> tuple[bool, str | None]:
             # Check if middle lines are parameter documentation
             # Match: param: type, param=default, *args, **kwargs
             param_lines = sum(
-                1 for line in lines[1:-1]
-                if re.match(r"^\s*(\*{0,2}\w+\s*[:=].*|[\*]{1,2}\w+)[,)]?\s*(#.*)?$", line.strip())
+                1
+                for line in lines[1:-1]
+                if re.match(
+                    r"^\s*(\*{0,2}\w+\s*[:=].*|[\*]{1,2}\w+)[,)]?\s*(#.*)?$",
+                    line.strip(),
+                )
             )
             if param_lines >= len(lines) - 3:  # Most lines are params
                 return True, "function signature documentation"
@@ -317,8 +327,13 @@ def should_skip_block(block: CodeBlock) -> tuple[bool, str | None]:
 
     # Decorator list documentation (multiple @decorator lines without function)
     # Used to show available decorators/markers
-    if all(re.match(r"^@\w+", line.strip()) or line.strip().startswith("#") or not line.strip()
-           for line in lines if line.strip()):
+    if all(
+        re.match(r"^@\w+", line.strip())
+        or line.strip().startswith("#")
+        or not line.strip()
+        for line in lines
+        if line.strip()
+    ):
         decorator_lines = sum(1 for line in lines if line.strip().startswith("@"))
         if decorator_lines >= 2:
             return True, "decorator/marker documentation"
@@ -330,7 +345,7 @@ def should_skip_block(block: CodeBlock) -> tuple[bool, str | None]:
     # Try to parse - if it fails, check if it's an intentional fragment
     try:
         ast.parse(source)
-    except SyntaxError as e:
+    except SyntaxError:
         # Check if it's an intentional fragment with ellipsis placeholders
         if "..." in source:
             return True, "contains ellipsis placeholder"
@@ -450,7 +465,9 @@ def add_mock_functions(env: dict) -> None:
             "max_iterations": 10,
             "data": np.random.rand(256, 256).astype(np.float32),
             # Complex coordinates for Mandelbrot
-            "complex_coords": (np.random.rand(256, 256) + 1j * np.random.rand(256, 256)).astype(np.complex64),
+            "complex_coords": (
+                np.random.rand(256, 256) + 1j * np.random.rand(256, 256)
+            ).astype(np.complex64),
         }
     )
 
@@ -501,9 +518,7 @@ def run_code_block(
     # Check if should skip
     should_skip, reason = should_skip_block(block)
     if should_skip:
-        return TestResult(
-            block=block, success=True, skipped=True, skip_reason=reason
-        )
+        return TestResult(block=block, success=True, skipped=True, skip_reason=reason)
 
     if env is None:
         env = create_test_environment()
@@ -680,7 +695,9 @@ def run_tests(
                 print(f"       {result.error}")
 
                 if not continue_on_error:
-                    print("\nStopping on first error. Use --continue-on-error to run all.")
+                    print(
+                        "\nStopping on first error. Use --continue-on-error to run all."
+                    )
                     return stats
 
     return stats
@@ -846,6 +863,7 @@ Note: This script should be run from the project root directory or a subdirector
     # Verify yapocis is importable
     try:
         import yapocis
+
         print(f"yapocis package: {yapocis.__file__}")
     except ImportError as e:
         print(f"Warning: Cannot import yapocis: {e}")

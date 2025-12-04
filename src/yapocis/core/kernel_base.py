@@ -20,7 +20,7 @@ Backend-specific classes inherit from this base and implement:
 
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 
@@ -138,7 +138,7 @@ class KernelBase(ABC):
         buf = self.ensure(arg)
         return buf
 
-    def prepare_return(self) -> Union[Any, tuple[Any], None]:
+    def prepare_return(self) -> Any | tuple[Any] | None:
         """
         Read GPU output buffers back to NumPy arrays and prepare return value.
 

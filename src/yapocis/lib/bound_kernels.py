@@ -1,8 +1,9 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 import os
+from collections.abc import Callable
+
 from yapocis.core import load_program
 from yapocis.utils.stereo_typing import *
-from typing import Any, Callable
 
 
 class BoundKernels:
@@ -18,7 +19,9 @@ class BoundKernels:
     INTERFACE = None
     load_program_config = {}
     use_async = None  # Can be overridden by subclasses (True/False) or left as None
-    use_async_write = None  # Can be overridden by subclasses (True/False) or left as None
+    use_async_write = (
+        None  # Can be overridden by subclasses (True/False) or left as None
+    )
 
     def __init__(
         self,
@@ -41,7 +44,11 @@ class BoundKernels:
             self.use_async = self.__class__.use_async
         else:
             # Environment variable is the fallback
-            self.use_async = os.environ.get('YAPOCIS_ASYNC', '').lower() in ('1', 'true', 'yes')
+            self.use_async = os.environ.get("YAPOCIS_ASYNC", "").lower() in (
+                "1",
+                "true",
+                "yes",
+            )
 
         # Three-level resolution for async_write: instance > class > environment
         if async_write is not None:
@@ -52,7 +59,11 @@ class BoundKernels:
             self.async_write = self.__class__.use_async_write
         else:
             # Environment variable is the fallback
-            self.async_write = os.environ.get('YAPOCIS_ASYNC_WRITE', '').lower() in ('1', 'true', 'yes')
+            self.async_write = os.environ.get("YAPOCIS_ASYNC_WRITE", "").lower() in (
+                "1",
+                "true",
+                "yes",
+            )
 
         # Pass backend through so callers can force Metal/CUDA/OCL per instance.
         self.kmgr = load_program(
@@ -126,9 +137,9 @@ class BoundKernels:
         For explicit cleanup, use context managers or call purge() manually.
         """
         # Only purge if explicitly enabled via environment variable
-        if os.environ.get('YAPOCIS_AUTO_PURGE', '').lower() in ('1', 'true', 'yes'):
+        if os.environ.get("YAPOCIS_AUTO_PURGE", "").lower() in ("1", "true", "yes"):
             try:
-                if hasattr(self, 'kmgr'):
+                if hasattr(self, "kmgr"):
                     self.kmgr.purge()
             except Exception:
                 # Silently ignore errors during cleanup

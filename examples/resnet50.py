@@ -177,7 +177,7 @@ def test_mode(
 
     if not image_names:
         print("No image assets found!")
-        print("Image assets should be in src/yapocis/images/")
+        print("Image assets should be in yapocis/images/")
         return
 
     if max_images:

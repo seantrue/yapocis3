@@ -150,9 +150,10 @@ def generate_dog(size):
     elif size == 9:
         return np.array([-1.0, -1.0, -1.0, -1.0, 8.0, -1.0, -1.0, -1.0, -1.0]) / 8.0
     elif size == 11:
-        return np.array(
-            [-1.0, -1.0, -1.0, -1.0, -1.0, 10.0, -1.0, -1.0, -1.0, -1.0, -1.0]
-        ) / 10.0
+        return (
+            np.array([-1.0, -1.0, -1.0, -1.0, -1.0, 10.0, -1.0, -1.0, -1.0, -1.0, -1.0])
+            / 10.0
+        )
     else:
         return np.array([-1.0, -1.0, 4.0, -1.0, -1.0]) / 4.0
 
@@ -272,5 +273,5 @@ def generate_convolves_context(context):
             }
     """
     convs = generate_convs_from_spec(context)
-    context['convs'] = convs
+    context["convs"] = convs
     return context

@@ -2,8 +2,8 @@
 
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
 
-import os
 import glob
+import os
 
 from yapocis.utils.internals import get_yapocis_dir
 

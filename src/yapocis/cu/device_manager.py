@@ -1,6 +1,7 @@
 """
 Helpers around the PyCUDA wrappers for CUDA
 """
+
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
 
 import atexit
@@ -8,10 +9,11 @@ import os
 import sys
 
 import pycuda.driver as cuda
+
 cuda.init()  # Initialize CUDA driver (but don't auto-create context)
-from pycuda.compiler import SourceModule
 import pycuda.gpuarray as gpuarray
 import yaml
+from pycuda.compiler import SourceModule
 
 from yapocis.core.device_mgr_base import DeviceManagerBase
 from yapocis.cu.device import get_device
@@ -39,7 +41,9 @@ class DeviceManager(DeviceManagerBase):
             timed: Enable performance timing
             **kwargs: Additional arguments for DeviceManagerBase
         """
-        assert device_name is None or isinstance(device_name, (str, int, bytes)), device_name
+        assert device_name is None or isinstance(
+            device_name, (str, int, bytes)
+        ), device_name
         device_name_str, device = get_device(device_name=device_name)
 
         # Create context and stream
@@ -48,13 +52,17 @@ class DeviceManager(DeviceManagerBase):
         try:
             ctx = device.make_context()
             stream = cuda.Stream()
-            super().__init__(ctx, stream, device_name_str, device, timed=timed, **kwargs)
-        except RuntimeError as e:
+            super().__init__(
+                ctx, stream, device_name_str, device, timed=timed, **kwargs
+            )
+        except RuntimeError:
             print(f"Failed to initialize `{device_name_str}', trying default")
             device_name_str, device = get_device()
             ctx = device.make_context()
             stream = cuda.Stream()
-            super().__init__(ctx, stream, device_name_str, device, timed=timed, **kwargs)
+            super().__init__(
+                ctx, stream, device_name_str, device, timed=timed, **kwargs
+            )
 
     def build(self, source: str, options: list[str] | None = None) -> SourceModule:
         """
@@ -70,14 +78,19 @@ class DeviceManager(DeviceManagerBase):
         # Default CUDA compilation options
         default_options = [
             "--use_fast_math",
-            "-Xcudafe", "--diag_suppress=177",  # Suppress "function declared but never referenced"
-            "-Xcudafe", "--diag_suppress=68",   # Suppress "integer conversion resulted in a change of sign"
-            "-Xcudafe", "--diag_suppress=550"   # Suppress "variable was set but never used"
+            "-Xcudafe",
+            "--diag_suppress=177",  # Suppress "function declared but never referenced"
+            "-Xcudafe",
+            "--diag_suppress=68",  # Suppress "integer conversion resulted in a change of sign"
+            "-Xcudafe",
+            "--diag_suppress=550",  # Suppress "variable was set but never used"
         ]
         options = default_options if options is None else options
 
         # Compile the source module (no_extern_c=True to allow C++ templates)
-        module = SourceModule(source, options=options, cache_dir=YAPOCIS_CACHE, no_extern_c=True)
+        module = SourceModule(
+            source, options=options, cache_dir=YAPOCIS_CACHE, no_extern_c=True
+        )
         return module
 
     # Implement abstract methods from DeviceManagerBase
@@ -160,7 +173,7 @@ class DeviceManager(DeviceManagerBase):
             # Collect unique streams
             unique_streams = set()
             for event in events:
-                if hasattr(event, 'synchronize'):
+                if hasattr(event, "synchronize"):
                     unique_streams.add(event)
 
             # Synchronize each unique stream
@@ -189,7 +202,7 @@ class DeviceManager(DeviceManagerBase):
         """
         try:
             # Synchronize stream to finish all pending operations
-            if hasattr(self, 'queue') and self.queue is not None:
+            if hasattr(self, "queue") and self.queue is not None:
                 self.queue.synchronize()
         except cuda.Error:
             # Stream may already be invalid - ignore
@@ -208,11 +221,11 @@ class DeviceManager(DeviceManagerBase):
         """
         try:
             # Skip if already cleaned up by atexit handler
-            if not hasattr(self, 'ctx') or self.ctx is None:
+            if not hasattr(self, "ctx") or self.ctx is None:
                 return
 
             # Clear buffers
-            if hasattr(self, 'buffers'):
+            if hasattr(self, "buffers"):
                 self.buffers.clear()
 
             # Pop context to clean up the context stack
@@ -226,7 +239,9 @@ class DeviceManager(DeviceManagerBase):
             # Silently ignore all errors during __del__
             pass
 
+
 _device_managers: dict[str, DeviceManager] = {}
+
 
 def _cleanup_device_managers():
     """
@@ -243,7 +258,7 @@ def _cleanup_device_managers():
             dmgr.buffers.clear()
 
             # Pop context from stack
-            if hasattr(dmgr, 'ctx') and dmgr.ctx is not None:
+            if hasattr(dmgr, "ctx") and dmgr.ctx is not None:
                 try:
                     dmgr.ctx.pop()
                 except (cuda.Error, AttributeError, RuntimeError):
@@ -254,8 +269,10 @@ def _cleanup_device_managers():
             # Ignore errors during cleanup
             pass
 
+
 # Register cleanup handler
 atexit.register(_cleanup_device_managers)
+
 
 def get_device_manager(device_name: str | None = None) -> DeviceManager:
     """
@@ -280,9 +297,11 @@ def get_device_manager(device_name: str | None = None) -> DeviceManager:
 
     return _device_managers[cache_key]
 
+
 def display_stats():
     device_stats = {dn: dmgr.stats for dn, dmgr in _device_managers.items()}
     print(yaml.safe_dump(device_stats))
+
 
 def display_snapshots():
     print()

@@ -1,4 +1,4 @@
-"""Tiny registry for CUDA kernels """
+"""Tiny registry for CUDA kernels"""
 
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
 

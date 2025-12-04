@@ -8,14 +8,15 @@ across different workload scenarios to validate correctness and measure
 performance characteristics.
 """
 import os
-import pytest
-import numpy as np
 
+import numpy as np
+import pytest
+
+from tests import get_backend_device_combinations
 from yapocis.images import find_image
-from yapocis.utils.basic import imread
 from yapocis.lib.gaussian import Gaussian
 from yapocis.lib.zc import ZC
-from tests import get_backend_device_combinations
+from yapocis.utils.basic import imread
 
 
 def load_test_image(size=512):
@@ -31,6 +32,7 @@ def load_test_image(size=512):
 
     # Resize
     from PIL import Image
+
     pil_img = Image.fromarray((img * 255).astype(np.uint8))
     pil_img = pil_img.resize((size, size), Image.BILINEAR)
     img = np.array(pil_img).astype(np.float32) / 255.0
@@ -78,9 +80,9 @@ class TestAsyncModeValidation:
 
         for mode_name in ["async-exec", "async-write", "both"]:
             max_diff = np.abs(sync_result - results[mode_name]).max()
-            assert max_diff == 0.0, (
-                f"{backend}/{device}: {mode_name} differs from sync by {max_diff}"
-            )
+            assert (
+                max_diff == 0.0
+            ), f"{backend}/{device}: {mode_name} differs from sync by {max_diff}"
 
     def test_zc_correctness(self, backend, device):
         """Test that ZC (zero-crossing) produces correct results across backends."""
@@ -96,7 +98,9 @@ class TestAsyncModeValidation:
         # Basic sanity checks
         assert result.shape == img.shape
         assert result.dtype == np.float32
-        assert np.all((result == 0.0) | (result == 1.0)), "ZC result should be binary (0 or 1)"
+        assert np.all(
+            (result == 0.0) | (result == 1.0)
+        ), "ZC result should be binary (0 or 1)"
 
         # Store result for cross-backend comparison
         return result
@@ -267,7 +271,7 @@ class TestZeroCrossing:
         # Create vertical stripes with gradients
         for x in range(10, size, 20):
             for y in range(size):
-                img[y, x] = 50.0 + (y - size/2) * 0.5
+                img[y, x] = 50.0 + (y - size / 2) * 0.5
 
         threshold = 0.1
         zc = ZC(device_name=device)

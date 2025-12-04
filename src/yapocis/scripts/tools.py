@@ -11,7 +11,8 @@ from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 def cmd_assets(args):
     """Asset management - find and list yapocis assets."""
-    from yapocis.fonts import font as find_font, fonts
+    from yapocis.fonts import font as find_font
+    from yapocis.fonts import fonts
     from yapocis.icons import find_icon, icons
     from yapocis.images import find_image, images
     from yapocis.interfaces import find_interface, interfaces
@@ -38,7 +39,11 @@ def cmd_assets(args):
         if args.all:
             asset_types = ["interfaces", "kernels", "images", "icons", "fonts"]
         else:
-            asset_types = args.assets if args.assets else ["interfaces", "kernels", "images", "icons", "fonts"]
+            asset_types = (
+                args.assets
+                if args.assets
+                else ["interfaces", "kernels", "images", "icons", "fonts"]
+            )
 
         for asset_type in asset_types:
             lister = listers.get(asset_type)
@@ -57,7 +62,13 @@ def cmd_assets(args):
         sys.exit(1)
 
     finder_keys = []
-    if args.all or (not args.images and not args.interfaces and not args.kernels and not args.icons and not args.fonts):
+    if args.all or (
+        not args.images
+        and not args.interfaces
+        and not args.kernels
+        and not args.icons
+        and not args.fonts
+    ):
         finder_keys = ["interface", "kernel", "image", "icon", "font"]
     else:
         if args.interfaces:
@@ -107,13 +118,14 @@ def cmd_devices(args):
 
 def cmd_backends(args):
     """List all available backends and their devices."""
-    from yapocis.core import get_backend, get_backend_infos, get_backend_device
+    from yapocis.core import get_backend, get_backend_device, get_backend_infos
 
     try:
         backend_infos = get_backend_infos()
 
         if args.json:
             import json
+
             print(json.dumps(backend_infos, indent=2))
             return 0
 
@@ -142,7 +154,7 @@ def cmd_backends(args):
             elif info["error"]:
                 print(f"  Error: {info['error']}")
             else:
-                print(f"  No devices found")
+                print("  No devices found")
             print()
 
         print("Legend:")
@@ -166,10 +178,10 @@ def cmd_backends(args):
 
 def cmd_models(args):
     """Download and convert pre-trained model weights."""
-    import os
-    import urllib.request
     import ssl
+    import urllib.request
     from pathlib import Path
+
     import numpy as np
 
     # Check for PyTorch
@@ -183,7 +195,9 @@ def cmd_models(args):
 
     def download_imagenet_labels(output_path: Path) -> None:
         """Download ImageNet class labels."""
-        labels_url = "https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"
+        labels_url = (
+            "https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"
+        )
         labels_file = output_path / "classes.txt"
 
         print(f"Downloading ImageNet labels from {labels_url}...")
@@ -196,7 +210,7 @@ def cmd_models(args):
                 content = response.read()
 
             # Write to file
-            with open(labels_file, 'wb') as f:
+            with open(labels_file, "wb") as f:
                 f.write(content)
 
             print(f"Saved labels to {labels_file}")
@@ -227,28 +241,28 @@ def cmd_models(args):
         # Convolutional layers
         conv_layer_idx = 0
         for name, param in state_dict.items():
-            if 'features' in name:
-                if 'weight' in name:
+            if "features" in name:
+                if "weight" in name:
                     weights = param.cpu().numpy()
-                    weights_dict[f'conv{conv_layer_idx}_weights'] = weights
+                    weights_dict[f"conv{conv_layer_idx}_weights"] = weights
                     print(f"  conv{conv_layer_idx}_weights: {weights.shape}")
-                elif 'bias' in name:
+                elif "bias" in name:
                     bias = param.cpu().numpy()
-                    weights_dict[f'conv{conv_layer_idx}_bias'] = bias
+                    weights_dict[f"conv{conv_layer_idx}_bias"] = bias
                     print(f"  conv{conv_layer_idx}_bias: {bias.shape}")
                     conv_layer_idx += 1
 
         # Fully connected layers
         fc_layer_idx = 0
         for name, param in state_dict.items():
-            if 'classifier' in name:
-                if 'weight' in name:
+            if "classifier" in name:
+                if "weight" in name:
                     weights = param.cpu().numpy()
-                    weights_dict[f'fc{fc_layer_idx}_weights'] = weights
+                    weights_dict[f"fc{fc_layer_idx}_weights"] = weights
                     print(f"  fc{fc_layer_idx}_weights: {weights.shape}")
-                elif 'bias' in name:
+                elif "bias" in name:
                     bias = param.cpu().numpy()
-                    weights_dict[f'fc{fc_layer_idx}_bias'] = bias
+                    weights_dict[f"fc{fc_layer_idx}_bias"] = bias
                     print(f"  fc{fc_layer_idx}_bias: {bias.shape}")
                     fc_layer_idx += 1
 
@@ -260,7 +274,7 @@ def cmd_models(args):
         # Print summary
         total_params = sum(v.size for v in weights_dict.values())
         file_size_mb = weights_file.stat().st_size / (1024 * 1024)
-        print(f"\nSummary:")
+        print("\nSummary:")
         print(f"  Total parameters: {total_params:,}")
         print(f"  File size: {file_size_mb:.1f} MB")
         print(f"  Conv layers: {conv_layer_idx}")
@@ -275,101 +289,127 @@ def cmd_models(args):
         state_dict = model.state_dict()
 
         # Stem layer (conv1 + bn1)
-        if 'conv1.weight' in state_dict:
-            conv_w = state_dict['conv1.weight'].cpu().numpy()
-            bn_w = state_dict['bn1.weight'].cpu().numpy()
-            bn_b = state_dict['bn1.bias'].cpu().numpy()
-            bn_mean = state_dict['bn1.running_mean'].cpu().numpy()
-            bn_var = state_dict['bn1.running_var'].cpu().numpy()
+        if "conv1.weight" in state_dict:
+            conv_w = state_dict["conv1.weight"].cpu().numpy()
+            bn_w = state_dict["bn1.weight"].cpu().numpy()
+            bn_b = state_dict["bn1.bias"].cpu().numpy()
+            bn_mean = state_dict["bn1.running_mean"].cpu().numpy()
+            bn_var = state_dict["bn1.running_var"].cpu().numpy()
 
             # Fuse batch norm into conv
             fused_w, fused_b = fuse_bn_into_conv(conv_w, bn_w, bn_b, bn_mean, bn_var)
 
-            weights_dict['stem_weights'] = fused_w
-            weights_dict['stem_bias'] = fused_b
+            weights_dict["stem_weights"] = fused_w
+            weights_dict["stem_bias"] = fused_b
             print(f"  stem_weights: {fused_w.shape}")
             print(f"  stem_bias: {fused_b.shape}")
 
         # Bottleneck blocks
         block_idx = 0
 
-        for layer_name in ['layer1', 'layer2', 'layer3', 'layer4']:
+        for layer_name in ["layer1", "layer2", "layer3", "layer4"]:
             layer_idx = 0
             while True:
-                block_prefix = f'{layer_name}.{layer_idx}'
+                block_prefix = f"{layer_name}.{layer_idx}"
 
                 # Check if this block exists
-                conv1_key = f'{block_prefix}.conv1.weight'
+                conv1_key = f"{block_prefix}.conv1.weight"
                 if conv1_key not in state_dict:
                     break
 
                 # conv1 + bn1 (1×1)
                 if conv1_key in state_dict:
-                    conv_w = state_dict[f'{block_prefix}.conv1.weight'].cpu().numpy()
-                    bn_w = state_dict[f'{block_prefix}.bn1.weight'].cpu().numpy()
-                    bn_b = state_dict[f'{block_prefix}.bn1.bias'].cpu().numpy()
-                    bn_mean = state_dict[f'{block_prefix}.bn1.running_mean'].cpu().numpy()
-                    bn_var = state_dict[f'{block_prefix}.bn1.running_var'].cpu().numpy()
+                    conv_w = state_dict[f"{block_prefix}.conv1.weight"].cpu().numpy()
+                    bn_w = state_dict[f"{block_prefix}.bn1.weight"].cpu().numpy()
+                    bn_b = state_dict[f"{block_prefix}.bn1.bias"].cpu().numpy()
+                    bn_mean = (
+                        state_dict[f"{block_prefix}.bn1.running_mean"].cpu().numpy()
+                    )
+                    bn_var = state_dict[f"{block_prefix}.bn1.running_var"].cpu().numpy()
 
-                    fused_w, fused_b = fuse_bn_into_conv(conv_w, bn_w, bn_b, bn_mean, bn_var)
-                    weights_dict[f'block{block_idx}_conv1_weights'] = fused_w
-                    weights_dict[f'block{block_idx}_conv1_bias'] = fused_b
+                    fused_w, fused_b = fuse_bn_into_conv(
+                        conv_w, bn_w, bn_b, bn_mean, bn_var
+                    )
+                    weights_dict[f"block{block_idx}_conv1_weights"] = fused_w
+                    weights_dict[f"block{block_idx}_conv1_bias"] = fused_b
                     print(f"  block{block_idx}_conv1_weights: {fused_w.shape}")
 
                 # conv2 + bn2 (3×3)
-                conv2_key = f'{block_prefix}.conv2.weight'
+                conv2_key = f"{block_prefix}.conv2.weight"
                 if conv2_key in state_dict:
-                    conv_w = state_dict[f'{block_prefix}.conv2.weight'].cpu().numpy()
-                    bn_w = state_dict[f'{block_prefix}.bn2.weight'].cpu().numpy()
-                    bn_b = state_dict[f'{block_prefix}.bn2.bias'].cpu().numpy()
-                    bn_mean = state_dict[f'{block_prefix}.bn2.running_mean'].cpu().numpy()
-                    bn_var = state_dict[f'{block_prefix}.bn2.running_var'].cpu().numpy()
+                    conv_w = state_dict[f"{block_prefix}.conv2.weight"].cpu().numpy()
+                    bn_w = state_dict[f"{block_prefix}.bn2.weight"].cpu().numpy()
+                    bn_b = state_dict[f"{block_prefix}.bn2.bias"].cpu().numpy()
+                    bn_mean = (
+                        state_dict[f"{block_prefix}.bn2.running_mean"].cpu().numpy()
+                    )
+                    bn_var = state_dict[f"{block_prefix}.bn2.running_var"].cpu().numpy()
 
-                    fused_w, fused_b = fuse_bn_into_conv(conv_w, bn_w, bn_b, bn_mean, bn_var)
-                    weights_dict[f'block{block_idx}_conv2_weights'] = fused_w
-                    weights_dict[f'block{block_idx}_conv2_bias'] = fused_b
+                    fused_w, fused_b = fuse_bn_into_conv(
+                        conv_w, bn_w, bn_b, bn_mean, bn_var
+                    )
+                    weights_dict[f"block{block_idx}_conv2_weights"] = fused_w
+                    weights_dict[f"block{block_idx}_conv2_bias"] = fused_b
                     print(f"  block{block_idx}_conv2_weights: {fused_w.shape}")
 
                 # conv3 + bn3 (1×1)
-                conv3_key = f'{block_prefix}.conv3.weight'
+                conv3_key = f"{block_prefix}.conv3.weight"
                 if conv3_key in state_dict:
-                    conv_w = state_dict[f'{block_prefix}.conv3.weight'].cpu().numpy()
-                    bn_w = state_dict[f'{block_prefix}.bn3.weight'].cpu().numpy()
-                    bn_b = state_dict[f'{block_prefix}.bn3.bias'].cpu().numpy()
-                    bn_mean = state_dict[f'{block_prefix}.bn3.running_mean'].cpu().numpy()
-                    bn_var = state_dict[f'{block_prefix}.bn3.running_var'].cpu().numpy()
+                    conv_w = state_dict[f"{block_prefix}.conv3.weight"].cpu().numpy()
+                    bn_w = state_dict[f"{block_prefix}.bn3.weight"].cpu().numpy()
+                    bn_b = state_dict[f"{block_prefix}.bn3.bias"].cpu().numpy()
+                    bn_mean = (
+                        state_dict[f"{block_prefix}.bn3.running_mean"].cpu().numpy()
+                    )
+                    bn_var = state_dict[f"{block_prefix}.bn3.running_var"].cpu().numpy()
 
-                    fused_w, fused_b = fuse_bn_into_conv(conv_w, bn_w, bn_b, bn_mean, bn_var)
-                    weights_dict[f'block{block_idx}_conv3_weights'] = fused_w
-                    weights_dict[f'block{block_idx}_conv3_bias'] = fused_b
+                    fused_w, fused_b = fuse_bn_into_conv(
+                        conv_w, bn_w, bn_b, bn_mean, bn_var
+                    )
+                    weights_dict[f"block{block_idx}_conv3_weights"] = fused_w
+                    weights_dict[f"block{block_idx}_conv3_bias"] = fused_b
                     print(f"  block{block_idx}_conv3_weights: {fused_w.shape}")
 
                 # Downsample (conv + bn) - optional projection shortcut
-                downsample_conv_key = f'{block_prefix}.downsample.0.weight'
+                downsample_conv_key = f"{block_prefix}.downsample.0.weight"
                 if downsample_conv_key in state_dict:
-                    conv_w = state_dict[f'{block_prefix}.downsample.0.weight'].cpu().numpy()
-                    bn_w = state_dict[f'{block_prefix}.downsample.1.weight'].cpu().numpy()
-                    bn_b = state_dict[f'{block_prefix}.downsample.1.bias'].cpu().numpy()
-                    bn_mean = state_dict[f'{block_prefix}.downsample.1.running_mean'].cpu().numpy()
-                    bn_var = state_dict[f'{block_prefix}.downsample.1.running_var'].cpu().numpy()
+                    conv_w = (
+                        state_dict[f"{block_prefix}.downsample.0.weight"].cpu().numpy()
+                    )
+                    bn_w = (
+                        state_dict[f"{block_prefix}.downsample.1.weight"].cpu().numpy()
+                    )
+                    bn_b = state_dict[f"{block_prefix}.downsample.1.bias"].cpu().numpy()
+                    bn_mean = (
+                        state_dict[f"{block_prefix}.downsample.1.running_mean"]
+                        .cpu()
+                        .numpy()
+                    )
+                    bn_var = (
+                        state_dict[f"{block_prefix}.downsample.1.running_var"]
+                        .cpu()
+                        .numpy()
+                    )
 
-                    fused_w, fused_b = fuse_bn_into_conv(conv_w, bn_w, bn_b, bn_mean, bn_var)
-                    weights_dict[f'block{block_idx}_downsample_weights'] = fused_w
-                    weights_dict[f'block{block_idx}_downsample_bias'] = fused_b
+                    fused_w, fused_b = fuse_bn_into_conv(
+                        conv_w, bn_w, bn_b, bn_mean, bn_var
+                    )
+                    weights_dict[f"block{block_idx}_downsample_weights"] = fused_w
+                    weights_dict[f"block{block_idx}_downsample_bias"] = fused_b
                     print(f"  block{block_idx}_downsample_weights: {fused_w.shape}")
 
                 block_idx += 1
                 layer_idx += 1
 
         # Fully connected layer
-        if 'fc.weight' in state_dict:
-            weights = state_dict['fc.weight'].cpu().numpy()
-            weights_dict['fc_weights'] = weights
+        if "fc.weight" in state_dict:
+            weights = state_dict["fc.weight"].cpu().numpy()
+            weights_dict["fc_weights"] = weights
             print(f"  fc_weights: {weights.shape}")
 
-        if 'fc.bias' in state_dict:
-            bias = state_dict['fc.bias'].cpu().numpy()
-            weights_dict['fc_bias'] = bias
+        if "fc.bias" in state_dict:
+            bias = state_dict["fc.bias"].cpu().numpy()
+            weights_dict["fc_bias"] = bias
             print(f"  fc_bias: {bias.shape}")
 
         # Save to NPZ
@@ -380,7 +420,7 @@ def cmd_models(args):
         # Print summary
         total_params = sum(v.size for v in weights_dict.values())
         file_size_mb = weights_file.stat().st_size / (1024 * 1024)
-        print(f"\nSummary:")
+        print("\nSummary:")
         print(f"  Total parameters: {total_params:,}")
         print(f"  File size: {file_size_mb:.1f} MB")
         print(f"  Bottleneck blocks: {block_idx}")
@@ -388,7 +428,7 @@ def cmd_models(args):
     # Handle model download
     model_name = args.model.lower()
 
-    if model_name not in ['vgg16', 'resnet50']:
+    if model_name not in ["vgg16", "resnet50"]:
         print(f"ERROR: Unknown model '{model_name}'")
         print("Supported models: vgg16, resnet50")
         return 1
@@ -397,7 +437,7 @@ def cmd_models(args):
     if args.output:
         output_path = Path(args.output)
     else:
-        output_path = Path('src/yapocis/models') / model_name
+        output_path = Path("src/yapocis/models") / model_name
 
     # Create output directory
     output_path.mkdir(parents=True, exist_ok=True)
@@ -407,18 +447,18 @@ def cmd_models(args):
     print(f"Downloading {model_name.upper()} pretrained model from PyTorch...")
     print("(This may take a few minutes on first run)")
 
-    if model_name == 'vgg16':
+    if model_name == "vgg16":
         model = models.vgg16(pretrained=True)
-    elif model_name == 'resnet50':
+    elif model_name == "resnet50":
         model = models.resnet50(pretrained=True)
 
     model.eval()  # Set to evaluation mode
     print("Download complete!\n")
 
     # Convert weights
-    if model_name == 'vgg16':
+    if model_name == "vgg16":
         convert_vgg16_weights(model, output_path)
-    elif model_name == 'resnet50':
+    elif model_name == "resnet50":
         convert_resnet50_weights(model, output_path)
 
     # Download labels
@@ -430,20 +470,25 @@ def cmd_models(args):
     print(f"{model_name.upper()} weights successfully downloaded and converted!")
     print("=" * 60)
     print(f"\nFiles created in {output_path}:")
-    print(f"  - weights.npz ({(output_path / 'weights.npz').stat().st_size / (1024*1024):.1f} MB)")
-    if not args.no_labels and (output_path / 'classes.txt').exists():
-        print(f"  - classes.txt")
+    print(
+        f"  - weights.npz ({(output_path / 'weights.npz').stat().st_size / (1024*1024):.1f} MB)"
+    )
+    if not args.no_labels and (output_path / "classes.txt").exists():
+        print("  - classes.txt")
 
     return 0
 
 
 def cmd_interfaces(args):
     """Generate documentation and stubs from interface files."""
-    from io import StringIO
     from mako.template import Template
-    from yapocis.core.interface import load_interface, scan_kernel_parameters, get_interface
+
+    from yapocis.core.interface import (
+        get_interface,
+        load_interface,
+        scan_kernel_parameters,
+    )
     from yapocis.core.interface_context import load_interface_context
-    from yapocis.core.manager import get_manager
     from yapocis.interfaces import interfaces
 
     def render_interface_template(interface_name: str) -> str:
@@ -451,7 +496,7 @@ def cmd_interfaces(args):
         template_text = load_interface(f"{interface_name}.interface")
 
         # Check if template contains Mako constructs
-        if '%' not in template_text and '${' not in template_text:
+        if "%" not in template_text and "${" not in template_text:
             return template_text
 
         # Load YAML context
@@ -463,6 +508,7 @@ def cmd_interfaces(args):
 
         # Apply context generator if specified in YAML
         from yapocis.core.interface_context import apply_context_generator
+
         context = apply_context_generator(context)
 
         # Render template
@@ -475,7 +521,10 @@ def cmd_interfaces(args):
         for kernel in interface.kernels:
             tiling = "tiled" if kernel.tiled else "untiled"
             if kernel.alias:
-                print(f"Kernel: {kernel.name} {tiling} alias for '{kernel.alias}'", file=file)
+                print(
+                    f"Kernel: {kernel.name} {tiling} alias for '{kernel.alias}'",
+                    file=file,
+                )
             else:
                 print(f"Kernel: {kernel.name} {tiling}", file=file)
 
@@ -494,10 +543,16 @@ def cmd_interfaces(args):
                     print("  Buffer already on GPU", file=file)
                 if not from_gpu:
                     pointer = "*" if param.hint else ""
-                    print(f"  Pass as parameter of type {pointer}{param.np_dtype}", file=file)
+                    print(
+                        f"  Pass as parameter of type {pointer}{param.np_dtype}",
+                        file=file,
+                    )
 
             def returned(param, ireturn):
-                print(f"  Return as {param.np_dtype} (tuple position {ireturn})", file=file)
+                print(
+                    f"  Return as {param.np_dtype} (tuple position {ireturn})",
+                    file=file,
+                )
                 return ireturn + 1
 
             def format_param(param):
@@ -513,12 +568,15 @@ def cmd_interfaces(args):
 
                 if param.hint:
                     if param.hint == "resident":
-                        print(f"  Buffer is resident on GPU", file=file)
+                        print("  Buffer is resident on GPU", file=file)
                         motion(param)
                     elif param.hint in ("out_like", "outlike"):
                         param_name = param.name.removeprefix("out_like_")
                         param_name = param_name.removeprefix("outlike_")
-                        print(f"  Allocate an array like '{param_name}' (opencl arg position={iparam}, dtype={param.np_dtype})", file=file)
+                        print(
+                            f"  Allocate an array like '{param_name}' (opencl arg position={iparam}, dtype={param.np_dtype})",
+                            file=file,
+                        )
                         motion(param)
                         ireturn = returned(param, ireturn)
                     elif param.hint == "out":
@@ -545,14 +603,23 @@ def cmd_interfaces(args):
             kernel_parameters = []
             for parameter in kernel.parameters:
                 if parameter.hint == "out_like":
-                    kernel_parameters.append(f"__global {parameter.data_type} *out_like_{parameter.name}")
+                    kernel_parameters.append(
+                        f"__global {parameter.data_type} *out_like_{parameter.name}"
+                    )
                 elif parameter.hint:
-                    kernel_parameters.append(f"__global {parameter.data_type} *{parameter.name}")
+                    kernel_parameters.append(
+                        f"__global {parameter.data_type} *{parameter.name}"
+                    )
                 elif parameter.dim:
                     kernel_parameters.append(f"{parameter.data_type} {parameter.name}")
                 else:
-                    kernel_parameters.append(f"const {parameter.data_type} {parameter.name}")
-            print(f"__kernel void {kernel.name}({', '.join(kernel_parameters)});", file=file)
+                    kernel_parameters.append(
+                        f"const {parameter.data_type} {parameter.name}"
+                    )
+            print(
+                f"__kernel void {kernel.name}({', '.join(kernel_parameters)});",
+                file=file,
+            )
         print(file=file)
 
     def python_stubs(interface, file=None):
@@ -563,7 +630,7 @@ def cmd_interfaces(args):
             if kernel.alias:
                 continue
             print(f"    def {kernel.name}(self, *args, **kwargs):", file=file)
-            print(f"        pass", file=file)
+            print("        pass", file=file)
             print(file=file)
 
     requested_interfaces = args.interfaces if args.interfaces else []
@@ -585,7 +652,9 @@ def cmd_interfaces(args):
         # Skip if template still has unprocessed Mako constructs
         if "%" in rendered_template or "${" in rendered_template:
             print(f"\n## {interface_name}")
-            print(f"Note: {interface_name} has unprocessed Mako template markup (no YAML context available)")
+            print(
+                f"Note: {interface_name} has unprocessed Mako template markup (no YAML context available)"
+            )
             continue
 
         try:
@@ -640,46 +709,86 @@ Examples:
   # Download and convert pre-trained models
   yapocis-tools models vgg16
   yapocis-tools models resnet50 --output my_models/
-        """
+        """,
     )
 
-    subparsers = parser.add_subparsers(dest='command', help='Subcommand to run')
+    subparsers = parser.add_subparsers(dest="command", help="Subcommand to run")
 
     # Assets subcommand
-    assets_parser = subparsers.add_parser('assets', help='List and find yapocis assets')
-    assets_parser.add_argument('--images', action="store_true", help="Search in images")
-    assets_parser.add_argument('--icons', action="store_true", help="Search in icons")
-    assets_parser.add_argument('--fonts', action="store_true", help="Search in fonts")
-    assets_parser.add_argument('--kernels', action="store_true", help="Search in kernels")
-    assets_parser.add_argument('--interfaces', action="store_true", help="Search in interfaces")
-    assets_parser.add_argument('--all', action="store_true", help="Search all asset types")
-    assets_parser.add_argument('--list', action="store_true", help="List available assets")
+    assets_parser = subparsers.add_parser("assets", help="List and find yapocis assets")
+    assets_parser.add_argument("--images", action="store_true", help="Search in images")
+    assets_parser.add_argument("--icons", action="store_true", help="Search in icons")
+    assets_parser.add_argument("--fonts", action="store_true", help="Search in fonts")
+    assets_parser.add_argument(
+        "--kernels", action="store_true", help="Search in kernels"
+    )
+    assets_parser.add_argument(
+        "--interfaces", action="store_true", help="Search in interfaces"
+    )
+    assets_parser.add_argument(
+        "--all", action="store_true", help="Search all asset types"
+    )
+    assets_parser.add_argument(
+        "--list", action="store_true", help="List available assets"
+    )
     assets_parser.add_argument("assets", nargs="*", help="Asset names to find")
 
     # Devices subcommand
-    devices_parser = subparsers.add_parser('devices', help='List OpenCL/Metal/CUDA devices')
-    devices_parser.add_argument('--list', action="store_true", help="List device names only")
+    devices_parser = subparsers.add_parser(
+        "devices", help="List OpenCL/Metal/CUDA devices"
+    )
+    devices_parser.add_argument(
+        "--list", action="store_true", help="List device names only"
+    )
     devices_parser.add_argument("devices", nargs="*", help="Specific devices to query")
 
     # Backends subcommand
-    backends_parser = subparsers.add_parser('backends', help='List all available backends')
-    backends_parser.add_argument('-v', '--verbose', action="store_true", help="Show environment variables")
-    backends_parser.add_argument('--json', action="store_true", help="Output as JSON")
+    backends_parser = subparsers.add_parser(
+        "backends", help="List all available backends"
+    )
+    backends_parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Show environment variables"
+    )
+    backends_parser.add_argument("--json", action="store_true", help="Output as JSON")
 
     # Interfaces subcommand
-    interfaces_parser = subparsers.add_parser('interfaces', help='Generate interface documentation and stubs')
-    interfaces_parser.add_argument('--list', action="store_true", help="List available interfaces")
-    interfaces_parser.add_argument('--all', action="store_true", help="Generate all output types")
-    interfaces_parser.add_argument('--explain', action="store_true", help="Generate human-readable docs")
-    interfaces_parser.add_argument('--opencl', action="store_true", help="Generate OpenCL stubs")
-    interfaces_parser.add_argument('--python', action="store_true", help="Generate Python stubs")
-    interfaces_parser.add_argument("interfaces", nargs="*", help="Interface names to process")
+    interfaces_parser = subparsers.add_parser(
+        "interfaces", help="Generate interface documentation and stubs"
+    )
+    interfaces_parser.add_argument(
+        "--list", action="store_true", help="List available interfaces"
+    )
+    interfaces_parser.add_argument(
+        "--all", action="store_true", help="Generate all output types"
+    )
+    interfaces_parser.add_argument(
+        "--explain", action="store_true", help="Generate human-readable docs"
+    )
+    interfaces_parser.add_argument(
+        "--opencl", action="store_true", help="Generate OpenCL stubs"
+    )
+    interfaces_parser.add_argument(
+        "--python", action="store_true", help="Generate Python stubs"
+    )
+    interfaces_parser.add_argument(
+        "interfaces", nargs="*", help="Interface names to process"
+    )
 
     # Models subcommand
-    models_parser = subparsers.add_parser('models', help='Download and convert pre-trained model weights')
-    models_parser.add_argument('model', choices=['vgg16', 'resnet50'], help="Model to download")
-    models_parser.add_argument('--output', type=str, help="Output directory (default: src/yapocis/models/<model>)")
-    models_parser.add_argument('--no-labels', action="store_true", help="Skip downloading ImageNet labels")
+    models_parser = subparsers.add_parser(
+        "models", help="Download and convert pre-trained model weights"
+    )
+    models_parser.add_argument(
+        "model", choices=["vgg16", "resnet50"], help="Model to download"
+    )
+    models_parser.add_argument(
+        "--output",
+        type=str,
+        help="Output directory (default: src/yapocis/models/<model>)",
+    )
+    models_parser.add_argument(
+        "--no-labels", action="store_true", help="Skip downloading ImageNet labels"
+    )
 
     args = parser.parse_args()
 
@@ -688,20 +797,20 @@ Examples:
         return 1
 
     # Route to appropriate command handler
-    if args.command == 'assets':
+    if args.command == "assets":
         return cmd_assets(args)
-    elif args.command == 'devices':
+    elif args.command == "devices":
         return cmd_devices(args)
-    elif args.command == 'backends':
+    elif args.command == "backends":
         return cmd_backends(args)
-    elif args.command == 'interfaces':
+    elif args.command == "interfaces":
         return cmd_interfaces(args)
-    elif args.command == 'models':
+    elif args.command == "models":
         return cmd_models(args)
     else:
         parser.print_help()
         return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

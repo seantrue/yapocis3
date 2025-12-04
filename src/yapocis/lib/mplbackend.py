@@ -2,12 +2,16 @@
 
 import mapbox_earcut as earcut
 import numpy as np
-from PIL import Image as PILImage
 from matplotlib._pylab_helpers import Gcf
 from matplotlib.backend_bases import (
-    FigureCanvasBase, FigureManagerBase, GraphicsContextBase, RendererBase)
+    FigureCanvasBase,
+    FigureManagerBase,
+    GraphicsContextBase,
+    RendererBase,
+)
 from matplotlib.figure import Figure
 from matplotlib.mathtext import MathTextParser
+from PIL import Image as PILImage
 
 from yapocis.lib.kerneldraw4 import KernelDraw4
 from yapocis.lib.typeset import extent_freetype
@@ -28,9 +32,11 @@ class RendererTemplate(RendererBase):
         a[:, :, 3] = 1.0
         self.kd = KernelDraw4(a)
         # Initialize math text parser for rendering LaTeX-style math expressions
-        self.mathtext_parser = MathTextParser('agg')
+        self.mathtext_parser = MathTextParser("agg")
 
-    def _draw_dashed_line(self, x1, y1, x2, y2, color, linewidth, dash_pattern, dash_offset):
+    def _draw_dashed_line(
+        self, x1, y1, x2, y2, color, linewidth, dash_pattern, dash_offset
+    ):
         """Draw a dashed line from (x1,y1) to (x2,y2) using the given dash pattern.
 
         Args:
@@ -147,14 +153,26 @@ class RendererTemplate(RendererBase):
                 for i in range(points.shape[0] - 1):
                     x1, y1 = points[i]
                     x2, y2 = points[i + 1]
-                    self._draw_dashed_line(x1, y1, x2, y2, color, linewidth_pixels,
-                                           dash_pattern_pixels, dash_offset_pixels)
+                    self._draw_dashed_line(
+                        x1,
+                        y1,
+                        x2,
+                        y2,
+                        color,
+                        linewidth_pixels,
+                        dash_pattern_pixels,
+                        dash_offset_pixels,
+                    )
             else:
                 # Draw solid lines
                 for i in range(points.shape[0] - 1):
-                    line = flat_points[i * 2:i * 2 + 4]
-                    line = np.array([line[1], line[0], line[3], line[2]], dtype=np.float32)
-                    self.kd.line(line, color=color, width=linewidth_pixels, aa_width=0.5)
+                    line = flat_points[i * 2 : i * 2 + 4]
+                    line = np.array(
+                        [line[1], line[0], line[3], line[2]], dtype=np.float32
+                    )
+                    self.kd.line(
+                        line, color=color, width=linewidth_pixels, aa_width=0.5
+                    )
 
         # Fill closed polygons if face color is provided and visible
         if closed_polygon_points and rgbFace is not None:
@@ -170,9 +188,18 @@ class RendererTemplate(RendererBase):
                 # Render all triangles with the face color
                 vertices = earcut_points[simplices]
                 for i in range(0, len(vertices), 3):
-                    triangle = vertices[i:i + 3].ravel()
-                    triangle = np.array([triangle[1], triangle[0], triangle[3], triangle[2], triangle[5], triangle[4]],
-                                        dtype=np.float32)
+                    triangle = vertices[i : i + 3].ravel()
+                    triangle = np.array(
+                        [
+                            triangle[1],
+                            triangle[0],
+                            triangle[3],
+                            triangle[2],
+                            triangle[5],
+                            triangle[4],
+                        ],
+                        dtype=np.float32,
+                    )
                     self.kd.triangle(triangle, color=rgbFace, aa_width=0.5)
 
         self.kd.render()
@@ -237,8 +264,9 @@ class RendererTemplate(RendererBase):
         # Handle matplotlib's math text (LaTeX-style syntax)
         if ismath:
             # Use MathTextParser to get dimensions
-            ox, oy, width, height, descent, font_image = \
-                self.mathtext_parser.parse(s, self.dpi, prop)
+            ox, oy, width, height, descent, font_image = self.mathtext_parser.parse(
+                s, self.dpi, prop
+            )
             return width, height, descent
 
         # Normal text rendering using FreeType
@@ -253,8 +281,9 @@ class RendererTemplate(RendererBase):
         # Handle math text separately
         if ismath and ismath != "TeX":
             # Parse and render math text to an image
-            ox, oy, width, height, descent, font_image = \
-                self.mathtext_parser.parse(s, self.dpi, prop)
+            ox, oy, width, height, descent, font_image = self.mathtext_parser.parse(
+                s, self.dpi, prop
+            )
 
             # Convert grayscale font_image to RGBA with color
             if font_image is not None:
@@ -301,7 +330,10 @@ class RendererTemplate(RendererBase):
         # Render the text to get the RGBA block
         # Use crop=False to preserve full bounding box for proper baseline alignment
         from yapocis.lib.typeset import render_text
-        bbox, text_block = render_text(s, font_name="default", size=int(size), rotation=angle, crop=False)
+
+        bbox, text_block = render_text(
+            s, font_name="default", size=int(size), rotation=angle, crop=False
+        )
 
         # Apply color to the text block
         rgba_block = np.empty((*text_block.shape, 4), dtype=np.float32)
@@ -338,6 +370,7 @@ class RendererTemplate(RendererBase):
 
     def show(self):
         from yapocis.utils.basic import show_array
+
         a = self.read()
         show_array(a)
         return a
@@ -350,12 +383,10 @@ class RendererTemplate(RendererBase):
         return a.tobytes()
 
 
-class GraphicsContextTemplate(GraphicsContextBase):
-    ...
+class GraphicsContextTemplate(GraphicsContextBase): ...
 
 
-def draw_if_interactive():
-    ...
+def draw_if_interactive(): ...
 
 
 def show(*, block=None):
@@ -389,9 +420,11 @@ class FigureCanvasTemplate(FigureCanvasBase):
         figheight = self.figure.get_figheight()
         dpi = self.figure.dpi
 
-        if (self._renderer is None or
-                self._renderer.dpi != dpi or
-                self._renderer.figsize != (figwidth, figheight)):
+        if (
+            self._renderer is None
+            or self._renderer.dpi != dpi
+            or self._renderer.figsize != (figwidth, figheight)
+        ):
             # Use get_figwidth/get_figheight instead of bbox_inches to get the correct figure size
             # bbox_inches might not be finalized until after tight_layout is applied
             self._renderer = RendererTemplate(dpi, (figwidth, figheight))
@@ -410,7 +443,7 @@ class FigureCanvasTemplate(FigureCanvasBase):
         renderer = self.get_renderer()
         return renderer.buffer_rgba()
 
-    filetypes = {**FigureCanvasBase.filetypes, 'foo': 'My magic Foo format'}
+    filetypes = {**FigureCanvasBase.filetypes, "foo": "My magic Foo format"}
 
     def print_png(self, filename, *args, **kwargs):
         a = self.draw()
@@ -424,11 +457,10 @@ class FigureCanvasTemplate(FigureCanvasBase):
     print_jpeg = print_png
 
     def get_default_filetype(self):
-        return 'png'
+        return "png"
 
 
-class FigureManagerTemplate(FigureManagerBase):
-    ...
+class FigureManagerTemplate(FigureManagerBase): ...
 
 
 FigureCanvas = FigureCanvasTemplate

@@ -1,6 +1,7 @@
-'''
+"""
 Provides 2d median filter for 2d arrays
-'''
+"""
+
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 # Provision this program with just one median filter, fixed length of 9
@@ -48,27 +49,20 @@ class Median(BoundKernels):
         output = np.zeros_like(input)
         m3.write(input)
         m3.write(output)
-
+        result_buffer = None
         if self.use_async:
             # Async path: enqueue all iterations without waiting
             with self.kmgr.async_mode():
                 for i in range(iterations):
                     m3(input, output, resident=(input, output))
+                    result_buffer = output
                     input, output = output, input
         else:
             # Synchronous path (traditional)
             for i in range(iterations):
                 m3(input, output)
+                result_buffer = output
                 input, output = output, input
-
-        # After N iterations with ping-pong, result is in:
-        # - iterations odd: output (after swap, it holds the result)
-        # - iterations even: input (after swap, it holds the result)
-        # But wait - after swap on last iteration, the roles are reversed
-        # Let's trace: iter1: write to output, swap -> input has result
-        # So after odd iterations: input has result
-        # After even iterations: output has result
-        result_buffer = input if iterations % 2 == 1 else output
 
         m3.read(result_buffer)
         return result_buffer.copy()

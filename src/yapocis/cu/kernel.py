@@ -1,13 +1,13 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
 
-import time
-from typing import Any, Callable, Union
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 import pycuda.driver as cuda
 
 from yapocis.core.kernel_base import KernelBase
-from yapocis.utils.stereo_typing import Array
+
 
 class Kernel(KernelBase):
     """
@@ -96,8 +96,11 @@ class Kernel(KernelBase):
         # Check for dispatch_size trait if global_size not explicitly provided
         if self.global_size is None and "dispatch_size" in self.traits:
             from yapocis.core.dispatch_expr import evaluate_dispatch_size
+
             dispatch_expr = self.traits["dispatch_size"]
-            self.global_size = evaluate_dispatch_size(dispatch_expr, self._current_args, self.params)
+            self.global_size = evaluate_dispatch_size(
+                dispatch_expr, self._current_args, self.params
+            )
 
         # Auto-infer global_size if still None
         if self.global_size is None:
@@ -125,6 +128,7 @@ class Kernel(KernelBase):
 
     def _execute_kernel_with_args(self, prepared_args, original_args, extra_kwargs):
         """Execute CUDA kernel with prepared arguments."""
+
         def show_args():
             print("Python arguments")
             for iarg, arg in enumerate(original_args):
@@ -136,7 +140,7 @@ class Kernel(KernelBase):
         # Prepare CUDA kernel arguments - convert GPUArrays to their underlying data
         cuda_args = []
         for arg in prepared_args:
-            if hasattr(arg, 'gpudata'):
+            if hasattr(arg, "gpudata"):
                 # It's a GPUArray, pass the underlying gpudata
                 cuda_args.append(arg.gpudata)
             else:
@@ -144,7 +148,9 @@ class Kernel(KernelBase):
                 cuda_args.append(arg)
 
         try:
-            self.kernel(*cuda_args, block=self.block, grid=self.grid, stream=self.stream)
+            self.kernel(
+                *cuda_args, block=self.block, grid=self.grid, stream=self.stream
+            )
         except cuda.Error as e:
             print(f"CUDA error calling {self.name}: {e}")
             show_args()

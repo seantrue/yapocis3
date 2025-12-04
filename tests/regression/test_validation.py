@@ -1,4 +1,3 @@
-
 """
 Example test showing validation framework usage.
 
@@ -8,9 +7,10 @@ This demonstrates how to modify existing tests to use the validation framework.
 import numpy as np
 import pytest
 
-from yapocis.core import get_backends, get_test_backends
+from yapocis.core import get_test_backends
 from yapocis.lib.graphics4 import Graphics4
 from yapocis.utils.deterministic import generate_test_field
+
 
 @pytest.mark.validation
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -39,10 +39,11 @@ def test_graphics4_circles_validation(backend, validate_result, monkeypatch):
     # Test assertions can still be used alongside validation
     assert np.sum(result) > 0, "Canvas should not be empty"
 
+
 @pytest.mark.validation
 def test_manual_validation_context():
     """Example showing manual validation context usage."""
-    from yapocis.utils.validation import ValidationContext, VALIDATION_DIR
+    from yapocis.utils.validation import VALIDATION_DIR, ValidationContext
 
     # Clean up any existing reference to ensure test is deterministic
     ref_file = VALIDATION_DIR / "manual_validation_test.npz"
@@ -68,6 +69,7 @@ def test_manual_validation_context():
         )
         is_valid2 = validator.validate(test_data2)
         assert is_valid2, "Validation should pass against promoted reference"
+
 
 def test_no_validation():
     """Test without validation marker runs normally."""

@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import importlib
+from collections.abc import Callable
 from contextlib import contextmanager
-from typing import Callable, Optional
 
 from mako.template import Template
-from yapocis.numbax.kernel import Kernel
 
 from yapocis.core.interface import Interface, get_interface, load_interface
+from yapocis.numbax.kernel import Kernel
 
 
 class KernelManager:
@@ -142,6 +142,7 @@ class KernelManager:
     ):
         # Load and merge YAML context with programmatic context
         from yapocis.core.interface_context import get_interface_context
+
         merged_context = get_interface_context(interface_spec, **context)
 
         # Load and render interface (expand Mako templates)
@@ -155,7 +156,7 @@ class KernelManager:
         interface = get_interface(source)
         km = KernelManager(interface, device_name, debug=debug, **context)
         # Expose the rendered interface source for tests and tooling
-        setattr(km, "source", source)
+        km.source = source
         return km
 
     def read(self, a, **kwargs):

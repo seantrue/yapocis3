@@ -5,23 +5,29 @@ import pytest
 from yapocis.core import get_test_backends
 from yapocis.lib.graphics4 import Graphics4
 from yapocis.utils.stereo_typing import *
-from . import ASIZE, StopWatcher, text_test_lines, double_shuffle
-from ...random_data import (
-    random_points,
-    random_lines,
-    random_triangles,
-    random_circles,
-    random_ellipses,
-    random_texts,
-    # Graphics4-specific imports
+
+from ...random_data import (  # Graphics4-specific imports
     components_to_colors,
-    random_colors_4ch as random_colors,
-    random_alpha_4ch as random_alpha,
-    random_icons,
-    image_sprites_4ch as image_sprites,
-    random_composites_4ch as random_composites,
-    random_sprites_4ch as random_sprites,
 )
+from ...random_data import image_sprites_4ch as image_sprites
+from ...random_data import random_alpha_4ch as random_alpha
+from ...random_data import (  # Graphics4-specific imports
+    random_circles,
+)
+from ...random_data import random_colors_4ch as random_colors
+from ...random_data import random_composites_4ch as random_composites
+from ...random_data import (  # Graphics4-specific imports
+    random_ellipses,
+    random_icons,
+    random_lines,
+    random_points,
+)
+from ...random_data import random_sprites_4ch as random_sprites
+from ...random_data import (  # Graphics4-specific imports
+    random_texts,
+    random_triangles,
+)
+from . import ASIZE, StopWatcher, double_shuffle, text_test_lines
 
 RED = [1, 0, 0, 1]
 GREEN = [0, 1, 0, 1]
@@ -44,8 +50,10 @@ def test_alpha(backend, monkeypatch):
         width = ASIZE // 6
         offset = ASIZE // 3
         with sw.checkpoint("alpha"):
-            coords = [(0, offset, ASIZE - 1, offset * 2), ]
-            grph.rects(canvas, coords, color=GREEN, alpha=.5)
+            coords = [
+                (0, offset, ASIZE - 1, offset * 2),
+            ]
+            grph.rects(canvas, coords, color=GREEN, alpha=0.5)
             coords = [(offset, 0, offset * 2, ASIZE - 1)]
             grph.rects(canvas, coords, color=RED, alpha=1.0)
         sw.show(canvas)
@@ -101,7 +109,7 @@ def test_circles(backend, monkeypatch):
     for i in range(100, ASIZE, 100):
         for j in range(100, ASIZE, 100):
             coords.append([i, j, 100])
-    colors = random_colors((len(coords)))
+    colors = random_colors(len(coords))
     with StopWatcher("circles", kernel=grph) as sw:
         with sw.checkpoint("circles"):
             grph.circles(canvas, coords, colors=colors)
@@ -118,7 +126,7 @@ def test_triangles(backend, monkeypatch):
     for i in range(100, ASIZE, 100):
         for j in range(100, ASIZE, 100):
             coords.append([i, j, i + 50, j + 0, i + 50, j - 50])
-    colors = random_colors((len(coords)))
+    colors = random_colors(len(coords))
     with StopWatcher("triangles", kernel=grph) as sw:
         with sw.checkpoint("triangles"):
             grph.triangles(canvas, coords, colors=colors)
@@ -135,7 +143,7 @@ def test_ellipses(backend, monkeypatch):
     for i in range(100, ASIZE, 100):
         for j in range(100, ASIZE, 100):
             coords.append([i, j, 50, 100])
-    colors = random_colors((len(coords)))
+    colors = random_colors(len(coords))
     grph.ellipses(canvas, coords, colors=colors)
     coords = []
     for i in range(100, ASIZE, 100):
@@ -178,7 +186,7 @@ def test_composite_mosaic(backend, monkeypatch):
 
     _, grph = setup_test()
     sprites = image_sprites(5)
-    coords, blocks = zip(*sprites)
+    coords, blocks = zip(*sprites, strict=False)
     coords = list(coords)
     blocks = list(blocks)
     h, w, chan = blocks[0].shape
@@ -202,7 +210,7 @@ def test_simple_icons(backend, monkeypatch):
             locations.append((x, y))
     blocks = random_icons(len(locations))
     colors = random_colors(len(locations))
-    for block, color in zip(blocks, colors):
+    for block, color in zip(blocks, colors, strict=False):
         block[:, :, :] *= color
     with StopWatcher("simple icons", kernel=grph) as sw:
         with sw.checkpoint("composite"):
@@ -217,7 +225,7 @@ def test_random_icons(backend, monkeypatch):
     locations = random_points()
     blocks = random_icons(len(locations))
     colors = random_colors(len(locations))
-    for block, color in zip(blocks, colors):
+    for block, color in zip(blocks, colors, strict=False):
         block[:, :, :] *= color
     with StopWatcher("random icons", kernel=grph) as sw:
         with sw.checkpoint("composite"):

@@ -17,9 +17,10 @@ import numpy as np
 import pytest
 
 from yapocis.images import find_image
-from yapocis.utils.basic import imread
 from yapocis.lib.anisodiff import Anisodiff
 from yapocis.lib.gaussian import Gaussian
+from yapocis.utils.basic import imread
+
 from . import StopWatcher, get_backend_device_combinations
 
 # Test configuration
@@ -38,6 +39,7 @@ def load_test_image(size=None):
     # Resize if requested
     if size is not None:
         from PIL import Image
+
         pil_img = Image.fromarray((img * 255).astype(np.uint8))
         pil_img = pil_img.resize((size, size), Image.BILINEAR)
         img = np.array(pil_img).astype(np.float32) / 255.0
@@ -73,7 +75,9 @@ class TestAsyncPerformance:
         with StopWatcher("anisodiff_sync", save_perf=True, kernel=ad_sync) as sw:
             for _ in range(REPEATS):
                 with sw.checkpoint(f"anisodiff_{n_iterations}iter_sync"):
-                    result_sync = ad_sync.anisodiff_n(img, n=n_iterations, scale=scale, step_size=step_size)
+                    result_sync = ad_sync.anisodiff_n(
+                        img, n=n_iterations, scale=scale, step_size=step_size
+                    )
 
         # Test ASYNC mode
         os.environ["YAPOCIS_ASYNC"] = "1"
@@ -82,7 +86,9 @@ class TestAsyncPerformance:
         with StopWatcher("anisodiff_async", save_perf=True, kernel=ad_async) as sw:
             for _ in range(REPEATS):
                 with sw.checkpoint(f"anisodiff_{n_iterations}iter_async"):
-                    result_async = ad_async.anisodiff_n(img, n=n_iterations, scale=scale, step_size=step_size)
+                    result_async = ad_async.anisodiff_n(
+                        img, n=n_iterations, scale=scale, step_size=step_size
+                    )
 
         # Verify results are similar (async shouldn't change output)
         assert result_sync.shape == result_async.shape
@@ -145,7 +151,9 @@ class TestAsyncPerformance:
         os.environ["YAPOCIS_ASYNC"] = "0"
         gauss_sync = Gaussian(device_name=device)
 
-        with StopWatcher("gaussian_zcsdog_sync", save_perf=True, kernel=gauss_sync) as sw:
+        with StopWatcher(
+            "gaussian_zcsdog_sync", save_perf=True, kernel=gauss_sync
+        ) as sw:
             for _ in range(REPEATS):
                 with sw.checkpoint("zcsdog_sync"):
                     zca_sync, grad_sync, theta_sync = gauss_sync.zcsdog(
@@ -156,7 +164,9 @@ class TestAsyncPerformance:
         os.environ["YAPOCIS_ASYNC"] = "1"
         gauss_async = Gaussian(device_name=device)
 
-        with StopWatcher("gaussian_zcsdog_async", save_perf=True, kernel=gauss_async) as sw:
+        with StopWatcher(
+            "gaussian_zcsdog_async", save_perf=True, kernel=gauss_async
+        ) as sw:
             for _ in range(REPEATS):
                 with sw.checkpoint("zcsdog_async"):
                     zca_async, grad_async, theta_async = gauss_async.zcsdog(
@@ -182,7 +192,8 @@ class TestCNNAsyncPerformance:
         # Skip if weights not available
         try:
             from yapocis.models import get_weights_path
-            weights_path = get_weights_path('vgg16')
+
+            weights_path = get_weights_path("vgg16")
             if weights_path is None:
                 pytest.skip("VGG16 weights not available")
         except Exception:
@@ -224,7 +235,8 @@ class TestCNNAsyncPerformance:
         # Skip if weights not available
         try:
             from yapocis.models import get_weights_path
-            weights_path = get_weights_path('vgg16')
+
+            weights_path = get_weights_path("vgg16")
             if weights_path is None:
                 pytest.skip("VGG16 weights not available")
         except Exception:
@@ -249,7 +261,9 @@ class TestCNNAsyncPerformance:
         os.environ["YAPOCIS_ASYNC"] = "1"
         vgg_async = VGG16Resident(str(weights_path))
 
-        with StopWatcher("vgg16_resident_async", save_perf=True, kernel=vgg_async) as sw:
+        with StopWatcher(
+            "vgg16_resident_async", save_perf=True, kernel=vgg_async
+        ) as sw:
             for _ in range(REPEATS):
                 with sw.checkpoint("forward_resident_async"):
                     result_async = vgg_async.forward(preprocessed)
@@ -266,7 +280,8 @@ class TestCNNAsyncPerformance:
         # Skip if weights not available
         try:
             from yapocis.models import get_weights_path
-            weights_path = get_weights_path('resnet50')
+
+            weights_path = get_weights_path("resnet50")
             if weights_path is None:
                 pytest.skip("ResNet50 weights not available")
         except Exception:
@@ -282,7 +297,9 @@ class TestCNNAsyncPerformance:
         resnet_sync = ResNet50Resident(str(weights_path))
         preprocessed = resnet_sync.preprocess_image(img)
 
-        with StopWatcher("resnet50_resident_sync", save_perf=True, kernel=resnet_sync) as sw:
+        with StopWatcher(
+            "resnet50_resident_sync", save_perf=True, kernel=resnet_sync
+        ) as sw:
             for _ in range(REPEATS):
                 with sw.checkpoint("forward_resident_sync"):
                     result_sync = resnet_sync.forward(preprocessed)
@@ -291,7 +308,9 @@ class TestCNNAsyncPerformance:
         os.environ["YAPOCIS_ASYNC"] = "1"
         resnet_async = ResNet50Resident(str(weights_path))
 
-        with StopWatcher("resnet50_resident_async", save_perf=True, kernel=resnet_async) as sw:
+        with StopWatcher(
+            "resnet50_resident_async", save_perf=True, kernel=resnet_async
+        ) as sw:
             for _ in range(REPEATS):
                 with sw.checkpoint("forward_resident_async"):
                     result_async = resnet_async.forward(preprocessed)

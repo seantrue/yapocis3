@@ -27,23 +27,25 @@ The DeviceManager combines:
   - Kernel compilation
 """
 
-from abc import ABC, abstractmethod
-from weakref import WeakValueDictionary
 import time
 import warnings
+from abc import ABC, abstractmethod
 from typing import Any
+from weakref import WeakValueDictionary
 
 from yapocis.utils.stereo_typing import Array
 
 
 def method_timer(self, name, method):
     """Decorator to time method execution."""
+
     def timed_method(*args, **kwargs):
         t = time.time()
         value = method(*args, **kwargs)
         t = time.time() - t
         self.times[name] += t
         return value
+
     return timed_method
 
 
@@ -91,8 +93,16 @@ class DeviceManagerBase(ABC):
     BUFFER_WARNING_THRESHOLD = 100  # Warn when buffer count exceeds this
     LEAKED_BUFFER_WARNING_THRESHOLD = 50  # Warn when leaked buffers exceed this
 
-    def __init__(self, context: Any, queue_or_stream: Any, device_name: str, device: Any,
-                 timed: bool = False, autoflatten: bool = True, **kwargs):
+    def __init__(
+        self,
+        context: Any,
+        queue_or_stream: Any,
+        device_name: str,
+        device: Any,
+        timed: bool = False,
+        autoflatten: bool = True,
+        **kwargs,
+    ):
         """
         Initialize device manager base.
 
@@ -116,7 +126,7 @@ class DeviceManagerBase(ABC):
 
         # Buffer tracking
         self.arrays = WeakValueDictionary()  # Weak references to numpy arrays
-        self.buffers = {}     # Strong references to device buffers
+        self.buffers = {}  # Strong references to device buffers
 
         # Statistics
         self.hits = self.misses = 0
@@ -125,7 +135,7 @@ class DeviceManagerBase(ABC):
 
         # Performance timing
         self.timed = timed
-        self.times = {name: 0 for name in self.TIMED_METHODS}
+        self.times = dict.fromkeys(self.TIMED_METHODS, 0)
         if self.timed or self.TIMED:
             for name in self.TIMED_METHODS:
                 setattr(self, name, method_timer(self, name, getattr(self, name)))
@@ -144,7 +154,7 @@ class DeviceManagerBase(ABC):
             misses=self.misses,
             buffers=len(self.buffers),
             arrays=len(self.arrays),
-            leaked=leaked
+            leaked=leaked,
         )
         d.update(self.times)
         d.update(kwargs)
@@ -178,10 +188,10 @@ class DeviceManagerBase(ABC):
         leaked_count = self.count_leaked_buffers()
 
         usage = {
-            'buffer_count': buffer_count,
-            'array_count': array_count,
-            'leaked_count': leaked_count,
-            'purged_total': self.purged,
+            "buffer_count": buffer_count,
+            "array_count": array_count,
+            "leaked_count": leaked_count,
+            "purged_total": self.purged,
         }
 
         if warn:
@@ -191,7 +201,7 @@ class DeviceManagerBase(ABC):
                     f"(threshold: {self.BUFFER_WARNING_THRESHOLD}). "
                     f"Consider calling purge() to free unused buffers.",
                     ResourceWarning,
-                    stacklevel=2
+                    stacklevel=2,
                 )
 
             if leaked_count > self.LEAKED_BUFFER_WARNING_THRESHOLD:
@@ -200,7 +210,7 @@ class DeviceManagerBase(ABC):
                     f"(threshold: {self.LEAKED_BUFFER_WARNING_THRESHOLD}). "
                     f"Call purge() to clean up orphaned buffers.",
                     ResourceWarning,
-                    stacklevel=2
+                    stacklevel=2,
                 )
 
         return usage
@@ -448,7 +458,9 @@ def get_device_manager_factory(backend_module):
         try:
             dmgr = _device_managers[device_name]
         except KeyError:
-            _device_managers[device_name] = dmgr = backend_module.DeviceManager(device_name)
+            _device_managers[device_name] = dmgr = backend_module.DeviceManager(
+                device_name
+            )
         return dmgr
 
     return get_device_manager

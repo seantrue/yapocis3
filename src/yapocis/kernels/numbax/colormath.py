@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import numpy as np
-from yapocis.lib.colormath import transform_names
 
 try:
     from numba import njit

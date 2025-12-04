@@ -96,7 +96,9 @@ def find_yapocis_file(subdirs: list[str], filename: str) -> str | None:
 
 
 class AssetManager:
-    def __init__(self, dirname, ext, extensions=None, match=None, recursive=False, default=None):
+    def __init__(
+        self, dirname, ext, extensions=None, match=None, recursive=False, default=None
+    ):
         self.dirname = dirname
         self.extensions = [] if extensions is None else extensions
         if ext:
@@ -140,13 +142,21 @@ class AssetManager:
             if self.recursive:
                 for subdir_name, dir_names, file_names in os.walk(asset_dir):
                     assets.update(
-                        {asset_name: os.path.join(asset_dir, subdir_name, asset_name) for asset_name in file_names if
-                         has_ext(asset_name)})
+                        {
+                            asset_name: os.path.join(asset_dir, subdir_name, asset_name)
+                            for asset_name in file_names
+                            if has_ext(asset_name)
+                        }
+                    )
             else:
                 for asset_dir in asset_dirs:
                     assets.update(
-                        {asset_name: os.path.join(asset_dir, asset_name) for asset_name in os.listdir(asset_dir) if
-                         has_ext(asset_name)})
+                        {
+                            asset_name: os.path.join(asset_dir, asset_name)
+                            for asset_name in os.listdir(asset_dir)
+                            if has_ext(asset_name)
+                        }
+                    )
         self.cached_assets = assets
         return list(self.cached_assets.keys())
 
@@ -162,7 +172,9 @@ class AssetManager:
         try:
             return self.cached_assets[asset_name]
         except:
-            raise ValueError(f"{asset_name} not found, use one of: {' '.join(self.assets())}")
+            raise ValueError(
+                f"{asset_name} not found, use one of: {' '.join(self.assets())}"
+            )
 
     def asset(self, asset_suggestion: str) -> str:
         """
@@ -195,4 +207,6 @@ class AssetManager:
             if self.default:
                 return self.asset_path(self.default)
             asset_names = [an.rsplit(".", 1)[0] for an in self.assets()]
-            raise ValueError(f"{asset_suggestion} not found, use one of: {' '.join(asset_names)}")
+            raise ValueError(
+                f"{asset_suggestion} not found, use one of: {' '.join(asset_names)}"
+            )

@@ -14,20 +14,20 @@ Licensed under the PSF license
 Adaptations for yapocis backend testing.
 """
 
-import pytest
-import numpy as np
 import matplotlib
 import matplotlib as mpl
+import numpy as np
+import pytest
 from matplotlib import pyplot as plt
 
 
 @pytest.fixture(autouse=True)
 def setup_backend():
     """Setup yapocis backend for all tests."""
-    matplotlib.use('module://yapocis.lib.mplbackend', force=True)
+    matplotlib.use("module://yapocis.lib.mplbackend", force=True)
     yield
     # Cleanup
-    plt.close('all')
+    plt.close("all")
 
 
 class TestBasicPyplot:
@@ -69,7 +69,7 @@ class TestBasicPyplot:
         assert fig2 is not None
         assert fig1 is not fig2
 
-        plt.close('all')
+        plt.close("all")
 
     def test_subplots(self):
         """Test plt.subplots() creates figures and axes."""
@@ -118,7 +118,7 @@ class TestFigureManagement:
         assert fig1 is fig3
         assert fig1 is not fig2
 
-        plt.close('all')
+        plt.close("all")
 
     def test_close_all(self):
         """Test plt.close('all') closes all figures."""
@@ -127,10 +127,11 @@ class TestFigureManagement:
         plt.figure(3)
 
         import matplotlib._pylab_helpers as pylab_helpers
+
         manager_class = pylab_helpers.Gcf
         assert len(manager_class.figs) >= 3
 
-        plt.close('all')
+        plt.close("all")
         assert len(manager_class.figs) == 0
 
 
@@ -169,9 +170,9 @@ class TestBasicPlotting:
     def test_plot_simple(self):
         """Test simple plot."""
         fig, ax = plt.subplots()
-        ax.axis('off')  # Disable axes to avoid unsupported features
+        ax.axis("off")  # Disable axes to avoid unsupported features
 
-        line, = ax.plot([0, 1], [0, 1])
+        (line,) = ax.plot([0, 1], [0, 1])
         assert line is not None
 
         fig.canvas.draw()
@@ -187,11 +188,11 @@ class TestBasicPlotting:
     def test_scatter_simple(self):
         """Test simple scatter plot."""
         fig, ax = plt.subplots()
-        ax.axis('off')
+        ax.axis("off")
 
         # Note: scatter may not be fully supported, test if it at least doesn't crash
         try:
-            ax.scatter([0.5], [0.5], s=100, c='red')
+            ax.scatter([0.5], [0.5], s=100, c="red")
             fig.canvas.draw()
             # If we get here, scatter didn't crash
             assert True
@@ -203,9 +204,9 @@ class TestBasicPlotting:
     def test_text_simple(self):
         """Test simple text rendering."""
         fig, ax = plt.subplots()
-        ax.axis('off')
+        ax.axis("off")
 
-        ax.text(0.5, 0.5, r'$\alpha$', fontsize=20)
+        ax.text(0.5, 0.5, r"$\alpha$", fontsize=20)
 
         fig.canvas.draw()
         renderer = fig.canvas.get_renderer()
@@ -224,13 +225,13 @@ class TestShapePlotting:
     def test_fill(self):
         """Test plt.fill() for filled polygons."""
         fig, ax = plt.subplots()
-        ax.axis('off')
+        ax.axis("off")
 
         # Create a triangle
         x = [0.2, 0.8, 0.5, 0.2]
         y = [0.2, 0.2, 0.8, 0.2]
 
-        ax.fill(x, y, color='red')
+        ax.fill(x, y, color="red")
 
         fig.canvas.draw()
         renderer = fig.canvas.get_renderer()
@@ -247,10 +248,10 @@ class TestShapePlotting:
     def test_axhline_axvline(self):
         """Test horizontal and vertical lines."""
         fig, ax = plt.subplots()
-        ax.axis('off')
+        ax.axis("off")
 
-        ax.axhline(0.5, color='black')
-        ax.axvline(0.5, color='black')
+        ax.axhline(0.5, color="black")
+        ax.axvline(0.5, color="black")
 
         fig.canvas.draw()
         renderer = fig.canvas.get_renderer()
@@ -323,7 +324,7 @@ class TestDrawingOperations:
     def test_draw(self):
         """Test fig.canvas.draw() completes without error."""
         fig, ax = plt.subplots()
-        ax.axis('off')
+        ax.axis("off")
         ax.plot([0, 1], [0, 1])
 
         # Should not raise error
@@ -334,7 +335,7 @@ class TestDrawingOperations:
     def test_buffer_rgba(self):
         """Test buffer_rgba() returns correct format."""
         fig, ax = plt.subplots(figsize=(4, 4), dpi=100)  # Explicit size
-        ax.axis('off')
+        ax.axis("off")
         ax.plot([0, 1], [0, 1])
 
         fig.canvas.draw()
@@ -349,8 +350,9 @@ class TestDrawingOperations:
         height = int(fig.get_figheight() * fig.dpi)
         expected_size = width * height * 4
 
-        assert len(buf) == expected_size, \
-            f"Buffer size {len(buf)} != expected {expected_size} (width={width}, height={height})"
+        assert (
+            len(buf) == expected_size
+        ), f"Buffer size {len(buf)} != expected {expected_size} (width={width}, height={height})"
 
         # Convert to array and check shape
         arr = np.frombuffer(buf, dtype=np.uint8).reshape((height, width, 4))
@@ -359,5 +361,5 @@ class TestDrawingOperations:
         plt.close()
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

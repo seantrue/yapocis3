@@ -30,6 +30,7 @@ from __future__ import annotations
 import numpy as np
 
 from yapocis.utils.stereo_typing import Image1
+
 from .bound_kernels import BoundKernels
 
 
@@ -330,7 +331,17 @@ def make_simplex2d(
 
     try:
         s = Simplex()
-        return s.simplex2d(width, height, seed, scale, (0, 0), octaves, persistence, lacunarity, tileable)
+        return s.simplex2d(
+            width,
+            height,
+            seed,
+            scale,
+            (0, 0),
+            octaves,
+            persistence,
+            lacunarity,
+            tileable,
+        )
     finally:
         if backend and old_backend is not None:
             os.environ["YAPOCIS_BACKEND"] = old_backend
@@ -380,7 +391,17 @@ def make_simplex3d(
 
     try:
         s = Simplex()
-        return s.simplex3d(width, height, depth, seed, scale, (0, 0, 0), octaves, persistence, lacunarity)
+        return s.simplex3d(
+            width,
+            height,
+            depth,
+            seed,
+            scale,
+            (0, 0, 0),
+            octaves,
+            persistence,
+            lacunarity,
+        )
     finally:
         if backend and old_backend is not None:
             os.environ["YAPOCIS_BACKEND"] = old_backend

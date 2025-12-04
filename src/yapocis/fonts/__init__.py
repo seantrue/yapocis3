@@ -46,7 +46,7 @@ def image_font(
     font_name = "default" if font_name is None else font_name
     size = 14 if size is None else size
     if truetype is None:
-        raise RuntimeError(f"PIL with TrueType support is not installed")
+        raise RuntimeError("PIL with TrueType support is not installed")
     font_path = font(font_name)
     try:
         return _fontcache[(font_path, size, index)]

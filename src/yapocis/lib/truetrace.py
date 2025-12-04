@@ -38,7 +38,7 @@ class TrueTrace(BoundKernels):
     INTERFACE = "truetrace"
 
     def trace_segments(
-            self, mask_u8: np.ndarray, iso: float = 0.0
+        self, mask_u8: np.ndarray, iso: float = 0.0
     ) -> tuple[np.ndarray, tuple[int, int]]:
         """Run JFA + Marching Squares on a binary mask.
 
@@ -102,7 +102,7 @@ INF32 = np.float32(1e30)
 
 
 def load_mask_from_image(
-        path: str, invert: bool = False, threshold: float | None = None
+    path: str, invert: bool = False, threshold: float | None = None
 ) -> np.ndarray:
     """Load an image and produce a binary mask.
 
@@ -273,7 +273,7 @@ def marching_squares_cpu(dist: np.ndarray, iso: float = 0.0) -> np.ndarray:
 
 
 def write_svg_segments(path: str, segs: np.ndarray, w: int, h: int):
-    from xml.etree.ElementTree import Element, SubElement, ElementTree
+    from xml.etree.ElementTree import Element, ElementTree, SubElement
 
     svg = Element(
         "svg",
@@ -286,12 +286,14 @@ def write_svg_segments(path: str, segs: np.ndarray, w: int, h: int):
         svg, "g", attrib={"fill": "none", "stroke": "black", "stroke-width": "0.75"}
     )
     for x0, y0, x1, y1 in segs:
-        SubElement(g, "line", x1=f"{x1}", y1=f"{h - 1 - y1}", x2=f"{x0}", y2=f"{h - 1 - y0}")
+        SubElement(
+            g, "line", x1=f"{x1}", y1=f"{h - 1 - y1}", x2=f"{x0}", y2=f"{h - 1 - y0}"
+        )
     ElementTree(svg).write(path)
 
 
 def chain_segments_to_polylines(
-        segs: np.ndarray, tol: float = 1e-3
+    segs: np.ndarray, tol: float = 1e-3
 ) -> list[np.ndarray]:
     if segs.size == 0:
         return []
@@ -376,7 +378,7 @@ def douglas_peucker(poly: np.ndarray, tol: float) -> np.ndarray:
         a, b = poly[i0], poly[i1]
         seg = b - a
         seg2 = float(np.dot(seg, seg))
-        pts = poly[i0 + 1: i1]
+        pts = poly[i0 + 1 : i1]
         if pts.size == 0:
             continue
         if seg2 <= 0:
@@ -403,7 +405,7 @@ douglas_peuker = douglas_peucker
 
 
 def close_and_filter_polylines(
-        polys: list[np.ndarray], close_tol_px: float = 1.0, min_area_px2: float = 0.0
+    polys: list[np.ndarray], close_tol_px: float = 1.0, min_area_px2: float = 0.0
 ) -> list[np.ndarray]:
     out: list[np.ndarray] = []
     for poly in polys:
@@ -493,7 +495,7 @@ def build_regions_with_holes(rings: list[np.ndarray]) -> list[dict]:
 
 
 def _ring_to_cubic_beziers(
-        ring: np.ndarray, tension: float = 0.0
+    ring: np.ndarray, tension: float = 0.0
 ) -> list[tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
     pts = ring[:-1]
     n = pts.shape[0]
@@ -513,14 +515,14 @@ def _ring_to_cubic_beziers(
 
 
 def write_svg_regions(
-        path: str,
-        regions: list[dict],
-        w: int,
-        h: int,
-        stroke_width: float = 1.0,
-        fill: str | None = None,
-        curve: str = "none",
-        tension: float = 0.0,
+    path: str,
+    regions: list[dict],
+    w: int,
+    h: int,
+    stroke_width: float = 1.0,
+    fill: str | None = None,
+    curve: str = "none",
+    tension: float = 0.0,
 ):
     """Write nested regions (outer+holes) to an SVG file.
 
@@ -536,7 +538,7 @@ def write_svg_regions(
     Returns:
         The output path (convenience).
     """
-    from xml.etree.ElementTree import Element, SubElement, ElementTree
+    from xml.etree.ElementTree import Element, ElementTree, SubElement
 
     def _fmt_xy(xy: np.ndarray) -> tuple[float, float]:
         return float(xy[0]), float(h - 1 - xy[1])
@@ -572,10 +574,10 @@ def write_svg_regions(
         viewBox=f"0 0 {w} {h}",
     )
     attrib = {
-        "fill":         "none" if fill is None else fill,
-        "stroke":       "black",
+        "fill": "none" if fill is None else fill,
+        "stroke": "black",
         "stroke-width": f"{stroke_width:.3f}",
-        "fill-rule":    "evenodd",
+        "fill-rule": "evenodd",
     }
     g = SubElement(svg, "g", attrib=attrib)
     for reg in regions:
@@ -593,10 +595,10 @@ def write_svg_regions(
 
 
 def trace_bitmap(
-        mask_u8: np.ndarray,
-        simplify_tol_px: float = 0.75,
-        min_area_px2: float = 4.0,
-        chain_tol_px: float = 0.25,
+    mask_u8: np.ndarray,
+    simplify_tol_px: float = 0.75,
+    min_area_px2: float = 4.0,
+    chain_tol_px: float = 0.25,
 ) -> list[np.ndarray]:
     """Extract closed rings from a binary mask fully on CPU.
 

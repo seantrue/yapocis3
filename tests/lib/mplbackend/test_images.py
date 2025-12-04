@@ -5,14 +5,13 @@ Test matplotlib backend with real images from yapocis assets.
 Creates a 4x4 contact sheet of images and compares yapocis backend output
 against the standard Agg backend to verify correct image rendering.
 """
-import pytest
-import numpy as np
+
 import matplotlib
 import matplotlib.pyplot as plt
-from pathlib import Path
-import os
+import numpy as np
+import pytest
 
-from yapocis.images import images, find_image
+from yapocis.images import find_image, images
 
 
 def create_contact_sheet(backend_name):
@@ -35,35 +34,41 @@ def create_contact_sheet(backend_name):
     if len(image_names) < 16:
         # Pad with repeated images if needed
         while len(image_names) < 16:
-            image_names.extend(available_images[:16 - len(image_names)])
+            image_names.extend(available_images[: 16 - len(image_names)])
 
     # Create figure with 4x4 subplots
     fig, axes = plt.subplots(4, 4, figsize=(12, 12))
-    fig.suptitle(f'Yapocis Asset Images - {backend_name}', fontsize=16)
+    fig.suptitle(f"Yapocis Asset Images - {backend_name}", fontsize=16)
 
-    for idx, (ax, img_name) in enumerate(zip(axes.flat, image_names)):
+    for idx, (ax, img_name) in enumerate(zip(axes.flat, image_names, strict=False)):
         try:
             # Load image
             img_path = find_image(img_name)
             img = plt.imread(img_path)
 
             # Display image
-            ax.imshow(img, interpolation='nearest')
+            ax.imshow(img, interpolation="nearest")
             ax.set_title(img_name, fontsize=8)
-            ax.axis('off')
+            ax.axis("off")
 
-        except Exception as e:
+        except Exception:
             # If image fails to load, show error
-            ax.text(0.5, 0.5, f'Error:\n{img_name}',
-                   ha='center', va='center', fontsize=8,
-                   transform=ax.transAxes)
-            ax.axis('off')
+            ax.text(
+                0.5,
+                0.5,
+                f"Error:\n{img_name}",
+                ha="center",
+                va="center",
+                fontsize=8,
+                transform=ax.transAxes,
+            )
+            ax.axis("off")
 
     plt.tight_layout()
 
     # Save to different filenames based on backend
-    backend_label = 'yapocis' if 'yapocis' in backend_name else 'agg'
-    output_path = f'claude-debug/contact_sheet_{backend_label}.png'
+    backend_label = "yapocis" if "yapocis" in backend_name else "agg"
+    output_path = f"claude-debug/contact_sheet_{backend_label}.png"
     plt.savefig(output_path, dpi=100)
     plt.close(fig)
 
@@ -81,8 +86,8 @@ def test_matplotlib_contact_sheet_comparison():
         pytest.skip("Cannot access yapocis assets")
 
     # Create contact sheets with both backends
-    agg_output = create_contact_sheet('Agg')
-    yapocis_output = create_contact_sheet('module://yapocis.lib.mplbackend')
+    agg_output = create_contact_sheet("Agg")
+    yapocis_output = create_contact_sheet("module://yapocis.lib.mplbackend")
 
     print(f"\n✓ Agg backend output: {agg_output}")
     print(f"✓ Yapocis backend output: {yapocis_output}")
@@ -100,8 +105,9 @@ def test_matplotlib_contact_sheet_comparison():
         img_yapocis = img_yapocis[:, :, :3]
 
     # Check shapes match
-    assert img_agg.shape == img_yapocis.shape, \
-        f"Image shapes don't match: {img_agg.shape} vs {img_yapocis.shape}"
+    assert (
+        img_agg.shape == img_yapocis.shape
+    ), f"Image shapes don't match: {img_agg.shape} vs {img_yapocis.shape}"
 
     # Calculate pixel difference
     diff = np.abs(img_agg.astype(float) - img_yapocis.astype(float))
@@ -112,7 +118,7 @@ def test_matplotlib_contact_sheet_comparison():
     # Use higher threshold to account for text rendering differences
     significant_diff = (diff > 10).sum() / diff.size * 100
 
-    print(f"\nImage comparison:")
+    print("\nImage comparison:")
     print(f"  Mean pixel difference: {mean_diff:.2f} (0-255 scale)")
     print(f"  Max pixel difference: {max_diff:.2f}")
     print(f"  Significantly different pixels (>10): {significant_diff:.2f}%")
@@ -120,16 +126,16 @@ def test_matplotlib_contact_sheet_comparison():
     # Allow differences due to text rendering variations between backends
     # The images themselves should be nearly identical, text may differ
     # Use mean difference as primary metric - should be small if images match
-    assert mean_diff < 25.0, \
-        f"Mean pixel difference too high: {mean_diff:.2f} > 25.0"
+    assert mean_diff < 25.0, f"Mean pixel difference too high: {mean_diff:.2f} > 25.0"
 
     # Also check that the vast majority of pixels are close
     close_pixels = (diff < 20).sum() / diff.size * 100
-    assert close_pixels > 70.0, \
-        f"Not enough similar pixels: {close_pixels:.2f}% < 70%"
+    assert close_pixels > 70.0, f"Not enough similar pixels: {close_pixels:.2f}% < 70%"
 
     print(f"  Pixels within 20 units: {close_pixels:.2f}%")
-    print("\n✓ Yapocis backend output matches Agg backend (within acceptable tolerance)")
+    print(
+        "\n✓ Yapocis backend output matches Agg backend (within acceptable tolerance)"
+    )
     print("  Note: Some differences expected due to text rendering")
 
 
@@ -152,25 +158,57 @@ def test_matplotlib_image_orientation():
     test_img[50:, 50:, 1] = 255
 
     # Test with both backends
-    for backend_name in ['Agg', 'module://yapocis.lib.mplbackend']:
+    for backend_name in ["Agg", "module://yapocis.lib.mplbackend"]:
         matplotlib.use(backend_name)
 
         fig, ax = plt.subplots(figsize=(6, 6))
         ax.imshow(test_img)
-        ax.set_title(f'Orientation Test - {backend_name}')
+        ax.set_title(f"Orientation Test - {backend_name}")
 
         # Add labels to verify orientation
-        ax.text(25, 25, 'RED\n(top-left)', ha='center', va='center',
-               color='white', fontsize=12, weight='bold')
-        ax.text(75, 25, 'GREEN\n(top-right)', ha='center', va='center',
-               color='white', fontsize=12, weight='bold')
-        ax.text(25, 75, 'BLUE\n(bottom-left)', ha='center', va='center',
-               color='white', fontsize=12, weight='bold')
-        ax.text(75, 75, 'YELLOW\n(bottom-right)', ha='center', va='center',
-               color='black', fontsize=12, weight='bold')
+        ax.text(
+            25,
+            25,
+            "RED\n(top-left)",
+            ha="center",
+            va="center",
+            color="white",
+            fontsize=12,
+            weight="bold",
+        )
+        ax.text(
+            75,
+            25,
+            "GREEN\n(top-right)",
+            ha="center",
+            va="center",
+            color="white",
+            fontsize=12,
+            weight="bold",
+        )
+        ax.text(
+            25,
+            75,
+            "BLUE\n(bottom-left)",
+            ha="center",
+            va="center",
+            color="white",
+            fontsize=12,
+            weight="bold",
+        )
+        ax.text(
+            75,
+            75,
+            "YELLOW\n(bottom-right)",
+            ha="center",
+            va="center",
+            color="black",
+            fontsize=12,
+            weight="bold",
+        )
 
-        backend_label = 'yapocis' if 'yapocis' in backend_name else 'agg'
-        output_path = f'claude-debug/orientation_test_{backend_label}.png'
+        backend_label = "yapocis" if "yapocis" in backend_name else "agg"
+        output_path = f"claude-debug/orientation_test_{backend_label}.png"
         plt.savefig(output_path, dpi=100)
         plt.close(fig)
 
@@ -179,8 +217,8 @@ def test_matplotlib_image_orientation():
     # Compare the two outputs
     from PIL import Image
 
-    img_agg = np.array(Image.open('claude-debug/orientation_test_agg.png'))
-    img_yapocis = np.array(Image.open('claude-debug/orientation_test_yapocis.png'))
+    img_agg = np.array(Image.open("claude-debug/orientation_test_agg.png"))
+    img_yapocis = np.array(Image.open("claude-debug/orientation_test_yapocis.png"))
 
     # Check key pixels to verify correct orientation
     # Sample a pixel from each quadrant
@@ -188,19 +226,20 @@ def test_matplotlib_image_orientation():
 
     # Top-left should be red-ish (accounting for text)
     # Use only RGB channels for comparison (ignore alpha if present)
-    tl_agg = img_agg[int(h*0.15), int(w*0.15), :3]
-    tl_yapocis = img_yapocis[int(h*0.15), int(w*0.15), :3]
+    tl_agg = img_agg[int(h * 0.15), int(w * 0.15), :3]
+    tl_yapocis = img_yapocis[int(h * 0.15), int(w * 0.15), :3]
 
     # Check they're similar
     tl_diff = np.abs(tl_agg.astype(float) - tl_yapocis.astype(float)).mean()
 
-    assert tl_diff < 10, \
-        f"Top-left pixels differ too much: {tl_diff:.2f} (should be < 10)"
+    assert (
+        tl_diff < 10
+    ), f"Top-left pixels differ too much: {tl_diff:.2f} (should be < 10)"
 
     print("✓ Image orientation test passed")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Run tests directly
     print("=" * 60)
     print("Testing matplotlib backend with yapocis asset images")

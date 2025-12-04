@@ -15,24 +15,27 @@ try:
 except Exception as e:  # pragma: no cover
     raise RuntimeError("PyMetallic is required for the metallic backend") from e
 
+
 def get_available_device_names() -> list[str]:
     devices = pm.Device.get_all_devices()
     return [getattr(d, "name", str(d)) for d in devices]
 
-def get_available_devices(aliases: bool = True) -> dict[str | int, "pm.Device"]:
+
+def get_available_devices(aliases: bool = True) -> dict[str | int, pm.Device]:
     """
     Build a mapping of device identifiers to Device objects.
 
     Keys include the device name (string) and, if `aliases` is True, numeric indices.
     """
     devices = pm.Device.get_all_devices()
-    out: dict[str | int, "pm.Device"] = {}
+    out: dict[str | int, pm.Device] = {}
     for i, dev in enumerate(devices):
         name = getattr(dev, "name", None) or f"metal:{i}"
         out[name] = dev
         if aliases:
             out[i] = dev
     return out
+
 
 def pick_default_device(device_names: list[str | int]) -> str | int:
     # Prefer discrete GPU names if present; otherwise pick the last item.
@@ -44,9 +47,10 @@ def pick_default_device(device_names: list[str | int]) -> str | int:
                 return lowercase[dn]
     return device_names[-1]
 
+
 def get_device(
     device_name: str | int | None = None,
-) -> tuple[str | int, "pm.Device"]:
+) -> tuple[str | int, pm.Device]:
     """
     Resolve a Metal device by name or index. If not provided, uses `YAPOCIS_DEVICE`
     or chooses a default via `pick_default_device`.

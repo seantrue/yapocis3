@@ -9,7 +9,6 @@ try:
 except Exception:  # pragma: no cover - fallback
     HAVE_NUMBA = False
 
-
     def njit(*args, **kwargs):  # type: ignore
         def _wrap(f):
             return f
@@ -34,21 +33,28 @@ def _blend_rgba(dst: np.ndarray, x: int, y: int, rgba: np.ndarray):
         # Standard alpha blending
         if alpha_out > 0.0:
             dst[y, x, 0] = (
-                                   rgba[0] * alpha_src + dst[y, x, 0] * alpha_dst * (1.0 - alpha_src)
-                           ) / alpha_out
+                rgba[0] * alpha_src + dst[y, x, 0] * alpha_dst * (1.0 - alpha_src)
+            ) / alpha_out
             dst[y, x, 1] = (
-                                   rgba[1] * alpha_src + dst[y, x, 1] * alpha_dst * (1.0 - alpha_src)
-                           ) / alpha_out
+                rgba[1] * alpha_src + dst[y, x, 1] * alpha_dst * (1.0 - alpha_src)
+            ) / alpha_out
             dst[y, x, 2] = (
-                                   rgba[2] * alpha_src + dst[y, x, 2] * alpha_dst * (1.0 - alpha_src)
-                           ) / alpha_out
+                rgba[2] * alpha_src + dst[y, x, 2] * alpha_dst * (1.0 - alpha_src)
+            ) / alpha_out
             dst[y, x, 3] = alpha_out
         # If alpha_out == 0, leave the destination pixel unchanged
 
 
 @njit(cache=True, fastmath=True)
 def _draw_line_rgba(
-        img: np.ndarray, x0: int, y0: int, x1: int, y1: int, width: float, aa_width: float, rgba: np.ndarray
+    img: np.ndarray,
+    x0: int,
+    y0: int,
+    x1: int,
+    y1: int,
+    width: float,
+    aa_width: float,
+    rgba: np.ndarray,
 ):
     xmin = int(max(0, min(x0, x1) - width - aa_width - 1))
     xmax = int(min(img.shape[1] - 1, max(x0, x1) + width + aa_width + 1))
@@ -94,7 +100,13 @@ def _draw_line_rgba(
 
 @njit(cache=True, fastmath=True)
 def _draw_rect_rgba(
-        img: np.ndarray, x0: int, y0: int, x1: int, y1: int, aa_width: float, rgba: np.ndarray
+    img: np.ndarray,
+    x0: int,
+    y0: int,
+    x1: int,
+    y1: int,
+    aa_width: float,
+    rgba: np.ndarray,
 ):
     if x0 <= x1:
         xmin, xmax = int(x0), int(x1)
@@ -123,7 +135,7 @@ def _draw_rect_rgba(
     a = rgba[3]
     for y in range(ymin_draw, ymax_draw + 1):
         for x in range(xmin_draw, xmax_draw + 1):
-            inside = (xmin <= x <= xmax and ymin <= y <= ymax)
+            inside = xmin <= x <= xmax and ymin <= y <= ymax
 
             if aa_width > 0.0 and inside:
                 # Anti-aliased edges using distance to nearest edge
@@ -145,7 +157,9 @@ def _draw_rect_rgba(
 
 
 @njit(cache=True, fastmath=True)
-def _draw_circle_rgba(img: np.ndarray, cx: int, cy: int, r: float, aa_width: float, rgba: np.ndarray):
+def _draw_circle_rgba(
+    img: np.ndarray, cx: int, cy: int, r: float, aa_width: float, rgba: np.ndarray
+):
     xmin = int(max(0, cx - r - aa_width - 1))
     xmax = int(min(img.shape[1] - 1, cx + r + aa_width + 1))
     ymin = int(max(0, cy - r - aa_width - 1))
@@ -177,7 +191,9 @@ def _edge(ax, ay, bx, by, px, py):
 
 
 @njit(cache=True, fastmath=True)
-def _dist_to_segment(px: float, py: float, ax: float, ay: float, bx: float, by: float) -> float:
+def _dist_to_segment(
+    px: float, py: float, ax: float, ay: float, bx: float, by: float
+) -> float:
     """Compute distance from point (px, py) to line segment (a, b)."""
     pax = px - ax
     pay = py - ay
@@ -193,7 +209,9 @@ def _dist_to_segment(px: float, py: float, ax: float, ay: float, bx: float, by: 
 
 
 @njit(cache=True, fastmath=True)
-def _draw_triangle_rgba(img: np.ndarray, x0, y0, x1, y1, x2, y2, aa_width: float, rgba: np.ndarray):
+def _draw_triangle_rgba(
+    img: np.ndarray, x0, y0, x1, y1, x2, y2, aa_width: float, rgba: np.ndarray
+):
     # Expand bounds for anti-aliasing
     if aa_width > 0.0:
         xmin = int(max(0, min(x0, x1, x2) - aa_width - 1))
@@ -214,13 +232,21 @@ def _draw_triangle_rgba(img: np.ndarray, x0, y0, x1, y1, x2, y2, aa_width: float
             w0 = _edge(x1, y1, x2, y2, x, y)
             w1 = _edge(x2, y2, x0, y0, x, y)
             w2 = _edge(x0, y0, x1, y1, x, y)
-            inside = (w0 >= 0 and w1 >= 0 and w2 >= 0) or (w0 <= 0 and w1 <= 0 and w2 <= 0)
+            inside = (w0 >= 0 and w1 >= 0 and w2 >= 0) or (
+                w0 <= 0 and w1 <= 0 and w2 <= 0
+            )
 
             if aa_width > 0.0 and inside:
                 # Anti-aliased edges using distance to nearest edge
-                dist1 = _dist_to_segment(float(x), float(y), float(x0), float(y0), float(x1), float(y1))
-                dist2 = _dist_to_segment(float(x), float(y), float(x1), float(y1), float(x2), float(y2))
-                dist3 = _dist_to_segment(float(x), float(y), float(x2), float(y2), float(x0), float(y0))
+                dist1 = _dist_to_segment(
+                    float(x), float(y), float(x0), float(y0), float(x1), float(y1)
+                )
+                dist2 = _dist_to_segment(
+                    float(x), float(y), float(x1), float(y1), float(x2), float(y2)
+                )
+                dist3 = _dist_to_segment(
+                    float(x), float(y), float(x2), float(y2), float(x0), float(y0)
+                )
                 edge_dist = min(min(dist1, dist2), dist3)
 
                 blend_t = _smoothstep(0.0, aa_width, edge_dist)
@@ -234,7 +260,13 @@ def _draw_triangle_rgba(img: np.ndarray, x0, y0, x1, y1, x2, y2, aa_width: float
 
 @njit(cache=True, fastmath=True)
 def _draw_ellipse_rgba(
-        img: np.ndarray, cx: int, cy: int, rx: float, ry: float, aa_width: float, rgba: np.ndarray
+    img: np.ndarray,
+    cx: int,
+    cy: int,
+    rx: float,
+    ry: float,
+    aa_width: float,
+    rgba: np.ndarray,
 ):
     # Expand bounds for anti-aliasing
     if aa_width > 0.0:
@@ -276,14 +308,14 @@ def _draw_ellipse_rgba(
 
 
 def lines(
-        width: int,
-        height: int,
-        a: np.ndarray,
-        nelements: int,
-        coords: np.ndarray,
-        widths: np.ndarray,
-        aa_widths: np.ndarray,
-        colors: np.ndarray,
+    width: int,
+    height: int,
+    a: np.ndarray,
+    nelements: int,
+    coords: np.ndarray,
+    widths: np.ndarray,
+    aa_widths: np.ndarray,
+    colors: np.ndarray,
 ):
     for i in range(nelements):
         # Swap coords to match OCL/Metal column-major convention
@@ -300,13 +332,13 @@ def lines(
 
 
 def rects(
-        width: int,
-        height: int,
-        a: np.ndarray,
-        nelements: int,
-        coords: np.ndarray,
-        aa_widths: np.ndarray,
-        colors: np.ndarray,
+    width: int,
+    height: int,
+    a: np.ndarray,
+    nelements: int,
+    coords: np.ndarray,
+    aa_widths: np.ndarray,
+    colors: np.ndarray,
 ):
     for i in range(nelements):
         # Swap coords to match OCL/Metal column-major convention
@@ -322,13 +354,13 @@ def rects(
 
 
 def circles(
-        width: int,
-        height: int,
-        a: np.ndarray,
-        nelements: int,
-        coords: np.ndarray,
-        aa_widths: np.ndarray,
-        colors: np.ndarray,
+    width: int,
+    height: int,
+    a: np.ndarray,
+    nelements: int,
+    coords: np.ndarray,
+    aa_widths: np.ndarray,
+    colors: np.ndarray,
 ):
     for i in range(nelements):
         # Swap coords to match OCL/Metal column-major convention
@@ -343,13 +375,13 @@ def circles(
 
 
 def triangles(
-        width: int,
-        height: int,
-        a: np.ndarray,
-        nelements: int,
-        coords: np.ndarray,
-        aa_widths: np.ndarray,
-        colors: np.ndarray,
+    width: int,
+    height: int,
+    a: np.ndarray,
+    nelements: int,
+    coords: np.ndarray,
+    aa_widths: np.ndarray,
+    colors: np.ndarray,
 ):
     for i in range(nelements):
         # Swap coords to match OCL/Metal column-major convention
@@ -367,13 +399,13 @@ def triangles(
 
 
 def ellipses(
-        width: int,
-        height: int,
-        a: np.ndarray,
-        nelements: int,
-        coords: np.ndarray,
-        aa_widths: np.ndarray,
-        colors: np.ndarray,
+    width: int,
+    height: int,
+    a: np.ndarray,
+    nelements: int,
+    coords: np.ndarray,
+    aa_widths: np.ndarray,
+    colors: np.ndarray,
 ):
     for i in range(nelements):
         # Swap coords to match OCL/Metal column-major convention

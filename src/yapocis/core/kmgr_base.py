@@ -42,8 +42,9 @@ The base class handles:
 
 import os
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from contextlib import contextmanager
-from typing import Any, Callable, Type
+from typing import Any
 
 from mako.lookup import TemplateLookup
 from mako.template import Template
@@ -80,7 +81,7 @@ class KernelManagerBase(ABC):
     _backend_name: str = None
 
     # Kernel wrapper class (override in subclass)
-    _kernel_class: Type = None
+    _kernel_class: type = None
 
     @abstractmethod
     def get_device_manager(self, device_name: str | int | None):
@@ -217,17 +218,21 @@ class KernelManagerBase(ABC):
         for kernel_spec in interface.kernels:
             # For extension kernels, lookup the base kernel they extend
             # For regular kernels, use their own name
-            if hasattr(kernel_spec, 'extends') and kernel_spec.extends:
+            if hasattr(kernel_spec, "extends") and kernel_spec.extends:
                 lookup_name = kernel_spec.extends
-            elif hasattr(kernel_spec, 'alias') and kernel_spec.alias:
+            elif hasattr(kernel_spec, "alias") and kernel_spec.alias:
                 lookup_name = kernel_spec.alias
             else:
                 lookup_name = kernel_spec.name
 
             kernel_func = self.get_kernel(self.program, lookup_name)
             self.callable[kernel_spec.name] = self._kernel_class(
-                lookup_name, self, kernel_func, kernel_spec.parameters,
-                async_write=async_write, traits=kernel_spec.traits
+                lookup_name,
+                self,
+                kernel_func,
+                kernel_spec.parameters,
+                async_write=async_write,
+                traits=kernel_spec.traits,
             )
 
     def read(self, a):
@@ -257,7 +262,7 @@ class KernelManagerBase(ABC):
         """
         if self.pending_events:
             # Call backend-specific wait implementation
-            if hasattr(self.dmgr, 'wait_events'):
+            if hasattr(self.dmgr, "wait_events"):
                 self.dmgr.wait_events(self.pending_events)
             self.pending_events.clear()
 

@@ -4,8 +4,8 @@ import os
 
 import numpy as np
 
-from .bound_kernels import BoundKernels
 from ..utils.basic import chunker
+from .bound_kernels import BoundKernels
 
 
 class AbstractGraphicsSetup:
@@ -14,13 +14,17 @@ class AbstractGraphicsSetup:
     def coerce_coords(self, coords, width, dtype=np.int32, **kwargs):
         raise NotImplementedError
 
-    def coerce_colors(self, coords, color=None, colors=None, alpha=None, alphas=None, **kwargs) -> np.ndarray:
+    def coerce_colors(
+        self, coords, color=None, colors=None, alpha=None, alphas=None, **kwargs
+    ) -> np.ndarray:
         raise NotImplementedError
 
     def coerce_widths(self, coords, width=None, widths=None, **kwargs) -> np.ndarray:
         raise NotImplementedError
 
-    def coerce_aa_widths(self, coords, aa_width=None, aa_widths=None, **kwargs) -> np.ndarray:
+    def coerce_aa_widths(
+        self, coords, aa_width=None, aa_widths=None, **kwargs
+    ) -> np.ndarray:
         raise NotImplementedError
 
     def setup_composite(self, locations, blocks, alpha=None, alphas=None, **kwargs):
@@ -57,9 +61,22 @@ class AbstractGraphicsSetup:
         """
         raise NotImplementedError
 
-    def setup_texts(self, locations, texts, font=None, fonts=None, size=None, sizes=None, alpha=None, alphas=None,
-                    color=None,
-                    colors=None, rotation=None, rotations=None, **kwargs):
+    def setup_texts(
+        self,
+        locations,
+        texts,
+        font=None,
+        fonts=None,
+        size=None,
+        sizes=None,
+        alpha=None,
+        alphas=None,
+        color=None,
+        colors=None,
+        rotation=None,
+        rotations=None,
+        **kwargs,
+    ):
         raise NotImplementedError
 
 
@@ -72,7 +89,14 @@ class AbstractGraphics(BoundKernels):
         colors = self.coerce_colors(coords, **kwargs)
         widths = self.coerce_widths(coords, **kwargs)
         aa_widths = self.coerce_aa_widths(coords, **kwargs)
-        self.kmgr.lines(image, coords, widths, aa_widths, colors, global_size=image.size // self.CHANNELS)
+        self.kmgr.lines(
+            image,
+            coords,
+            widths,
+            aa_widths,
+            colors,
+            global_size=image.size // self.CHANNELS,
+        )
 
     def rects(self, image, coords, **kwargs):
         if not coords:
@@ -80,7 +104,9 @@ class AbstractGraphics(BoundKernels):
         coords = self.coerce_coords(coords, 4)
         colors = self.coerce_colors(coords, **kwargs)
         aa_widths = self.coerce_aa_widths(coords, **kwargs)
-        self.kmgr.rects(image, coords, aa_widths, colors, global_size=image.size // self.CHANNELS)
+        self.kmgr.rects(
+            image, coords, aa_widths, colors, global_size=image.size // self.CHANNELS
+        )
 
     def circles(self, image, coords, **kwargs):
         if not coords:
@@ -88,7 +114,9 @@ class AbstractGraphics(BoundKernels):
         coords = self.coerce_coords(coords, 3)
         colors = self.coerce_colors(coords, **kwargs)
         aa_widths = self.coerce_aa_widths(coords, **kwargs)
-        self.kmgr.circles(image, coords, aa_widths, colors, global_size=image.size // self.CHANNELS)
+        self.kmgr.circles(
+            image, coords, aa_widths, colors, global_size=image.size // self.CHANNELS
+        )
 
     def triangles(self, image, coords, **kwargs):
         if not coords:
@@ -96,7 +124,9 @@ class AbstractGraphics(BoundKernels):
         coords = self.coerce_coords(coords, 6)
         colors = self.coerce_colors(coords, **kwargs)
         aa_widths = self.coerce_aa_widths(coords, **kwargs)
-        self.kmgr.triangles(image, coords, aa_widths, colors, global_size=image.size // self.CHANNELS)
+        self.kmgr.triangles(
+            image, coords, aa_widths, colors, global_size=image.size // self.CHANNELS
+        )
 
     def ellipses(self, image, coords, **kwargs):
         if not coords:
@@ -104,7 +134,9 @@ class AbstractGraphics(BoundKernels):
         coords = self.coerce_coords(coords, 4)
         colors = self.coerce_colors(coords, **kwargs)
         aa_widths = self.coerce_aa_widths(coords, **kwargs)
-        self.kmgr.ellipses(image, coords, aa_widths, colors, global_size=image.size // self.CHANNELS)
+        self.kmgr.ellipses(
+            image, coords, aa_widths, colors, global_size=image.size // self.CHANNELS
+        )
 
     def composite(self, image, locations, blocks, **kwargs):
         """
@@ -120,7 +152,9 @@ class AbstractGraphics(BoundKernels):
 
         """
         coords, buffer, ipixels = self.setup_composite(locations, blocks, **kwargs)
-        self.kmgr.composite(image, coords, buffer, ipixels, global_size=image.size // self.CHANNELS)
+        self.kmgr.composite(
+            image, coords, buffer, ipixels, global_size=image.size // self.CHANNELS
+        )
 
     def sprites(self, image, locations, sprites, alpha=None, alphas=None):
         """
@@ -134,8 +168,12 @@ class AbstractGraphics(BoundKernels):
         Returns: None
 
         """
-        coords, buffer, ipixels = self.setup_sprites(locations, sprites, alpha=alpha, alphas=alphas)
-        self.kmgr.composite(image, coords, buffer, ipixels, global_size=image.size // self.CHANNELS)
+        coords, buffer, ipixels = self.setup_sprites(
+            locations, sprites, alpha=alpha, alphas=alphas
+        )
+        self.kmgr.composite(
+            image, coords, buffer, ipixels, global_size=image.size // self.CHANNELS
+        )
 
     def draw_strings(self, image, locations, texts, **kwargs):
         locations, blocks, alphas = self.setup_texts(locations, texts, **kwargs)
@@ -158,8 +196,13 @@ class AbstractKernelDraw:
     COLOR_WIDTH = None
     GRAPHICS = None
 
-    def __init__(self, a, device_name: str | None = None, graphics: AbstractGraphics | None = None,
-                 chunk_size: int | None = 500):
+    def __init__(
+        self,
+        a,
+        device_name: str | None = None,
+        graphics: AbstractGraphics | None = None,
+        chunk_size: int | None = 500,
+    ):
         self.a = a
         graphics = self.GRAPHICS if graphics is None else graphics
         self.graphics = graphics(device_name=device_name) if graphics else graphics
@@ -185,7 +228,9 @@ class AbstractKernelDraw:
         aa_widths = self.coerce_aa_widths(len(coords), **kwargs)
         return coords, colors, widths, aa_widths
 
-    def coerce_colors(self, n: int, color: float | None = None, colors=None, alpha=None, **kwargs):
+    def coerce_colors(
+        self, n: int, color: float | None = None, colors=None, alpha=None, **kwargs
+    ):
         # a tuple, list, array of COLOR_WIDTH floats
         # a list or tuple of array/list/tuple of COLOR_WIDTH floats
         # an array of nxCOLOR_WIDTH floats
@@ -214,7 +259,9 @@ class AbstractKernelDraw:
             else:
                 # For single-channel, ensure (n, 2) shape for [color, alpha]
                 if len(colors.shape) == 1:
-                    colors = np.column_stack([colors, np.full(n, alpha, dtype=np.float32)])
+                    colors = np.column_stack(
+                        [colors, np.full(n, alpha, dtype=np.float32)]
+                    )
                 shape = colors.shape
                 assert shape == (n, 2), f"Expected ({n}, 2) but got {shape}"
         return np.ascontiguousarray(colors)
@@ -223,7 +270,9 @@ class AbstractKernelDraw:
         alphas = to_vector(alpha, alphas, n, default=self.alpha, dtype=np.float32)
         return alphas
 
-    def coerce_widths(self, n, width=None, widths=None, distance=None, **kwargs) -> np.ndarray:
+    def coerce_widths(
+        self, n, width=None, widths=None, distance=None, **kwargs
+    ) -> np.ndarray:
         if width and widths:
             raise RuntimeError(f"Only one of width {width} and {widths}")
         if width and distance:
@@ -232,7 +281,9 @@ class AbstractKernelDraw:
         widths = to_vector(width, widths, n, default=1.0, dtype=np.float32)
         return widths
 
-    def coerce_aa_widths(self, n, aa_width=None, aa_widths=None, **kwargs) -> np.ndarray:
+    def coerce_aa_widths(
+        self, n, aa_width=None, aa_widths=None, **kwargs
+    ) -> np.ndarray:
         if aa_width is not None and aa_widths is not None:
             raise RuntimeError(f"Only one of aa_width {aa_width} and {aa_widths}")
         aa_widths = to_vector(aa_width, aa_widths, n, default=0.0, dtype=np.float32)
@@ -257,8 +308,16 @@ class AbstractKernelDraw:
     def sprite(self, xy, sprite, **kwargs):
         self._sprites.append((xy, sprite, kwargs))
 
-    def draw_string(self, xy, text, font=None, size=None, alpha=None, color=None, rotation=None):
-        self._draw_strings.append((xy, text, dict(font=font, size=size, alpha=alpha, color=color, rotation=rotation)))
+    def draw_string(
+        self, xy, text, font=None, size=None, alpha=None, color=None, rotation=None
+    ):
+        self._draw_strings.append(
+            (
+                xy,
+                text,
+                dict(font=font, size=size, alpha=alpha, color=color, rotation=rotation),
+            )
+        )
 
     def _render_list(self, handler, arglist, columns):
         columns = {}
@@ -275,7 +334,7 @@ class AbstractKernelDraw:
             assert display_list is not None and handler is not None, handler
             if self.chunk_size:
                 for chunk in chunker(display_list, self.chunk_size):
-                    arglist = list(zip(*chunk))
+                    arglist = list(zip(*chunk, strict=False))
                     columns = {}
                     for kwargs in arglist[-1]:
                         for key, value in kwargs.items():
@@ -283,7 +342,7 @@ class AbstractKernelDraw:
                             columns.setdefault(key, []).append(value)
                     handler(*arglist[:-1], **columns)
             else:
-                arglist = list(zip(*display_list))
+                arglist = list(zip(*display_list, strict=False))
                 columns = {}
                 for kwargs in arglist[-1]:
                     for key, value in kwargs.items():
@@ -324,7 +383,7 @@ class AbstractKernelDraw:
 
     def render(self):
         # Check if async mode is enabled
-        use_async = os.environ.get('YAPOCIS_ASYNC', '').lower() in ('1', 'true', 'yes')
+        use_async = os.environ.get("YAPOCIS_ASYNC", "").lower() in ("1", "true", "yes")
 
         if use_async and self.graphics:
             with self.graphics.kmgr.async_mode():
@@ -334,36 +393,60 @@ class AbstractKernelDraw:
 
     def lines(self, coords, **kwargs):
         coords, colors, widths, aa_widths = self.prepare_args(coords, 4, **kwargs)
-        self.graphics.kmgr.lines_res(self.a, coords, widths, aa_widths, colors, global_size=self.global_size)
+        self.graphics.kmgr.lines_res(
+            self.a, coords, widths, aa_widths, colors, global_size=self.global_size
+        )
 
     def rects(self, coords, **kwargs):
         coords, colors, _, aa_widths = self.prepare_args(coords, 4, **kwargs)
-        self.graphics.kmgr.rects_res(self.a, coords, aa_widths, colors, global_size=self.global_size)
+        self.graphics.kmgr.rects_res(
+            self.a, coords, aa_widths, colors, global_size=self.global_size
+        )
 
     def circles(self, coords, **kwargs):
         coords, colors, _, aa_widths = self.prepare_args(coords, 3, **kwargs)
-        self.graphics.kmgr.circles_res(self.a, coords, aa_widths, colors, global_size=self.global_size)
+        self.graphics.kmgr.circles_res(
+            self.a, coords, aa_widths, colors, global_size=self.global_size
+        )
 
     def triangles(self, coords, **kwargs):
         coords, colors, _, aa_widths = self.prepare_args(coords, 6, **kwargs)
-        self.graphics.kmgr.triangles_res(self.a, coords, aa_widths, colors, global_size=self.global_size)
+        self.graphics.kmgr.triangles_res(
+            self.a, coords, aa_widths, colors, global_size=self.global_size
+        )
 
     def ellipses(self, coords, **kwargs):
         coords, colors, _, aa_widths = self.prepare_args(coords, 4, **kwargs)
-        self.graphics.kmgr.ellipses_res(self.a, coords, aa_widths, colors, global_size=self.global_size)
+        self.graphics.kmgr.ellipses_res(
+            self.a, coords, aa_widths, colors, global_size=self.global_size
+        )
 
     def composite(self, locations, blocks, **kwargs):
-        coords, buffer, pixel_indexes = self.graphics.setup_composite(locations, blocks, **kwargs)
-        self.graphics.kmgr.composite_res(self.a, coords, buffer, pixel_indexes, global_size=self.global_size)
+        coords, buffer, pixel_indexes = self.graphics.setup_composite(
+            locations, blocks, **kwargs
+        )
+        self.graphics.kmgr.composite_res(
+            self.a, coords, buffer, pixel_indexes, global_size=self.global_size
+        )
 
     def sprites(self, locations, sprites, **kwargs):
-        coords, buffer, pixel_indexes = self.graphics.setup_sprites(locations, sprites, **kwargs)
-        self.graphics.kmgr.composite_res(self.a, coords, buffer, pixel_indexes, global_size=self.global_size)
+        coords, buffer, pixel_indexes = self.graphics.setup_sprites(
+            locations, sprites, **kwargs
+        )
+        self.graphics.kmgr.composite_res(
+            self.a, coords, buffer, pixel_indexes, global_size=self.global_size
+        )
 
     def draw_strings(self, locations, texts, **kwargs):
-        locations, blocks, alphas = self.graphics.setup_texts(locations, texts, **kwargs)
-        coords, buffer, pixel_indexes = self.graphics.setup_composite(locations, blocks, alphas=alphas)
-        self.graphics.kmgr.composite_res(self.a, coords, buffer, pixel_indexes, global_size=self.global_size)
+        locations, blocks, alphas = self.graphics.setup_texts(
+            locations, texts, **kwargs
+        )
+        coords, buffer, pixel_indexes = self.graphics.setup_composite(
+            locations, blocks, alphas=alphas
+        )
+        self.graphics.kmgr.composite_res(
+            self.a, coords, buffer, pixel_indexes, global_size=self.global_size
+        )
 
     def read(self):
         self.render()
@@ -377,7 +460,7 @@ class AbstractKernelDraw:
 def arrayify1d(scalar_or_vector, length, default=None, dtype=np.float32):
     scalar_or_vector = default if scalar_or_vector is None else scalar_or_vector
     if scalar_or_vector is None:
-        raise ValueError(f"Both value and default are None")
+        raise ValueError("Both value and default are None")
     if isinstance(scalar_or_vector, np.ndarray):
         vector = scalar_or_vector.astype(dtype, copy=False)
     elif isinstance(scalar_or_vector, (list, tuple)):
@@ -386,19 +469,25 @@ def arrayify1d(scalar_or_vector, length, default=None, dtype=np.float32):
         vector = np.empty(length, dtype=dtype)
         vector[:] = scalar_or_vector
     if vector.shape[0] != length:
-        raise ValueError(f"value length {vector.shape[0]} does not match specified {length}")
+        raise ValueError(
+            f"value length {vector.shape[0]} does not match specified {length}"
+        )
     return vector
 
 
 def arrayify2d(scalar_or_vector, length, width, default=None, dtype=np.float32):
     if scalar_or_vector is None and default is None:
-        raise ValueError(f"Both value and default are None")
-    scalar_or_vector = [default] * width if scalar_or_vector is None else scalar_or_vector
+        raise ValueError("Both value and default are None")
+    scalar_or_vector = (
+        [default] * width if scalar_or_vector is None else scalar_or_vector
+    )
     if isinstance(scalar_or_vector, (list, tuple, np.ndarray)):
         vector = np.array(scalar_or_vector, dtype=dtype)
     if len(vector.shape) == 2:
         if vector.shape[2] != width:
-            raise ValueError(f"shape {scalar_or_vector.shape} should be {length},{width}")
+            raise ValueError(
+                f"shape {scalar_or_vector.shape} should be {length},{width}"
+            )
         return vector
     else:
         vector = np.empty((length, width), dtype=dtype)
@@ -409,7 +498,9 @@ def arrayify2d(scalar_or_vector, length, width, default=None, dtype=np.float32):
 def to_list(scalar, vector, n, default=None):
     if scalar is None and vector is None:
         scalar = default
-    coerced = list(vector) if isinstance(vector, (tuple, list, np.ndarray)) else [scalar] * n
+    coerced = (
+        list(vector) if isinstance(vector, (tuple, list, np.ndarray)) else [scalar] * n
+    )
     coerced = [default if value is None else value for value in coerced]
     assert len(coerced) == n
     return coerced
@@ -418,6 +509,9 @@ def to_list(scalar, vector, n, default=None):
 def to_vector(scalar, vector, n, dtype=np.float32, default=None):
     if scalar is None and vector is None:
         scalar = default
-    coerced = arrayify1d(scalar, n, default=default, dtype=dtype) if scalar else arrayify1d(vector, n, default=default,
-                                                                                            dtype=dtype)
+    coerced = (
+        arrayify1d(scalar, n, default=default, dtype=dtype)
+        if scalar
+        else arrayify1d(vector, n, default=default, dtype=dtype)
+    )
     return coerced

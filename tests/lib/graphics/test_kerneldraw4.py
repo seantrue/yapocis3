@@ -1,31 +1,36 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
-import pytest
 import time
 
 import numpy as np
+import pytest
 
 from yapocis.core import get_test_backends
 from yapocis.lib.kerneldraw4 import KernelDraw4
 from yapocis.utils.stereo_typing import Image4
-from . import ASIZE, StopWatcher
+
+from ...random_data import random_alpha_4ch as random_alpha
 from ...random_data import (
-    random_alpha_4ch as random_alpha,
     random_circles,
-    random_colors_4ch as random_colors,
-    random_composites_4ch as random_composites,
+)
+from ...random_data import random_colors_4ch as random_colors
+from ...random_data import random_composites_4ch as random_composites
+from ...random_data import (
     random_ellipses,
     random_lines,
     random_rects,
-    random_sprites_4ch as random_sprites,
 )
+from ...random_data import random_sprites_4ch as random_sprites
+from . import ASIZE, StopWatcher
 
 
 def just_canvas() -> Image4:
     return np.zeros((ASIZE, ASIZE, 4), dtype=np.float32)
 
 
-def setup_test(device_name: str | None = None, chunk_size: int | None = None) -> tuple[Image4, KernelDraw4]:
+def setup_test(
+    device_name: str | None = None, chunk_size: int | None = None
+) -> tuple[Image4, KernelDraw4]:
     canvas = just_canvas()
     return canvas, KernelDraw4(canvas, device_name=device_name, chunk_size=chunk_size)
 
@@ -63,12 +68,12 @@ def test_displaylist(backend, monkeypatch):
     lines = random_lines()
     with StopWatcher("display list", kernel=ad) as sw:
         with sw.checkpoint("display_list"):
-            for xyxy, color in zip(lines, random_colors()):
+            for xyxy, color in zip(lines, random_colors(), strict=False):
                 ad.line(xyxy, color=color, distance=1.5)
-            for rect, color in zip(rects, random_colors()):
+            for rect, color in zip(rects, random_colors(), strict=False):
                 ad.rect(rect, color=color)
             for x in range(0, ASIZE, 100):
-                ad.draw_string((x, x), "Hello world!", color=[1, 1, 1, .5])
+                ad.draw_string((x, x), "Hello world!", color=[1, 1, 1, 0.5])
         with sw.checkpoint("render"):
             ad.render()
         with sw.checkpoint("read"):
@@ -92,9 +97,9 @@ def test_chunking(backend, monkeypatch):
         ad = KernelDraw4(canvas, chunk_size=chunk_size)
         with StopWatcher(f"chunking {chunk_size}", kernel=ad) as sw:
             with sw.checkpoint("display_list"):
-                for xyxy, color, alpha in zip(lines, colors, alphas):
+                for xyxy, color, alpha in zip(lines, colors, alphas, strict=False):
                     ad.line(xyxy, distance=1.5, color=color, alpha=alpha)
-                for rect, color, alpha in zip(rects, colors, alphas):
+                for rect, color, alpha in zip(rects, colors, alphas, strict=False):
                     ad.rect(rect, color=color, alpha=alpha)
                 for x in range(0, ASIZE, 100):
                     ad.draw_string((x, x), "Hello world!")

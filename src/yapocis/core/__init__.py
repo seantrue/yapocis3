@@ -108,7 +108,7 @@ def get_manager(backend: str | None = None):
         from yapocis.metallic import kernel_manager as km
 
         return km
-    elif backend in ("numbax","numba"):
+    elif backend in ("numbax", "numba"):
         # Return the Numba kernel_manager module (uses Numba JIT)
         from yapocis.numbax import kernel_manager as km
 
@@ -239,20 +239,24 @@ def get_test_backends(backend_filters: list[str] | None = None) -> list[str]:
     # Determine which filters to use
     if backend_filters is None:
         # Check environment variable
-        env_backends = os.environ.get('YAPOCIS_TEST_BACKENDS', '').strip()
+        env_backends = os.environ.get("YAPOCIS_TEST_BACKENDS", "").strip()
         if env_backends:
-            backend_filters = [b.strip() for b in env_backends.split(',') if b.strip()]
+            backend_filters = [b.strip() for b in env_backends.split(",") if b.strip()]
         else:
             backend_filters = []
 
     # Apply filters
     if backend_filters:
-        available_backends = [b for b in available_backends if matches_filter(b, backend_filters)]
+        available_backends = [
+            b for b in available_backends if matches_filter(b, backend_filters)
+        ]
 
     return available_backends
 
 
-def get_test_devices(backend: str, device_filters: list[str] | None = None) -> dict[str, str]:
+def get_test_devices(
+    backend: str, device_filters: list[str] | None = None
+) -> dict[str, str]:
     """
     Get devices for a backend, applying filters and environment variables.
 
@@ -277,42 +281,45 @@ def get_test_devices(backend: str, device_filters: list[str] | None = None) -> d
     # Determine which filters to use
     if device_filters is None:
         # Check environment variable
-        env_devices = os.environ.get('YAPOCIS_TEST_DEVICES', '').strip()
+        env_devices = os.environ.get("YAPOCIS_TEST_DEVICES", "").strip()
         if env_devices:
-            device_filters = [d.strip() for d in env_devices.split(',') if d.strip()]
+            device_filters = [d.strip() for d in env_devices.split(",") if d.strip()]
         else:
             device_filters = []
 
     devices = {}
 
     try:
-        if backend == 'ocl':
+        if backend == "ocl":
             from yapocis.ocl.device import get_available_devices
+
             dev_dict = get_available_devices(aliases=False)
             for name in dev_dict.keys():
                 if isinstance(name, str) and matches_filter(name, device_filters):
                     devices[name] = f"ocl:{name}"
 
-        elif backend == 'metal':
+        elif backend == "metal":
             from yapocis.metallic.device import get_available_devices
+
             dev_dict = get_available_devices(aliases=False)
             for name in dev_dict.keys():
                 if isinstance(name, str) and matches_filter(name, device_filters):
                     devices[name] = f"metal:{name}"
 
-        elif backend == 'cuda':
+        elif backend == "cuda":
             from yapocis.cu.device import get_available_devices
+
             dev_dict = get_available_devices(aliases=False)
             for name in dev_dict.keys():
                 if isinstance(name, str) and matches_filter(name, device_filters):
                     devices[name] = f"cuda:{name}"
 
-        elif backend == 'numbax':
+        elif backend == "numbax":
             # Numba is CPU-based, single "device"
             # Don't apply device filters to CPU-only backends
-            devices['CPU (Numba JIT)'] = 'numbax:cpu'
+            devices["CPU (Numba JIT)"] = "numbax:cpu"
 
-    except Exception as e:
+    except Exception:
         # Silently skip backends that fail to enumerate devices
         pass
 

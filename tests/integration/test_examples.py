@@ -6,9 +6,9 @@ from yapocis.core import get_test_backends
 from yapocis.lib.channels import split_channels
 from yapocis.lib.gradient import Gradient
 from yapocis.lib.hsi import HSI
-from yapocis.utils import basic, advanced
+from yapocis.utils import advanced, basic
 
-from . import image_test, StopWatcher
+from . import StopWatcher, image_test
 
 
 def example_test(module, label):

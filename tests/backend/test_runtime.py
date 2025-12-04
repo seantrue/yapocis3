@@ -9,7 +9,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from yapocis.core import load_program, get_manager
+from yapocis.core import get_manager, load_program
 
 
 @pytest.mark.smoke
@@ -20,7 +20,6 @@ def test_runtime_demo_ocl(monkeypatch):
     except Exception as e:
         pytest.skip(f"pyopencl not available: {e}")
     monkeypatch.setenv("YAPOCIS_BACKEND", "ocl")
-    from yapocis.core import get_manager
 
     mgr = get_manager("ocl")
     prog = load_program("demo")
@@ -39,7 +38,6 @@ def test_runtime_demo_metal(monkeypatch):
     except Exception as e:
         pytest.skip(f"pymetallic not available: {e}")
     monkeypatch.setenv("YAPOCIS_BACKEND", "metal")
-    from yapocis.core import get_manager
 
     mgr = get_manager("metal")
     prog = load_program("demo")
@@ -56,7 +54,7 @@ def test_runtime_demo_cuda(monkeypatch):
     try:
         # import pycuda.autoinit  # noqa: F401
         # import pycuda.driver as cuda  # noqa: F401
-        import pycuda
+        pass
     except Exception as e:
         pytest.skip(f"pycuda not available: {e}")
     monkeypatch.setenv("YAPOCIS_BACKEND", "cuda")
@@ -80,7 +78,7 @@ def test_runtime_demo_numba(monkeypatch):
     except Exception as e:
         pytest.skip(f"numba not available: {e}")
     monkeypatch.setenv("YAPOCIS_BACKEND", "numbax")
-    from yapocis.core import get_manager, load_program
+    from yapocis.core import load_program
 
     mgr = get_manager("numbax")
     prog = load_program("demo")

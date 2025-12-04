@@ -11,15 +11,15 @@ from argparse import ArgumentParser
 
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 backends = ["metal", "ocl", "numba", "cuda", "ref", "test"]
-from datetime import datetime
 import re
+from datetime import datetime
 
 import pygame
 
 # Import watchdog for file system monitoring
 try:
-    from watchdog.observers import Observer
     from watchdog.events import FileSystemEventHandler
+    from watchdog.observers import Observer
 
     WATCHDOG_AVAILABLE = True
 except ImportError:
@@ -32,10 +32,11 @@ from yapocis.utils.internals import get_viewing_queue
 # Import validation framework
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from pathlib import Path
+
 from yapocis.utils.validation import (
-    promote_to_validation,
-    load_validation_reference,
     compare_with_validation,
+    load_validation_reference,
+    promote_to_validation,
 )
 
 VIEWING_QUEUE = get_viewing_queue()
@@ -46,21 +47,21 @@ os.makedirs(VALIDATION_PATH, exist_ok=True)
 
 # Keyboard help mapping
 KEYBOARD_HELP = {
-    "q / Esc":   "Quit",
-    "a":         "Previous image",
-    "d":         "Next image",
-    "w":         "First image (beginning)",
-    "e":         "Last image (end)",
-    "s":         "Toggle tailing mode (auto-advance on new files)",
+    "q / Esc": "Quit",
+    "a": "Previous image",
+    "d": "Next image",
+    "w": "First image (beginning)",
+    "e": "Last image (end)",
+    "s": "Toggle tailing mode (auto-advance on new files)",
     "Backspace": "Delete current image (or validation if viewing validation)",
-    "F12":       "Promote to validation reference (agnostic)",
+    "F12": "Promote to validation reference (agnostic)",
     "Shift+F12": "Force promote to validation (agnostic overwrite)",
-    "Ctrl+F12":  "Promote to backend-specific validation",
-    "F11":       "Compare with validation reference",
-    "F10":       "Show validation info for current image",
-    "F9":        "Toggle between test image and validation reference",
-    "F8":        "Toggle 3-panel difference view (current|validation|diff)",
-    "h":         "Show this help",
+    "Ctrl+F12": "Promote to backend-specific validation",
+    "F11": "Compare with validation reference",
+    "F10": "Show validation info for current image",
+    "F9": "Toggle between test image and validation reference",
+    "F8": "Toggle 3-panel difference view (current|validation|diff)",
+    "h": "Show this help",
 }
 
 
@@ -185,15 +186,15 @@ def get_images(filter_strings=None, force_refresh=False):
 
     # Check if we need to refresh the cache
     filters_changed = (
-            current_filter_strings != last_filter_strings
-            or current_validation_filters != last_validation_filters
+        current_filter_strings != last_filter_strings
+        or current_validation_filters != last_validation_filters
     )
 
     if (
-            not force_refresh
-            and not images_cache_dirty
-            and not filters_changed
-            and cached_images
+        not force_refresh
+        and not images_cache_dirty
+        and not filters_changed
+        and cached_images
     ):
         # Return cached results if valid
         return cached_images
@@ -218,8 +219,8 @@ def get_images(filter_strings=None, force_refresh=False):
             filename = os.path.basename(path)
             # Check if filename contains ALL filter strings (case-insensitive)
             if all(
-                    filter_str.lower() in filename.lower()
-                    for filter_str in current_filter_strings
+                filter_str.lower() in filename.lower()
+                for filter_str in current_filter_strings
             ):
                 filtered_images.append(path)
         images = filtered_images
@@ -245,8 +246,8 @@ def get_images(filter_strings=None, force_refresh=False):
             if show_no_validation:
                 # Include if no validation reference exists (orange color)
                 if (
-                        validation_color == (255, 165, 0)
-                        and validation_text == "[no validation]"
+                    validation_color == (255, 165, 0)
+                    and validation_text == "[no validation]"
                 ):
                     validation_filtered.append(path)
 
@@ -307,7 +308,7 @@ class ImageWatcherFileHandler(FileSystemEventHandler):
         global tailing_advance_needed
         if not event.is_directory:
             if self._is_image_file(event.src_path) or self._is_validation_file(
-                    event.src_path
+                event.src_path
             ):
                 print(f"File created: {os.path.basename(event.src_path)}")
                 invalidate_image_cache()
@@ -325,7 +326,7 @@ class ImageWatcherFileHandler(FileSystemEventHandler):
         """Handle file deletion events."""
         if not event.is_directory:
             if self._is_image_file(event.src_path) or self._is_validation_file(
-                    event.src_path
+                event.src_path
             ):
                 print(f"File deleted: {os.path.basename(event.src_path)}")
                 invalidate_image_cache()
@@ -335,10 +336,10 @@ class ImageWatcherFileHandler(FileSystemEventHandler):
         global tailing_advance_needed
         if not event.is_directory:
             if (
-                    self._is_image_file(event.src_path)
-                    or self._is_image_file(event.dest_path)
-                    or self._is_validation_file(event.src_path)
-                    or self._is_validation_file(event.dest_path)
+                self._is_image_file(event.src_path)
+                or self._is_image_file(event.dest_path)
+                or self._is_validation_file(event.src_path)
+                or self._is_validation_file(event.dest_path)
             ):
                 print(
                     f"File moved: {os.path.basename(event.src_path)} -> {os.path.basename(event.dest_path)}"
@@ -517,7 +518,9 @@ def next_image():
     if showing_difference_view:
         new_img, new_label = fetch_image(image_index + 1)
         # Re-apply difference view to new image
-        return create_difference_visualization(None) if new_img else (new_img, new_label)
+        return (
+            create_difference_visualization(None) if new_img else (new_img, new_label)
+        )
     elif showing_validation_reference:
         new_img, new_label = fetch_image(image_index + 1)
         return view_validation_reference(None) if new_img else (new_img, new_label)
@@ -531,7 +534,9 @@ def previous_image():
     if showing_difference_view:
         new_img, new_label = fetch_image(image_index - 1)
         # Re-apply difference view to new image
-        return create_difference_visualization(None) if new_img else (new_img, new_label)
+        return (
+            create_difference_visualization(None) if new_img else (new_img, new_label)
+        )
     elif showing_validation_reference:
         new_img, new_label = fetch_image(image_index - 1)
         return view_validation_reference(None) if new_img else (new_img, new_label)
@@ -551,7 +556,9 @@ def last_image():
     # Keep current view mode when navigating
     if showing_difference_view:
         new_img, new_label = fetch_image(len(images) - 1)
-        return create_difference_visualization(None) if new_img else (new_img, new_label)
+        return (
+            create_difference_visualization(None) if new_img else (new_img, new_label)
+        )
     elif showing_validation_reference:
         new_img, new_label = fetch_image(len(images) - 1)
         return view_validation_reference(None) if new_img else (new_img, new_label)
@@ -564,7 +571,9 @@ def first_image():
     # Keep current view mode when navigating
     if showing_difference_view:
         new_img, new_label = fetch_image(0)
-        return create_difference_visualization(None) if new_img else (new_img, new_label)
+        return (
+            create_difference_visualization(None) if new_img else (new_img, new_label)
+        )
     elif showing_validation_reference:
         new_img, new_label = fetch_image(0)
         return view_validation_reference(None) if new_img else (new_img, new_label)
@@ -715,7 +724,7 @@ def compare_with_validation_reference(font):
         matches, info = compare_with_validation(test_name, current_array, backend)
 
         if matches:
-            show_status_message(font, f"✓ Matches validation reference", (0, 255, 0))
+            show_status_message(font, "✓ Matches validation reference", (0, 255, 0))
         else:
             status = info["status"]
             if status == "no_reference":
@@ -753,7 +762,7 @@ def show_validation_info(font):
                 font, f"Validation: {shape_str} {reference.dtype}", (0, 255, 255)
             )
         else:
-            show_status_message(font, f"No validation reference", (255, 165, 0))
+            show_status_message(font, "No validation reference", (255, 165, 0))
 
     except Exception as e:
         show_status_message(font, f"Info error: {str(e)[:40]}", (255, 0, 0))
@@ -780,7 +789,9 @@ def view_validation_reference(font=None):
         reference = load_validation_reference(test_name, backend)
         if reference is None:
             if font:
-                show_status_message(font, "No validation reference found", (255, 165, 0))
+                show_status_message(
+                    font, "No validation reference found", (255, 165, 0)
+                )
             return None, None
 
         # Convert numpyx array to pygame surface
@@ -969,7 +980,9 @@ def create_difference_visualization(font=None):
         reference = load_validation_reference(test_name, backend)
         if reference is None:
             if font:
-                show_status_message(font, "No validation reference found", (255, 165, 0))
+                show_status_message(
+                    font, "No validation reference found", (255, 165, 0)
+                )
             return None, None
 
         # Load current test result
@@ -992,7 +1005,7 @@ def create_difference_visualization(font=None):
                 show_status_message(
                     font,
                     f"Shape mismatch: {current_array.shape} vs {reference.shape}",
-                    (255, 0, 0)
+                    (255, 0, 0),
                 )
             return None, None
 
@@ -1007,7 +1020,9 @@ def create_difference_visualization(font=None):
                     # Values in arbitrary range - normalize
                     arr_min, arr_max = arr.min(), arr.max()
                     if arr_max > arr_min:
-                        return ((arr - arr_min) / (arr_max - arr_min) * 255).astype(np.uint8)
+                        return ((arr - arr_min) / (arr_max - arr_min) * 255).astype(
+                            np.uint8
+                        )
                     else:
                         return np.zeros_like(arr, dtype=np.uint8)
             else:
@@ -1097,8 +1112,13 @@ def create_difference_visualization(font=None):
 
             # Resize using PIL for better quality
             from PIL import Image
-            current_pil = Image.fromarray(current_rgb).resize((new_w, new_h), Image.LANCZOS)
-            reference_pil = Image.fromarray(reference_rgb).resize((new_w, new_h), Image.LANCZOS)
+
+            current_pil = Image.fromarray(current_rgb).resize(
+                (new_w, new_h), Image.LANCZOS
+            )
+            reference_pil = Image.fromarray(reference_rgb).resize(
+                (new_w, new_h), Image.LANCZOS
+            )
             diff_pil = Image.fromarray(diff_vis).resize((new_w, new_h), Image.LANCZOS)
 
             current_rgb = np.array(current_pil)
@@ -1120,10 +1140,14 @@ def create_difference_visualization(font=None):
         composite.fill((50, 50, 50))
 
         # Add labels
-        label_font = pygame.font.Font(font.get_fonts()[0] if hasattr(font, 'get_fonts') else None, 16)
+        label_font = pygame.font.Font(
+            font.get_fonts()[0] if hasattr(font, "get_fonts") else None, 16
+        )
         current_label = label_font.render("Current", True, (255, 255, 255))
         reference_label = label_font.render("Validation", True, (255, 255, 255))
-        diff_label = label_font.render(f"Difference (max: {max_diff:.2e})", True, (255, 255, 255))
+        diff_label = label_font.render(
+            f"Difference (max: {max_diff:.2e})", True, (255, 255, 255)
+        )
 
         # Position panels
         x_positions = [10, surf_w + 20, surf_w * 2 + 30]
@@ -1159,27 +1183,41 @@ def create_difference_visualization(font=None):
             else:
                 t = (val - 0.75) / 0.25
                 color = (255, int(255 * (1 - t)), 0)
-            pygame.draw.line(composite, color, (x_positions[2] + i, legend_y),
-                             (x_positions[2] + i, legend_y + legend_height))
+            pygame.draw.line(
+                composite,
+                color,
+                (x_positions[2] + i, legend_y),
+                (x_positions[2] + i, legend_y + legend_height),
+            )
 
         # Add scale labels
         scale_label_font = pygame.font.Font(None, 14)
         min_label = scale_label_font.render("0", True, (255, 255, 255))
         max_label = scale_label_font.render(f"{max_diff:.2e}", True, (255, 255, 255))
         composite.blit(min_label, (x_positions[2], legend_y + legend_height + 2))
-        composite.blit(max_label, (x_positions[2] + legend_width - 40, legend_y + legend_height + 2))
+        composite.blit(
+            max_label,
+            (x_positions[2] + legend_width - 40, legend_y + legend_height + 2),
+        )
 
         label = f"DIFFERENCE VIEW: {test_name}"
         if font:
-            show_status_message(font, f"Showing difference visualization (max diff: {max_diff:.2e})", (0, 255, 255))
+            show_status_message(
+                font,
+                f"Showing difference visualization (max diff: {max_diff:.2e})",
+                (0, 255, 255),
+            )
 
         return composite, (label, (0, 255, 255))
 
     except Exception as e:
         import traceback
+
         traceback.print_exc()
         if font:
-            show_status_message(font, f"Error creating diff view: {str(e)[:40]}", (255, 0, 0))
+            show_status_message(
+                font, f"Error creating diff view: {str(e)[:40]}", (255, 0, 0)
+            )
         return None, None
 
 
@@ -1196,7 +1234,6 @@ def delete_validation_reference(font):
         return False
 
     try:
-        import os
         from pathlib import Path
 
         # Check for both agnostic and backend-specific validation references
@@ -1436,8 +1473,12 @@ def main():
                     # Toggle tailing mode
                     tailing_mode = not tailing_mode
                     if tailing_mode:
-                        show_status_message(font, "Tailing enabled - waiting for new files", (0, 255, 0))
-                        print("Tailing mode enabled - will auto-advance when new files are detected")
+                        show_status_message(
+                            font, "Tailing enabled - waiting for new files", (0, 255, 0)
+                        )
+                        print(
+                            "Tailing mode enabled - will auto-advance when new files are detected"
+                        )
                     else:
                         show_status_message(font, "Tailing disabled", (255, 255, 0))
                         print("Tailing mode disabled")

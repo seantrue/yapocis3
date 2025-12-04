@@ -4,6 +4,7 @@ import os
 
 import pycuda.driver as cuda
 
+
 def get_available_device_names():
     """Get names of all available CUDA devices"""
     cuda.init()
@@ -12,6 +13,7 @@ def get_available_device_names():
         device = cuda.Device(i)
         device_names.append(device.name())
     return device_names
+
 
 def get_available_devices(aliases: bool = True) -> dict[str, cuda.Device]:
     """
@@ -30,12 +32,14 @@ def get_available_devices(aliases: bool = True) -> dict[str, cuda.Device]:
             devices[i] = device
     return devices
 
+
 def pick_default_device(device_names: list[str]) -> str:
     """Pick the default CUDA device - prefer first GPU found"""
     if not device_names:
         raise RuntimeError("No CUDA devices found")
     # Just pick the first device for CUDA
     return device_names[0]
+
 
 def get_device(device_name: str | None = None) -> tuple[str, cuda.Device]:
     """

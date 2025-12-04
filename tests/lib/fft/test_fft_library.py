@@ -5,8 +5,9 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from yapocis.core import get_test_backends
 from yapocis.lib.fft import FFT
-from yapocis.core import get_backends, get_test_backends
+
 from . import StopWatcher
 
 
@@ -55,7 +56,9 @@ def test_analyze_signal(backend, monkeypatch):
     peak_freq = freqs[peak_idx]
 
     # Should be close to 100 Hz
-    assert abs(peak_freq - freq) < 2.0, f"Expected peak at {freq} Hz, got {peak_freq} Hz"
+    assert (
+        abs(peak_freq - freq) < 2.0
+    ), f"Expected peak at {freq} Hz, got {peak_freq} Hz"
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -67,8 +70,12 @@ def test_window_functions(backend, monkeypatch):
     signal = np.ones(256, dtype=np.float32)
 
     # Test all window types
-    for window_type in [FFT.WINDOW_RECTANGULAR, FFT.WINDOW_HANN,
-                        FFT.WINDOW_HAMMING, FFT.WINDOW_BLACKMAN]:
+    for window_type in [
+        FFT.WINDOW_RECTANGULAR,
+        FFT.WINDOW_HANN,
+        FFT.WINDOW_HAMMING,
+        FFT.WINDOW_BLACKMAN,
+    ]:
         windowed = fft.apply_window(signal, window_type)
         assert windowed.shape == signal.shape
         assert windowed.dtype == np.float32
@@ -90,18 +97,25 @@ def test_find_peaks(backend, monkeypatch):
 
     # Use well-separated frequencies
     signal = (
-        np.sin(2 * np.pi * 100 * t) +
-        0.8 * np.sin(2 * np.pi * 250 * t)  # Changed from 200 to 250 for better separation
+        np.sin(2 * np.pi * 100 * t)
+        + 0.8
+        * np.sin(2 * np.pi * 250 * t)  # Changed from 200 to 250 for better separation
     ).astype(np.float32)
 
     with StopWatcher("find_peaks") as sw:
         with sw.checkpoint("find_peaks"):
-            peak_freqs, peak_powers = fft.find_peaks(signal, sample_rate=sample_rate, n_peaks=2)
+            peak_freqs, peak_powers = fft.find_peaks(
+                signal, sample_rate=sample_rate, n_peaks=2
+            )
 
     # Should find peaks near 100 and 250 Hz
     assert len(peak_freqs) == 2
-    assert any(abs(f - 100) < 3 for f in peak_freqs), f"No peak near 100 Hz in {peak_freqs}"
-    assert any(abs(f - 250) < 3 for f in peak_freqs), f"No peak near 250 Hz in {peak_freqs}"
+    assert any(
+        abs(f - 100) < 3 for f in peak_freqs
+    ), f"No peak near 100 Hz in {peak_freqs}"
+    assert any(
+        abs(f - 250) < 3 for f in peak_freqs
+    ), f"No peak near 250 Hz in {peak_freqs}"
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -123,7 +137,9 @@ def test_estimate_frequency(backend, monkeypatch):
         with sw.checkpoint("estimate"):
             estimated_freq = fft.estimate_frequency(signal, sample_rate=sample_rate)
 
-    assert abs(estimated_freq - freq) < 2.0, f"Expected {freq} Hz, got {estimated_freq} Hz"
+    assert (
+        abs(estimated_freq - freq) < 2.0
+    ), f"Expected {freq} Hz, got {estimated_freq} Hz"
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -145,8 +161,7 @@ def test_spectrogram(backend, monkeypatch):
     with StopWatcher("spectrogram") as sw:
         with sw.checkpoint("compute"):
             times, freqs, spec = fft.spectrogram(
-                signal, sample_rate=sample_rate,
-                window_size=128, hop_size=32
+                signal, sample_rate=sample_rate, window_size=128, hop_size=32
             )
 
     # Check dimensions
@@ -170,9 +185,9 @@ def test_bandpass_filter(backend, monkeypatch):
     t = np.linspace(0, duration, n_samples, dtype=np.float32)
 
     signal = (
-        np.sin(2 * np.pi * 50 * t) +   # Low frequency (should be filtered out)
-        np.sin(2 * np.pi * 100 * t) +  # In passband
-        np.sin(2 * np.pi * 300 * t)    # High frequency (should be filtered out)
+        np.sin(2 * np.pi * 50 * t)  # Low frequency (should be filtered out)
+        + np.sin(2 * np.pi * 100 * t)  # In passband
+        + np.sin(2 * np.pi * 300 * t)  # High frequency (should be filtered out)
     ).astype(np.float32)
 
     with StopWatcher("bandpass_filter") as sw:
@@ -224,7 +239,9 @@ def test_coherence(backend, monkeypatch):
     # Create two related signals
     n = 256
     signal1 = np.random.randn(n).astype(np.float32)
-    signal2 = signal1 + 0.1 * np.random.randn(n).astype(np.float32)  # Correlated + noise
+    signal2 = signal1 + 0.1 * np.random.randn(n).astype(
+        np.float32
+    )  # Correlated + noise
 
     freqs, coh = fft.coherence(signal1, signal2)
 
@@ -252,10 +269,10 @@ def test_fft_library_smoke():
     """Smoke test - ensure FFT library loads."""
     fft = FFT()
     assert fft is not None
-    assert hasattr(fft, 'forward')
-    assert hasattr(fft, 'inverse')
-    assert hasattr(fft, 'analyze_signal')
-    assert hasattr(fft, 'spectrogram')
+    assert hasattr(fft, "forward")
+    assert hasattr(fft, "inverse")
+    assert hasattr(fft, "analyze_signal")
+    assert hasattr(fft, "spectrogram")
 
 
 @pytest.mark.parametrize("backend", get_test_backends())

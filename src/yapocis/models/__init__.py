@@ -14,11 +14,13 @@ Example:
     weights_path = get_model_path('vgg16', 'weights.npz')
     classes_path = get_model_path('vgg16', 'classes.txt')
 """
+
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
 
 import os
 from pathlib import Path
-from typing import Optional, Dict, List
+from typing import Dict, List, Optional
+
 
 class ModelAssetManager:
     """
@@ -31,7 +33,7 @@ class ModelAssetManager:
     - README.md: Model documentation (optional)
     """
 
-    def __init__(self, base_dir: str, project_dir: Optional[str] = None):
+    def __init__(self, base_dir: str, project_dir: str | None = None):
         """
         Initialize model asset manager.
 
@@ -41,7 +43,7 @@ class ModelAssetManager:
         """
         self.base_dir = base_dir
         self.project_dir = project_dir
-        self._model_cache: Dict[str, Path] = {}
+        self._model_cache: dict[str, Path] = {}
         self._scan_models()
 
     def _scan_models(self) -> None:
@@ -49,7 +51,11 @@ class ModelAssetManager:
         base_path = Path(self.base_dir)
         if base_path.exists():
             for item in base_path.iterdir():
-                if item.is_dir() and not item.name.startswith('.') and not item.name.startswith('__'):
+                if (
+                    item.is_dir()
+                    and not item.name.startswith(".")
+                    and not item.name.startswith("__")
+                ):
                     self._model_cache[item.name] = item
 
         # Also check project directory if specified
@@ -57,11 +63,15 @@ class ModelAssetManager:
             project_path = Path(self.project_dir)
             if project_path.exists():
                 for item in project_path.iterdir():
-                    if item.is_dir() and not item.name.startswith('.') and not item.name.startswith('__'):
+                    if (
+                        item.is_dir()
+                        and not item.name.startswith(".")
+                        and not item.name.startswith("__")
+                    ):
                         # Project models override base models
                         self._model_cache[item.name] = item
 
-    def list_models(self) -> List[str]:
+    def list_models(self) -> list[str]:
         """
         List all available models.
 
@@ -70,7 +80,7 @@ class ModelAssetManager:
         """
         return sorted(self._model_cache.keys())
 
-    def find_model(self, name: str) -> Optional[Path]:
+    def find_model(self, name: str) -> Path | None:
         """
         Find a model directory by name.
 
@@ -82,7 +92,7 @@ class ModelAssetManager:
         """
         return self._model_cache.get(name)
 
-    def get_model_path(self, model_name: str, filename: str) -> Optional[Path]:
+    def get_model_path(self, model_name: str, filename: str) -> Path | None:
         """
         Get path to a specific file within a model directory.
 
@@ -103,7 +113,7 @@ class ModelAssetManager:
 
         return None
 
-    def get_model_files(self, model_name: str) -> Optional[Dict[str, Path]]:
+    def get_model_files(self, model_name: str) -> dict[str, Path] | None:
         """
         Get all files in a model directory.
 
@@ -119,7 +129,7 @@ class ModelAssetManager:
 
         files = {}
         for file_path in model_dir.iterdir():
-            if file_path.is_file() and not file_path.name.startswith('.'):
+            if file_path.is_file() and not file_path.name.startswith("."):
                 files[file_path.name] = file_path
 
         return files
@@ -136,7 +146,7 @@ class ModelAssetManager:
         """
         return model_name in self._model_cache
 
-    def get_weights_path(self, model_name: str) -> Optional[Path]:
+    def get_weights_path(self, model_name: str) -> Path | None:
         """
         Convenience method to get model weights file.
 
@@ -146,9 +156,9 @@ class ModelAssetManager:
         Returns:
             Path to weights.npz file, or None if not found
         """
-        return self.get_model_path(model_name, 'weights.npz')
+        return self.get_model_path(model_name, "weights.npz")
 
-    def get_classes_path(self, model_name: str) -> Optional[Path]:
+    def get_classes_path(self, model_name: str) -> Path | None:
         """
         Convenience method to get model class labels file.
 
@@ -158,13 +168,12 @@ class ModelAssetManager:
         Returns:
             Path to classes.txt file, or None if not found
         """
-        return self.get_model_path(model_name, 'classes.txt')
+        return self.get_model_path(model_name, "classes.txt")
 
 
 # Create global model asset manager instance
 _model_manager = ModelAssetManager(
-    os.path.join(os.path.dirname(__file__), ''),
-    os.environ.get('YAPOCIS_MODELS')
+    os.path.join(os.path.dirname(__file__), ""), os.environ.get("YAPOCIS_MODELS")
 )
 
 # Public API

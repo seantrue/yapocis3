@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 from tests import StopWatcher
-from yapocis.core import get_backends, get_test_backends
+from yapocis.core import get_test_backends
 
 # Import library classes that we'll test
 from yapocis.lib.anisodiff import Anisodiff

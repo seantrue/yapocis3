@@ -2,9 +2,11 @@
 
 import numpy as np
 import pytest
+
 from yapocis.core import get_backends, get_test_backends
 from yapocis.lib.graphics import Graphics1
 from yapocis.lib.graphics4 import Graphics4
+
 from . import ASIZE, StopWatcher
 
 
@@ -24,7 +26,13 @@ def test_lines_with_antialiasing(backend, monkeypatch):
         coords_no_aa = [(50, 50, 600, 600)]
 
         with sw.checkpoint("lines_no_aa"):
-            g.lines(canvas, coords_no_aa, width=5.0, aa_width=0.0, color=[1.0, 0.0, 0.0, 1.0])
+            g.lines(
+                canvas,
+                coords_no_aa,
+                width=5.0,
+                aa_width=0.0,
+                color=[1.0, 0.0, 0.0, 1.0],
+            )
 
         # Check that some pixels were drawn (diagonal line should hit middle)
         assert canvas[300, 300, 0] > 0.5, f"Line not drawn ({backend})"
@@ -33,7 +41,9 @@ def test_lines_with_antialiasing(backend, monkeypatch):
         coords_aa = [(100, 900, 900, 100)]
 
         with sw.checkpoint("lines_with_aa"):
-            g.lines(canvas, coords_aa, width=5.0, aa_width=2.0, color=[0.0, 1.0, 0.0, 1.0])
+            g.lines(
+                canvas, coords_aa, width=5.0, aa_width=2.0, color=[0.0, 1.0, 0.0, 1.0]
+            )
 
         # Check that some pixels were drawn
         assert canvas[500, 500, 1] > 0.5, f"Anti-aliased line not drawn ({backend})"
@@ -54,10 +64,14 @@ def test_lines_aa_width_variations(backend, monkeypatch):
     with StopWatcher("aa_width_variations", kernel=g) as sw:
         # Draw multiple lines with different aa_width values
         aa_widths = [0.0, 1.0, 2.0, 4.0]
-        colors = [[1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 0.0, 1.0],
-                  [0.0, 0.0, 1.0, 1.0], [1.0, 1.0, 0.0, 1.0]]
+        colors = [
+            [1.0, 0.0, 0.0, 1.0],
+            [0.0, 1.0, 0.0, 1.0],
+            [0.0, 0.0, 1.0, 1.0],
+            [1.0, 1.0, 0.0, 1.0],
+        ]
 
-        for i, (aa_width, color) in enumerate(zip(aa_widths, colors)):
+        for i, (aa_width, color) in enumerate(zip(aa_widths, colors, strict=False)):
             y_offset = i * 200
             coords = [(100, 100 + y_offset, 800, 800 + y_offset)]
 
@@ -66,7 +80,9 @@ def test_lines_aa_width_variations(backend, monkeypatch):
 
             # Check that something was drawn
             pixels_drawn = np.count_nonzero(canvas)
-            assert pixels_drawn > 0, f"Line with aa_width={aa_width} not drawn ({backend})"
+            assert (
+                pixels_drawn > 0
+            ), f"Line with aa_width={aa_width} not drawn ({backend})"
 
         sw.show(canvas)
         print(f"✅ {backend}: AA width variations test passed")
@@ -103,6 +119,7 @@ def test_lines_backward_compatibility(backend, monkeypatch):
 
 
 # Graphics1 (1-channel) tests
+
 
 @pytest.mark.parametrize("backend", get_test_backends())
 def test_lines_with_antialiasing_1ch(backend, monkeypatch):
@@ -152,16 +169,25 @@ def test_lines_aa_width_variations_1ch(backend, monkeypatch):
         aa_widths = [0.0, 1.0, 2.0, 4.0]
         colors = [0.3, 0.5, 0.7, 1.0]  # Different grayscale intensities
 
-        for i, (aa_width, color) in enumerate(zip(aa_widths, colors)):
+        for i, (aa_width, color) in enumerate(zip(aa_widths, colors, strict=False)):
             y_offset = i * 200
             coords = [(100, 100 + y_offset, 800, 800 + y_offset)]
 
             with sw.checkpoint(f"aa_width_{aa_width}"):
-                g.lines(canvas, coords, width=10.0, aa_width=aa_width, color=color, alpha=1.0)
+                g.lines(
+                    canvas,
+                    coords,
+                    width=10.0,
+                    aa_width=aa_width,
+                    color=color,
+                    alpha=1.0,
+                )
 
             # Check that something was drawn
             pixels_drawn = np.count_nonzero(canvas)
-            assert pixels_drawn > 0, f"Line with aa_width={aa_width} not drawn ({backend})"
+            assert (
+                pixels_drawn > 0
+            ), f"Line with aa_width={aa_width} not drawn ({backend})"
 
         sw.show(canvas)
         print(f"✅ {backend}: 1-channel AA width variations test passed")
@@ -243,7 +269,12 @@ def test_circles_aa_width_variations(backend, monkeypatch):
             for j in range(200, 800, 300):
                 coords.append([i, j, 80])
 
-        colors = [[1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 0.0, 1.0], [0.0, 0.0, 1.0, 1.0], [1.0, 1.0, 0.0, 1.0]]
+        colors = [
+            [1.0, 0.0, 0.0, 1.0],
+            [0.0, 1.0, 0.0, 1.0],
+            [0.0, 0.0, 1.0, 1.0],
+            [1.0, 1.0, 0.0, 1.0],
+        ]
         aa_widths = [0.0, 0.0, 4.0, 4.0]
 
         with sw.checkpoint("circles_mixed_aa"):
@@ -253,7 +284,7 @@ def test_circles_aa_width_variations(backend, monkeypatch):
         # Coords: [[200,200], [200,500], [500,200], [500,500]] with colors [Red, Green, Blue, Yellow]
         # Note: OCL and CUDA/Numbax have different coordinate conventions (column-major vs row-major)
         assert canvas[200, 200, 0] > 0.5, f"Circle 1 (red) not drawn ({backend})"
-        if backend == 'ocl':
+        if backend == "ocl":
             # OCL: coord [x,y] -> canvas[x,y]
             assert canvas[200, 500, 1] > 0.5, f"Circle 2 (green) not drawn ({backend})"
             assert canvas[500, 200, 2] > 0.5, f"Circle 3 (blue) not drawn ({backend})"
@@ -261,7 +292,9 @@ def test_circles_aa_width_variations(backend, monkeypatch):
             # CUDA/Numbax: coord [x,y] -> canvas[y,x]
             assert canvas[500, 200, 1] > 0.5, f"Circle 2 (green) not drawn ({backend})"
             assert canvas[200, 500, 2] > 0.5, f"Circle 3 (blue) not drawn ({backend})"
-        assert canvas[500, 500, :3].sum() > 1.0, f"Circle 4 (yellow) not drawn ({backend})"
+        assert (
+            canvas[500, 500, :3].sum() > 1.0
+        ), f"Circle 4 (yellow) not drawn ({backend})"
 
         sw.show(canvas)
         print(f"✅ {backend}: Circles AA width variations test passed")
@@ -345,7 +378,7 @@ def test_circles_aa_width_variations_1ch(backend, monkeypatch):
         # Coords: [[200,200], [200,500], [500,200], [500,500]] with colors [1.0, 0.8, 0.6, 0.4]
         # Note: OCL and CUDA/Numbax have different coordinate conventions
         assert canvas[200, 200] > 0.5, f"Circle 1 not drawn ({backend})"
-        if backend == 'ocl':
+        if backend == "ocl":
             assert canvas[200, 500] > 0.3, f"Circle 2 not drawn ({backend})"
             assert canvas[500, 200] > 0.3, f"Circle 3 not drawn ({backend})"
         else:
@@ -407,4 +440,6 @@ if __name__ == "__main__":
         test_circles_aa_width_variations_1ch(backend)
         test_circles_backward_compatibility_1ch(backend)
 
-    print("\n✅ All anti-aliasing tests passed (lines & circles, 4-channel and 1-channel)!")
+    print(
+        "\n✅ All anti-aliasing tests passed (lines & circles, 4-channel and 1-channel)!"
+    )

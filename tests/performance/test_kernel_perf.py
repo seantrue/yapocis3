@@ -20,6 +20,7 @@ from yapocis.lib.median import Median
 from yapocis.lib.operators import Operators
 from yapocis.lib.truetrace import TrueTrace
 from yapocis.lib.zc import ZC
+
 from . import StopWatcher, get_backend_device_combinations
 
 # Test data sizes - keep small for fast performance testing
@@ -185,7 +186,7 @@ class TestKernelPerformance:
         y, x = np.ogrid[:SMALL_SIZE, :SMALL_SIZE]
         center = SMALL_SIZE // 2
         radius = SMALL_SIZE // 4
-        mask = ((x - center) ** 2 + (y - center) ** 2 <= radius ** 2).astype(np.uint8)
+        mask = ((x - center) ** 2 + (y - center) ** 2 <= radius**2).astype(np.uint8)
 
         with StopWatcher("truetrace", save_perf=True, kernel=tt) as sw:
             for _ in range(repeats):
@@ -219,15 +220,15 @@ class TestKernelPerformance:
         # repeats = 1 if backend.startswith("num") else REPEATS
 
         from tests.random_data import (
-            random_lines,
             random_circles,
-            random_rects,
-            random_triangles,
-            random_ellipses,
             random_colors_4ch,
-            random_icons,
-            random_texts,
             random_composites_4ch,
+            random_ellipses,
+            random_icons,
+            random_lines,
+            random_rects,
+            random_texts,
+            random_triangles,
         )
 
         g4 = Graphics4()
@@ -310,24 +311,35 @@ class TestKernelPerformance:
             for size in [256, 512]:
                 for _ in range(REPEATS):
                     with sw.checkpoint(f"simplex2d_{size}x{size}"):
-                        noise2d = s.simplex2d(size, size, seed=42, octaves=4, scale=0.01)
+                        noise2d = s.simplex2d(
+                            size, size, seed=42, octaves=4, scale=0.01
+                        )
 
             # 2D noise - multiple octaves
             for octaves in [1, 4, 8]:
                 with sw.checkpoint(f"simplex2d_octaves{octaves}"):
-                    noise2d = s.simplex2d(MEDIUM_SIZE, MEDIUM_SIZE, seed=42, octaves=octaves, scale=0.01)
+                    noise2d = s.simplex2d(
+                        MEDIUM_SIZE, MEDIUM_SIZE, seed=42, octaves=octaves, scale=0.01
+                    )
 
             # 2D tileable
             for _ in range(REPEATS):
                 with sw.checkpoint("simplex2d_tileable"):
                     tileable = s.simplex2d(
-                        SMALL_SIZE, SMALL_SIZE, seed=42, octaves=4, scale=0.01, tileable=True
+                        SMALL_SIZE,
+                        SMALL_SIZE,
+                        seed=42,
+                        octaves=4,
+                        scale=0.01,
+                        tileable=True,
                     )
 
             # 3D noise
             for depth in [32, 64]:
                 with sw.checkpoint(f"simplex3d_{SMALL_SIZE}x{SMALL_SIZE}x{depth}"):
-                    noise3d = s.simplex3d(SMALL_SIZE, SMALL_SIZE, depth, seed=99, octaves=3, scale=0.02)
+                    noise3d = s.simplex3d(
+                        SMALL_SIZE, SMALL_SIZE, depth, seed=99, octaves=3, scale=0.02
+                    )
 
         assert noise2d.shape == (MEDIUM_SIZE, MEDIUM_SIZE)
         assert noise3d.shape == (depth, SMALL_SIZE, SMALL_SIZE)

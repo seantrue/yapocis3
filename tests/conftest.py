@@ -2,7 +2,6 @@ import importlib
 import os
 import sys
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import pytest
@@ -204,7 +203,8 @@ def pytest_configure(config):
         "markers", "track_memory: marks tests that should track memory usage"
     )
     config.addinivalue_line(
-        "markers", "performance: marks performance tests that should only run when explicitly requested"
+        "markers",
+        "performance: marks performance tests that should only run when explicitly requested",
     )
 
 
@@ -294,8 +294,9 @@ def perf_tracker(request):
 @pytest.fixture
 def backend_comparison(request):
     """Run the same test across multiple backends for comparison."""
-    from . import PerformanceTracker
     import time
+
+    from . import PerformanceTracker
 
     available_backends = []
 

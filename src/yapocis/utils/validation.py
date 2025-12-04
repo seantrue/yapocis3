@@ -8,17 +8,18 @@ This module provides utilities for:
 4. Managing validation file lifecycle
 """
 
-import os
-import numpy as np
 from pathlib import Path
-from typing import Optional, Union
-import shutil
+
+import numpy as np
+
 from .basic import _current_backend
 from .internals import get_viewing_queue
+
 # Default paths
 QUEUE_DIR = Path(get_viewing_queue())
 RAW_DIR = QUEUE_DIR / "raw"
 VALIDATION_DIR = QUEUE_DIR / "validation"
+
 
 def get_validation_key(
     test_name: str, backend: str | None = None, backend_specific: bool = False
@@ -37,6 +38,7 @@ def get_validation_key(
     if backend_specific and backend:
         return f"{test_name} [{backend}]"
     return test_name
+
 
 def save_validation_reference(
     test_name: str,
@@ -73,6 +75,7 @@ def save_validation_reference(
     print(f"Saved validation reference: {validation_file}")
     return validation_file
 
+
 def load_validation_reference(
     test_name: str, backend: str | None = None
 ) -> np.ndarray | None:
@@ -106,6 +109,7 @@ def load_validation_reference(
             return data["arr_0"] if "arr_0" in data else data[list(data.keys())[0]]
 
     return None
+
 
 def compare_with_validation(
     test_name: str,
@@ -165,6 +169,7 @@ def compare_with_validation(
     info["status"] = "matches" if matches else "numerical_mismatch"
 
     return matches, info
+
 
 def promote_to_validation(
     test_name: str,
@@ -242,6 +247,7 @@ def promote_to_validation(
         print(f"Failed to promote {test_name}: {e}")
         return False
 
+
 def list_validation_references(backend: str | None = None) -> list[str]:
     """
     list available validation references.
@@ -267,6 +273,7 @@ def list_validation_references(backend: str | None = None) -> list[str]:
         references.append(name)
 
     return sorted(references)
+
 
 def cleanup_validation_references(
     backend: str | None = None, confirm: bool = True
@@ -310,6 +317,7 @@ def cleanup_validation_references(
             print(f"Failed to delete {file}: {e}")
 
     return deleted
+
 
 class ValidationContext:
     """Context manager for validation testing."""

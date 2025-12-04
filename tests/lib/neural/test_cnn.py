@@ -11,10 +11,10 @@ import pytest
 from yapocis import core
 from yapocis.core import get_test_backends
 
-
 # =================================================================
 # Convolution Tests
 # =================================================================
+
 
 @pytest.mark.parametrize("backend", get_test_backends())
 @pytest.mark.smoke
@@ -22,7 +22,7 @@ def test_conv2d_3x3_loads(backend, monkeypatch):
     """Test that 3x3 convolution kernel compiles."""
     monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     prog = core.load_program("cnn")
-    assert hasattr(prog, 'conv2d_3x3')
+    assert hasattr(prog, "conv2d_3x3")
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -30,7 +30,7 @@ def test_conv2d_1x1_loads(backend, monkeypatch):
     """Test that 1x1 convolution kernel compiles."""
     monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     prog = core.load_program("cnn")
-    assert hasattr(prog, 'conv2d_1x1')
+    assert hasattr(prog, "conv2d_1x1")
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -38,12 +38,13 @@ def test_depthwise_conv2d_3x3_loads(backend, monkeypatch):
     """Test that depthwise separable convolution kernel compiles."""
     monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     prog = core.load_program("cnn")
-    assert hasattr(prog, 'depthwise_conv2d_3x3')
+    assert hasattr(prog, "depthwise_conv2d_3x3")
 
 
 # =================================================================
 # Activation Tests
 # =================================================================
+
 
 @pytest.mark.parametrize("backend", get_test_backends())
 def test_relu_activation(backend, monkeypatch):
@@ -89,6 +90,7 @@ def test_softmax_activation(backend, monkeypatch):
 # =================================================================
 # Pooling Tests
 # =================================================================
+
 
 @pytest.mark.parametrize("backend", get_test_backends())
 def test_max_pool_2x2(backend, monkeypatch):
@@ -147,6 +149,7 @@ def test_global_max_pool(backend, monkeypatch):
 # Normalization Tests
 # =================================================================
 
+
 @pytest.mark.parametrize("backend", get_test_backends())
 def test_batch_norm(backend, monkeypatch):
     """Test batch normalization."""
@@ -188,6 +191,7 @@ def test_layer_norm(backend, monkeypatch):
 # Fully Connected Tests
 # =================================================================
 
+
 @pytest.mark.parametrize("backend", get_test_backends())
 def test_fully_connected(backend, monkeypatch):
     """Test fully connected layer."""
@@ -209,6 +213,7 @@ def test_fully_connected(backend, monkeypatch):
 # =================================================================
 # Regularization Tests
 # =================================================================
+
 
 @pytest.mark.parametrize("backend", get_test_backends())
 def test_dropout_inference_mode(backend, monkeypatch):
@@ -248,12 +253,15 @@ def test_dropout_training_mode(backend, monkeypatch):
 
     # Check approximately correct fraction is dropped
     drop_fraction = num_zeros / len(output)
-    assert 0.35 < drop_fraction < 0.65, f"Expected ~50% dropout, got {drop_fraction * 100:.1f}%"
+    assert (
+        0.35 < drop_fraction < 0.65
+    ), f"Expected ~50% dropout, got {drop_fraction * 100:.1f}%"
 
 
 # =================================================================
 # Cross-Backend Consistency Tests
 # =================================================================
+
 
 def test_cross_backend_conv2d_1x1(monkeypatch):
     """Test that Metal and OpenCL produce identical results for 1x1 conv."""
@@ -270,7 +278,7 @@ def test_cross_backend_conv2d_1x1(monkeypatch):
         monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         prog = core.load_program("cnn")
 
-        if backend == 'ocl':
+        if backend == "ocl":
             input_arr = np.ascontiguousarray(input_arr)
 
         output_buf = np.zeros((8, 16, 16), dtype=np.float32)
@@ -278,9 +286,11 @@ def test_cross_backend_conv2d_1x1(monkeypatch):
 
     backend1, backend2 = list(outputs.keys())
     np.testing.assert_allclose(
-        outputs[backend1], outputs[backend2],
-        rtol=1e-5, atol=1e-6,
-        err_msg=f"Cross-backend mismatch: {backend1} vs {backend2}"
+        outputs[backend1],
+        outputs[backend2],
+        rtol=1e-5,
+        atol=1e-6,
+        err_msg=f"Cross-backend mismatch: {backend1} vs {backend2}",
     )
 
 
@@ -290,7 +300,9 @@ def test_cross_backend_gelu(monkeypatch):
     if len(backends) < 2:
         pytest.skip("Need at least 2 backends for cross-backend testing")
 
-    input_arr = np.array([-3.0, -2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0, 3.0], dtype=np.float32)
+    input_arr = np.array(
+        [-3.0, -2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0, 3.0], dtype=np.float32
+    )
 
     outputs = {}
     for backend in backends[:2]:
@@ -300,15 +312,18 @@ def test_cross_backend_gelu(monkeypatch):
 
     backend1, backend2 = list(outputs.keys())
     np.testing.assert_allclose(
-        outputs[backend1], outputs[backend2],
-        rtol=1e-5, atol=1e-6,
-        err_msg=f"Cross-backend mismatch: {backend1} vs {backend2}"
+        outputs[backend1],
+        outputs[backend2],
+        rtol=1e-5,
+        atol=1e-6,
+        err_msg=f"Cross-backend mismatch: {backend1} vs {backend2}",
     )
 
 
 # =================================================================
 # Integration Tests
 # =================================================================
+
 
 @pytest.mark.parametrize("backend", get_test_backends())
 def test_all_kernels_load(backend, monkeypatch):
@@ -318,17 +333,28 @@ def test_all_kernels_load(backend, monkeypatch):
 
     expected_kernels = [
         # Convolution
-        'conv2d_3x3', 'conv2d_3x3_optimized', 'conv2d_1x1', 'depthwise_conv2d_3x3',
+        "conv2d_3x3",
+        "conv2d_3x3_optimized",
+        "conv2d_1x1",
+        "depthwise_conv2d_3x3",
         # Activation
-        'relu_activation', 'gelu', 'softmax',
+        "relu_activation",
+        "gelu",
+        "softmax",
         # Pooling
-        'max_pool_2x2', 'global_avg_pool', 'global_max_pool',
+        "max_pool_2x2",
+        "global_avg_pool",
+        "global_max_pool",
         # Normalization
-        'batch_norm', 'layer_norm', 'layer_norm_1d',
+        "batch_norm",
+        "layer_norm",
+        "layer_norm_1d",
         # Fully Connected
-        'fully_connected', 'matrix_multiply_simd',
+        "fully_connected",
+        "matrix_multiply_simd",
         # Regularization
-        'dropout', 'spatial_dropout'
+        "dropout",
+        "spatial_dropout",
     ]
 
     missing = [k for k in expected_kernels if not hasattr(prog, k)]

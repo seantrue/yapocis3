@@ -9,5 +9,3 @@ def test_images():
     for tif in tifs:
         img = imread(find_image(tif))
         show_array(img, "imread", tif)
-
-

@@ -46,7 +46,9 @@ def _blackman_window(n: int) -> np.ndarray:
     window = np.empty(n, dtype=np.float32)
     for i in range(n):
         pos = i / (n - 1)
-        window[i] = 0.42 - 0.5 * np.cos(2.0 * np.pi * pos) + 0.08 * np.cos(4.0 * np.pi * pos)
+        window[i] = (
+            0.42 - 0.5 * np.cos(2.0 * np.pi * pos) + 0.08 * np.cos(4.0 * np.pi * pos)
+        )
     return window
 
 
@@ -101,8 +103,13 @@ def window(input_arr: np.ndarray, window_type: int, output: np.ndarray):
     return output
 
 
-def fft1d_batch(input_arr: np.ndarray, batch_size: int, fft_size: int,
-                direction: int, output: np.ndarray):
+def fft1d_batch(
+    input_arr: np.ndarray,
+    batch_size: int,
+    fft_size: int,
+    direction: int,
+    output: np.ndarray,
+):
     """
     Batch 1D FFT forward/inverse transform.
 

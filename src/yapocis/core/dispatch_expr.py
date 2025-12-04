@@ -11,8 +11,9 @@ Used by kernel dispatch_size trait to compute global_size at runtime.
 """
 
 import re
-import numpy as np
 from typing import Any
+
+import numpy as np
 
 
 def evaluate_dispatch_expression(expr: str, args: tuple[Any, ...], params: list) -> int:
@@ -50,7 +51,7 @@ def evaluate_dispatch_expression(expr: str, args: tuple[Any, ...], params: list)
 
     # Parse dimension reference: "dimension_of parameter"
     # e.g., "height_of input", "width_of output", "sizeof input", "dim_0_of input"
-    dim_pattern = r'(width_of|height_of|depth_of|sizeof|dim_\d+_of)\s+(\w+)'
+    dim_pattern = r"(width_of|height_of|depth_of|sizeof|dim_\d+_of)\s+(\w+)"
     match = re.search(dim_pattern, expr)
 
     if match:
@@ -70,7 +71,9 @@ def evaluate_dispatch_expression(expr: str, args: tuple[Any, ...], params: list)
         arg = args[param_idx]
 
         if not isinstance(arg, np.ndarray):
-            raise ValueError(f"Parameter '{param_name}' must be a numpy array for {dim_type}")
+            raise ValueError(
+                f"Parameter '{param_name}' must be a numpy array for {dim_type}"
+            )
 
         # Get the dimension value
         # dim_N_of: Direct access to shape[N]
@@ -78,7 +81,9 @@ def evaluate_dispatch_expression(expr: str, args: tuple[Any, ...], params: list)
             # Extract N from "dim_N_of"
             n = int(dim_type.split("_")[1])
             if n >= len(arg.shape):
-                raise ValueError(f"Array '{param_name}' does not have dimension {n} (shape={arg.shape})")
+                raise ValueError(
+                    f"Array '{param_name}' does not have dimension {n} (shape={arg.shape})"
+                )
             dim_value = arg.shape[n]
         # Traditional dimension specifiers (for backward compatibility)
         # For yapocis graphics arrays in (H, W) format:
@@ -113,9 +118,9 @@ def evaluate_dispatch_expression(expr: str, args: tuple[Any, ...], params: list)
         raise ValueError(f"Cannot evaluate dispatch expression '{expr}': {e}")
 
 
-def evaluate_dispatch_size(dispatch_size: list[str] | tuple[str, ...],
-                           args: tuple[Any, ...],
-                           params: list) -> tuple[int, ...]:
+def evaluate_dispatch_size(
+    dispatch_size: list[str] | tuple[str, ...], args: tuple[Any, ...], params: list
+) -> tuple[int, ...]:
     """
     Evaluate a dispatch_size tuple expression.
 

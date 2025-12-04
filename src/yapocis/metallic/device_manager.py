@@ -7,8 +7,9 @@ and buffer manager. Also provides program build.
 
 import os
 import sys
-import yaml
+
 import numpy as np
+import yaml
 
 try:
     import pymetallic  # type: ignore
@@ -70,7 +71,7 @@ class DeviceManager(DeviceManagerBase):
         return None
 
     # Implement abstract methods from DeviceManagerBase
-    def make_buffer(self, a: Array) -> "pymetallic.Buffer":
+    def make_buffer(self, a: Array) -> pymetallic.Buffer:
         """Create PyMetallic buffer from numpy array."""
         # Ensure contiguous data for low-level transfer
         if not a.flags.c_contiguous:
@@ -88,7 +89,7 @@ class DeviceManager(DeviceManagerBase):
         np.copyto(a, view)
         return a
 
-    def write_buffer(self, a: Array, wait: bool = True) -> "pymetallic.Buffer":
+    def write_buffer(self, a: Array, wait: bool = True) -> pymetallic.Buffer:
         """
         Write numpy array to PyMetallic buffer.
 
@@ -122,7 +123,7 @@ class DeviceManager(DeviceManagerBase):
         self.buffers[buffer_id] = buf
         return buf
 
-    def find_buffer(self, a: Array, op: int) -> "pymetallic.Buffer | None":
+    def find_buffer(self, a: Array, op: int) -> pymetallic.Buffer | None:
         """Find existing PyMetallic buffer for array."""
         assert op in (
             self.READ,
@@ -153,10 +154,12 @@ class DeviceManager(DeviceManagerBase):
         if events:
             # Metal command buffers have waitUntilCompleted() method
             for event in events:
-                if hasattr(event, 'waitUntilCompleted'):
+                if hasattr(event, "waitUntilCompleted"):
                     event.waitUntilCompleted()
 
+
 _device_managers: dict[str | int, DeviceManager] = {}
+
 
 def get_device_manager(device_name: str | int | None = None) -> DeviceManager:
     try:
@@ -165,9 +168,11 @@ def get_device_manager(device_name: str | int | None = None) -> DeviceManager:
         _device_managers[device_name] = dmgr = DeviceManager(device_name)
     return dmgr
 
+
 def display_stats():
     device_stats = {str(dn): dmgr.stats for dn, dmgr in _device_managers.items()}
     print(yaml.safe_dump(device_stats))
+
 
 def display_snapshots():
     print()

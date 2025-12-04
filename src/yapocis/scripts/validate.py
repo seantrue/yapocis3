@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 """
 Validation management script for yapocis test results.
@@ -17,16 +16,18 @@ from pathlib import Path
 # Add yapocis to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from yapocis.utils.validation import (
-    promote_to_validation,
-    list_validation_references,
-    cleanup_validation_references,
-    load_validation_reference,
-    VALIDATION_DIR,
-    RAW_DIR,
-)
-from yapocis.core import get_backends
 import re
+
+from yapocis.core import get_backends
+from yapocis.utils.validation import (
+    RAW_DIR,
+    VALIDATION_DIR,
+    cleanup_validation_references,
+    list_validation_references,
+    load_validation_reference,
+    promote_to_validation,
+)
+
 
 def parse_test_name(filename):
     """
@@ -55,6 +56,7 @@ def parse_test_name(filename):
     test_name = test_name.strip()
 
     return test_name, backend
+
 
 def promote_command(args):
     """Handle promote subcommand."""
@@ -100,6 +102,7 @@ def promote_command(args):
             else:
                 print(f"✗ Failed to promote {args.test_name}")
 
+
 def list_command(args):
     """Handle list subcommand."""
     if args.backends:
@@ -120,6 +123,7 @@ def list_command(args):
         else:
             print("  (none)")
 
+
 def clean_command(args):
     """Handle clean subcommand."""
     backends = args.backends or [None]
@@ -134,6 +138,7 @@ def clean_command(args):
         total_deleted += deleted
 
     print(f"Total deleted: {total_deleted}")
+
 
 def info_command(args):
     """Handle info subcommand."""
@@ -164,6 +169,7 @@ def info_command(args):
                 print(f"    ... and {len(references) - 10} more")
         print()
 
+
 def inspect_command(args):
     """Handle inspect subcommand."""
     backends = args.backends or get_backends()
@@ -180,7 +186,7 @@ def inspect_command(args):
                 f"  Sum: {reference.sum():.6f}, Min: {reference.min():.6f}, Max: {reference.max():.6f}"
             )
         else:
-            print(f"  No validation reference found")
+            print("  No validation reference found")
 
         # Check if raw file exists
         key = f"{args.test_name} [{backend}]"
@@ -195,13 +201,15 @@ def inspect_command(args):
                 f"  Sum: {array.sum():.6f}, Min: {array.min():.6f}, Max: {array.max():.6f}"
             )
         else:
-            print(f"  No raw file found")
+            print("  No raw file found")
         print()
+
 
 def validate_command(args):
     """Handle validate subcommand - systematically check all test results against validation references."""
-    from yapocis.utils.validation import compare_with_validation
     import numpy as np
+
+    from yapocis.utils.validation import compare_with_validation
 
     if not RAW_DIR.exists():
         print(f"Raw directory not found: {RAW_DIR}")
@@ -303,7 +311,7 @@ def validate_command(args):
         f"Without validation ref:    {no_validation} ({no_validation/total_tests*100:.1f}%)"
     )
     print()
-    print(f"Validation results:")
+    print("Validation results:")
     print(
         f"  ✅ Passed:  {validation_passed}/{validation_found} ({validation_passed/max(validation_found,1)*100:.1f}%)"
     )
@@ -340,6 +348,7 @@ def validate_command(args):
 
     # Return status code for CI/CD
     return 0 if validation_failed == 0 and len(results["errors"]) == 0 else 1
+
 
 def main():
     parser = argparse.ArgumentParser(description="Manage yapocis validation references")
@@ -419,6 +428,7 @@ def main():
         return 1
 
     return args.func(args)
+
 
 if __name__ == "__main__":
     sys.exit(main() or 0)

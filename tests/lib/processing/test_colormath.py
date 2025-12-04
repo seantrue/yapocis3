@@ -1,12 +1,14 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
 import pytest
+
 from yapocis.core import get_test_backends
 from yapocis.lib.channels import join_channels, split_channels
 from yapocis.lib.colormath import Colormath, transform_names
 from yapocis.lib.hsi import HSI
 from yapocis.utils.stereo_typing import *
-from . import ASIZE, StopWatcher, image_test, show, assert_closeenough
+
+from . import ASIZE, StopWatcher, assert_closeenough, image_test, show
 
 
 @pytest.mark.smoke

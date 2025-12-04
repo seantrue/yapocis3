@@ -10,8 +10,10 @@ Demonstrates:
 """
 
 import time
+
 import numpy as np
 import pytest
+
 from yapocis import core
 
 
@@ -59,9 +61,15 @@ def test_manual_async():
     # Since imageops kernels use out_like (allocate new buffers),
     # we can't build a true pipeline. Instead, test async execution
     # of independent operations
-    result1 = prog.clamp_pixels(image, 0.0, 1.0, async_exec=True)  # Returns None (async)
-    result2 = prog.clamp_pixels(image * 2, 0.0, 1.0, async_exec=True)  # Returns None (async)
-    result3 = prog.clamp_pixels(image * 0.5, 0.0, 1.0, async_exec=True)  # Returns None (async)
+    result1 = prog.clamp_pixels(
+        image, 0.0, 1.0, async_exec=True
+    )  # Returns None (async)
+    result2 = prog.clamp_pixels(
+        image * 2, 0.0, 1.0, async_exec=True
+    )  # Returns None (async)
+    result3 = prog.clamp_pixels(
+        image * 0.5, 0.0, 1.0, async_exec=True
+    )  # Returns None (async)
 
     # Wait for all operations to complete
     prog.wait_all()
@@ -123,7 +131,9 @@ def test_pipeline_correctness():
     assert np.allclose(sync2, test2, atol=1e-5), "stretch results differ"
     assert np.allclose(sync3, test3, atol=1e-5), "final results differ"
 
-    print(f"✓ Pipeline correctness verified (max diff: {np.max(np.abs(sync3 - test3)):.2e})")
+    print(
+        f"✓ Pipeline correctness verified (max diff: {np.max(np.abs(sync3 - test3)):.2e})"
+    )
 
 
 def test_repeated_operations():
@@ -152,7 +162,9 @@ def test_repeated_operations():
             _ = prog.clamp_pixels(image, 0.0, 1.0)
     elapsed_async = time.time() - start
 
-    print(f"✓ Repeated ops - Sync: {elapsed_sync*1000:.2f}ms, Async: {elapsed_async*1000:.2f}ms")
+    print(
+        f"✓ Repeated ops - Sync: {elapsed_sync*1000:.2f}ms, Async: {elapsed_async*1000:.2f}ms"
+    )
 
     # Async should be faster or similar (no benefit on CPU backend)
     # Just verify it completes without error
@@ -202,9 +214,9 @@ def test_async_api_compatibility():
 
 if __name__ == "__main__":
     """Run tests with timing output."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("Yapocis Async Execution Test Suite")
-    print("="*70)
+    print("=" * 70)
 
     try:
         # Run tests with output
@@ -217,20 +229,22 @@ if __name__ == "__main__":
         test_async_api_compatibility()
 
         # Summary
-        print("\n" + "="*70)
+        print("\n" + "=" * 70)
         print("SUMMARY")
-        print("="*70)
-        print(f"\nAll tests passed!")
+        print("=" * 70)
+        print("\nAll tests passed!")
         print(f"  Synchronous execution:  {sync_time*1000:.2f}ms")
         print(f"  Manual async:           {manual_time*1000:.2f}ms")
         print(f"  Context manager async:  {context_time*1000:.2f}ms")
-        print(f"\nNote: Speedup varies by backend.")
-        print(f"  - GPU backends (Metal, OpenCL, CUDA): 1.5-2x typical")
-        print(f"  - CPU backend (Numba): No speedup (API compatible only)")
+        print("\nNote: Speedup varies by backend.")
+        print("  - GPU backends (Metal, OpenCL, CUDA): 1.5-2x typical")
+        print("  - CPU backend (Numba): No speedup (API compatible only)")
 
     except Exception as e:
         print(f"\n✗ Test failed: {e}")
         import traceback
+
         traceback.print_exc()
         import sys
+
         sys.exit(1)

@@ -1,7 +1,6 @@
-import os
-
 _backends = None
-from . import get_backends, get_backend
+from . import get_backend
+
 
 def get_manager(backend: str | None = None):
     """
@@ -27,7 +26,7 @@ def get_manager(backend: str | None = None):
         from yapocis.metallic import kernel_manager as km
 
         return km
-    elif backend in ("numba","numbax"):
+    elif backend in ("numba", "numbax"):
         # Return the Numba kernel_manager module (uses Numba JIT)
         from yapocis.numbax import kernel_manager as km
 

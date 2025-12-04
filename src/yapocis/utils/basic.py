@@ -1,13 +1,14 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 import os
 import sys
-from typing import Iterable, Iterator
+from collections.abc import Iterable, Iterator
 
 import skimage
 from PIL import Image, ImageDraw, ImageFont
 
 from yapocis.fonts import font as find_font
 from yapocis.utils.stereo_typing import *
+
 from .internals import get_viewing_queue
 
 VIEWER = os.environ.get("YAPOCIS_VIEWER")
@@ -19,7 +20,7 @@ if not os.path.isdir(VIEWING_QUEUE):
     raise RuntimeError(f"Can't find viewing queue '{VIEWING_QUEUE}'")
 
 DEBUG = False
-BENCHMARKING = os.environ.get('BENCHMARKING', None)
+BENCHMARKING = os.environ.get("BENCHMARKING", None)
 
 
 def get_test_image() -> "Image3":
@@ -29,6 +30,7 @@ def get_test_image() -> "Image3":
         A float32 RGB image array normalized to [0, 1].
     """
     from yapocis.images import find_image
+
     return imread(find_image("test"))
 
 
@@ -44,8 +46,13 @@ def _current_backend() -> str:
 # bytescale, toimage borrowed from scipy.misc
 # Used under the liberal BSD license
 # Returns a byte-scaled image
-def byte_scale(data: Array, cmin: float | None = None, cmax: float | None = None, high: int = 255,
-               low: int = 0) -> Array:
+def byte_scale(
+    data: Array,
+    cmin: float | None = None,
+    cmax: float | None = None,
+    high: int = 255,
+    low: int = 0,
+) -> Array:
     if data.dtype == np.uint8:
         return data
     high = high - low
@@ -59,9 +66,17 @@ def byte_scale(data: Array, cmin: float | None = None, cmax: float | None = None
 _errstr = "Mode is unknown or incompatible with input array shape."
 
 
-def to_image(arr: Array, high: int = 255, low: int = 0, cmin: float | None = None, cmax: float | None = None,
-             pal: Array | None = None, mode: str | None = None,
-             channel_axis: int | None = None, newaxis: int | None = None) -> PILImage:
+def to_image(
+    arr: Array,
+    high: int = 255,
+    low: int = 0,
+    cmin: float | None = None,
+    cmax: float | None = None,
+    pal: Array | None = None,
+    mode: str | None = None,
+    channel_axis: int | None = None,
+    newaxis: int | None = None,
+) -> PILImage:
     """Takes a numpy array and returns a PIL image.  The mode of the
     PIL image depends on the array shape, the pal keyword, and the mode
     keyword.
@@ -87,31 +102,33 @@ def to_image(arr: Array, high: int = 255, low: int = 0, cmin: float | None = Non
         raise ValueError("'arr' does not have a suitable array shape for any mode.")
     if len(shape) == 2:
         shape = (shape[1], shape[0])  # columns show up first
-        if mode == 'F':
+        if mode == "F":
             data32 = data.astype(np.float32)
             image = Image.frombytes(mode, shape, data32.tobytes())
             return image
-        if mode in [None, 'L', 'P']:
+        if mode in [None, "L", "P"]:
             bytedata = byte_scale(data, high=high, low=low, cmin=cmin, cmax=cmax)
-            image = Image.frombytes('L', shape, bytedata.tobytes())
+            image = Image.frombytes("L", shape, bytedata.tobytes())
             if pal is not None:
                 image.putpalette(np.asarray(pal, dtype=np.uint8).tostring())
                 # Becomes a mode='P' automagically.
-            elif mode == 'P':  # default gray-scale
-                pal = np.arange(0, 256, 1, dtype=np.uint8)[:, newaxis] * \
-                      np.ones((3,), dtype=np.uint8)[newaxis, :]
+            elif mode == "P":  # default gray-scale
+                pal = (
+                    np.arange(0, 256, 1, dtype=np.uint8)[:, newaxis]
+                    * np.ones((3,), dtype=np.uint8)[newaxis, :]
+                )
                 image.putpalette(np.asarray(pal, dtype=np.uint8).tostring())
             return image
-        if mode == '1':  # high input gives threshold for 1
-            bytedata = (data > high)
-            image = Image.frombytes('1', shape, bytedata.tobytes())
+        if mode == "1":  # high input gives threshold for 1
+            bytedata = data > high
+            image = Image.frombytes("1", shape, bytedata.tobytes())
             return image
         if cmin is None:
             cmin = np.amin(np.ravel(data))
         if cmax is None:
             cmax = np.amax(np.ravel(data))
         data = (data * 1.0 - cmin) * (high - low) / (cmax - cmin) + low
-        if mode == 'I':
+        if mode == "I":
             data32 = data.astype(np.uint32)
             image = Image.frombytes(mode, shape, data32.tobytes())
         else:
@@ -121,7 +138,7 @@ def to_image(arr: Array, high: int = 255, low: int = 0, cmin: float | None = Non
     # if here then 3-d array with a 3 or a 4 in the shape length.
     # Check for 3 in datacube shape --- 'RGB' or 'YCbCr'
     if channel_axis is None:
-        if (3 in shape):
+        if 3 in shape:
             ca = np.flatnonzero(np.asarray(shape) == 3)[0]
         else:
             ca = np.flatnonzero(np.asarray(shape) == 4)
@@ -149,17 +166,17 @@ def to_image(arr: Array, high: int = 255, low: int = 0, cmin: float | None = Non
         shape = (shape[2], shape[1])
     if mode is None:
         if numch == 3:
-            mode = 'RGB'
+            mode = "RGB"
         else:
-            mode = 'RGBA'
+            mode = "RGBA"
 
-    if mode not in ['RGB', 'RGBA', 'YCbCr', 'CMYK']:
+    if mode not in ["RGB", "RGBA", "YCbCr", "CMYK"]:
         raise ValueError(_errstr)
 
-    if mode in ['RGB', 'YCbCr']:
+    if mode in ["RGB", "YCbCr"]:
         if numch != 3:
             raise ValueError("Invalid array shape for mode.")
-    if mode in ['RGBA', 'CMYK']:
+    if mode in ["RGBA", "CMYK"]:
         if numch != 4:
             raise ValueError("Invalid array shape for mode.")
 
@@ -183,13 +200,16 @@ def newsize(width: int, height: int, longest: int) -> tuple[bool, int, int]:
     return False, width, height
 
 
-def imread(filename: str, longest: int | None = None, keep_alpha: bool = False) -> Union[
-    Image1, Image3]:
+def imread(
+    filename: str, longest: int | None = None, keep_alpha: bool = False
+) -> Union[Image1, Image3]:
     img = skimage.io.imread(filename)
     img_dtype = img.dtype
     resize, w, h = newsize(img.shape[1], img.shape[0], longest)
     if resize:
-        img = skimage.transform.resize(img, (h, w), preserve_range=True, anti_aliasing=True)
+        img = skimage.transform.resize(
+            img, (h, w), preserve_range=True, anti_aliasing=True
+        )
     a = img.astype(np.float32) / np.iinfo(img_dtype).max
     if not keep_alpha and len(a.shape) == 3 and a.shape[2] == 4:
         a = a[:, :, 0:3]
@@ -307,7 +327,11 @@ def sign_array(*args, **kwargs) -> tuple[str, PILImage]:
             ink = 0
     except IndexError:
         ink = 0
-    caption = "" if not kwargs else " " + " ".join([f"{key}:{value}" for (key, value) in kwargs.items()])
+    caption = (
+        ""
+        if not kwargs
+        else " " + " ".join([f"{key}:{value}" for (key, value) in kwargs.items()])
+    )
     if len(shape) > 2:
         ink = [ink] * shape[-1]
         ink = tuple(ink)
@@ -341,7 +365,9 @@ def show_array(array: np.ndarray, *args, checkzero=True, **kwargs) -> None:
         os.system(f'{VIEWER} "{os.path.abspath(os.path.join(VIEWING_QUEUE, name))}"&')
 
 
-def show_arraygrad(title: str, image: Image1, theta: Image1, grad: Image1 | None = None) -> None:
+def show_arraygrad(
+    title: str, image: Image1, theta: Image1, grad: Image1 | None = None
+) -> None:
     """
     Show an array with gradient orientation and optional magnitude
     Args:
@@ -354,6 +380,7 @@ def show_arraygrad(title: str, image: Image1, theta: Image1, grad: Image1 | None
 
     """
     from PIL import ImageDraw  # @UnresolvedImport
+
     title, img = sign_array(title, image)
     img = img.convert("RGB")
     draw = ImageDraw.Draw(img)
@@ -408,27 +435,27 @@ class Shaper:
         return self.data
 
     def asrows(self):
-        if self.order == 'C':
+        if self.order == "C":
             return self.data
         if self.order:
             self.data = self.asimage()
         if self.order == None:
-            self.order = 'C'
+            self.order = "C"
             self.data = self.data.reshape(-1, order=self.order)
             return self.data
 
     def ascols(self):
-        if self.order == 'F':
+        if self.order == "F":
             return self.data
         if self.order:
             self.data = self.asimage()
         if self.order == None:
-            self.order = 'F'
+            self.order = "F"
             self.data = self.data.reshape(-1, order=self.order)
         return self.data
 
 
-def histeq_large(im: Image1, nbr_bins=2 ** 16) -> Array:
+def histeq_large(im: Image1, nbr_bins=2**16) -> Array:
     """
     Histogram equalization of a 2D array
 
@@ -530,7 +557,9 @@ def set_margin(a: Image1, margin: int, value: float | None = 0.0) -> None:
     a[:margin, :] = value
 
 
-def set_frame(a: Image1, width: int, frame: float | None = 1.0, margin: float | None = 0.0) -> None:
+def set_frame(
+    a: Image1, width: int, frame: float | None = 1.0, margin: float | None = 0.0
+) -> None:
     """
     set the margin and then set the outer most pixels.
 
@@ -568,7 +597,7 @@ def chunker(data: Iterable, chunk_size: int = 100) -> Iterator[list]:
 
     """
     for i in range(0, len(data), chunk_size):
-        yield data[i:i + chunk_size]
+        yield data[i : i + chunk_size]
 
 
 def get_image_depth(image):
@@ -583,4 +612,4 @@ def get_image_depth(image):
             return 3
         elif image.shape[2] == 4:
             return 4
-    raise ValueError(f'Array shape {image.shape} is not supported')
+    raise ValueError(f"Array shape {image.shape} is not supported")

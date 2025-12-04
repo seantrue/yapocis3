@@ -22,8 +22,9 @@ Example:
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2024.
 
 import os
+
 import numpy as np
-from typing import Tuple, Optional
+
 from .bound_kernels import BoundKernels
 
 
@@ -51,11 +52,10 @@ class FFT(BoundKernels):
     # This affects Apple M1/M2/M3 GPUs. The performance cost is acceptable (~10-20%).
     # Note: This option is OpenCL-specific and not needed for CUDA/Metal/Numbax
     def __init__(self, *args, **kwargs):
-        import os
-        backend = os.environ.get('YAPOCIS_BACKEND', 'ocl')
+        backend = os.environ.get("YAPOCIS_BACKEND", "ocl")
 
         # Only apply optimization workaround for OpenCL backend
-        if backend == 'ocl':
+        if backend == "ocl":
             self.load_program_config = {"options": ["-cl-opt-disable"]}
 
         super().__init__(*args, **kwargs)
@@ -85,7 +85,9 @@ class FFT(BoundKernels):
         # The kernel will use DFT fallback for sizes > 1024
         if fft_size <= 256:
             # Optimized FFT path with local memory
-            return self.kmgr.fft1d(signal, 1, global_size=(fft_size,), local_size=(fft_size,))
+            return self.kmgr.fft1d(
+                signal, 1, global_size=(fft_size,), local_size=(fft_size,)
+            )
         else:
             # Let OpenCL choose work-group size for DFT fallback or large FFT
             return self.kmgr.fft1d(signal, 1, global_size=(fft_size,))
@@ -107,7 +109,9 @@ class FFT(BoundKernels):
         # For sizes > 256, we can't use local_size=fft_size (max work-group size is 256)
         if fft_size <= 256:
             # Optimized FFT path with local memory
-            return self.kmgr.fft1d(fft_result, -1, global_size=(fft_size,), local_size=(fft_size,))
+            return self.kmgr.fft1d(
+                fft_result, -1, global_size=(fft_size,), local_size=(fft_size,)
+            )
         else:
             # Let OpenCL choose work-group size for DFT fallback
             return self.kmgr.fft1d(fft_result, -1, global_size=(fft_size,))
@@ -145,9 +149,12 @@ class FFT(BoundKernels):
 
         # Critical: Set threadgroup size to fft_size so each threadgroup processes one FFT
         return self.kmgr.fft1d_batch(
-            signals, batch_size, fft_size, 1,
+            signals,
+            batch_size,
+            fft_size,
+            1,
             global_size=(batch_size * fft_size,),
-            local_size=(fft_size,)
+            local_size=(fft_size,),
         )
 
     def batch_inverse(self, fft_results: np.ndarray) -> np.ndarray:
@@ -177,15 +184,16 @@ class FFT(BoundKernels):
 
         # Critical: Set threadgroup size to fft_size so each threadgroup processes one FFT
         return self.kmgr.fft1d_batch(
-            fft_results, batch_size, fft_size, -1,
+            fft_results,
+            batch_size,
+            fft_size,
+            -1,
             global_size=(batch_size * fft_size,),
-            local_size=(fft_size,)
+            local_size=(fft_size,),
         )
 
     def apply_window(
-        self,
-        signal: np.ndarray,
-        window_type: int = WINDOW_HANN
+        self, signal: np.ndarray, window_type: int = WINDOW_HANN
     ) -> np.ndarray:
         """
         Apply window function to a signal.
@@ -223,8 +231,8 @@ class FFT(BoundKernels):
         sample_rate: float = 1.0,
         window_type: int = WINDOW_HANN,
         return_db: bool = True,
-        positive_only: bool = True
-    ) -> Tuple[np.ndarray, np.ndarray]:
+        positive_only: bool = True,
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Perform complete spectral analysis of a real signal.
 
@@ -281,8 +289,8 @@ class FFT(BoundKernels):
         signal: np.ndarray,
         sample_rate: float = 1.0,
         n_peaks: int = 5,
-        window_type: int = WINDOW_HANN
-    ) -> Tuple[np.ndarray, np.ndarray]:
+        window_type: int = WINDOW_HANN,
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Find the dominant frequency peaks in a signal.
 
@@ -317,10 +325,10 @@ class FFT(BoundKernels):
         signal: np.ndarray,
         sample_rate: float = 1.0,
         window_size: int = 512,
-        hop_size: Optional[int] = None,
+        hop_size: int | None = None,
         window_type: int = WINDOW_HANN,
-        return_db: bool = True
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        return_db: bool = True,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Compute spectrogram (time-frequency representation) of a signal.
 
@@ -356,7 +364,7 @@ class FFT(BoundKernels):
         n_windows = (n_samples - window_size) // hop_size + 1
 
         # Prepare output arrays
-        freqs = np.fft.fftfreq(window_size, 1.0 / sample_rate)[:window_size // 2]
+        freqs = np.fft.fftfreq(window_size, 1.0 / sample_rate)[: window_size // 2]
         n_freqs = len(freqs)
         spectrogram = np.zeros((n_windows, n_freqs), dtype=np.float32)
         times = np.zeros(n_windows, dtype=np.float32)
@@ -424,7 +432,7 @@ class FFT(BoundKernels):
         self,
         signal: np.ndarray,
         sample_rate: float = 1.0,
-        window_type: int = WINDOW_HANN
+        window_type: int = WINDOW_HANN,
     ) -> float:
         """
         Estimate the dominant frequency in a signal.
@@ -441,7 +449,9 @@ class FFT(BoundKernels):
             >>> freq = fft.estimate_frequency(signal, sample_rate=1000)
             >>> print(f"Dominant frequency: {freq:.2f} Hz")
         """
-        peak_freqs, _ = self.find_peaks(signal, sample_rate, n_peaks=1, window_type=window_type)
+        peak_freqs, _ = self.find_peaks(
+            signal, sample_rate, n_peaks=1, window_type=window_type
+        )
         return peak_freqs[0]
 
     def bandpass_filter(
@@ -449,7 +459,7 @@ class FFT(BoundKernels):
         signal: np.ndarray,
         low_freq: float,
         high_freq: float,
-        sample_rate: float = 1.0
+        sample_rate: float = 1.0,
     ) -> np.ndarray:
         """
         Apply a simple bandpass filter in the frequency domain.
@@ -490,11 +500,8 @@ class FFT(BoundKernels):
         return result.real.astype(np.float32)
 
     def coherence(
-        self,
-        signal1: np.ndarray,
-        signal2: np.ndarray,
-        window_type: int = WINDOW_HANN
-    ) -> Tuple[np.ndarray, np.ndarray]:
+        self, signal1: np.ndarray, signal2: np.ndarray, window_type: int = WINDOW_HANN
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Compute magnitude-squared coherence between two signals.
 
@@ -574,11 +581,7 @@ class FFT(BoundKernels):
         """
         return float(np.sqrt(np.mean(np.abs(signal) ** 2)))
 
-    def snr(
-        self,
-        signal: np.ndarray,
-        noise: np.ndarray
-    ) -> float:
+    def snr(self, signal: np.ndarray, noise: np.ndarray) -> float:
         """
         Compute signal-to-noise ratio in dB.
 

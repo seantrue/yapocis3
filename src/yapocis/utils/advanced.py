@@ -7,7 +7,7 @@ from yapocis.lib.kerneldraw1 import KernelDraw1
 from yapocis.lib.kerneldraw3 import KernelDraw3
 from yapocis.utils.basic import *
 
-BENCHMARKING = os.environ.get('BENCHMARKING',None)
+BENCHMARKING = os.environ.get("BENCHMARKING", None)
 
 from .basic import VIEWING_QUEUE
 
@@ -26,7 +26,7 @@ def sign(title: str, img: np.ndarray) -> np.ndarray:
         ad = KernelDraw1(img)
     elif len(img.shape) == 3 and img.shape[2] == 3:
         ad = KernelDraw3(img)
-    ad.draw_string((10,10), title, color=1.0, size=fheight, alpha="bug")
+    ad.draw_string((10, 10), title, color=1.0, size=fheight, alpha="bug")
     ad.render()
     img = ad.read()
     return img
@@ -35,7 +35,7 @@ def sign(title: str, img: np.ndarray) -> np.ndarray:
 _showArrayCounter = 0
 
 
-def sign_array(array:np.ndarray, *args, normalize=True):
+def sign_array(array: np.ndarray, *args, normalize=True):
     global _showArrayCounter
     _showArrayCounter += 1
     assert isinstance(array, np.ndarray)
@@ -45,12 +45,12 @@ def sign_array(array:np.ndarray, *args, normalize=True):
         title = "showarray %s" % _showArrayCounter
 
     if array.dtype != np.float32:
-        array = array.astype(np.float32) / 255.
+        array = array.astype(np.float32) / 255.0
     else:
         try:
-            array = array[:,:]
+            array = array[:, :]
         except:
-            array = array[:,:,:]
+            array = array[:, :, :]
     if normalize and array.dtype in (np.float32, np.float64):
         array -= array.min()
         array /= array.max()
@@ -58,7 +58,7 @@ def sign_array(array:np.ndarray, *args, normalize=True):
     return title, array
 
 
-def show_array(array:np.ndarray, *args, **kwargs) -> None:
+def show_array(array: np.ndarray, *args, **kwargs) -> None:
     if BENCHMARKING:
         return
     title, img = sign_array(array, *args, **kwargs)
@@ -70,7 +70,7 @@ def show_array(array:np.ndarray, *args, **kwargs) -> None:
     img.save(path)
 
 
-def show_arraygrad(title, image, theta, grad = None) -> None:
+def show_arraygrad(title, image, theta, grad=None) -> None:
     """
     Show an array with gradient orientation and optional magnitude
     Args:
@@ -85,12 +85,12 @@ def show_arraygrad(title, image, theta, grad = None) -> None:
     image = copy.deepcopy(image)
     ad = KernelDraw3(image)
     # Decimate the arrays since we only use every 10th point any way
-    theta = theta[::10,::10]
+    theta = theta[::10, ::10]
     if grad is None:
         grad = np.zeros_like(theta)
         grad[:, :] = 20
     else:
-        grad = grad[::10,::10]
+        grad = grad[::10, ::10]
         grad -= grad.min()
         if grad.max() != 0.0:
             grad /= grad.max()
@@ -101,15 +101,13 @@ def show_arraygrad(title, image, theta, grad = None) -> None:
     dys = grad * cos
     for i in range(10, image.shape[0], 10):
         for j in range(10, image.shape[1], 10):
-            dx = dxs[i//10,j//10]
-            dy = dys[i//10,j//10]
-            grd = grad[i//10,j//10]
+            dx = dxs[i // 10, j // 10]
+            dy = dys[i // 10, j // 10]
+            grd = grad[i // 10, j // 10]
             x1, y1 = int(i - dx), int(j - dy)
             x2, y2 = int(i + dx), int(j + dy)
-            color = grd/10.
-            ad.line((x1,y1,x2,y2), distance=1.1, color=color, alpha=1)
+            color = grd / 10.0
+            ad.line((x1, y1, x2, y2), distance=1.1, color=color, alpha=1)
     ad.render()
     a = ad.read()
     show_array(a, title, normalize=False)
-
-
