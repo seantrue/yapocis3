@@ -25,6 +25,7 @@ hist = ops.histogram(image, n_bins=256, low=0.0, high=1.0)
 ```
 
 **Parameters:**
+
 - `input` - 2D float32 array
 - `n_bins` - Number of histogram bins (default: 256)
 - `n_workers` - GPU worker count (default: 32)
@@ -67,7 +68,6 @@ peak_intensity = peak_bin / 256.0
 ```python
 import numpy as np
 from yapocis.lib.imageops import Imageops
-from yapocis.lib.channels import histeq
 from yapocis.utils.basic import get_test_image
 
 # Load image and convert to grayscale (simulate low contrast)
@@ -79,7 +79,7 @@ ops = Imageops()
 hist_before = ops.histogram(gray)
 
 # Equalize
-equalized = histeq(gray)
+equalized = ops.histeq(gray)
 
 # Compute histogram after
 hist_after = ops.histogram(equalized)
@@ -90,6 +90,7 @@ hist_after = ops.histogram(equalized)
 ```python
 import numpy as np
 from yapocis.lib.imageops import Imageops
+
 
 def otsu_threshold(image):
     """Find optimal threshold using Otsu's method."""
@@ -122,6 +123,7 @@ def otsu_threshold(image):
             best_threshold = bin_centers[t]
 
     return best_threshold
+
 
 # Usage
 from yapocis.utils.basic import get_test_image
@@ -161,29 +163,29 @@ interface imageops {
 
 **histogram:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `input` | `float*` | Input image |
-| `input_size` | `int` | Total pixels (derived from `size_of input`) |
-| `low` | `float` | Minimum value for binning |
-| `high` | `float` | Maximum value for binning |
-| `hst` | `int*` | Output histogram bins |
-| `hst_size` | `int` | Number of bins (derived from `size_of hst`) |
+| Parameter    | Type     | Description                                 |
+|--------------|----------|---------------------------------------------|
+| `input`      | `float*` | Input image                                 |
+| `input_size` | `int`    | Total pixels (derived from `size_of input`) |
+| `low`        | `float`  | Minimum value for binning                   |
+| `high`       | `float`  | Maximum value for binning                   |
+| `hst`        | `int*`   | Output histogram bins                       |
+| `hst_size`   | `int`    | Number of bins (derived from `size_of hst`) |
 
 **clamp_pixels:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `input` | `float*` | Input image |
-| `low` | `float` | Minimum clamp value |
-| `high` | `float` | Maximum clamp value |
+| Parameter | Type     | Description         |
+|-----------|----------|---------------------|
+| `input`   | `float*` | Input image         |
+| `low`     | `float`  | Minimum clamp value |
+| `high`    | `float`  | Maximum clamp value |
 
 **binarize:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `input` | `float*` | Input image |
-| `threshold` | `float` | Binarization threshold |
+| Parameter   | Type     | Description            |
+|-------------|----------|------------------------|
+| `input`     | `float*` | Input image            |
+| `threshold` | `float`  | Binarization threshold |
 
 ### Direct Kernel Access
 

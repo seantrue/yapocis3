@@ -45,12 +45,14 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # -- Options for HTML output -------------------------------------------------
 
-html_theme = "pydata_sphinx_theme"
+html_theme = "sphinx_rtd_theme"
 
 html_theme_options = {
-    "github_url": "https://github.com/seantrue/yapocis",
-    "show_toc_level": 2,
-    "navigation_with_keys": True,
+    "navigation_depth": 4,
+    "collapse_navigation": False,
+    "sticky_navigation": True,
+    "includehidden": True,
+    "titles_only": False,
 }
 
 html_static_path = ["_static"]
@@ -59,6 +61,15 @@ html_static_path = ["_static"]
 html_css_files = [
     "custom.css",
 ]
+
+# RTD theme context
+html_context = {
+    "display_github": True,
+    "github_user": "seantrue",
+    "github_repo": "yapocis",
+    "github_version": "main",
+    "conf_py_path": "/docs/",
+}
 
 # -- Autodoc configuration ---------------------------------------------------
 

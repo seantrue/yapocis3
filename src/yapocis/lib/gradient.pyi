@@ -1,0 +1,6 @@
+from numpy.typing import NDArray
+import numpy as np
+
+class Gradient:
+    def gradient(self, input: NDArray[np.floating], reach: int) -> tuple[NDArray[np.floating], NDArray[np.floating]]: ...
+    def gradient_res(self, input: NDArray[np.floating], reach: int, grad: NDArray[np.floating], theta: NDArray[np.floating]) -> None: ...

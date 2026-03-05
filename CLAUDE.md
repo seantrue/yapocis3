@@ -4,402 +4,134 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Yapocis is a multi-backend GPU/CPU computing framework for image processing and graphics operations. It provides a
-unified Python interface to OpenCL, CUDA, Metal, and Numba backends through an IDL-like interface definition language
-and Mako template system.
+Yapocis is a multi-backend GPU/CPU computing framework for image processing, graphics operations and parallel processing. It provides a unified Python interface to OpenCL, CUDA, Metal, and Numba backends through an IDL-like interface definition language and Mako template system.
 
 ## Key Commands
 
 ### Environment Setup
-
 ```bash
-# Using make (recommended)
-make install-dev
-
-# Or manually with uv
-uv venv .venv --python 3.13
-source .venv/bin/activate  # On Unix/macOS
-# .venv\Scripts\activate  # On Windows
-uv sync --group dev
-
-# Install with all backends
-make install-backends
-# Or: uv sync --extra all-backends --group dev
-
-# Install specific backends
+make install-dev                    # Full development setup (Python 3.13)
+make install-backends               # Install all backend dependencies
 uv sync --extra opencl --group dev  # OpenCL only
 uv sync --extra metal --group dev   # Metal only
-uv sync --extra numba --group dev   # Numba only
-uv sync --extra cuda --group dev    # CUDA only
 ```
 
-### Code Quality & Formatting
-
+### Code Quality
 ```bash
-# Format code with isort and black
-make format
-
-# Check formatting
-make format-check
-
-# Lint with ruff
-make lint
-make lint-fix  # Auto-fix issues
-
-# Type check with mypy
-make typecheck
-
-# Run all checks
-make check
-
-# Auto-fix all issues
-make fix
-
-# Check license compliance
-make license-check
+make format      # isort + black
+make lint        # ruff check
+make lint-fix    # ruff with auto-fix
+make typecheck   # mypy
+make check       # All checks (format-check + lint + typecheck)
+make fix         # Auto-fix all issues
 ```
 
 ### Testing
-
 ```bash
-# Run all tests across available backends
-make test
+make test                # All tests
+make test-ocl            # OpenCL backend
+make test-metal          # Metal backend
+make test-numba          # Numba backend
+make test-smoke          # Quick smoke tests (~22 tests)
 
-# Run backend-specific tests
-make test-ocl      # OpenCL tests
-make test-metal    # Metal tests  
-make test-numba    # Numba tests
+# Single test
+pytest tests/lib/graphics/test_graphics.py::test_smoke_line -v
 
-# Run specific test patterns
-pytest -q -k "test_graphics"
-pytest -q tests/test_backend_smoke.py  # Compile all interfaces
-pytest -q tests/test_backend_runtime.py  # Basic runtime sanity
-
-# Backend markers for selective testing
-pytest -q -m ocl    # Only OpenCL tests
-pytest -q -m metal  # Only Metal tests
-pytest -q -m numba  # Only Numba tests
-
-# Run single test
-pytest tests/test_graphics_pixel_exact.py::test_graphics_pixel_exact_backend -v
+# With validation
+pytest --validate tests/
 ```
 
-### Benchmarking
-
+### Building
 ```bash
-# Separable Gaussian convolution benchmark
-python scripts/bench_convolvesep_numba.py --sizes 512,1024 --repeats 3 --backends auto
-
-# Median 3x3 benchmark
-python scripts/bench_median3x3.py --sizes 512,1024 --backends auto
-```
-
-### Changelog Management
-
-```bash
-# Generate CHANGELOG.md from git history
-make changelog
-
-# Show unreleased changes
-make changelog-unreleased
-```
-
-### Building & Distribution
-
-```bash
-# Build distribution packages
-make build
-
-# Build wheel only
-make build-wheel
-
-# Interactive release (recommended - automates version bump, changelog, publish)
-make release
-
-# Publish to TestPyPI
-make publish-test
-
-# Publish to PyPI
-make publish
-```
-
-### Asset Configuration
-
-```bash
-# Enable external assets (icons, images, interfaces)
-export YAPOCIS_PROJECT=external
-```
-
-### CLI Tools
-
-```bash
-# Unified development tools (recommended)
-yapocis-tools backends                    # List all backends and devices
-yapocis-tools devices --list              # List OpenCL/Metal/CUDA devices
-yapocis-tools assets --list --all         # List all assets
-yapocis-tools assets test.jpg --images    # Find specific asset
-yapocis-tools interfaces --list           # List interfaces
-yapocis-tools interfaces mandelbrot --explain  # Show interface docs
-
-# Individual commands (also available)
-yapocis-devices --list                    # List devices
-yapocis-backends                          # List backends
-yapocis-assets --list --all               # List assets
-yapocis-interfaces --list                 # List interfaces
-
-# Specialized tools
-# Manage validation references
-yapocis-validate info
-yapocis-validate list
-yapocis-validate promote "test_name"
-
-# Analyze test output quality
-yapocis-queue queue/raw
-yapocis-queue --nan-only
-
-# Generate performance reports
-yapocis-report
-
-# Watch image directory for changes
-yapocis-imagewatcher --queue queue/rendered
-yapocis-imagewatcher --validation-failed  # Show only failed validations
-yapocis-imagewatcher graphics  # Filter by name substring
-
-# Generate kernel packages and stubs
-yapocis-package convolvesep --backend ocl
-yapocis-stubs input.h
+make build       # Build wheel + sdist
+make release     # Interactive release workflow
+make publish     # PyPI publication
 ```
 
 ## Architecture Overview
 
-### Core Components
+### Core Abstractions (`src/yapocis/core/`)
+- **KernelManagerBase**: Template rendering, interface parsing, program caching
+- **KernelBase**: Buffer management, parameter mapping, execution dispatch
+- **DeviceManagerBase**: Device context, buffer lifecycle, resource tracking
 
-**Backend Management (`yapocis.core.manager`)**
+### Backend Implementations
+Each backend (`ocl/`, `metallic/`, `numbax/`, `cu/`) inherits from base classes:
+- `kernel_manager.py` → Template resolution and compilation
+- `kernel.py` → Backend-specific execution
+- `device_manager.py` → Device context management
 
-- `get_backends()`: Detect available backends (ocl, metal, cuda, numba)
-- `get_manager(backend)`: Get backend-specific kernel manager
-- Backends controlled by `YAPOCIS_BACKEND` environment variable
+### Template Pipeline
+```
+Interface name → Load YAML context → Render interface spec (Mako) →
+Parse interface → Get kernel manager → Render kernel source (Mako) →
+Compile/cache program → Register callables
+```
 
-**Interface Definition Language**
+### High-Level Libraries (`src/yapocis/lib/`)
+- `BoundKernels` base class binds interfaces to backends
+- Respects `YAPOCIS_BACKEND` environment variable
+- Libraries: graphics, convolve, colormath, gaussian, fft, truetrace, etc.
 
-- IDL-like syntax in `yapocis/interfaces/*.interface` files
-- Parsed by `yapocis.core.interface_parser` (PyParsing-based)
-- Key keywords: `in`, `out`, `inout`, `out_like`, `resident`, `width_of`, `height_of`
-- Extensions allow alternate signatures (e.g., `res` for resident buffers)
+## Critical Constraints
 
-**Template System**
-
-- Mako templates per backend: `yapocis/kernels/*.mako` (OpenCL), `yapocis/metalkernels/*.mako` (Metal),
-  `yapocis/cukernels/*.mako` (CUDA)
-- Backend-specific KernelManagers resolve and compile templates
-- Template resolution via `yapocis.core.mako_utils`
-
-**Compiled Kernel Packages (`yapocis.kernelpack.*`)**
-
-- Pre-compiled Python classes that eliminate runtime interpretation overhead
-- Generated from interface specifications with explicit buffer management
-- Directory structure: `yapocis/kernelpack/{ocl,metal,cuda,numba}/`
-- Enabled via `YAPOCIS_KERNELPACK=1` environment variable or `use_package=True` parameter
-- Automatic fallback to traditional path if package unavailable
-- Currently implemented: `convolvesep` (Gaussian blur operations)
-- Performance improvement: ~20-25% faster than runtime interpretation
-
-**High-Level Libraries (`yapocis.lib.*`)**
-
-- `graphics.py`, `graphics4.py`: 2D graphics primitives (lines, circles, text)
-- `convolve.py`: Image convolution operations
-- `colormath.py`, `hsi.py`: Color space conversions
-- `anisodiff.py`: Anisotropic diffusion
-- `truetrace.py`: Signed distance field path tracing
-
-### Backend Architecture
-
-Each backend implements:
-
-- **Device Management**: Enumerate and select compute devices
-- **Buffer Management**: Allocate/manage GPU/CPU memory
-- **Kernel Management**: Compile and execute kernels with unified `load_program`/`import_program` API
-
-**OpenCL Backend** (`yapocis.ocl.*`)
-
-- Via PyOpenCL, supports CPU/GPU devices
-- 2D tiled dispatch for large arrays
-
-**Metal Backend** (`yapocis.metallic.*`)
-
-- Via pymetallic shim, Apple GPU only
-- Falls back to OpenCL templates when Metal-specific unavailable
-
-**CUDA Backend** (`yapocis.cu.*`)
-
-- Via PyCUDA, compiles through NVCC
-- Template system adapted from OpenCL
-- Row-major storage order (matches NumPy, opposite of OpenCL/Metal)
-- All 12 kernel interfaces compile and run successfully (anisodiff, colormath, demo, gradient, graphics, graphics4, hsi,
-  imageops, mandelbrot, median3x3, truetrace, zcs)
-
-**Numba Backend** (`yapocis.numba.*`)
-
-- Pure Python/NumPy with JIT compilation
-- Used for CPU fallback and testing
+- **Column vs Row Major**: OpenCL and Metal are column-major; CUDA is row-major
+- **Named Arguments**: Bound kernels do NOT take named arguments (except meta-kernel control). Library methods may use keyword arguments.
+- **Auto-derivation**: Yapocis kernels derive parameters automatically. Don't explicitly specify derivable parameters (M=3, N=2, etc.)
+- **Bug Fixes**: Do not fix tests by using alternate backends. The bug is still a bug.
 
 ## Environment Variables
 
 ```bash
-YAPOCIS_BACKEND=ocl|metal|cuda|numba    # Backend selection
-YAPOCIS_DEVICE=<device_name_or_index>   # Device selection
-YAPOCIS_CACHE=<directory>               # Kernel cache directory
-YAPOCIS_TUNECACHE=<json_file>           # Autotune cache (default: ~/.cache/yapocis/tuning.json)
-YAPOCIS_PROJECT=<directory>             # Additional asset root (e.g., "external")
-YAPOCIS_VIEWER=<command>                # Image viewer for debugging
-YAPOCIS_KERNELPACK=1|true|yes           # Enable compiled kernel packages (default: off)
+YAPOCIS_BACKEND=ocl|metal|cuda|numba   # Backend selection
+YAPOCIS_DEVICE=<name_or_index>         # Device selection
+YAPOCIS_CACHE=<directory>              # Kernel cache directory
+YAPOCIS_PROJECT=<directory>            # Additional asset root
+YAPOCIS_KERNELPACK=1|true|yes          # Enable compiled kernel packages
+YAPOCIS_VALIDATION                     # Enable reproducible test seeding
 ```
 
-## Testing Architecture
+## Test Organization
 
-**Backend Coverage**
+Tests are in `tests/` with structure: `tests/{category}/{subcategory}/`
 
-- Tests automatically skip when backend dependencies unavailable
-- Pytest markers: `@pytest.mark.ocl`, `@pytest.mark.metal`, etc.
-- Cross-backend validation via `test_backend_crosscheck.py`
+**Categories**: backend/, lib/, kernelpack/, async/, performance/, regression/, integration/
 
-**Key Test Files**
-
-- `test_backend_smoke.py`: Compile all interfaces across backends
-- `test_backend_runtime.py`: Basic execution sanity checks
-- `test_graphics_pixel_exact.py`: Pixel-perfect validation (most important for graphics)
-- `test_backend_crosscheck.py`: Cross-backend output comparison
-
-**Asset Testing**
-
-- Set `YAPOCIS_PROJECT=external` to access full test asset library
-- Icons, images, and additional interfaces in `external/` directory
-
-## Interface Definition Language
-
-```idl
-interface mandelbrot {
-    kernel mandelbrot(in complex64 q, out_like short q, int maxiter);
-};
-
-interface tiled graphics4 {
-    kernel lines(width_of a, height_of a, inout float a, width_of lines, in float lines, in float distance, in float rcolor);
-    extension res as lines(width_of a, height_of a, resident float a, width_of lines, in float lines, in float distance, in float rcolor);
-};
-```
-
-**Parameter Hints**
-
-- `in`, `out`, `inout`: Data flow direction
-- `out_like <param>`: Allocate output with same shape as parameter
-- `resident`: Use buffer in-place (reduce copies)
-- `width_of`, `height_of`: Auto-derive dimensions
-- `sizeof`: Auto-derive buffer sizes
-
-## Common Development Patterns
-
-**Loading and Using Kernels**
-
+**Markers**:
 ```python
-import core
-from core import get_manager
-
-mgr = get_manager("ocl")  # or honor YAPOCIS_BACKEND
-prog = core.load_program("mandelbrot")
-result = prog.mandelbrot(input_array, maxiter=1000)
+@pytest.mark.smoke       # Quick validation (~22 tests)
+@pytest.mark.ocl         # OpenCL-specific
+@pytest.mark.metal       # Metal-specific
+@pytest.mark.validation  # Regression validation
+@pytest.mark.performance # Benchmarks (opt-in)
 ```
-
-**High-Level Graphics**
-
-```python
-from yapocis.lib.graphics4 import Graphics4
-
-g = Graphics4()
-canvas = np.zeros((height, width, 4), dtype=np.float32)
-g.circles(canvas, [(x, y, radius)], color=[r, g, b, a])
-result = g.read(canvas)
-```
-
-**Backend Testing**
-
-```python
-@pytest.mark.parametrize("backend", get_backends())
-def test_operation(backend):
-    os.environ["YAPOCIS_BACKEND"] = backend
-    # Test implementation
-```
-
-## Asset Management
-
-Asset lookup searches: `[yapocis_package, cwd, YAPOCIS_PROJECT]`
-
-- Icons: `yapocis.icons.icon(name, size=64)`
-- Images: `yapocis.images.image(name)`
-- Interfaces: `yapocis.interfaces.find_interface(name)`
-- Kernels: Resolved per backend via AssetManager
 
 ## Validation Framework
 
-The validation system uses stored test results for regression testing:
+```bash
+# Run with validation
+pytest --validate tests/
 
-### Test Output Storage
+# Manage references
+yapocis-validate info
+yapocis-validate list
+yapocis-validate promote "test_name"
+```
 
-- All `show_array()` calls automatically save arrays to `queue/raw/*.npz`
-- Both raw arrays (.npz) and rendered images (.png) are saved
-- Files named with format: `"test_name [backend].npz"`
-
-### Validation Commands
+## CLI Tools
 
 ```bash
-# Manage validation references
-python yapocis/scripts/validate.py info              # System status
-python yapocis/scripts/validate.py list             # List references
-python yapocis/scripts/validate.py promote "test"   # Promote test result
-python yapocis/scripts/validate.py promote all      # Bulk promote
-
-# Run tests with validation
-pytest --validate                    # Compare against references
-pytest --update-validation          # Update references with current results
-pytest --validation-tolerance=1e-5  # Set comparison tolerance
-pytest -m validation                # Only validation-marked tests
+yapocis-tools backends              # List backends and devices
+yapocis-tools interfaces --list     # List interfaces
+yapocis-validate info               # Validation system status
+yapocis-report                      # Performance reports
+yapocis-imagewatcher                # Image viewer for debugging
 ```
 
-### Test Integration
+## Development Notes
 
-```python
-@pytest.mark.validation
-@pytest.mark.parametrize("backend", get_backends())
-def test_operation(backend, validate_result):
-    os.environ["YAPOCIS_BACKEND"] = backend
-    result = perform_operation()
-    validate_result("operation_name", result, backend)
-```
-
-### Validation Workflow
-
-1. **Run tests** to generate `queue/raw/*.npz` files
-2. **Review outputs** and promote good results to validation references
-3. **Daily development** with `pytest --validate` to catch regressions
-4. **Update references** with `--update-validation` for intentional changes
-
-### NPZ Analysis Tool
-
-```bash
-# Analyze test output files for data quality
-python yapocis/scripts/queue-check.py [directory]           # Analyze queue/raw by default
-python yapocis/scripts/queue-check.py --filter "cuda"       # Filter by pattern
-python yapocis/scripts/queue-check.py --nan-only            # Only show files with NaN
-python yapocis/scripts/queue-check.py --summary             # Summary statistics only
-python yapocis/scripts/queue-check.py --dtype float32       # Filter by dtype
-python yapocis/scripts/queue-check.py --verbose             # Show all array details
-```
-
-Use this tool to diagnose data quality issues like NaN/Inf values, check dtypes, and verify min/max ranges in test
-outputs.
-
-- Never delete the performance database. Update the schema instead.
-- Bound kernels do not take arguments via named arguments, except for meta- kernel control. Library methods may take
-  keyword arguments.
-- It looks like you are still explicitly specifying derivable parameters (M=3,N=2, etc)
-Yapocis kernels derive all parameters if possible.
-- OpenCL and Metal are both column major; cuda is row major.
+- Put test scripts and data in `claude-debug/` - don't delete
+- Add `.md` files in `claude-debug/` to git, not code/data files
+- Update `AI.md` when creating commits
+- Create commits only when explicitly requested
+- Never delete the performance database

@@ -479,6 +479,548 @@ def cmd_models(args):
     return 0
 
 
+def cmd_scaffold(args):
+    """Create scaffolding for a yapocis extension project."""
+    from pathlib import Path
+    from textwrap import dedent
+
+    project_name = args.name
+    project_dir = Path(args.output) if args.output else Path(project_name)
+
+    # Validate project name (must be valid Python identifier)
+    if not project_name.isidentifier():
+        print(f"ERROR: '{project_name}' is not a valid project name")
+        print("Project name must be a valid Python identifier (letters, numbers, underscores)")
+        return 1
+
+    # Define the structure
+    structure = {
+        "directories": [
+            "",  # root
+            "interfaces",
+            "kernels",
+            "kernels/ocl",
+            "kernels/metal",
+            "kernels/cuda",
+            "kernels/numbax",
+            "lib",
+            "tests",
+            "images",
+            "icons",
+        ],
+        "files": {}
+    }
+
+    # README.md template
+    structure["files"]["README.md"] = dedent(f'''\
+        # {project_name}
+
+        A yapocis extension project.
+
+        ## Installation
+
+        ```bash
+        # Create virtual environment with uv
+        uv venv
+        source .venv/bin/activate
+
+        # Install dependencies
+        uv pip install -e .
+
+        # Or install with dev dependencies
+        uv pip install -e ".[dev]"
+        ```
+
+        ## Usage
+
+        Set the environment variable to use this extension:
+
+        ```bash
+        export YAPOCIS_PROJECT=$(pwd)
+        ```
+
+        Or in Python:
+
+        ```python
+        import os
+        os.environ['YAPOCIS_PROJECT'] = '/path/to/{project_name}'
+
+        from {project_name}.lib.{project_name} import {project_name.title().replace("_", "")}
+
+        proc = {project_name.title().replace("_", "")}()
+        result = proc.fill(image, 0.5)
+        ```
+
+        ## Testing
+
+        ```bash
+        # Run tests
+        pytest tests/
+
+        # Run with specific backend
+        YAPOCIS_BACKEND=metal pytest tests/
+        ```
+
+        ## Project Structure
+
+        ```
+        {project_name}/
+        ├── interfaces/
+        │   └── {project_name}.interface    # Kernel interface definition
+        ├── kernels/
+        │   ├── ocl/
+        │   │   └── {project_name}.mako     # OpenCL kernel
+        │   ├── metal/
+        │   │   └── {project_name}.mako     # Metal kernel
+        │   ├── cuda/
+        │   │   └── {project_name}.mako     # CUDA kernel
+        │   └── numbax/
+        │       └── {project_name}.py       # Numba kernel
+        ├── lib/
+        │   └── {project_name}.py           # Python wrapper
+        ├── tests/
+        │   └── test_{project_name}.py      # Tests
+        ├── images/                         # Test images
+        ├── icons/                          # Icons
+        ├── pyproject.toml
+        └── README.md
+        ```
+
+        ## Adding New Kernels
+
+        1. Define the interface in `interfaces/{project_name}.interface`
+        2. Implement kernels for each backend in `kernels/`
+        3. Create Python wrapper in `lib/`
+        4. Add tests in `tests/`
+
+        ## License
+
+        MIT
+    ''')
+
+    # pyproject.toml template
+    structure["files"]["pyproject.toml"] = dedent(f'''\
+        [project]
+        name = "{project_name}"
+        version = "0.1.0"
+        description = "A yapocis extension project"
+        readme = "README.md"
+        requires-python = ">=3.10"
+        dependencies = [
+            "yapocis>=0.3.0",
+            "numpy>=1.20",
+        ]
+
+        [project.optional-dependencies]
+        dev = [
+            "pytest>=7.0",
+            "pytest-cov",
+        ]
+
+        [build-system]
+        requires = ["hatchling"]
+        build-backend = "hatchling.build"
+
+        [tool.hatch.build.targets.wheel]
+        packages = ["lib", "interfaces", "kernels"]
+
+        [tool.pytest.ini_options]
+        testpaths = ["tests"]
+        python_files = ["test_*.py"]
+
+        [tool.ruff]
+        line-length = 100
+        target-version = "py310"
+
+        [tool.ruff.lint]
+        select = ["E", "F", "I", "W"]
+    ''')
+
+    # .gitignore
+    structure["files"][".gitignore"] = dedent('''\
+        # Python
+        __pycache__/
+        *.py[cod]
+        *$py.class
+        *.so
+        .Python
+        build/
+        develop-eggs/
+        dist/
+        downloads/
+        eggs/
+        .eggs/
+        lib64/
+        parts/
+        sdist/
+        var/
+        wheels/
+        *.egg-info/
+        .installed.cfg
+        *.egg
+
+        # Virtual environments
+        .venv/
+        venv/
+        ENV/
+
+        # IDE
+        .idea/
+        .vscode/
+        *.swp
+        *.swo
+
+        # Testing
+        .pytest_cache/
+        .coverage
+        htmlcov/
+
+        # OS
+        .DS_Store
+        Thumbs.db
+
+        # Yapocis
+        mako_modules/
+        *.duckdb
+        *.duckdb.wal
+    ''')
+
+    # Interface template
+    class_name = project_name.title().replace("_", "")
+    structure["files"][f"interfaces/{project_name}.interface"] = dedent(f'''\
+        // {project_name} interface
+        // A sample yapocis kernel interface
+
+        interface {project_name} {{
+            // Fill an array with a constant value
+            kernel fill(
+                sizeof a,
+                in float a,
+                float value
+            );
+
+            // Fill using resident buffer (in-place)
+            extension res as fill(
+                sizeof a,
+                resident float a,
+                float value
+            );
+        }};
+    ''')
+
+    # OpenCL kernel template
+    structure["files"][f"kernels/ocl/{project_name}.mako"] = dedent(f'''\
+        // {project_name} OpenCL kernel
+
+        __kernel void fill(
+            int size,
+            __global float *a,
+            float value
+        ) {{
+            int idx = get_global_id(0);
+            if (idx >= size) return;
+            a[idx] = value;
+        }}
+    ''')
+
+    # Metal kernel template
+    structure["files"][f"kernels/metal/{project_name}.mako"] = dedent(f'''\
+        // {project_name} Metal kernel
+        <%include file="constants.mako"/>
+
+        kernel void fill(
+            constant int &size [[buffer(0)]],
+            device float *a [[buffer(1)]],
+            constant float &value [[buffer(2)]],
+            uint idx [[thread_position_in_grid]]
+        ) {{
+            if (idx >= (uint)size) return;
+            a[idx] = value;
+        }}
+    ''')
+
+    # CUDA kernel template
+    structure["files"][f"kernels/cuda/{project_name}.mako"] = dedent(f'''\
+        // {project_name} CUDA kernel
+
+        extern "C" __global__ void fill(
+            int size,
+            float *a,
+            float value
+        ) {{
+            int idx = blockIdx.x * blockDim.x + threadIdx.x;
+            if (idx >= size) return;
+            a[idx] = value;
+        }}
+    ''')
+
+    # Numba kernel template
+    structure["files"][f"kernels/numbax/{project_name}.py"] = dedent(f'''\
+        """
+        {project_name} Numba kernel implementation.
+        """
+        import numpy as np
+        from numba import njit, prange
+
+
+        @njit(parallel=True, cache=True)
+        def fill(size: int, a: np.ndarray, value: float) -> np.ndarray:
+            """Fill array with a constant value."""
+            flat = a.ravel()
+            for idx in prange(size):
+                flat[idx] = value
+            return a
+    ''')
+
+    # Python library wrapper
+    structure["files"][f"lib/{project_name}.py"] = dedent(f'''\
+        """
+        {project_name} - Python wrapper for {project_name} kernels.
+        """
+        import numpy as np
+        from yapocis.lib.bound_kernels import BoundKernels
+
+
+        class {class_name}(BoundKernels):
+            """
+            {project_name.title()} kernel wrapper.
+
+            Provides GPU-accelerated array operations.
+            """
+
+            INTERFACE = "{project_name}"
+
+            def fill(self, array: np.ndarray, value: float = 0.0) -> None:
+                """
+                Fill an array with a constant value on the device.
+
+                The array is initialized to the value on the GPU. Use kmgr.read(array)
+                to retrieve the result if needed.
+
+                Args:
+                    array: Array to fill (will be uploaded to device)
+                    value: Value to fill the array with
+                """
+                array = np.ascontiguousarray(array, dtype=np.float32)
+                self.kmgr.fill(array, value)
+
+            def fill_res(self, array: np.ndarray, value: float = 0.0) -> None:
+                """
+                Fill a resident array with a constant value (in-place on device).
+
+                Uses a buffer that is already on the device.
+
+                Args:
+                    array: Resident array to fill
+                    value: Value to fill the array with
+                """
+                self.kmgr.fill_res(array, value)
+    ''')
+
+    # lib/__init__.py
+    structure["files"]["lib/__init__.py"] = dedent(f'''\
+        """
+        {project_name} library.
+        """
+        from .{project_name} import {class_name}
+
+        __all__ = ["{class_name}"]
+    ''')
+
+    # Test file
+    structure["files"][f"tests/test_{project_name}.py"] = dedent(f'''\
+        """
+        Tests for {project_name} extension.
+        """
+        import os
+        import sys
+        from pathlib import Path
+
+        import numpy as np
+        import pytest
+
+        # Set up YAPOCIS_PROJECT to find our extension
+        PROJECT_ROOT = Path(__file__).parent.parent
+        os.environ["YAPOCIS_PROJECT"] = str(PROJECT_ROOT)
+
+        # Add lib to path for imports
+        sys.path.insert(0, str(PROJECT_ROOT))
+
+        from lib.{project_name} import {class_name}
+
+
+        @pytest.fixture
+        def processor():
+            """Create a {class_name} instance."""
+            return {class_name}()
+
+
+        class Test{class_name}:
+            """Tests for {class_name} class."""
+
+            def test_fill_initializes_on_device(self, processor):
+                """Test that fill initializes array on device."""
+                array = np.empty((100, 100), dtype=np.float32)
+                processor.fill(array, value=1.0)
+
+                # Read back from device to verify
+                result = processor.kmgr.read(array)
+                assert result.shape == (100, 100)
+                assert result.dtype == np.float32
+                assert np.allclose(result, 1.0)
+
+            def test_fill_with_value(self, processor):
+                """Test that fill sets correct value."""
+                array = np.empty((50, 50), dtype=np.float32)
+                value = 3.14
+
+                processor.fill(array, value=value)
+                result = processor.kmgr.read(array)
+
+                assert np.allclose(result, value)
+
+            def test_fill_with_zero(self, processor):
+                """Test filling with zero."""
+                array = np.empty((64, 64), dtype=np.float32)
+
+                processor.fill(array, value=0.0)
+                result = processor.kmgr.read(array)
+
+                assert np.allclose(result, 0.0)
+
+            def test_fill_res_on_resident_buffer(self, processor):
+                """Test fill_res on a resident buffer."""
+                array = np.ones((32, 32), dtype=np.float32) * 5.0
+                value = 2.0
+
+                # First upload to device
+                processor.kmgr.write(array)
+                # Then fill in place
+                processor.fill_res(array, value=value)
+                # Read back
+                result = processor.kmgr.read(array)
+
+                assert np.allclose(result, value)
+
+            def test_different_shapes(self, processor):
+                """Test various array shapes."""
+                shapes = [(10, 10), (100, 50), (256, 256), (512, 128)]
+
+                for shape in shapes:
+                    array = np.empty(shape, dtype=np.float32)
+                    processor.fill(array, value=1.0)
+                    result = processor.kmgr.read(array)
+                    assert result.shape == shape
+                    assert np.allclose(result, 1.0)
+
+
+        def test_import():
+            """Test that the module can be imported."""
+            from lib.{project_name} import {class_name}
+            assert {class_name} is not None
+
+
+        if __name__ == "__main__":
+            pytest.main([__file__, "-v"])
+    ''')
+
+    # tests/__init__.py
+    structure["files"]["tests/__init__.py"] = '"""Test suite for {project_name}."""\n'.format(project_name=project_name)
+
+    # Dry run mode
+    if args.dry_run:
+        print(f"[DRY RUN] Would create extension project: {project_name}")
+        print(f"[DRY RUN] Project directory: {project_dir.absolute()}")
+        print()
+        print("Directories:")
+        for dir_path in structure["directories"]:
+            full_path = project_dir / dir_path if dir_path else project_dir
+            exists = full_path.exists()
+            status = "[EXISTS]" if exists else "[CREATE]"
+            print(f"  {status} {full_path}")
+        print()
+        print("Files:")
+        for file_path in structure["files"]:
+            full_path = project_dir / file_path
+            exists = full_path.exists()
+            status = "[EXISTS]" if exists else "[CREATE]"
+            if exists and args.force:
+                status = "[OVERWRITE]"
+            elif exists and args.complete:
+                status = "[SKIP]"
+            print(f"  {status} {full_path}")
+        return 0
+
+    # Check if directory exists
+    if project_dir.exists():
+        if not args.force and not args.complete:
+            print(f"ERROR: Directory '{project_dir}' already exists")
+            print("Use --force to overwrite or --complete to add missing files")
+            return 1
+
+    # Create directories
+    created_dirs = 0
+    for dir_path in structure["directories"]:
+        full_path = project_dir / dir_path if dir_path else project_dir
+        if not full_path.exists():
+            full_path.mkdir(parents=True, exist_ok=True)
+            print(f"Created directory: {full_path}")
+            created_dirs += 1
+        elif args.complete:
+            pass  # Directory exists, that's fine in complete mode
+        else:
+            print(f"Directory exists: {full_path}")
+
+    # Create files
+    created_files = 0
+    skipped_files = 0
+    overwritten_files = 0
+
+    for file_path, content in structure["files"].items():
+        full_path = project_dir / file_path
+
+        if full_path.exists():
+            if args.force:
+                full_path.write_text(content)
+                print(f"Overwrote file: {full_path}")
+                overwritten_files += 1
+            elif args.complete:
+                print(f"Skipped existing file: {full_path}")
+                skipped_files += 1
+            else:
+                print(f"File exists: {full_path}")
+                skipped_files += 1
+        else:
+            # Ensure parent directory exists
+            full_path.parent.mkdir(parents=True, exist_ok=True)
+            full_path.write_text(content)
+            print(f"Created file: {full_path}")
+            created_files += 1
+
+    # Summary
+    print()
+    print("=" * 60)
+    print(f"Extension project '{project_name}' scaffolding complete!")
+    print("=" * 60)
+    print(f"  Location: {project_dir.absolute()}")
+    print(f"  Directories created: {created_dirs}")
+    print(f"  Files created: {created_files}")
+    if overwritten_files:
+        print(f"  Files overwritten: {overwritten_files}")
+    if skipped_files:
+        print(f"  Files skipped: {skipped_files}")
+    print()
+    print("Next steps:")
+    print(f"  cd {project_dir}")
+    print("  uv venv && source .venv/bin/activate")
+    print("  uv pip install -e '.[dev]'")
+    print(f"  export YAPOCIS_PROJECT=$(pwd)")
+    print("  pytest tests/")
+    print()
+
+    return 0
+
+
 def cmd_interfaces(args):
     """Generate documentation and stubs from interface files."""
     from mako.template import Template
@@ -622,16 +1164,156 @@ def cmd_interfaces(args):
             )
         print(file=file)
 
+    def np_dtype_to_type_hint(np_dtype: str, is_buffer: bool) -> str:
+        """Convert numpy dtype to Python type hint string."""
+        if is_buffer:
+            if np_dtype in ("float32", "float64", "float16"):
+                return "NDArray[np.floating]"
+            elif np_dtype in ("int32", "int64", "int16"):
+                return "NDArray[np.signedinteger]"
+            elif np_dtype in ("complex64", "complex128"):
+                return "NDArray[np.complexfloating]"
+            return f"NDArray  # {np_dtype}"
+        else:
+            # Scalars
+            if np_dtype in ("float32", "float64", "float16"):
+                return "float"
+            elif np_dtype in ("int32", "int64", "int16"):
+                return "int"
+            return np_dtype
+
     def python_stubs(interface, file=None):
-        """Generate Python stubs."""
-        print(f"# yapocis.{interface.name}", file=file)
-        print(f"class {interface.name.capitalize()}:", file=file)
+        """Generate Python stubs with proper type hints and docstrings."""
+        print("from numpy.typing import NDArray", file=file)
+        print("import numpy as np", file=file)
+        print(file=file)
+
+        class_name = interface.name.replace("_", " ").title().replace(" ", "")
+        print(f"class {class_name}:", file=file)
+        print(f'    """Interface: {interface.name}"""', file=file)
+        print(file=file)
+
         for kernel in interface.kernels:
-            if kernel.alias:
-                continue
-            print(f"    def {kernel.name}(self, *args, **kwargs):", file=file)
-            print("        pass", file=file)
+            # Build parameter list and return types
+            params = []  # (name, type_hint, description)
+            returns = []  # (type_hint, description)
+
+            for param in kernel.parameters:
+                is_buffer = bool(param.pointer)
+                type_hint = np_dtype_to_type_hint(param.np_dtype, is_buffer)
+
+                # Handle out_like first - these are derived but should be returns
+                if param.hint == "out_like":
+                    # Auto-allocated output - becomes return value
+                    source = param.name.removeprefix("out_like_")
+                    returns.append((type_hint, f"{param.np_dtype} array (like {source})"))
+                    continue
+
+                if param.derived:
+                    # Skip derived params (width_of, height_of, etc.)
+                    continue
+
+                if param.hint == "out":
+                    # Allocated output - becomes return value
+                    returns.append((type_hint, f"{param.np_dtype} array"))
+                elif param.hint in ("in", "inout", "resident"):
+                    # User-provided parameter
+                    role = {"in": "input", "inout": "input/output", "resident": "resident"}[
+                        param.hint
+                    ]
+                    params.append((param.name, type_hint, f"{role} {param.np_dtype}"))
+                elif not param.pointer:
+                    # Scalar parameter
+                    params.append((param.name, type_hint, f"{param.np_dtype} scalar"))
+                else:
+                    # Buffer without explicit hint
+                    params.append((param.name, type_hint, f"{param.np_dtype} array"))
+
+            # Build return type
+            if not returns:
+                return_type = "None"
+            elif len(returns) == 1:
+                return_type = returns[0][0]
+            else:
+                return_type = f"tuple[{', '.join(r[0] for r in returns)}]"
+
+            # Generate method - kernel.name is the method name
+            # kernel.alias is the base kernel it's derived from (if any)
+            method_name = kernel.name
+
+            # Signature
+            if params:
+                print(f"    def {method_name}(", file=file)
+                print("        self,", file=file)
+                for name, hint, _ in params:
+                    print(f"        {name}: {hint},", file=file)
+                print(f"    ) -> {return_type}:", file=file)
+            else:
+                print(f"    def {method_name}(self) -> {return_type}:", file=file)
+
+            # Docstring
+            print('        """', file=file)
+            if params:
+                print("        Args:", file=file)
+                for name, _, desc in params:
+                    print(f"            {name}: {desc}", file=file)
+            if returns:
+                print(file=file)
+                print("        Returns:", file=file)
+                for _, desc in returns:
+                    print(f"            {desc}", file=file)
+            print('        """', file=file)
+            print("        ...", file=file)
             print(file=file)
+
+    def python_pyi_stubs(interface, file=None):
+        """Generate compact .pyi stub file format."""
+        print("from numpy.typing import NDArray", file=file)
+        print("import numpy as np", file=file)
+        print(file=file)
+
+        class_name = interface.name.replace("_", " ").title().replace(" ", "")
+        print(f"class {class_name}:", file=file)
+
+        for kernel in interface.kernels:
+            params = []
+            returns = []
+
+            for param in kernel.parameters:
+                is_buffer = bool(param.pointer)
+                type_hint = np_dtype_to_type_hint(param.np_dtype, is_buffer)
+
+                # Handle out_like first - these are derived but should be returns
+                if param.hint == "out_like":
+                    returns.append(type_hint)
+                    continue
+
+                if param.derived:
+                    continue
+
+                if param.hint == "out":
+                    returns.append(type_hint)
+                elif param.hint in ("in", "inout", "resident"):
+                    params.append(f"{param.name}: {type_hint}")
+                elif not param.pointer:
+                    params.append(f"{param.name}: {type_hint}")
+                else:
+                    params.append(f"{param.name}: {type_hint}")
+
+            # Return type
+            if not returns:
+                return_type = "None"
+            elif len(returns) == 1:
+                return_type = returns[0]
+            else:
+                return_type = f"tuple[{', '.join(returns)}]"
+
+            # Method name - kernel.name is the actual method name
+            method_name = kernel.name
+
+            # Compact single-line format
+            params_str = ", ".join(params)
+            print(f"    def {method_name}(self, {params_str}) -> {return_type}: ...", file=file)
 
     requested_interfaces = args.interfaces if args.interfaces else []
 
@@ -678,6 +1360,24 @@ def cmd_interfaces(args):
             print(f"\n### Python Stubs: {interface_name}")
             python_stubs(interface_obj)
 
+        if args.all or args.stubs:
+            print(f"\n### .pyi Stubs: {interface_name}")
+            python_pyi_stubs(interface_obj)
+
+        if args.write_lib:
+            # Write .pyi stub to yapocis/lib/ directory
+            from pathlib import Path
+
+            import yapocis.lib
+
+            lib_dir = Path(yapocis.lib.__file__).parent
+            pyi_path = lib_dir / f"{interface_name}.pyi"
+
+            with open(pyi_path, "w") as f:
+                python_pyi_stubs(interface_obj, file=f)
+
+            print(f"Wrote {pyi_path}")
+
     return 0
 
 
@@ -709,6 +1409,12 @@ Examples:
   # Download and convert pre-trained models
   yapocis-tools models vgg16
   yapocis-tools models resnet50 --output my_models/
+
+  # Create extension project scaffolding
+  yapocis-tools scaffold my_extension
+  yapocis-tools scaffold my_extension --dry-run
+  yapocis-tools scaffold my_extension --output /path/to/projects
+  yapocis-tools scaffold my_extension --complete  # Add missing files
         """,
     )
 
@@ -768,7 +1474,15 @@ Examples:
         "--opencl", action="store_true", help="Generate OpenCL stubs"
     )
     interfaces_parser.add_argument(
-        "--python", action="store_true", help="Generate Python stubs"
+        "--python", action="store_true", help="Generate Python stubs with docstrings"
+    )
+    interfaces_parser.add_argument(
+        "--stubs", action="store_true", help="Generate compact .pyi stub format"
+    )
+    interfaces_parser.add_argument(
+        "--write-lib",
+        action="store_true",
+        help="Write .pyi stubs to yapocis/lib/ directory",
     )
     interfaces_parser.add_argument(
         "interfaces", nargs="*", help="Interface names to process"
@@ -790,6 +1504,37 @@ Examples:
         "--no-labels", action="store_true", help="Skip downloading ImageNet labels"
     )
 
+    # Scaffold subcommand
+    scaffold_parser = subparsers.add_parser(
+        "scaffold", help="Create scaffolding for a yapocis extension project"
+    )
+    scaffold_parser.add_argument(
+        "name", help="Name of the extension project (must be valid Python identifier)"
+    )
+    scaffold_parser.add_argument(
+        "--output",
+        "-o",
+        type=str,
+        help="Output directory (default: ./<name>)",
+    )
+    scaffold_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be created without actually creating files",
+    )
+    scaffold_parser.add_argument(
+        "--force",
+        "-f",
+        action="store_true",
+        help="Overwrite existing files",
+    )
+    scaffold_parser.add_argument(
+        "--complete",
+        "-c",
+        action="store_true",
+        help="Add missing files/directories without overwriting existing ones",
+    )
+
     args = parser.parse_args()
 
     if not args.command:
@@ -807,6 +1552,8 @@ Examples:
         return cmd_interfaces(args)
     elif args.command == "models":
         return cmd_models(args)
+    elif args.command == "scaffold":
+        return cmd_scaffold(args)
     else:
         parser.print_help()
         return 1

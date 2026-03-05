@@ -4,7 +4,8 @@ Channel and plane manipulation utilities.
 
 ## Overview
 
-The `channels` module provides functions for splitting, joining, and processing image channels. It handles the differences between PIL ordering and NumPy array layouts.
+The `channels` module provides functions for splitting, joining, and processing image channels. It handles the
+differences between PIL ordering and NumPy array layouts.
 
 ## Functions
 
@@ -22,6 +23,7 @@ print(f"Channel shapes: r={r.shape}, g={g.shape}, b={b.shape}")
 ```
 
 **Parameters:**
+
 - `rgb` - (H, W, 3) float32 array
 
 **Returns:** Tuple of three (H, W) arrays (copies)
@@ -39,6 +41,7 @@ print(f"Joined RGB shape: {rgb_joined.shape}")
 ```
 
 **Parameters:**
+
 - `r`, `g`, `b` - (H, W) float32 arrays
 
 **Returns:** (H, W, 3) float32 array
@@ -57,6 +60,7 @@ print(f"Number of planes: {len(planes)}")
 ```
 
 **Parameters:**
+
 - `image` - 2D or 3D float32 array
 
 **Returns:** Tuple of (H, W) arrays, or single array if 2D input
@@ -80,7 +84,8 @@ print(f"Rejoined image shape: {image_rejoined.shape}")
 Histogram equalization for contrast enhancement.
 
 ```python
-from yapocis.lib.channels import histeq
+
+from yapocis.lib.imageops import histeq
 from yapocis.utils.basic import get_test_image
 import numpy as np
 
@@ -90,6 +95,7 @@ print(f"Equalized shape: {equalized.shape}")
 ```
 
 **Parameters:**
+
 - `im` - 2D float32 array
 - `nbr_bins` - Number of histogram bins (default: 2^16)
 
@@ -122,7 +128,8 @@ result = join_channels(r_filtered, g_filtered, b_filtered)
 ## Example: Histogram Equalization
 
 ```python
-from yapocis.lib.channels import histeq, split_planes, join_planes
+from yapocis.lib.channels import split_planes, join_planes
+from yapocis.lib.imageops import Imageops
 from yapocis.lib.hsi import HSI
 from yapocis.utils.basic import get_test_image
 
@@ -131,13 +138,10 @@ rgb = get_test_image()
 
 # Convert to HSI to equalize luminance only (preserves color)
 hsi_conv = HSI()
-hsi = hsi_conv.rgb2hsi3(rgb)
-
-# Split and equalize intensity
-h, s, i = split_planes(hsi)
-i_eq = histeq(i)
+h, s, i = hsi_conv.rgb2hsi3(rgb)
 
 # Rejoin and convert back
+ops = Imageops()
 hsi_eq = join_planes(h, s, i_eq)
 result = hsi_conv.hsi2rgb3(hsi_eq)
 ```

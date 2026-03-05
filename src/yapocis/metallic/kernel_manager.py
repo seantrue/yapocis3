@@ -18,7 +18,7 @@ except Exception as e:  # pragma: no cover
 
 from yapocis.core.kmgr_base import KernelManagerBase
 from yapocis.metallic.device_manager import get_device_manager
-from yapocis.utils.internals import get_yapocis_dir
+from yapocis.utils.internals import get_yapocis_dir, get_yapocis_dirs
 
 # Runtime selection between Python and Cython implementations
 _use_cython = os.environ.get("YAPOCIS_USE_CYTHON", "0").lower() in ("1", "true", "yes")
@@ -69,7 +69,7 @@ class KernelManager(KernelManagerBase):
         """
         Metal-specific template resolution with OCL fallback.
 
-        Looks for templates in:
+        Searches in order across all yapocis directories (YAPOCIS_PROJECT, cwd, package):
         1. kernels/metal/*.mako (Metal-specific)
         2. kernels/ocl/*.mako (OCL fallback)
 
@@ -80,23 +80,28 @@ class KernelManager(KernelManagerBase):
             Full path to template file
 
         Raises:
-            FileNotFoundError: If template not found in either location
+            FileNotFoundError: If template not found in any location
         """
-        # Prefer Metal-specific templates
-        base_dir = os.path.join(get_yapocis_dir(), "kernels", "metal")
-        metal_template = os.path.join(base_dir, f"{base_filename}.mako")
-        if os.path.exists(metal_template):
-            return metal_template
+        template_filename = f"{base_filename}.mako"
+        searched_paths = []
 
-        # Fallback to OCL kernels for compatibility
-        ocl_dir = os.path.join(get_yapocis_dir(), "kernels", "ocl")
-        ocl_template = os.path.join(ocl_dir, f"{base_filename}.mako")
-        if os.path.exists(ocl_template):
-            return ocl_template
+        # Search all yapocis directories for Metal-specific template first
+        for base_dir in get_yapocis_dirs():
+            metal_template = os.path.join(base_dir, "kernels", "metal", template_filename)
+            searched_paths.append(metal_template)
+            if os.path.exists(metal_template):
+                return metal_template
+
+        # Fallback: search all directories for OCL template
+        for base_dir in get_yapocis_dirs():
+            ocl_template = os.path.join(base_dir, "kernels", "ocl", template_filename)
+            searched_paths.append(ocl_template)
+            if os.path.exists(ocl_template):
+                return ocl_template
 
         raise FileNotFoundError(
-            f"No template found for {base_filename}; "
-            f"looked in {base_dir} and {ocl_dir}"
+            f"No template found for '{base_filename}' (backend=metal). "
+            f"Searched: {', '.join(searched_paths)}"
         )
 
     def snapshot(self, **kwargs):

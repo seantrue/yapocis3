@@ -2,6 +2,7 @@
 import os
 import sys
 from collections.abc import Iterable, Iterator
+from pathlib import Path
 
 import skimage
 from PIL import Image, ImageDraw, ImageFont
@@ -339,7 +340,9 @@ def sign_array(*args, **kwargs) -> tuple[str, PILImage]:
     return title, img
 
 
-def show_array(array: np.ndarray, *args, checkzero=True, **kwargs) -> None:
+def show_array(array: np.ndarray, *args, queue_dir=None, checkzero=True, **kwargs) -> Path:
+    queue_dir = queue_dir or VIEWING_QUEUE
+    raw_dir = os.path.join(queue_dir, "raw") if queue_dir else RAW_QUEUE
     split_args = []
     for arg in args:
         arg = str(arg)
@@ -357,13 +360,15 @@ def show_array(array: np.ndarray, *args, checkzero=True, **kwargs) -> None:
     raw_img = array_to_image(array)
     title, img = sign_array(*args, array, **kwargs)
     name = f"{title}.png"
-    img.save(os.path.join(VIEWING_QUEUE, name))
-    raw_img.save(os.path.join(RAW_QUEUE, name))
-    npz_name = f"{title}.npz"
-    np.savez_compressed(os.path.join(RAW_QUEUE, npz_name), array)
+    pth = os.path.join(queue_dir, name)
+    img.save(pth)
+    if os.path.exists(raw_dir):
+        raw_img.save(os.path.join(raw_dir, name))
+        npz_name = f"{title}.npz"
+        np.savez_compressed(os.path.join(raw_dir, npz_name), array)
     if VIEWER:
-        os.system(f'{VIEWER} "{os.path.abspath(os.path.join(VIEWING_QUEUE, name))}"&')
-
+        os.system(f'{VIEWER} "{os.path.abspath(pth)}"&')
+    return Path(pth)
 
 def show_arraygrad(
     title: str, image: Image1, theta: Image1, grad: Image1 | None = None
@@ -414,7 +419,7 @@ def show_arraygrad(
             else:
                 color = "white"
             draw.line([(x1, y1), (x2, y2)], fill=color)
-    show_array(np.array(img), title)
+    return show_array(np.array(img), title)
 
 
 class Shaper:

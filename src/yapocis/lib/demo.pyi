@@ -1,0 +1,6 @@
+from numpy.typing import NDArray
+import numpy as np
+
+class Demo:
+    def sum(self, a: NDArray[np.floating], b: NDArray[np.floating]) -> NDArray[np.floating]: ...
+    def sum_res(self, a: NDArray[np.floating], b: NDArray[np.floating]) -> NDArray[np.floating]: ...

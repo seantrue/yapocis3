@@ -25,6 +25,7 @@ print(np.linalg.norm(a_plus_b - (a + b)))  # Should be ~0
 ```
 
 Key concepts:
+
 - `load_program()` compiles and loads a kernel interface
 - Arrays are automatically transferred to/from GPU
 - Results match NumPy operations
@@ -75,6 +76,7 @@ grad, angle = gradient.gradient(i, stride=5)
 GPU-accelerated Mandelbrot set computation with Tkinter visualization.
 
 Demonstrates:
+
 - Using `import_program()` to import kernel as a Python function
 - Comparison between NumPy, serial Python, and GPU implementations
 - Interactive fractal exploration
@@ -90,6 +92,7 @@ output = calc_fractal_opencl(complex_coords, maxiter=256)
 ```
 
 **Performance comparison (1024x1024):**
+
 - Serial Python: ~10 seconds
 - Vectorized NumPy: ~0.5 seconds
 - GPU (OpenCL): ~0.02 seconds
@@ -119,13 +122,19 @@ peak_freqs, peak_powers = fft.find_peaks(signal, sample_rate, n_peaks=2)
 
 Detailed power spectrum analysis with windowing options.
 
+![FFT: Power Spectrum](/_static/images/fft_library_demo_spectrogram.png)
+
 ### fft_chirp_analysis.py
 
 Analyze frequency-varying (chirp) signals using short-time FFT.
 
+![FFT: Chirp](/_static/images/fft_library_demo_filter.png)
+
 ### fft_library_demo.py
 
 Comprehensive FFT library demonstration covering all features.
+
+![FFT: Demo](/_static/images/fft_library_demo_basic.png)
 
 ## Performance Benchmarks
 
@@ -144,6 +153,7 @@ python examples/median_performance.py --devices "Apple M4"
 ![Median Performance](/_static/images/median_performance.png)
 
 Features:
+
 - Automatic backend/device discovery
 - Comparison against scipy baseline
 - Async resident buffer optimization
@@ -153,7 +163,7 @@ Features:
 
 Zero-crossing detection performance across backends and image sizes.
 
-![ZCS Performance](/_static/images/zcs_performance.png)
+![ZCS: Performance](/_static/images/zcs_performance.png)
 
 ## Matplotlib Backend Examples
 
@@ -165,6 +175,7 @@ Demonstrates scatter plot marker rendering:
 
 ```python {.no-exec}
 import matplotlib
+
 matplotlib.use("module://yapocis.lib.mplbackend")
 import matplotlib.pyplot as plt
 
@@ -238,13 +249,13 @@ python examples/zcs_performance.py
 
 Several examples generate output files in the `examples/` directory:
 
-| File | Description |
-|------|-------------|
-| `median_performance.png` | Median filter benchmark chart |
-| `zcs_performance.png` | Zero-crossing benchmark chart |
-| `matplotlib_markers.png` | Scatter plot markers |
-| `matplot_filled_paths.png` | Path rendering |
-| `matplotlib_histogram.png` | Histogram rendering |
+| File                       | Description                   |
+|----------------------------|-------------------------------|
+| `median_performance.png`   | Median filter benchmark chart |
+| `zcs_performance.png`      | Zero-crossing benchmark chart |
+| `matplotlib_markers.png`   | Scatter plot markers          |
+| `matplot_filled_paths.png` | Path rendering                |
+| `matplotlib_histogram.png` | Histogram rendering           |
 
 ## See Also
 

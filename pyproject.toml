@@ -44,6 +44,8 @@ dependencies = [
     "Pygments>=2.15.1",
     "certifi>=2024.7.4",
     "idna>=3.7",
+    "pyrefly>=0.45.1",
+    "ty>=0.0.1a33",
 ]
 
 [project.urls]

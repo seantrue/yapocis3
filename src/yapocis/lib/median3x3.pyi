@@ -1,0 +1,6 @@
+from numpy.typing import NDArray
+import numpy as np
+
+class Median3X3:
+    def median3x3(self, a: NDArray[np.floating]) -> NDArray[np.floating]: ...
+    def median3x3_res(self, a: NDArray[np.floating]) -> NDArray[np.floating]: ...

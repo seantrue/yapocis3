@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import importlib
+import importlib.util
+import os
+import sys
 from collections.abc import Callable
 from contextlib import contextmanager
 
@@ -8,6 +11,45 @@ from mako.template import Template
 
 from yapocis.core.interface import Interface, get_interface, load_interface
 from yapocis.numbax.kernel import Kernel
+from yapocis.utils.internals import get_yapocis_dirs
+
+
+def _load_numba_kernel_module(interface_name: str):
+    """
+    Load a Numba kernel module, searching YAPOCIS_PROJECT directories first.
+
+    Search order:
+    1. YAPOCIS_PROJECT/kernels/numbax/{interface_name}.py
+    2. Current working directory/kernels/numbax/{interface_name}.py
+    3. yapocis.kernels.numbax.{interface_name} (standard import)
+
+    Args:
+        interface_name: Name of the interface (e.g., "mandelbrot")
+
+    Returns:
+        Loaded module or None if not found
+
+    Raises:
+        ModuleNotFoundError: If module not found in any location
+    """
+    # First, search in yapocis directories (project, cwd)
+    for base_dir in get_yapocis_dirs():
+        kernel_path = os.path.join(base_dir, "kernels", "numbax", f"{interface_name}.py")
+        if os.path.exists(kernel_path):
+            # Load module from file path
+            spec = importlib.util.spec_from_file_location(
+                f"yapocis_ext.kernels.numbax.{interface_name}",
+                kernel_path
+            )
+            if spec and spec.loader:
+                module = importlib.util.module_from_spec(spec)
+                sys.modules[spec.name] = module
+                spec.loader.exec_module(module)
+                return module
+
+    # Fallback to standard import
+    mod_name = f"yapocis.kernels.numbax.{interface_name}"
+    return importlib.import_module(mod_name)
 
 
 class KernelManager:
@@ -33,14 +75,13 @@ class KernelManager:
         # Async execution support (no-op for CPU backend)
         self.pending_events = []
         self._default_async = False
-        # Load module with Python implementations
-        mod_name = f"yapocis.kernels.numbax.{interface.name}"
+        # Load module with Python implementations (searches YAPOCIS_PROJECT first)
         try:
-            mod = importlib.import_module(mod_name)
+            mod = _load_numba_kernel_module(interface.name)
         except ModuleNotFoundError:
             # Defer implementation errors to call time; allow smoke-compile to pass
             self.module_missing = True  # type: ignore[attr-defined]
-            self.missing_module_name = mod_name  # type: ignore[attr-defined]
+            self.missing_module_name = f"yapocis.kernels.numbax.{interface.name}"  # type: ignore[attr-defined]
             return
         # Wire up kernels
         for k in interface.kernels:

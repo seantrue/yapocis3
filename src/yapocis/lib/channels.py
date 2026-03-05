@@ -5,31 +5,7 @@ HWC <-> CHW ordering, conceptually.
 
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
 
-import numpy as np
-
 from yapocis.utils.stereo_typing import *
-
-
-def histeq(im: Image1, nbr_bins: int = 2**16) -> Image1:
-    """
-    Histogram equalization of a 2D array
-
-    Args:
-        im: 2D Array
-        nbr_bins: number of bins
-
-    Returns:
-        2d Array, dtype=np.float32
-    """
-    imhist, bins = np.histogram(im.ravel(), nbr_bins, density=True)
-    imhist[0] = 0
-
-    cdf = imhist.cumsum()  # cumulative distribution function
-    cdf = (nbr_bins - 1) * cdf / cdf[-1]
-    cdf = cdf / nbr_bins
-
-    im2 = np.interp(im.flatten(), bins[:-1], cdf)
-    return np.array(im2, np.float32).reshape(im.shape)
 
 
 def split_channels(rgb: Image3) -> tuple[Image1, Image1, Image1]:

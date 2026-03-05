@@ -51,7 +51,7 @@ from mako.template import Template
 
 from yapocis.core.interface import Interface, get_interface, load_interface
 from yapocis.core.interface_context import get_interface_context
-from yapocis.utils.internals import get_yapocis_dir
+from yapocis.utils.internals import get_yapocis_dir, get_yapocis_dirs
 from yapocis.utils.stereo_typing import Context
 
 
@@ -109,7 +109,11 @@ class KernelManagerBase(ABC):
         """
         Locate kernel template file for given interface name.
 
-        Default implementation looks in yapocis/kernels/{backend}/*.mako
+        Searches in order:
+        1. YAPOCIS_PROJECT/kernels/{backend}/*.mako (if YAPOCIS_PROJECT set)
+        2. Current working directory/kernels/{backend}/*.mako
+        3. yapocis package/kernels/{backend}/*.mako
+
         Subclasses can override for custom template resolution (e.g., Metal's fallback).
 
         Args:
@@ -121,20 +125,21 @@ class KernelManagerBase(ABC):
         Raises:
             FileNotFoundError: If template not found
         """
-        # New structure: kernels/{backend}/*
-        # All backends now use kernels/{backend}/ structure
-        kernel_dir = os.path.join("kernels", self._backend_name)
+        # Search in all yapocis directories (project, cwd, package)
+        kernel_subdir = os.path.join("kernels", self._backend_name)
+        template_filename = f"{base_filename}.mako"
 
-        kernel_path = os.path.join(
-            get_yapocis_dir(), kernel_dir, f"{base_filename}.mako"
+        searched_paths = []
+        for base_dir in get_yapocis_dirs():
+            kernel_path = os.path.join(base_dir, kernel_subdir, template_filename)
+            searched_paths.append(kernel_path)
+            if os.path.exists(kernel_path):
+                return kernel_path
+
+        raise FileNotFoundError(
+            f"Template not found for '{base_filename}' (backend={self._backend_name}). "
+            f"Searched: {', '.join(searched_paths)}"
         )
-
-        if not os.path.exists(kernel_path):
-            raise FileNotFoundError(
-                f"Template not found: {kernel_path} (backend={self._backend_name})"
-            )
-
-        return kernel_path
 
     def __init__(
         self,
@@ -419,7 +424,17 @@ class KernelManagerBase(ABC):
             Rendered kernel source code
         """
         tfilename = self.find_kernel_template(base_filename)
+        kernel_subdir = os.path.join("kernels", self._backend_name)
+
+        # Build template lookup directories:
+        # 1. Directory containing the found template (for extension templates)
+        # 2. All yapocis kernel directories (for base templates like constants.mako)
         template_directories = [os.path.dirname(tfilename)]
+        for base_dir in get_yapocis_dirs():
+            kernel_dir = os.path.join(base_dir, kernel_subdir)
+            if os.path.isdir(kernel_dir) and kernel_dir not in template_directories:
+                template_directories.append(kernel_dir)
+
         mako_modules = os.path.join(
             get_yapocis_dir(), "mako_modules", self._backend_name
         )
