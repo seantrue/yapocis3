@@ -4,14 +4,14 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Summary Statistics
 
-- **Total AI-assisted commits**: ~30
+- **Total AI-assisted commits**: ~31
 - **Major features developed with AI assistance**:
   - Infrastructure: Package modernization (hatchling, modern tooling), automated changelog generation, type annotation modernization, release automation system
   - Backend work: CUDA kernel compilation fixes, CUDA row-major addressing fixes, Metal backend fixes, coordinate system standardization, Numba backend completeness, truetrace kernel port, separable convolution boundary fix
   - Testing: Validation framework, StopWatcher enhancements, test isolation fixes, NPZ analysis tooling, test determinism fixes
   - Performance: Performance tracking system, DuckDB migration, reproducibility improvements
   - Code quality: Test refactoring, random data centralization, Python 3.9+ type modernization, HSI alpha channel handling
-  - Developer experience: Environment variable standardization, enhanced backend/device listing, PyPI publishing workflow
+  - Developer experience: Environment variable standardization, enhanced backend/device listing, PyPI publishing workflow, extension project scaffolding, .pyi stub generation
   - Documentation: Complete documentation rewrite with executable examples, doctest validation tool
 - **Lines of code**:
   - ~12,200 lines: Documentation rewrite with executable examples (2025-12-03)
@@ -30,8 +30,26 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~25 lines: Separable convolution boundary fix (2025-10-17)
   - ~470 lines: Release automation system (2025-10-31)
   - ~40 lines: Numbax composite bounds fix (2025-11-30)
+  - ~1870 lines: Extension project support, enhanced imageops, stub generation (2026-03-05)
 
 ## Detailed Contributions
+
+### 2026-03-05: Extension Project Support, Enhanced Imageops, and Improved Tooling
+
+**AI Contribution (Claude):**
+- Multi-directory template/kernel search for YAPOCIS_PROJECT support across all backends (kmgr_base, metallic, numbax)
+- Moved histeq from channels to Imageops, added histmatch, clamp_pixels, stretch, binarize methods
+- Extension project scaffolding command (`yapocis-tools scaffold`)
+- .pyi stub generation for all interfaces (`--stubs`, `--write-lib` flags)
+- Comprehensive histeq/histmatch test suite
+- Documentation updates: switched to sphinx_rtd_theme, updated library docs
+- Updated show_array utility to accept queue_dir and return Path
+- Condensed CLAUDE.md
+
+**Human Contribution:**
+- Architecture decisions for extension project structure
+- Review and direction for imageops API design
+- Backend selection and testing strategy
 
 ### 2025-12-03: Complete Documentation Rewrite with Executable Examples
 
