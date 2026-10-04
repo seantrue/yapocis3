@@ -54,6 +54,8 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 **Human Contribution:**
 - Directed the test-then-ship workflow (CPMD).
 
+**Release:** shipped as v0.3.9 (version bump and CHANGELOG entry by Claude; the previously unlabeled documentation block in CHANGELOG was labeled 0.3.8 to match the 2025-12-03 bump).
+
 ### 2026-03-05: Extension Project Support, Enhanced Imageops, and Improved Tooling
 
 **AI Contribution (Claude):**
