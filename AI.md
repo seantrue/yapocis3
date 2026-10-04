@@ -1,5 +1,7 @@
 # AI Contributions to Yapocis
 
+*About AI slop.* Fair cop — a good share of this file, and of the kernels and tooling it describes, came out of a machine. Think of it as instant ramen: quick, cheap, genuinely edible, and not something that simmered on the stove all day. The honest reply isn't a claim about quality; it's the record below — what the maintainer asked for, what the model wrote, and where AI-written code was wrong, including the defects the cross-backend test suite caught before they shipped. Bon appétit, but mind the sodium content.
+
 This document tracks contributions made by AI assistants (primarily Claude) versus the human maintainer.
 
 ## Summary Statistics
@@ -31,8 +33,26 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~470 lines: Release automation system (2025-10-31)
   - ~40 lines: Numbax composite bounds fix (2025-11-30)
   - ~1870 lines: Extension project support, enhanced imageops, stub generation (2026-03-05)
+  - ~270 lines: Colorspace matrix/xyY fixes and content-keyed Mako module cache (2026-10-04, colleague-authored; AI verified)
 
 ## Detailed Contributions
+
+### 2026-10-04: Colorspace Fixes and Content-Keyed Kernel Template Cache
+
+**Colleague Contribution (authored the fix):**
+- `colormath` `transform` kernels (OCL, Metal, CUDA, Numba): the 3x3 matrices in `transforms[]` are stored column by column, but the kernels read them row by row, so every RGB↔XYZ working-space conversion applied the transposed matrix. The dead `TRANSPOSE` switch was removed and the column-major gather made unconditional; Numba's `_transform_njit` and fallback `v @ m.T` were changed to match.
+- `xyz2xyY` wrote Z instead of Y into the third channel, and `xyY2xyz` swapped the Y and Z outputs (OCL, Metal, CUDA).
+- `kmgr_base.kernel_template_lookup`: compiled Mako modules are named by the MD5 of the template source, so an edit landing in the same whole second as the last compile (e.g. `git stash pop`) can no longer silently reuse a stale module. Old modules for a template are removed when a new digest appears.
+- Tests: value tests for sRGB→XYZ (D65 white, primaries), round-trip and white-Y=1 for every working space, xyY values and round-trip (~49 LOC in `test_colormath.py`); `tests/backend/test_kernel_template_cache.py` (~65 LOC); `tests/lib/processing/test_hsi2rgb_clamp.py` bounds/round-trip checks for `hsi2rgb` (~104 LOC). Source changes ~55 LOC net across five files.
+- The existing colormath tests only displayed images, which is how the transposed matrices and misplaced xyY components went unnoticed.
+
+**AI Contribution (Claude):**
+- Ran the targeted tests (37 passed across ocl/metal/numbax) and the full non-performance suite with and without the change. Both runs show the same 38 failures (graphics4 icons, alpha blending, antialiasing, mplbackend comparisons, tools CLI, Metal compile smoke tests, `test_hires`, `histeq_hsi_roundtrip[ocl]`, `vimp_common`); with the change, 970 tests pass versus 957 at HEAD, and no test regresses.
+- Ruled out: an initial baseline run reported zero failures only because collection aborted on the new cache test, which imports a function that doesn't exist at HEAD; the baseline was rerun with that file moved aside.
+- Applied isort/black to the changed Python files.
+
+**Human Contribution:**
+- Directed the test-then-ship workflow (CPMD).
 
 ### 2026-03-05: Extension Project Support, Enhanced Imageops, and Improved Tooling
 

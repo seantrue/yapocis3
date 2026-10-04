@@ -40,6 +40,8 @@ The base class handles:
   - Module-level factory methods (load_program, import_program)
 """
 
+import glob
+import hashlib
 import os
 from abc import ABC, abstractmethod
 from collections.abc import Callable
@@ -53,6 +55,38 @@ from yapocis.core.interface import Interface, get_interface, load_interface
 from yapocis.core.interface_context import get_interface_context
 from yapocis.utils.internals import get_yapocis_dir, get_yapocis_dirs
 from yapocis.utils.stereo_typing import Context
+
+
+def kernel_template_lookup(
+    directories: list[str], module_directory: str
+) -> TemplateLookup:
+    """A Mako TemplateLookup whose compiled modules are named by the MD5 of their template.
+
+    Mako reuses a compiled module unless the template's whole-second mtime is newer than the
+    module's, so an edit made in the same second as the last compile (a checkout, a
+    ``git stash pop``) silently ran the old kernel. Naming each module
+    ``<template>.<md5 of its source>.py`` makes reusing a stale module impossible; when a new
+    digest is named, that template's other compiled modules are removed.
+    """
+
+    def modulename(filename: str, uri: str) -> str:
+        with open(filename, "rb") as f:
+            digest = hashlib.md5(f.read()).hexdigest()
+        base = os.path.join(module_directory, os.path.normpath(uri.lstrip("/")))
+        path = f"{base}.{digest}.py"
+        for old in [*glob.glob(f"{glob.escape(base)}.*.py"), f"{base}.py"]:
+            if old != path and os.path.exists(old):
+                try:
+                    os.remove(old)
+                except OSError:
+                    pass  # another process may have removed or be replacing it
+        return path
+
+    return TemplateLookup(
+        directories=directories,
+        module_directory=module_directory,
+        modulename_callable=modulename,
+    )
 
 
 class KernelManagerBase(ABC):
@@ -438,9 +472,7 @@ class KernelManagerBase(ABC):
         mako_modules = os.path.join(
             get_yapocis_dir(), "mako_modules", self._backend_name
         )
-        mylookup = TemplateLookup(
-            directories=template_directories, module_directory=mako_modules
-        )
+        mylookup = kernel_template_lookup(template_directories, mako_modules)
         filename = os.path.split(tfilename)[-1]
         t = mylookup.get_template(filename)
         source = str(t.render(**context))

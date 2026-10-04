@@ -203,20 +203,14 @@ __constant float transforms[] =
     0,0,1
 };
 
-//#define TRANSPOSE
-
 extern "C" __kernel void transform(float *input, int transform_id, float *output) {
     size_t i = get_global_id(0)*3;
     size_t tid  = transform_id*9;
-#ifndef TRANSPOSE
-    float3 a = make_float3(transforms[tid+0],transforms[tid+1],transforms[tid+2]);
-    float3 b = make_float3(transforms[tid+3],transforms[tid+4],transforms[tid+5]);
-    float3 c = make_float3(transforms[tid+6],transforms[tid+7],transforms[tid+8]);
-#else
+    // transforms[] stores each 3x3 matrix column by column, so the rows a, b, c are
+    // gathered across it; vxm3 then dots the pixel with each row.
     float3 a = make_float3(transforms[tid+0],transforms[tid+3],transforms[tid+6]);
     float3 b = make_float3(transforms[tid+1],transforms[tid+4],transforms[tid+7]);
     float3 c = make_float3(transforms[tid+2],transforms[tid+5],transforms[tid+8]);
-#endif
     float3 rgb = make_float3(input[i], input[i+1], input[i+2]);
     float3 xyz = vxm3(rgb, a, b, c);
     output[i]   = xyz.x;
@@ -235,7 +229,7 @@ extern "C" __kernel void xyz2xyY(float *input, float *output) {
     float sum = x+y+z;
     output[i]   = x/sum;
     output[i+1] = y/sum;
-    output[i+2] = z;
+    output[i+2] = y;
 }
 
 // X = x*Y/y
@@ -249,6 +243,6 @@ extern "C" __kernel void xyY2xyz(float *input, float *output) {
     float X = x*Y/y;
     float Z = ((1.0-x-y)*Y)/y;
     output[i]   = y != 0.0 ? X : 0.0;
-    output[i+2] = y != 0.0 ? Y : 0.0;
-    output[i+1] = y != 0.0 ? Z: 0.0;
+    output[i+1] = y != 0.0 ? Y : 0.0;
+    output[i+2] = y != 0.0 ? Z : 0.0;
 }

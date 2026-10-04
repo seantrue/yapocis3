@@ -152,3 +152,52 @@ def test_xyY(backend, monkeypatch):
         with sw.checkpoint("2rgb"):
             rgb2 = cm.transform_named("adobe1998_d65.xyz2rgb", xyz2)
         sw.showcheck(rgb2)
+
+
+# Correctness, not just display: the tests above only show images, which let a transposed
+# matrix and misplaced xyY components through unnoticed.
+
+
+def _pixels(*rgb):
+    return np.ascontiguousarray(np.array([rgb], dtype=np.float32).reshape(1, -1, 3))
+
+
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_srgb_matrix_values(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+    cm = Colormath()
+    xyz = cm.transform_named(
+        "srgb_d65.rgb2xyz", _pixels((1, 1, 1), (1, 0, 0), (0, 1, 0))
+    )
+    np.testing.assert_allclose(xyz[0, 0], [0.9505, 1.0, 1.089], atol=2e-3)  # D65 white
+    np.testing.assert_allclose(xyz[0, 1], [0.4124, 0.2126, 0.0193], atol=1e-3)  # red
+    np.testing.assert_allclose(xyz[0, 2], [0.3576, 0.7152, 0.1192], atol=1e-3)  # green
+
+
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_every_working_space_inverts(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+    cm = Colormath()
+    rgb = np.ascontiguousarray(
+        np.random.default_rng(0).random((8, 8, 3), dtype=np.float32)
+    )
+    spaces = sorted({name.split(".")[0] for name in transform_names if "." in name})
+    for space in spaces:
+        xyz = cm.transform_named(f"{space}.rgb2xyz", rgb.copy())
+        back = cm.transform_named(f"{space}.xyz2rgb", np.ascontiguousarray(xyz))
+        np.testing.assert_allclose(back, rgb, atol=1e-4, err_msg=space)
+        # Y of white is 1 in every space (the matrices are normalized to their white point)
+        white = cm.transform_named(f"{space}.rgb2xyz", _pixels((1, 1, 1)))
+        assert abs(white[0, 0, 1] - 1.0) < 2e-3, space
+
+
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_xyY_values_and_round_trip(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+    cm = Colormath()
+    xyz = _pixels((0.3, 0.6, 0.1), (0.2, 0.25, 0.5))
+    xyY = cm.xyz2xyY(xyz.copy())
+    np.testing.assert_allclose(xyY[0, 0], [0.3, 0.6, 0.6], atol=1e-6)
+    np.testing.assert_allclose(xyY[0, 1], [0.2 / 0.95, 0.25 / 0.95, 0.25], atol=1e-6)
+    back = cm.xyY2xyz(np.ascontiguousarray(xyY))
+    np.testing.assert_allclose(back, xyz, atol=1e-5)

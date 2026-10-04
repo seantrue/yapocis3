@@ -211,15 +211,11 @@ kernel void transform(const device float *input [[ buffer(0) ]],
                       uint i [[ thread_position_in_grid ]]) {
     size_t idx = i*3;
     size_t tid  = (size_t)transform_id*9;
-#ifndef TRANSPOSE
-    float3 a = float3(transforms[tid+0],transforms[tid+1],transforms[tid+2]);
-    float3 b = float3(transforms[tid+3],transforms[tid+4],transforms[tid+5]);
-    float3 c = float3(transforms[tid+6],transforms[tid+7],transforms[tid+8]);
-#else
+    // transforms[] stores each 3x3 matrix column by column, so the rows a, b, c are
+    // gathered across it; vxm3 then dots the pixel with each row.
     float3 a = float3(transforms[tid+0],transforms[tid+3],transforms[tid+6]);
     float3 b = float3(transforms[tid+1],transforms[tid+4],transforms[tid+7]);
     float3 c = float3(transforms[tid+2],transforms[tid+5],transforms[tid+8]);
-#endif
     float3 rgb = float3(input[idx], input[idx+1], input[idx+2]);
     float3 xyz = vxm3(rgb, a, b, c);
     output[idx]   = xyz.x;
@@ -240,7 +236,7 @@ kernel void xyz2xyY(const device float *input [[ buffer(0) ]],
     float sum = x+y+z;
     output[idx]   = x/sum;
     output[idx+1] = y/sum;
-    output[idx+2] = z;
+    output[idx+2] = y;
 }
 
 // X = x*Y/y
@@ -256,6 +252,6 @@ kernel void xyY2xyz(const device float *input [[ buffer(0) ]],
     float X = x*Y/(y);
     float Z = ((1.0-x-y)*Y)/(y);
     output[idx]   = y != 0.0 ? X : 0.0;
-    output[idx+2] = y != 0.0 ? Y : 0.0;
-    output[idx+1] = y != 0.0 ? Z: 0.0;
+    output[idx+1] = y != 0.0 ? Y : 0.0;
+    output[idx+2] = y != 0.0 ? Z : 0.0;
 }
