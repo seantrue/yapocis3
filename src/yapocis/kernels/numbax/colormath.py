@@ -540,9 +540,10 @@ def _transform_njit(input: np.ndarray, transform_id: int, output: np.ndarray) ->
         x = vin[i, 0]
         y = vin[i, 1]
         z = vin[i, 2]
-        vout[i, 0] = m00 * x + m01 * y + m02 * z
-        vout[i, 1] = m10 * x + m11 * y + m12 * z
-        vout[i, 2] = m20 * x + m21 * y + m22 * z
+        # _TRANSFORMS stores each matrix column by column (as kernels/colormath.mako does)
+        vout[i, 0] = m00 * x + m10 * y + m20 * z
+        vout[i, 1] = m01 * x + m11 * y + m21 * z
+        vout[i, 2] = m02 * x + m12 * y + m22 * z
 
 
 def transform(input: np.ndarray, transform_id: int, output: np.ndarray):
@@ -551,7 +552,7 @@ def transform(input: np.ndarray, transform_id: int, output: np.ndarray):
     else:
         m = _mat_for(transform_id)
         v = input.reshape(-1, 3)
-        out = (v @ m.T).astype(np.float32)
+        out = (v @ m).astype(np.float32)  # m is stored column by column
         output[:] = out.reshape(output.shape)
     return output
 
