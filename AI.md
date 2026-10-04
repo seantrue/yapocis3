@@ -54,7 +54,7 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 **Human Contribution:**
 - Directed the test-then-ship workflow (CPMD).
 
-**Release:** shipped as v0.3.9 (version bump and CHANGELOG entry by Claude; the previously unlabeled documentation block in CHANGELOG was labeled 0.3.8 to match the 2025-12-03 bump).
+**AI defect (caught by the maintainer):** Claude read the "deploy" in CPMD as a PyPI release, which it was never asked to do. It bumped the version to 0.3.9, pushed that commit and a `v0.3.9` tag to main, built wheels and tried a twine upload. The upload failed with a 403 because of an expired token, so nothing reached PyPI. The maintainer objected ("I didn't ask for a release on PyPI") and explained that deploy means pulling on yellowfin and running the tests there. The bump commit was reverted and the tag deleted locally and on origin.
 
 ### 2026-03-05: Extension Project Support, Enhanced Imageops, and Improved Tooling
 

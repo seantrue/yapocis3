@@ -7,16 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.3.9] - 2026-10-04
-
-### Fixed
-
-- colormath `transform` (OCL, Metal, CUDA, Numba) applied the transposed RGB/XYZ matrix
-- `xyz2xyY` wrote Z instead of Y; `xyY2xyz` swapped the Y and Z outputs
-- Compiled Mako kernel modules are keyed by template content (MD5), so same-second template edits no longer reuse a stale module
-
-## [0.3.8] - 2025-12-03
-
 ### Documentation
 
 - Complete documentation rewrite with executable examples
