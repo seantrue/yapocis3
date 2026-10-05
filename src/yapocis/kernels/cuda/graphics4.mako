@@ -1,12 +1,11 @@
 <%include file="constants.mako"/>
+#define DXDY2
 <%include file="helpers.mako"/>
 
 // Kernels for operating on HxWx4 arrays
 // array[,,3] is the "alpha" channel
 // The alpha channel is ignored (but must be present) for the input/output array (a)
 // Colors are [N,4] where color[,3] is the alpha and is _not_ ignored
-
-#define DXDY2
 
 #define ONES ONE4
 #define ZEROS ZERO4

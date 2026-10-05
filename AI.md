@@ -37,6 +37,16 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2026-10-04: CUDA Helpers Made Opt-In (fixes CUDA compile on main)
+
+**Origin:** These changes were found uncommitted in the yellowfin working tree. Who wrote them isn't recorded there. Claude committed them at the maintainer's request.
+
+**What it fixes:** On main, `cuda/helpers.mako` defined `dot3`, `vxm3` and `dxdy2` unconditionally, so the HSI kernel source failed under nvcc with `function "dot3" has already been defined`. The failed compile also left the CUDA context unusable for the rest of the pytest process, so most later CUDA tests failed with `cuModuleGetFunction failed: an illegal memory access was encountered`. The fix wraps each helper in `#ifdef DOT3/VXM3/DXDY2`, and each kernel template (`colormath`, `graphics`, `graphics4`, `hsi`) defines the helpers it needs before including `helpers.mako` (~14 LOC across five files).
+
+**Investigation (Claude):** Clean main on yellowfin: 709 passed, 297 failed. Main plus these changes (and the uncommitted test tolerance changes): 948 passed, 58 failed, and no test failed only with the changes. Both runs had `nvcc` (CUDA 12.5) on PATH. The bug never showed on the Mac because the Mac has no CUDA, so main's CUDA kernels were never compiled there. The yellowfin test-tolerance increases (10 to 25 in three mplbackend and graphics test files) were deliberately left out of this commit.
+
+**Second commit: `yapocis-cuda-cards` and environment.** This was also found uncommitted on yellowfin, with authorship not recorded. It adds `src/yapocis/scripts/cuda_cards.py` (~1,040 LOC), a per-card, per-toolkit CUDA benchmark. Each (toolkit, card) pair runs in its own subprocess with the card pinned by UUID; the script writes md/pdf/json reports and records results in the performance DuckDB. It also adds `activate.sh` (~23 LOC) for the yellowfin Python 3.10 virtualenv, plus pyopencl/pycuda/numba dependencies and the `yapocis-cuda-cards` entry point in `pyproject.toml`, with `uv.lock` updated to match (`uv lock --check` passes with it and fails with the previous lock). Claude resolved the `pyproject.toml` and `CLAUDE.md` merge conflicts against the upstream versions (it kept both dependency sets, and added the cuda-cards lines to the condensed CLAUDE.md CLI section). The benchmark itself was not run or reviewed in this session.
+
 ### 2026-10-04: Colorspace Fixes and Content-Keyed Kernel Template Cache
 
 **Colleague Contribution (authored the fix):**

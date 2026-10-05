@@ -46,6 +46,9 @@ dependencies = [
     "idna>=3.7",
     "pyrefly>=0.45.1",
     "ty>=0.0.1a33",
+    "pyopencl>=2025.2.6",
+    "pycuda>=2025.1.2",
+    "numba>=0.62.1",
 ]
 
 [project.urls]
@@ -147,6 +150,7 @@ yapocis-queue = "yapocis.scripts.queue_check:main"
 yapocis-report = "yapocis.scripts.report:main"
 yapocis-validate = "yapocis.scripts.validate:main"
 yapocis-performance = "yapocis.scripts.performance:main"
+yapocis-cuda-cards = "yapocis.scripts.cuda_cards:main"
 yapocis-doctest = "yapocis.scripts.doctest_examples:main"
 
 [build-system]

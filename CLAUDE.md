@@ -125,6 +125,8 @@ yapocis-tools backends              # List backends and devices
 yapocis-tools interfaces --list     # List interfaces
 yapocis-validate info               # Validation system status
 yapocis-report                      # Performance reports
+yapocis-cuda-cards --list           # Per-card CUDA benchmark: show cards, toolkits, plan
+yapocis-cuda-cards                  # 12 on all cards, 13 on the 3060; writes performance/cuda_cards_<stamp>.*
 yapocis-imagewatcher                # Image viewer for debugging
 ```
 
