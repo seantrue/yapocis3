@@ -45,6 +45,8 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 **Investigation (Claude):** Clean main on yellowfin: 709 passed, 297 failed. Main plus these changes (and the uncommitted test tolerance changes): 948 passed, 58 failed, and no test failed only with the changes. Both runs had `nvcc` (CUDA 12.5) on PATH. The bug never showed on the Mac because the Mac has no CUDA, so main's CUDA kernels were never compiled there. The yellowfin test-tolerance increases (10 to 25 in three mplbackend and graphics test files) were deliberately left out of this commit.
 
+**Second commit: `yapocis-cuda-cards` and environment.** This was also found uncommitted on yellowfin, with authorship not recorded. It adds `src/yapocis/scripts/cuda_cards.py` (~1,040 LOC), a per-card, per-toolkit CUDA benchmark. Each (toolkit, card) pair runs in its own subprocess with the card pinned by UUID; the script writes md/pdf/json reports and records results in the performance DuckDB. It also adds `activate.sh` (~23 LOC) for the yellowfin Python 3.10 virtualenv, plus pyopencl/pycuda/numba dependencies and the `yapocis-cuda-cards` entry point in `pyproject.toml`, with `uv.lock` updated to match (`uv lock --check` passes with it and fails with the previous lock). Claude resolved the `pyproject.toml` and `CLAUDE.md` merge conflicts against the upstream versions (it kept both dependency sets, and added the cuda-cards lines to the condensed CLAUDE.md CLI section). The benchmark itself was not run or reviewed in this session.
+
 ### 2026-10-04: Colorspace Fixes and Content-Keyed Kernel Template Cache
 
 **Colleague Contribution (authored the fix):**
