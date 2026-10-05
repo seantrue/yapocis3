@@ -1,4 +1,5 @@
 <%include file="constants.mako"/>
+#define DXDY2
 <%include file="helpers.mako"/>
 
 /* Kernels that implement graphics primitives against a float array.
@@ -19,7 +20,6 @@
  * colors.  The coordinates are in the same coordinate system as the
  * float array, and the colors are in the range [0,1].
  */
-#define DXDY2
 
 extern "C" __kernel
 void lines(int width, int height,  READWRITE float *a, int nelements, READONLY float2 *coords, READONLY float *rdist, READONLY float *aa_widths, READONLY float2 *colors)

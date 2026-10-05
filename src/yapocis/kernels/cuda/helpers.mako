@@ -14,19 +14,25 @@
 
 #define ABS(x) (((x) < 0) ? -(x) : (x))
 
+#ifdef DXDY2
 static __device__ __inline__ float dxdy2(float2 a, float2 b) {
     float2 dxdy =  (a-b)*(a-b);
     return dxdy.x + dxdy.y;
 }
+#endif
 
+#ifdef DOT3
 static __device__ __inline__ float dot3(float3 a, float3 b) {
    return (float) (a.x*b.x + a.y*b.y + a.z*b.z);
 }
+#endif
 
+#ifdef VXM3
 static __device__ __inline__ float3 vxm3(float3 v, float3 a, float3 b, float3 c) {
     float3 result = make_float3(dot3(v,a), dot3(v,b), dot3(v,c));
     return result;
 }
+#endif
 
 #ifdef DEBUG
 static __inline void p3(__constant char *s, float3 v) {

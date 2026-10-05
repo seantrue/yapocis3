@@ -1,11 +1,10 @@
 <%include file="constants.mako"/>
+#define DOT3
 <%include file="helpers.mako"/>
 
 // https://stackoverflow.com/questions/15095909/from-rgb-to-hsv-in-opengl-glsl
 // For color math, see: http://www.brucelindbloom.com/index.html?Math.html
 // For white points, see: https://en.wikipedia.org/wiki/Standard_illuminant
-
-#define DOT3
 
 #define eps 1.0e-10
 
