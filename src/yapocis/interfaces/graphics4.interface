@@ -8,6 +8,10 @@ interface graphics4 {
     extension res as circles(width_of a, height_of a, resident float a, width_of lines, in float lines, in float aa_width, in float rcolor);
     kernel triangles(width_of a, height_of a, inout float a, width_of lines, in float lines, in float aa_width, in float rcolor);
     extension res as triangles(width_of a, height_of a, resident float a, width_of lines, in float lines, in float aa_width, in float rcolor);
+    # Triangles of a mesh (a triangulated polygon), with a top-left fill rule: a pixel on
+    # an edge shared by two triangles belongs to only one of them
+    kernel mesh_triangles(width_of a, height_of a, inout float a, width_of lines, in float lines, in float aa_width, in float rcolor);
+    extension res as mesh_triangles(width_of a, height_of a, resident float a, width_of lines, in float lines, in float aa_width, in float rcolor);
     kernel ellipses(width_of a, height_of a, inout float a, width_of lines, in float lines, in float aa_width, in float rcolor);
     extension res as ellipses(width_of a, height_of a, resident float a, width_of lines, in float lines, in float aa_width, in float rcolor);
     kernel composite(width_of a, height_of a, inout float a, width_of lines, in int lines, in float pixels, in int ipixels,  width_of pixels);

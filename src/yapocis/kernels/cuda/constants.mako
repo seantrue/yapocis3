@@ -9,6 +9,12 @@ __device__ __forceinline__ int get_global_id_x(){return blockIdx.x*blockDim.x+th
 __device__ __forceinline__ int get_global_id_y(){return blockIdx.y*blockDim.y+threadIdx.y;}
 __device__ __forceinline__ int get_global_id_z(){return blockIdx.z*blockDim.z+threadIdx.z;}
 #define get_global_id(N) ( (N)==0 ? get_global_id_x() : ( (N)==1 ? get_global_id_y() : get_global_id_z() ) )
+// The launcher rounds the grid up to whole blocks, so threads can run past the
+// end of the arrays. A kernel whose parameter list ends with GLOBAL_SIZE_PARAM
+// is passed the real global size (see cu/kernel.py) and should start with
+// RETURN_IF_OUTSIDE(get_global_id(0)).
+#define GLOBAL_SIZE_PARAM , unsigned long long yapocis_global_size
+#define RETURN_IF_OUTSIDE(i) if ((unsigned long long)(i) >= yapocis_global_size) return;
 __device__ __forceinline__ int clampi(int v,int lo,int hi){return max(lo,min(hi,v));}
 __device__ __forceinline__ float clampf(float v,float lo,float hi){return fminf(hi,fmaxf(lo,v));}
 __device__ __forceinline__ float clamp(float v,float lo,float hi){return fminf(hi,fmaxf(lo,v));}

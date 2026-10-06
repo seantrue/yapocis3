@@ -7,6 +7,7 @@ Helpers around the PyCUDA wrappers for CUDA
 import atexit
 import os
 import sys
+from contextlib import contextmanager
 
 import pycuda.driver as cuda
 
@@ -64,6 +65,24 @@ class DeviceManager(DeviceManagerBase):
                 ctx, stream, device_name_str, device, timed=timed, **kwargs
             )
 
+    @contextmanager
+    def activated(self):
+        """Make this device's context current for the block, then restore.
+
+        make_context() leaves the most recently created context current, so
+        with several devices every module load, allocation, copy and launch
+        must select its own context, or it runs in (or mixes handles with)
+        another device's context: "invalid resource handle".
+        """
+        if cuda.Context.get_current() == self.ctx:
+            yield
+            return
+        self.ctx.push()
+        try:
+            yield
+        finally:
+            cuda.Context.pop()
+
     def build(self, source: str, options: list[str] | None = None) -> SourceModule:
         """
         Compile CUDA source code.
@@ -88,9 +107,10 @@ class DeviceManager(DeviceManagerBase):
         options = default_options if options is None else options
 
         # Compile the source module (no_extern_c=True to allow C++ templates)
-        module = SourceModule(
-            source, options=options, cache_dir=YAPOCIS_CACHE, no_extern_c=True
-        )
+        with self.activated():
+            module = SourceModule(
+                source, options=options, cache_dir=YAPOCIS_CACHE, no_extern_c=True
+            )
         return module
 
     # Implement abstract methods from DeviceManagerBase
@@ -99,7 +119,8 @@ class DeviceManager(DeviceManagerBase):
         if not a.data.contiguous:
             raise RuntimeError(f"Array {id(a)} {a.shape} is not contiguous")
         # Create a GPUArray from the numpy array
-        buf = gpuarray.to_gpu_async(a, stream=self.queue)
+        with self.activated():
+            buf = gpuarray.to_gpu_async(a, stream=self.queue)
         buffer_id = id(a)
         self.arrays[buffer_id] = a
         self.buffers[buffer_id] = buf
@@ -109,8 +130,9 @@ class DeviceManager(DeviceManagerBase):
         """Read PyCUDA GPUArray back to numpy array."""
         buf = self.find_buffer(a, self.READ)
         # Copy from GPU to host
-        buf.get_async(self.queue, ary=a)
-        self.queue.synchronize()
+        with self.activated():
+            buf.get_async(self.queue, ary=a)
+            self.queue.synchronize()
         return a
 
     def write_buffer(self, a: Array, wait: bool = True) -> gpuarray.GPUArray:
@@ -132,11 +154,12 @@ class DeviceManager(DeviceManagerBase):
             as "transfers" are essentially pointer operations.
         """
         buf = self.ensure_buffer(a)
-        # Copy from host to GPU using async transfer
-        buf.set_async(a, stream=self.queue)
-        if wait:
-            # Synchronous mode: block until transfer completes
-            self.queue.synchronize()
+        with self.activated():
+            # Copy from host to GPU using async transfer
+            buf.set_async(a, stream=self.queue)
+            if wait:
+                # Synchronous mode: block until transfer completes
+                self.queue.synchronize()
         # Async mode: return immediately, transfer continues in background
         return buf
 
@@ -177,8 +200,9 @@ class DeviceManager(DeviceManagerBase):
                     unique_streams.add(event)
 
             # Synchronize each unique stream
-            for stream in unique_streams:
-                stream.synchronize()
+            with self.activated():
+                for stream in unique_streams:
+                    stream.synchronize()
 
     def _free_buffer(self, buffer: gpuarray.GPUArray):
         """
@@ -203,7 +227,8 @@ class DeviceManager(DeviceManagerBase):
         try:
             # Synchronize stream to finish all pending operations
             if hasattr(self, "queue") and self.queue is not None:
-                self.queue.synchronize()
+                with self.activated():
+                    self.queue.synchronize()
         except cuda.Error:
             # Stream may already be invalid - ignore
             pass

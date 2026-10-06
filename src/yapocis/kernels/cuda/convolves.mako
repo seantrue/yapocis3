@@ -13,6 +13,7 @@ void ${name}(int width, float* a, float* ret )
     size_t right;
     right = width-${left};
     i = get_global_id(0);
+    if (i >= (size_t)width) return;
     sum = 0.0;
     if ((i > ${left}) &&  (i < right)) {
 	%for j in range(len(conv)):

@@ -9,12 +9,13 @@ from matplotlib.backend_bases import (
     GraphicsContextBase,
     RendererBase,
 )
+from matplotlib.backends.backend_agg import get_hinting_flag
 from matplotlib.figure import Figure
+from matplotlib.font_manager import findfont, get_font
 from matplotlib.mathtext import MathTextParser
 from PIL import Image as PILImage
 
 from yapocis.lib.kerneldraw4 import KernelDraw4
-from yapocis.lib.typeset import extent_freetype
 from yapocis.utils.logging import get_logger
 
 log = get_logger("mplbackend")
@@ -33,6 +34,16 @@ class RendererTemplate(RendererBase):
         self.kd = KernelDraw4(a)
         # Initialize math text parser for rendering LaTeX-style math expressions
         self.mathtext_parser = MathTextParser("agg")
+
+    @staticmethod
+    def _kernel_line_width(width_pixels):
+        """Width to pass to KernelDraw4.line for a stroke width_pixels wide.
+
+        The lines kernel covers width/2 + 0.5 px on each side of the line, one pixel
+        more than width in all; passing width - 1 makes the stroke width_pixels wide,
+        as Agg draws it.
+        """
+        return max(width_pixels - 1.0, 0.0)
 
     def _draw_dashed_line(
         self, x1, y1, x2, y2, color, linewidth, dash_pattern, dash_offset
@@ -91,9 +102,7 @@ class RendererTemplate(RendererBase):
                 seg_y1 = y1 + uy * pos
                 seg_x2 = x1 + ux * end_pos
                 seg_y2 = y1 + uy * end_pos
-                line = np.array([seg_y1, seg_x1, seg_y2, seg_x2], dtype=np.float32)
-                self.kd.line(line, color=color, width=linewidth, aa_width=0.5)
-                pos = end_pos
+                line = np.array([seg_x1, seg_y1, seg_x2, seg_y2], dtype=np.float32)
                 self.kd.line(line, color=color, width=linewidth, aa_width=0.5)
                 pos = end_pos
             else:
@@ -129,9 +138,10 @@ class RendererTemplate(RendererBase):
             if (points[0, :] - points[-1, :]).sum() == 0.0:
                 # Closed polys have start,end point identical
                 closed_polygon_points.append(points)
-        # Get line width from graphics context and convert to pixels
+        # Get line width from graphics context and convert to pixels, as the lines
+        # kernel needs it
         linewidth = gc.get_linewidth()  # In points
-        linewidth_pixels = self.points_to_pixels(linewidth)
+        linewidth_pixels = self._kernel_line_width(self.points_to_pixels(linewidth))
 
         # Get line dash pattern from graphics context
         dash_offset, dash_pattern = gc.get_dashes()
@@ -144,8 +154,9 @@ class RendererTemplate(RendererBase):
             dash_pattern_pixels = None
             dash_offset_pixels = 0
 
-        # Draw outlines (lines) for all polygons
-        for points in polygon_points:
+        # Draw outlines (lines) for all polygons. A zero-width stroke draws nothing, as in
+        # Agg; the lines kernel would still cover half a pixel either side.
+        for points in polygon_points if linewidth > 0 else []:
             flat_points = points.ravel()
             # If we have a dash pattern, we need to draw dashed lines
             if dash_pattern_pixels:
@@ -166,10 +177,7 @@ class RendererTemplate(RendererBase):
             else:
                 # Draw solid lines
                 for i in range(points.shape[0] - 1):
-                    line = flat_points[i * 2 : i * 2 + 4]
-                    line = np.array(
-                        [line[1], line[0], line[3], line[2]], dtype=np.float32
-                    )
+                    line = np.array(flat_points[i * 2 : i * 2 + 4], dtype=np.float32)
                     self.kd.line(
                         line, color=color, width=linewidth_pixels, aa_width=0.5
                     )
@@ -185,22 +193,14 @@ class RendererTemplate(RendererBase):
                 earcut_lengths = np.cumsum(earcut_lengths)
                 simplices = earcut.triangulate_float32(earcut_points, earcut_lengths)
 
-                # Render all triangles with the face color
+                # Render all triangles with the face color as one mesh, hard-edged.
+                # Antialiasing fades every triangle edge inward, so shared edges showed
+                # as seams; mesh triangles draw each shared-edge pixel once, so
+                # translucent fills are not blended twice along them.
                 vertices = earcut_points[simplices]
                 for i in range(0, len(vertices), 3):
-                    triangle = vertices[i : i + 3].ravel()
-                    triangle = np.array(
-                        [
-                            triangle[1],
-                            triangle[0],
-                            triangle[3],
-                            triangle[2],
-                            triangle[5],
-                            triangle[4],
-                        ],
-                        dtype=np.float32,
-                    )
-                    self.kd.triangle(triangle, color=rgbFace, aa_width=0.5)
+                    triangle = np.array(vertices[i : i + 3].ravel(), dtype=np.float32)
+                    self.kd.mesh_triangle(triangle, color=rgbFace, aa_width=0.0)
 
         self.kd.render()
 
@@ -252,9 +252,8 @@ class RendererTemplate(RendererBase):
         # with row 0 at the top of the image region, we need to flip to match our canvas
         im = np.flipud(im)
 
-        # Composite image onto canvas
-        # composite expects (row, col) format, so pass (canvas_y, canvas_x)
-        self.kd.composite([(canvas_y, canvas_x)], [im])
+        # Composite image onto canvas at (x, y)
+        self.kd.composite([(canvas_x, canvas_y)], [im])
 
     def get_text_width_height_descent(self, s, prop, ismath):
         # Handle external LaTeX (not supported)
@@ -269,80 +268,73 @@ class RendererTemplate(RendererBase):
             )
             return width, height, descent
 
-        # Normal text rendering using FreeType
-        size = self.points_to_pixels(prop.get_size_in_points())
-        xmin, ymin, xmax, ymax = extent_freetype(s, "default", size=size)
-        w, h, d = xmax - xmin, ymax, abs(ymin)
-        # log.debug(f"get_text_width_height_descent {s} {prop} {xmin,ymin,xmax,ymax} -> {w,h,d}")
-        return w, h, d
+        # Normal text: Agg's metrics. Matplotlib lays text out with the advance width and
+        # the full height (ascent + descent), not the ink extent.
+        font = self._prepare_font(prop)
+        font.set_text(s, 0.0, flags=get_hinting_flag())
+        w, h = font.get_width_height()
+        return w / 64.0, h / 64.0, font.get_descent() / 64.0
+
+    def _prepare_font(self, prop):
+        """The FT2Font for prop (the figure's font, not a fixed one) at this dpi."""
+        font = get_font(findfont(prop))
+        font.clear()
+        font.set_size(prop.get_size_in_points(), self.dpi)
+        return font
 
     def draw_text(self, gc, x, y, s, prop, angle, ismath=False, mtext=None):
-
-        # Handle math text separately
+        # Text is rasterised and placed as Agg does, so output matches the Agg backend:
+        # (x, y) is the baseline start, and each branch finds the bitmap's bottom-left
+        theta = np.radians(angle)
         if ismath and ismath != "TeX":
-            # Parse and render math text to an image
             ox, oy, width, height, descent, font_image = self.mathtext_parser.parse(
-                s, self.dpi, prop
+                s, self.dpi, prop, antialiased=gc.get_antialiased()
             )
+            x = round(x + ox + descent * np.sin(theta))
+            y = round(y - oy + descent * np.cos(theta))
+            image = font_image
+        else:
+            # The figure's font at the exact (fractional) pixel size, Agg's hinting
+            font = self._prepare_font(prop)
+            font.set_text(s, 0, flags=get_hinting_flag())
+            font.draw_glyphs_to_bitmap(antialiased=gc.get_antialiased())
+            d = font.get_descent() / 64.0
+            xo, yo = (v / 64.0 for v in font.get_bitmap_offset())
+            x = round(x + xo + d * np.sin(theta))
+            y = round(y + yo + d * np.cos(theta))
+            image = font.get_image()
+        self._draw_text_image(image, x, y + 1, angle, gc)
 
-            # Convert grayscale font_image to RGBA with color
-            if font_image is not None:
-                # Convert FT2Image to numpy array
-                font_array = np.asarray(font_image)
-                h, w = font_array.shape[:2]
-                rgba_image = np.zeros((h, w, 4), dtype=np.float32)
-
-                # Apply text color from graphics context
-                color = gc._rgb
-                if len(color) == 3:
-                    color = list(color) + [1.0]  # Add alpha
-
-                # Set RGB channels to text color
-                rgba_image[:, :, 0] = color[0]
-                rgba_image[:, :, 1] = color[1]
-                rgba_image[:, :, 2] = color[2]
-
-                # Use font_array as alpha channel (normalize to 0-1)
-                rgba_image[:, :, 3] = font_array.astype(np.float32) / 255.0
-
-                # Convert from baseline position to top-left for composite
-                # y is baseline in canvas coords (y=0 at top)
-                # For composite, we need the top-left corner of the image
-                # top of text image is (height - descent) pixels above the baseline
-                # So: y_top = y - (height - descent)
-                y_top = y - (height - descent)
-
-                # Composite the math text image onto the canvas
-                # composite expects (row, col) format
-                self.kd.composite([(y_top, x)], [rgba_image])
-
+    def _draw_text_image(self, image, x, y, angle, gc):
+        """Composite a text coverage bitmap whose bottom-left corner is at (x, y)."""
+        if image is None:
             return
+        coverage = np.asarray(image).astype(np.float32) / 255.0
+        rows, cols = coverage.shape[:2]
+        if rows == 0 or cols == 0:
+            return
+        theta = np.radians(angle)
 
-        # Normal text rendering using FreeType
-        w, h, d = self.get_text_width_height_descent(s, prop, ismath)
-        size = self.points_to_pixels(prop.get_size_in_points())
+        if angle % 360 == 0:
+            top, left = y - rows, x
+        else:
+            # Agg rotates the bitmap counterclockwise about its bottom-left corner
+            rotated = PILImage.fromarray(coverage, mode="F").rotate(
+                angle, resample=PILImage.BILINEAR, expand=True
+            )
+            # Where the bottom-left corner lands in the expanded, rotated bitmap
+            dx, dy = -cols / 2.0, rows / 2.0
+            cx, cy = rotated.width / 2.0, rotated.height / 2.0
+            corner_x = cx + dx * np.cos(theta) + dy * np.sin(theta)
+            corner_y = cy - dx * np.sin(theta) + dy * np.cos(theta)
+            top, left = round(y - corner_y), round(x - corner_x)
+            coverage = np.asarray(rotated, dtype=np.float32)
 
-        # Matplotlib gives us the baseline position (already adjusted for va alignment)
-        # Convert from baseline to top-left corner
-        # Top of text = baseline - (h - d) where (h - d) is the ascent
-        y_top = y - (h - d)
-
-        # Render the text to get the RGBA block
-        # Use crop=False to preserve full bounding box for proper baseline alignment
-        from yapocis.lib.typeset import render_text
-
-        bbox, text_block = render_text(
-            s, font_name="default", size=int(size), rotation=angle, crop=False
-        )
-
-        # Apply color to the text block
-        rgba_block = np.empty((*text_block.shape, 4), dtype=np.float32)
-        rgba_block[:, :, :3] = text_block[:, :, np.newaxis] * np.array(gc._rgb[:3])
-        rgba_block[:, :, 3] = text_block * gc._rgb[3]
-
-        # Use composite directly to place text at exact position
-        # composite expects locations as (row, col) and handles positioning without offset
-        self.kd.composite([(int(np.round(y_top)), int(np.round(x)))], [rgba_block])
+        # composite blends straight (not premultiplied) colour by alpha
+        rgba_block = np.empty((*coverage.shape, 4), dtype=np.float32)
+        rgba_block[:, :, :3] = np.array(gc._rgb[:3])
+        rgba_block[:, :, 3] = coverage * gc._rgb[3]
+        self.kd.composite([(int(left), int(top))], [rgba_block])
 
     def flipy(self):
         # Return True to indicate canvas uses y-down coordinate system

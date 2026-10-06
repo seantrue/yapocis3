@@ -104,10 +104,10 @@ def show_arraygrad(title, image, theta, grad=None) -> None:
             dx = dxs[i // 10, j // 10]
             dy = dys[i // 10, j // 10]
             grd = grad[i // 10, j // 10]
-            x1, y1 = int(i - dx), int(j - dy)
-            x2, y2 = int(i + dx), int(j + dy)
+            row1, col1 = int(i - dx), int(j - dy)
+            row2, col2 = int(i + dx), int(j + dy)
             color = grd / 10.0
-            ad.line((x1, y1, x2, y2), distance=1.1, color=color, alpha=1)
+            ad.line((col1, row1, col2, row2), distance=1.1, color=color, alpha=1)
     ad.render()
     a = ad.read()
     show_array(a, title, normalize=False)

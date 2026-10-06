@@ -6,27 +6,21 @@ from yapocis.core import get_test_backends
 from yapocis.lib.graphics4 import Graphics4
 from yapocis.utils.stereo_typing import *
 
-from ...random_data import (  # Graphics4-specific imports
+from ...random_data import (  # Graphics4-specific imports  # Graphics4-specific imports  # Graphics4-specific imports  # Graphics4-specific imports
     components_to_colors,
-)
-from ...random_data import image_sprites_4ch as image_sprites
-from ...random_data import random_alpha_4ch as random_alpha
-from ...random_data import (  # Graphics4-specific imports
     random_circles,
-)
-from ...random_data import random_colors_4ch as random_colors
-from ...random_data import random_composites_4ch as random_composites
-from ...random_data import (  # Graphics4-specific imports
     random_ellipses,
     random_icons,
     random_lines,
     random_points,
-)
-from ...random_data import random_sprites_4ch as random_sprites
-from ...random_data import (  # Graphics4-specific imports
     random_texts,
     random_triangles,
 )
+from ...random_data import image_sprites_4ch as image_sprites
+from ...random_data import random_alpha_4ch as random_alpha
+from ...random_data import random_colors_4ch as random_colors
+from ...random_data import random_composites_4ch as random_composites
+from ...random_data import random_sprites_4ch as random_sprites
 from . import ASIZE, StopWatcher, double_shuffle, text_test_lines
 
 RED = [1, 0, 0, 1]

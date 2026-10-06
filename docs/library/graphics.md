@@ -70,6 +70,10 @@ Composite pre-rendered blocks onto the canvas.
 g.composite(canvas, locations, blocks)
 ```
 
+**Parameters:**
+- `locations` - List of (x, y) upper-left corners, x = column and y = row
+- `blocks` - List of (h, w, 4) RGBA arrays
+
 ### draw_strings
 
 Render text strings.

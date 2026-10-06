@@ -26,32 +26,21 @@ def _smoothstep(edge0: float, edge1: float, x: float) -> float:
 @njit(cache=True, fastmath=True)
 def _blend_rgba(dst: np.ndarray, x: int, y: int, rgba: np.ndarray):
     if 0 <= y < dst.shape[0] and 0 <= x < dst.shape[1]:
+        # Porter-Duff "over", as the OCL/Metal kernels compute it
         alpha_src = rgba[3]
-        alpha_dst = dst[y, x, 3]
-        alpha_out = alpha_src + alpha_dst * (1.0 - alpha_src)
-
-        # Standard alpha blending
-        if alpha_out > 0.0:
-            dst[y, x, 0] = (
-                rgba[0] * alpha_src + dst[y, x, 0] * alpha_dst * (1.0 - alpha_src)
-            ) / alpha_out
-            dst[y, x, 1] = (
-                rgba[1] * alpha_src + dst[y, x, 1] * alpha_dst * (1.0 - alpha_src)
-            ) / alpha_out
-            dst[y, x, 2] = (
-                rgba[2] * alpha_src + dst[y, x, 2] * alpha_dst * (1.0 - alpha_src)
-            ) / alpha_out
-            dst[y, x, 3] = alpha_out
-        # If alpha_out == 0, leave the destination pixel unchanged
+        dst[y, x, 0] = rgba[0] * alpha_src + dst[y, x, 0] * (1.0 - alpha_src)
+        dst[y, x, 1] = rgba[1] * alpha_src + dst[y, x, 1] * (1.0 - alpha_src)
+        dst[y, x, 2] = rgba[2] * alpha_src + dst[y, x, 2] * (1.0 - alpha_src)
+        dst[y, x, 3] = alpha_src + dst[y, x, 3] * (1.0 - alpha_src)
 
 
 @njit(cache=True, fastmath=True)
 def _draw_line_rgba(
     img: np.ndarray,
-    x0: int,
-    y0: int,
-    x1: int,
-    y1: int,
+    x0: float,
+    y0: float,
+    x1: float,
+    y1: float,
     width: float,
     aa_width: float,
     rgba: np.ndarray,
@@ -63,22 +52,19 @@ def _draw_line_rgba(
     vx = x1 - x0
     vy = y1 - y0
     seg2 = vx * vx + vy * vy + 1e-20
-    threshold = width * 0.5
+    # Same rule as the OCL/Metal/CUDA lines kernels: cover width/2 + 0.5 px either side,
+    # only alongside the segment (flat ends), strict inequality for hard edges
+    threshold = width * 0.5 + 0.5
     thr2 = threshold * threshold
     for y in range(ymin, ymax + 1):
         for x in range(xmin, xmax + 1):
             wx = x - x0
             wy = y - y0
             t = (wx * vx + wy * vy) / seg2
-            if t < 0:
-                px, py = x0, y0
-            elif t > 1:
-                px, py = x1, y1
-            else:
-                px = x0 + t * vx
-                py = y0 + t * vy
-            dx = x - px
-            dy = y - py
+            if t < 0.0 or t > 1.0:
+                continue
+            dx = x - (x0 + t * vx)
+            dy = y - (y0 + t * vy)
             dist2 = dx * dx + dy * dy
 
             if aa_width > 0.0:
@@ -94,55 +80,42 @@ def _draw_line_rgba(
                     _blend_rgba(img, x, y, aa_rgba)
             else:
                 # Hard edge (original behavior)
-                if dist2 <= thr2:
+                if dist2 < thr2:
                     _blend_rgba(img, x, y, rgba)
 
 
 @njit(cache=True, fastmath=True)
 def _draw_rect_rgba(
     img: np.ndarray,
-    x0: int,
-    y0: int,
-    x1: int,
-    y1: int,
+    x0: float,
+    y0: float,
+    x1: float,
+    y1: float,
     aa_width: float,
     rgba: np.ndarray,
 ):
-    if x0 <= x1:
-        xmin, xmax = int(x0), int(x1)
-    else:
-        xmin, xmax = int(x1), int(x0)
-    if y0 <= y1:
-        ymin, ymax = int(y0), int(y1)
-    else:
-        ymin, ymax = int(y1), int(y0)
-
-    # Expand bounds for anti-aliasing
-    if aa_width > 0.0:
-        xmin_draw = max(0, int(xmin - aa_width - 1))
-        xmax_draw = min(img.shape[1] - 1, int(xmax + aa_width + 1))
-        ymin_draw = max(0, int(ymin - aa_width - 1))
-        ymax_draw = min(img.shape[0] - 1, int(ymax + aa_width + 1))
-    else:
-        xmin_draw = max(0, xmin)
-        xmax_draw = min(img.shape[1] - 1, xmax)
-        ymin_draw = max(0, ymin)
-        ymax_draw = min(img.shape[0] - 1, ymax)
+    # Float edges, as the OCL/Metal/CUDA rects kernels use them; antialiasing fades
+    # inward from them, so only pixels inside are drawn
+    xmin, xmax = min(x0, x1), max(x0, x1)
+    ymin, ymax = min(y0, y1), max(y0, y1)
+    xmin_draw = max(0, int(np.ceil(xmin)))
+    xmax_draw = min(img.shape[1] - 1, int(np.floor(xmax)))
+    ymin_draw = max(0, int(np.ceil(ymin)))
+    ymax_draw = min(img.shape[0] - 1, int(np.floor(ymax)))
 
     if xmin_draw > xmax_draw or ymin_draw > ymax_draw:
         return
 
-    a = rgba[3]
     for y in range(ymin_draw, ymax_draw + 1):
         for x in range(xmin_draw, xmax_draw + 1):
             inside = xmin <= x <= xmax and ymin <= y <= ymax
 
             if aa_width > 0.0 and inside:
                 # Anti-aliased edges using distance to nearest edge
-                dist_l = float(x) - float(xmin)
-                dist_r = float(xmax) - float(x)
-                dist_b = float(y) - float(ymin)
-                dist_t = float(ymax) - float(y)
+                dist_l = float(x) - xmin
+                dist_r = xmax - float(x)
+                dist_b = float(y) - ymin
+                dist_t = ymax - float(y)
                 edge_dist = min(min(dist_l, dist_r), min(dist_b, dist_t))
 
                 blend_t = _smoothstep(0.0, aa_width, edge_dist)
@@ -150,15 +123,12 @@ def _draw_rect_rgba(
                 aa_rgba[3] *= blend_t
                 _blend_rgba(img, x, y, aa_rgba)
             elif inside:
-                # Hard edge (original behavior)
-                img[y, x, 0] = (1.0 - a) * img[y, x, 0] + a * rgba[0]
-                img[y, x, 1] = (1.0 - a) * img[y, x, 1] + a * rgba[1]
-                img[y, x, 2] = (1.0 - a) * img[y, x, 2] + a * rgba[2]
+                _blend_rgba(img, x, y, rgba)
 
 
 @njit(cache=True, fastmath=True)
 def _draw_circle_rgba(
-    img: np.ndarray, cx: int, cy: int, r: float, aa_width: float, rgba: np.ndarray
+    img: np.ndarray, cx: float, cy: float, r: float, aa_width: float, rgba: np.ndarray
 ):
     xmin = int(max(0, cx - r - aa_width - 1))
     xmax = int(min(img.shape[1] - 1, cx + r + aa_width + 1))
@@ -190,6 +160,41 @@ def _edge(ax, ay, bx, by, px, py):
     return (px - ax) * (by - ay) - (py - ay) * (bx - ax)
 
 
+# Triangle fill rule, the same as the OCL/Metal/CUDA tri_inside: a pixel exactly on an
+# edge shared by two triangles belongs to only one of them, so translucent fills are not
+# blended twice along the seam. _tri_edge is exactly antisymmetric in (a, b): computed
+# with the endpoints in a canonical order, so both triangles get opposite values.
+@njit(cache=True, fastmath=True)
+def _tri_edge(ax, ay, bx, by, px, py):
+    swap = (bx < ax) or (bx == ax and by < ay)
+    if swap:
+        ax, ay, bx, by = bx, by, ax, ay
+    v = (bx - ax) * (py - ay) - (by - ay) * (px - ax)
+    return -v if swap else v
+
+
+@njit(cache=True, fastmath=True)
+def _tri_owns(dx, dy):
+    # Same winding: a shared edge runs in opposite directions; exactly one owns it
+    return dy > 0.0 or (dy == 0.0 and dx > 0.0)
+
+
+@njit(cache=True, fastmath=True)
+def _tri_inside(px, py, x1, y1, x2, y2, x3, y3):
+    area = _tri_edge(x1, y1, x2, y2, x3, y3)
+    if area == 0.0:
+        return False
+    s = 1.0 if area > 0.0 else -1.0  # normalise the winding
+    e1 = s * _tri_edge(x1, y1, x2, y2, px, py)
+    e2 = s * _tri_edge(x2, y2, x3, y3, px, py)
+    e3 = s * _tri_edge(x3, y3, x1, y1, px, py)
+    return (
+        (e1 > 0.0 or (e1 == 0.0 and _tri_owns(s * (x2 - x1), s * (y2 - y1))))
+        and (e2 > 0.0 or (e2 == 0.0 and _tri_owns(s * (x3 - x2), s * (y3 - y2))))
+        and (e3 > 0.0 or (e3 == 0.0 and _tri_owns(s * (x1 - x3), s * (y1 - y3))))
+    )
+
+
 @njit(cache=True, fastmath=True)
 def _dist_to_segment(
     px: float, py: float, ax: float, ay: float, bx: float, by: float
@@ -210,7 +215,16 @@ def _dist_to_segment(
 
 @njit(cache=True, fastmath=True)
 def _draw_triangle_rgba(
-    img: np.ndarray, x0, y0, x1, y1, x2, y2, aa_width: float, rgba: np.ndarray
+    img: np.ndarray,
+    x0,
+    y0,
+    x1,
+    y1,
+    x2,
+    y2,
+    aa_width: float,
+    rgba: np.ndarray,
+    mesh: bool,
 ):
     # Expand bounds for anti-aliasing
     if aa_width > 0.0:
@@ -229,12 +243,18 @@ def _draw_triangle_rgba(
         return
     for y in range(ymin, ymax + 1):
         for x in range(xmin, xmax + 1):
-            w0 = _edge(x1, y1, x2, y2, x, y)
-            w1 = _edge(x2, y2, x0, y0, x, y)
-            w2 = _edge(x0, y0, x1, y1, x, y)
-            inside = (w0 >= 0 and w1 >= 0 and w2 >= 0) or (
-                w0 <= 0 and w1 <= 0 and w2 <= 0
-            )
+            if mesh:
+                # Top-left fill rule, in (row, col) order as the OCL/Metal/CUDA
+                # kernels see coordinates, so every backend picks the same owner
+                inside = _tri_inside(float(y), float(x), y0, x0, y1, x1, y2, x2)
+            else:
+                # Inclusive edges: pixels on any edge are inside
+                w0 = _edge(x1, y1, x2, y2, x, y)
+                w1 = _edge(x2, y2, x0, y0, x, y)
+                w2 = _edge(x0, y0, x1, y1, x, y)
+                inside = (w0 >= 0 and w1 >= 0 and w2 >= 0) or (
+                    w0 <= 0 and w1 <= 0 and w2 <= 0
+                )
 
             if aa_width > 0.0 and inside:
                 # Anti-aliased edges using distance to nearest edge
@@ -261,8 +281,8 @@ def _draw_triangle_rgba(
 @njit(cache=True, fastmath=True)
 def _draw_ellipse_rgba(
     img: np.ndarray,
-    cx: int,
-    cy: int,
+    cx: float,
+    cy: float,
     rx: float,
     ry: float,
     aa_width: float,
@@ -320,10 +340,10 @@ def lines(
     for i in range(nelements):
         # Swap coords to match OCL/Metal column-major convention
         # coords are passed as (row1, col1, row2, col2)
-        x0 = int(coords[i, 1])  # col1
-        y0 = int(coords[i, 0])  # row1
-        x1 = int(coords[i, 3])  # col2
-        y1 = int(coords[i, 2])  # row2
+        x0 = float(coords[i, 1])  # col1
+        y0 = float(coords[i, 0])  # row1
+        x1 = float(coords[i, 3])  # col2
+        y1 = float(coords[i, 2])  # row2
         w = float(widths[i])
         aa_w = float(aa_widths[i])
         rgba = colors[i]
@@ -343,10 +363,10 @@ def rects(
     for i in range(nelements):
         # Swap coords to match OCL/Metal column-major convention
         # coords are passed as (row1, col1, row2, col2)
-        x0 = int(coords[i, 1])  # col1
-        y0 = int(coords[i, 0])  # row1
-        x1 = int(coords[i, 3])  # col2
-        y1 = int(coords[i, 2])  # row2
+        x0 = float(coords[i, 1])  # col1
+        y0 = float(coords[i, 0])  # row1
+        x1 = float(coords[i, 3])  # col2
+        y1 = float(coords[i, 2])  # row2
         aa_w = float(aa_widths[i])
         rgba = colors[i]
         _draw_rect_rgba(a, x0, y0, x1, y1, aa_w, rgba)
@@ -365,8 +385,8 @@ def circles(
     for i in range(nelements):
         # Swap coords to match OCL/Metal column-major convention
         # coords are passed as (row, col, radius)
-        cx = int(coords[i, 1])  # col
-        cy = int(coords[i, 0])  # row
+        cx = float(coords[i, 1])  # col
+        cy = float(coords[i, 0])  # row
         r = float(coords[i, 2])
         aa_w = float(aa_widths[i])
         rgba = colors[i]
@@ -374,7 +394,7 @@ def circles(
     return a
 
 
-def triangles(
+def _triangles(
     width: int,
     height: int,
     a: np.ndarray,
@@ -382,20 +402,32 @@ def triangles(
     coords: np.ndarray,
     aa_widths: np.ndarray,
     colors: np.ndarray,
+    mesh: bool,
 ):
     for i in range(nelements):
         # Swap coords to match OCL/Metal column-major convention
         # coords are passed as (row1, col1, row2, col2, row3, col3)
-        x0 = int(coords[i, 1])  # col1
-        y0 = int(coords[i, 0])  # row1
-        x1 = int(coords[i, 3])  # col2
-        y1 = int(coords[i, 2])  # row2
-        x2 = int(coords[i, 5])  # col3
-        y2 = int(coords[i, 4])  # row3
+        x0 = float(coords[i, 1])  # col1
+        y0 = float(coords[i, 0])  # row1
+        x1 = float(coords[i, 3])  # col2
+        y1 = float(coords[i, 2])  # row2
+        x2 = float(coords[i, 5])  # col3
+        y2 = float(coords[i, 4])  # row3
         aa_w = float(aa_widths[i])
         rgba = colors[i]
-        _draw_triangle_rgba(a, x0, y0, x1, y1, x2, y2, aa_w, rgba)
+        _draw_triangle_rgba(a, x0, y0, x1, y1, x2, y2, aa_w, rgba, mesh)
     return a
+
+
+def triangles(width, height, a, nelements, coords, aa_widths, colors):
+    """Triangles with inclusive edges: pixels on any edge are drawn."""
+    return _triangles(width, height, a, nelements, coords, aa_widths, colors, False)
+
+
+def mesh_triangles(width, height, a, nelements, coords, aa_widths, colors):
+    """Triangles of a mesh, with a top-left fill rule: a pixel on an edge shared
+    by two triangles belongs to only one, so translucent fills blend it once."""
+    return _triangles(width, height, a, nelements, coords, aa_widths, colors, True)
 
 
 def ellipses(
@@ -410,8 +442,8 @@ def ellipses(
     for i in range(nelements):
         # Swap coords to match OCL/Metal column-major convention
         # coords are passed as (row, col, width, height)
-        cx = int(coords[i, 1])  # col
-        cy = int(coords[i, 0])  # row
+        cx = float(coords[i, 1])  # col
+        cy = float(coords[i, 0])  # row
         # OCL/Metal also swap width/height for ellipses
         rx = float(coords[i, 3])  # height (swapped to match OCL)
         ry = float(coords[i, 2])  # width (swapped to match OCL)

@@ -36,6 +36,7 @@ extern "C" __kernel
 void filterImage${planes}(int width, int height, FLOAT${planes} *input, float scale, float step_size, FLOAT${planes} *output)
 {
     size_t i = get_global_id(0);
+    if (i >= (size_t)width * height) return;
     int x = X(i);
     int y = Y(i);
     FLOAT${planes} CF;
@@ -45,7 +46,8 @@ void filterImage${planes}(int width, int height, FLOAT${planes} *input, float sc
 %else:
     FLOAT invscale = 1.0f/scale;
 %endif
-    if ((0<x) && (x<(width-1)) && ((0<y) && (y<(height-1)))) {
+    // CUDA X(i) runs along height and Y(i) along width (helpers.mako)
+    if ((0<x) && (x<(height-1)) && ((0<y) && (y<(width-1)))) {
       FLOAT${planes} n = input[i+1];
       FLOAT${planes} s = input[i-1];
       FLOAT${planes} e = input[i-height];

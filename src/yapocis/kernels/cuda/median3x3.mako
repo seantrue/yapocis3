@@ -29,6 +29,7 @@ void median3x3(int width, int height, float* a, float* ret )
     size_t right = width - left;
     int h = height;
     i = get_global_id(0);
+    if (i >= (size_t)width) return;  // width is size_of a here
     m = a[i];
     if ((i >= left) &&  (i < right)) {
 		aa[0] =  a[(i-h)-1];

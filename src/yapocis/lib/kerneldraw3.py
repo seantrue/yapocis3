@@ -57,6 +57,9 @@ class KernelDraw3(AbstractKernelDraw):
     def triangles(self, coords, **kwargs):
         self.render_immediate("triangles", 6, coords, **kwargs)
 
+    def mesh_triangles(self, coords, **kwargs):
+        self.render_immediate("mesh_triangles", 6, coords, **kwargs)
+
     def ellipses(self, coords, **kwargs):
         self.render_immediate("ellipses", 4, coords, **kwargs)
 

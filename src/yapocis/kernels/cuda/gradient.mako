@@ -10,11 +10,13 @@ extern "C" __kernel
 void gradient${planes}(int width, int height, FLOAT${planes}* input, int reach, FLOAT${planes}* grad, FLOAT${planes} *theta )
 {
     size_t i = get_global_id(0);
+    if (i >= (size_t)width * height) return;
     int x = X(i);
     int y = Y(i);
     FLOAT${planes} gr = ZERO${planes};
     FLOAT${planes} th = ZERO${planes};
-    if (0 <= (x-reach)  && (x+reach) < width && 0 <= (y-reach) && (y+reach) < height) {
+    // CUDA X(i) runs along height and Y(i) along width (helpers.mako)
+    if (0 <= (x-reach)  && (x+reach) < height && 0 <= (y-reach) && (y+reach) < width) {
         FLOAT${planes} dx = input[ADDRESS(x+reach,y)] - input[ADDRESS(x-reach,y)];
         FLOAT${planes} dy = input[ADDRESS(x,y+reach)] - input[ADDRESS(x,y-reach)];
         gr = sqrt(dx*dx+dy*dy);

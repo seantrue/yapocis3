@@ -44,7 +44,8 @@ class KernelManager(KernelManagerBase):
         Returns:
             pycuda.driver.Function object
         """
-        return program.get_function(kernel_name)
+        with self.dmgr.activated():
+            return program.get_function(kernel_name)
 
     def snapshot(self, **kwargs):
         """Add backend='metal' to snapshot metadata."""

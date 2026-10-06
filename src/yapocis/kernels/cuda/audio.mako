@@ -23,7 +23,8 @@ extern "C" __kernel void spectral_variance(int width, int height, float *spectro
     variance[t] = var_sum / (float)height;
 }
 
-extern "C" __kernel void log_normalize(float *input, float *output) {
+extern "C" __kernel void log_normalize(float *input, float *output GLOBAL_SIZE_PARAM) {
+    RETURN_IF_OUTSIDE(get_global_id(0))
     size_t i = get_global_id(0);
     float value = input[i];
     // Apply log (add small epsilon to avoid log(0))
@@ -31,7 +32,8 @@ extern "C" __kernel void log_normalize(float *input, float *output) {
     output[i] = value;
 }
 
-extern "C" __kernel void normalize_with_minmax(float *input, float min_val, float max_val, float *output) {
+extern "C" __kernel void normalize_with_minmax(float *input, float min_val, float max_val, float *output GLOBAL_SIZE_PARAM) {
+    RETURN_IF_OUTSIDE(get_global_id(0))
     size_t i = get_global_id(0);
     float value = input[i];
     float range = max_val - min_val;
@@ -81,9 +83,9 @@ extern "C" __kernel void fused_vad_features(float *spectrogram,
     features[t] = log_var;
 }
 
-extern "C" __kernel void smooth_1d(float *input, int window_size, int n_param, float *output) {
+extern "C" __kernel void smooth_1d(float *input, int window_size, int n_param, float *output GLOBAL_SIZE_PARAM) {
     int i = get_global_id(0);
-    size_t n = gridDim.x * blockDim.x;  // Array length (use CUDA's grid size)
+    size_t n = yapocis_global_size;  // Array length, as OpenCL's get_global_size(0)
 
     if (i >= n) return;
 

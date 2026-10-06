@@ -5,6 +5,7 @@ Unified yapocis development tools CLI.
 
 Provides utilities for inspecting assets, backends, devices, and interfaces.
 """
+import inspect
 import sys
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
@@ -1169,18 +1170,20 @@ def cmd_interfaces(args):
         if is_buffer:
             if np_dtype in ("float32", "float64", "float16"):
                 return "NDArray[np.floating]"
-            elif np_dtype in ("int32", "int64", "int16"):
+            elif np_dtype in ("int32", "int64", "int16", "int8"):
                 return "NDArray[np.signedinteger]"
+            elif np_dtype in ("uint32", "uint64", "uint16", "uint8"):
+                return "NDArray[np.unsignedinteger]"
             elif np_dtype in ("complex64", "complex128"):
                 return "NDArray[np.complexfloating]"
-            return f"NDArray  # {np_dtype}"
+            return "NDArray[np.generic]"
         else:
             # Scalars
             if np_dtype in ("float32", "float64", "float16"):
                 return "float"
-            elif np_dtype in ("int32", "int64", "int16"):
+            elif np_dtype.removeprefix("u") in ("int32", "int64", "int16", "int8"):
                 return "int"
-            return np_dtype
+            return "object"
 
     def python_stubs(interface, file=None):
         """Generate Python stubs with proper type hints and docstrings."""
@@ -1266,16 +1269,96 @@ def cmd_interfaces(args):
             print("        ...", file=file)
             print(file=file)
 
+    def library_class(interface_name):
+        """The yapocis.lib class a stub file describes, or None.
+
+        A stub ``yapocis/lib/<interface_name>.pyi`` only applies to the module
+        ``yapocis.lib.<interface_name>``, so only that module is searched, for
+        a class it defines that binds the interface (``INTERFACE``).
+        """
+        import importlib
+
+        try:
+            module = importlib.import_module(f"yapocis.lib.{interface_name}")
+        except Exception:
+            return None
+        for cls in vars(module).values():
+            if (
+                inspect.isclass(cls)
+                and cls.__module__ == module.__name__
+                and getattr(cls, "INTERFACE", None) == interface_name
+            ):
+                return cls
+        return None
+
+    def library_methods(cls):
+        """Public methods (plus __init__) the library class defines in Python."""
+        methods = {}
+        for klass in reversed(cls.__mro__):
+            if klass is object:
+                continue
+            for name, member in vars(klass).items():
+                if name.startswith("_") and name != "__init__":
+                    continue
+                if inspect.isfunction(member):
+                    methods[name] = member
+        return methods
+
+    def pyi_signature(name, func):
+        """Render a Python method's signature in .pyi form.
+
+        Source annotations may reference names the stub does not import, so
+        every parameter and return is typed ``Any`` (``__init__`` returns
+        None) and defaults become ``...``.
+        """
+        parts = []
+        star_seen = False
+        params = list(inspect.signature(func).parameters.values())
+        for index, param in enumerate(params):
+            if index == 0:
+                parts.append(param.name)  # self
+            elif param.kind is param.VAR_POSITIONAL:
+                parts.append(f"*{param.name}: Any")
+                star_seen = True
+            elif param.kind is param.VAR_KEYWORD:
+                parts.append(f"**{param.name}: Any")
+            else:
+                if param.kind is param.KEYWORD_ONLY and not star_seen:
+                    parts.append("*")
+                    star_seen = True
+                default = "" if param.default is param.empty else " = ..."
+                parts.append(f"{param.name}: Any{default}")
+        return_type = "None" if name == "__init__" else "Any"
+        return f"    def {name}({', '.join(parts)}) -> {return_type}: ..."
+
     def python_pyi_stubs(interface, file=None):
-        """Generate compact .pyi stub file format."""
+        """Generate compact .pyi stub file format.
+
+        Kernels are reached through BoundKernels.__getattr__ with their
+        interface signatures, unless the library class defines a Python
+        method of the same name; then the stub uses that method's signature.
+        """
+        cls = library_class(interface.name)
+        if cls is not None:
+            class_name = cls.__name__
+            methods = library_methods(cls)
+        else:
+            class_name = interface.name.replace("_", " ").title().replace(" ", "")
+            methods = {}
+
+        if methods:
+            print("from typing import Any", file=file)
         print("from numpy.typing import NDArray", file=file)
         print("import numpy as np", file=file)
         print(file=file)
 
-        class_name = interface.name.replace("_", " ").title().replace(" ", "")
         print(f"class {class_name}:", file=file)
+        for name in methods:
+            print(pyi_signature(name, methods[name]), file=file)
 
         for kernel in interface.kernels:
+            if kernel.name in methods:
+                continue
             params = []
             returns = []
 
@@ -1365,6 +1448,16 @@ def cmd_interfaces(args):
             python_pyi_stubs(interface_obj)
 
         if args.write_lib:
+            # A stub with no matching library class would describe a
+            # nonexistent class, or hide a same-named module's real API.
+            if library_class(interface_obj.name) is None:
+                print(
+                    f"Skipped {interface_name}.pyi: no class in "
+                    f"yapocis.lib.{interface_name} binds INTERFACE = "
+                    f"'{interface_name}'"
+                )
+                continue
+
             # Write .pyi stub to yapocis/lib/ directory
             from pathlib import Path
 

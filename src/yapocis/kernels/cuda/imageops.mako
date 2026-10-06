@@ -2,7 +2,8 @@
 <%include file="helpers.mako"/>
 
 // kernels imageops
-extern "C" __kernel void clamp_pixels(float *input, float low, float high, float *output) {
+extern "C" __kernel void clamp_pixels(float *input, float low, float high, float *output GLOBAL_SIZE_PARAM) {
+    RETURN_IF_OUTSIDE(get_global_id(0))
     size_t i = get_global_id(0);
     float value = input[i];
     value = value < low ? low:  value;
@@ -10,7 +11,8 @@ extern "C" __kernel void clamp_pixels(float *input, float low, float high, float
     output[i] = value;
 
 }
-extern "C" __kernel void stretch(float *input, float input_min, float input_max, float low, float high, float *output) {
+extern "C" __kernel void stretch(float *input, float input_min, float input_max, float low, float high, float *output GLOBAL_SIZE_PARAM) {
+    RETURN_IF_OUTSIDE(get_global_id(0))
     size_t i = get_global_id(0);
     float value = input[i];
     value = value < input_min ? input_min : value;
@@ -20,7 +22,8 @@ extern "C" __kernel void stretch(float *input, float input_min, float input_max,
     output[i] = value;
 }
 
-extern "C" __kernel void binarize(float *input, float threshold, float *output) {
+extern "C" __kernel void binarize(float *input, float threshold, float *output GLOBAL_SIZE_PARAM) {
+    RETURN_IF_OUTSIDE(get_global_id(0))
     size_t i = get_global_id(0);
     float value = input[i];
     value = value >= threshold ? 1.0 : 0.0;
@@ -30,10 +33,12 @@ extern "C" __kernel void binarize(float *input, float threshold, float *output) 
 extern "C" __kernel void histogram(float *input, int size_of_input, float low, float high, int *hst, int size_of_hst) {
     int n_bins = size_of_hst;
     size_t i = get_global_id(0);
+    if (i >= (size_t)size_of_input) return;
     float value = input[i];
     value = value < low ? low : value;
     value = value > high ? high : value;
     size_t bucket = (size_t)((n_bins*value)/(high-low));
+    bucket = min((size_t)(n_bins-1), bucket);  // value == high, as Metal clamps
     atomic_inc(hst+bucket);
     barrier(CLK_GLOBAL_MEM_FENCE);
 

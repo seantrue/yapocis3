@@ -205,6 +205,12 @@ def imread(
     filename: str, longest: int | None = None, keep_alpha: bool = False
 ) -> Union[Image1, Image3]:
     img = skimage.io.imread(filename)
+    if keep_alpha:
+        # skimage drops tRNS transparency (palette/grayscale PNGs) when
+        # converting to RGB; let PIL expand it into a real alpha channel.
+        with Image.open(filename) as pimg:
+            if pimg.mode in ("P", "PA", "LA", "La") or "transparency" in pimg.info:
+                img = np.asarray(pimg.convert("RGBA"))
     img_dtype = img.dtype
     resize, w, h = newsize(img.shape[1], img.shape[0], longest)
     if resize:
