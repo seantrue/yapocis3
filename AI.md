@@ -38,6 +38,18 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2026-10-06: yellowfin on Python 3.13; Seaborn Comparison Tests Pin Their Font
+
+**Maintainer direction:** "Change yellowfin to use python 3.13 instead of 3.10", then, once the font cause was shown, "Pin the font."
+
+**yellowfin environment (Claude, ~26 LOC in `activate.sh`).** yellowfin's tests had run from a hand-built Python 3.10 virtualenv (`~/.virtualenvs/yapocis-310`): numpy 1.25, no matplotlib, yapocis not installed (hence `PYTHONPATH=src`), and no `nvcc` in non-interactive ssh sessions. The checkout's uv-managed `.venv` (Python 3.13.7) was synced from the current lock with `uv sync --python 3.13 --extra opencl --extra cuda --extra numba --group dev`, which installs yapocis editable. `activate.sh` now defaults to that `.venv` (the `YAPOCIS3_VENV` override is kept) and exports `CUDA_HOME`/`PATH` when `/usr/local/cuda` exists. The old virtualenv was left in place, unused.
+
+**Result and the one failure.** Under 3.13 with the new script: 979 passed and 1 failed on yellowfin (OCL and CUDA; more tests than before because matplotlib and seaborn are now installed). The failure was `test_seaborn::test_hexgrid` at RMS 10.12 against a tolerance of 10.0. Claude ruled out the GPU (identical on OCL, CUDA and Numba), the library versions (matplotlib, seaborn, numpy, freetype-py, libfreetype and Pillow all match the Mac), and the data (seeded). The cause was fonts: seaborn's theme puts Arial first, which the Mac has (RMS 9.14) and yellowfin doesn't, so it falls back to DejaVu Sans. With DejaVu Sans forced, both machines give exactly 10.123, so the test had passed on the Mac only because Arial happened to be installed.
+
+**Fix (Claude, ~15 LOC).** The three seaborn comparison tests pass `font="DejaVu Sans"` (bundled with matplotlib) to `sns.set_theme`. `test_hexgrid`'s tolerance is 10.5, with a comment giving the measured 10.12, and its failure message reports the actual tolerance. All 3 seaborn tests pass on the Mac (OCL, Metal, Numba) and on yellowfin under 3.13. The full suite was not re-run after the font pin.
+
+**Housekeeping on yellowfin (Claude, at the maintainer's request):** removed the scratch worktree and its temporary files, and deleted 22 stale `__pycache__` directories, including the cached `.pyc` that broke `test_rpc.py` (see the previous entry).
+
 ### 2026-10-06: One (x, y) Drawing Convention, CUDA Memory-Safety and Multi-GPU Fixes, Dependency Cleanup
 
 **Origin of part of this commit:** The working tree on `graphics-numba-mpl-mesh` already held uncommitted work when this session began, and who wrote it isn't recorded: `mesh_triangles` (shared edges drawn once, so translucent fills have no seams) in the interfaces and the OCL, Metal, CUDA and Numba kernels (~520 LOC), a Numba graphics rework (~400 LOC), the matplotlib backend's mesh fills and text compositing (~160 LOC), `tests/lib/graphics/test_primitive_consistency.py` (~87 LOC) and smaller test edits. Claude ran it and tested it alongside this session's changes, but did not write it.
@@ -66,6 +78,8 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 **Ruled out / pre-existing:** the first yellowfin failures (about 50%) were `nvcc` missing from non-interactive ssh's `PATH`, not this change. The async CUDA failures and `test_histeq_hsi_roundtrip` failed identically on clean main (both are fixed here). The 10 `benchmark` errors were `pytest-benchmark` missing from yellowfin's venv (installed).
 
 **Testing:** Mac (OCL, Metal, Numba; `YAPOCIS_TEST_BACKENDS=ocl,metal,numbax`): 911 passed across `tests/lib`, regression, integration and async after the code changes. After the dependency changes, 910 passed and `test_hires` passed once imagecodecs was added. After the lock bumps, integration, graphics and mplbackend: 380 passed. yellowfin (OCL and CUDA on a Tesla P40, RTX 3080 and RTX 3060), on a patch of this tree in a scratch worktree: 767 passed and 0 failed, and the 10 benchmark tests passed after the install. yellowfin was not re-run after the pyproject/lock changes, because its venv isn't built from them.
+
+**After merge (#34, `85ea445`), on yellowfin's own checkout:** the first run failed at collection (`No module named 'yapocis'`): yapocis isn't installed in that venv, so pytest needs `PYTHONPATH=src`, as the scratch-worktree runs used. With it: 775 passed and 2 failed, both in `tests/integration/test_rpc.py`. Claude traced those to a stale cache, not code. pytest's rewritten `.pyc` for `test_rpc.py` dated from July, when the repo lived at `/data/speedy/workspace/yapocis3`. Since the source hadn't changed, pytest kept reusing it with the old path recorded, so `import_program`'s `inspect.getmodule()` couldn't find the calling module and injected nothing. The tests passed with `--assert=plain` and in the fresh worktree. After deleting the generated `tests/**/__pycache__` on yellowfin, `test_rpc.py` passed (10/10), for 777 passing tests on main with no failures. About 300 stale `.pyc` files under `src/` there still record the old path.
 
 **Division of labor:** the maintainer diagnosed the coordinate split and the CUDA bounds history and made the design and dependency decisions; Claude did the investigation, the implementation, the yellowfin and sanitizer runs, and the tests.
 
