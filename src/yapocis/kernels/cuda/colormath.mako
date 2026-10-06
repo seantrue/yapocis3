@@ -205,7 +205,8 @@ __constant float transforms[] =
     0,0,1
 };
 
-extern "C" __kernel void transform(float *input, int transform_id, float *output) {
+extern "C" __kernel void transform(float *input, int transform_id, float *output GLOBAL_SIZE_PARAM) {
+    RETURN_IF_OUTSIDE(get_global_id(0))
     size_t i = get_global_id(0)*3;
     size_t tid  = transform_id*9;
     // transforms[] stores each 3x3 matrix column by column, so the rows a, b, c are
@@ -223,7 +224,8 @@ extern "C" __kernel void transform(float *input, int transform_id, float *output
 // x = X/(X+Y+Z)
 // y = Y/(X+Y+Z)
 // y = y
-extern "C" __kernel void xyz2xyY(float *input, float *output) {
+extern "C" __kernel void xyz2xyY(float *input, float *output GLOBAL_SIZE_PARAM) {
+    RETURN_IF_OUTSIDE(get_global_id(0))
     size_t i = get_global_id(0)*3;
     float x = input[i];
     float y = input[i+1];
@@ -237,7 +239,8 @@ extern "C" __kernel void xyz2xyY(float *input, float *output) {
 // X = x*Y/y
 // Y = Y
 // Z = ((1−x−y)*Y)/y
-extern "C" __kernel void xyY2xyz(float *input, float *output) {
+extern "C" __kernel void xyY2xyz(float *input, float *output GLOBAL_SIZE_PARAM) {
+    RETURN_IF_OUTSIDE(get_global_id(0))
     size_t i = get_global_id(0)*3;
     float x = input[i];
     float y = input[i+1];

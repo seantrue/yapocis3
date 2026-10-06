@@ -4,16 +4,25 @@
 
 // Kernels for operating on HxWx4 arrays
 // array[,,3] is the "alpha" channel
-// The alpha channel is ignored (but must be present) for the input/output array (a)
-// Colors are [N,4] where color[,3] is the alpha and is _not_ ignored
+// Colors are [N,4] where color[,3] is the alpha
 
 #define ONES ONE4
 #define ZEROS ZERO4
+
+// Porter-Duff "over" at opacity e, as the OCL/Metal kernels blend:
+// rgb = src.rgb*e + dst.rgb*(1-e), alpha = e + dst.a*(1-e)
+__device__ __forceinline__ float4 blend_over(float4 dst, float4 src, float e) {
+  return make_float4(src.x * e + dst.x * (1.0f - e),
+                     src.y * e + dst.y * (1.0f - e),
+                     src.z * e + dst.z * (1.0f - e),
+                     e + dst.w * (1.0f - e));
+}
 
 extern "C" __kernel void lines(int width, int height, READWRITE float4 *a, int nelements,
                     READONLY float2 *coords, READONLY float *rdist,
                     READONLY float *aa_widths, READONLY float4 *colors) {
   size_t i = get_global_id(0);
+  if (i >= (size_t)width * height) return;
   int x = X(i);
   int y = Y(i);
   float4 color = a[i];
@@ -26,7 +35,6 @@ extern "C" __kernel void lines(int width, int height, READWRITE float4 *a, int n
     float2 linestart = *coords++;
     float2 lineend = *coords++;
     float4 rgba = *colors++;
-    float4 alpha = make_float4(rgba.w, rgba.w, rgba.w, 0.0f);
     float linemag2 = dxdy2(lineend, linestart);
     float2 delta = lineend - linestart;
     float2 u2 = (point - linestart) * (delta);
@@ -41,23 +49,20 @@ extern "C" __kernel void lines(int width, int height, READWRITE float4 *a, int n
         float edge_outer = threshold + aa_width;
         float edge_inner = threshold - aa_width;
         float t = smoothstep(edge_outer, edge_inner, dist);
-        float4 clr = (rgba * alpha) + (color * (ONES - alpha));
-        color = mix(color, clr, t * rgba.w);
+        color = blend_over(color, rgba, t * rgba.w);
       } else {
         // Hard edge (original behavior, fast path)
-        float4 clr = (rgba * alpha) + (color * (ONES - alpha));
-        color = (dist2 < threshold2) ? clr : color;
+        if (dist2 < threshold2) color = blend_over(color, rgba, rgba.w);
       }
     }
   }
-  color.w = 0.0f;
   a[i] = color;
-  barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
 extern "C" __kernel void rects(int width, int height, READWRITE float4 *a, int nelements,
                     READONLY float4 *coords, READONLY float *aa_widths, READONLY float4 *colors) {
   size_t i = get_global_id(0);
+  if (i >= (size_t)width * height) return;
   float4 pixel = a[i];
   int x = X(i);
   int y = Y(i);
@@ -66,7 +71,6 @@ extern "C" __kernel void rects(int width, int height, READWRITE float4 *a, int n
     float4 region = *coords++;
     float aa_width = *aa_widths++;
     float4 rgba = *colors++;
-    float4 alpha = make_float4(rgba.w, rgba.w, rgba.w, 0.0f);
 
     float l = min(region.x, region.z);
     float b = min(region.y, region.w);
@@ -84,21 +88,19 @@ extern "C" __kernel void rects(int width, int height, READWRITE float4 *a, int n
       float edge_dist = min(min(dist_l, dist_r), min(dist_b, dist_t));
 
       float blend_t = smoothstep(0.0f, aa_width, edge_dist);
-      float4 clr = (rgba * alpha) + (pixel * (ONES - alpha));
-      pixel = mix(pixel, clr, blend_t * rgba.w);
+      pixel = blend_over(pixel, rgba, blend_t * rgba.w);
     } else if (inside) {
       // Hard edge (original behavior, fast path)
-      float4 clr = (rgba * alpha) + (pixel * (ONES - alpha));
-      pixel = clr;
+      pixel = blend_over(pixel, rgba, rgba.w);
     }
   }
   a[i] = pixel;
-  barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
 extern "C" __kernel void circles(int width, int height, READWRITE float4 *a, int nelements,
                       READONLY float *coords, READONLY float *aa_widths, READONLY float4 *colors) {
   size_t i = get_global_id(0);
+  if (i >= (size_t)width * height) return;
   float4 pixel = a[i];
   int x = X(i);
   int y = Y(i);
@@ -110,7 +112,6 @@ extern "C" __kernel void circles(int width, int height, READWRITE float4 *a, int
     float radius = *coords++;
     float aa_width = *aa_widths++;
     float4 rgba = *colors++;
-    float4 alpha = make_float4(rgba.w, rgba.w, rgba.w, 0.0f);
     float2 center = make_float2(cx, cy);
     float dist = sqrt(dxdy2(center, point));
 
@@ -119,20 +120,48 @@ extern "C" __kernel void circles(int width, int height, READWRITE float4 *a, int
       float edge_outer = radius + aa_width;
       float edge_inner = radius - aa_width;
       float t = smoothstep(edge_outer, edge_inner, dist);
-      float4 clr = (rgba * alpha) + (pixel * (ONES - alpha));
-      pixel = mix(pixel, clr, t * rgba.w);
+      pixel = blend_over(pixel, rgba, t * rgba.w);
     } else {
       // Hard edge (original behavior, fast path)
-      float4 clr = (rgba * alpha) + (pixel * (ONES - alpha));
-      pixel = (dist <= radius) ? clr : pixel;
+      if (dist <= radius) pixel = blend_over(pixel, rgba, rgba.w);
     }
   }
   a[i] = pixel;
-  barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
 #define signex(p1, p2, p3)                                                     \
   ((p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y))
+
+// Triangle fill rule. A pixel exactly on an edge shared by two triangles belongs to
+// only one of them, so translucent fills are not blended twice along the seam.
+// tri_edge is exactly antisymmetric in (a, b): it is computed with the endpoints in a
+// canonical order, so the two triangles get exactly opposite values on a shared edge.
+static __device__ __forceinline__ float tri_edge(float ax, float ay, float bx, float by, float px, float py) {
+  bool swap = (bx < ax) || (bx == ax && by < ay);
+  float sx = swap ? bx : ax, sy = swap ? by : ay;
+  float ex = swap ? ax : bx, ey = swap ? ay : by;
+  float v = (ex - sx) * (py - sy) - (ey - sy) * (px - sx);
+  return swap ? -v : v;
+}
+
+// With both triangles wound the same way, a shared edge runs in opposite directions,
+// and exactly one direction owns pixels lying on it
+static __device__ __forceinline__ bool tri_owns(float dx, float dy) {
+  return dy > 0.0f || (dy == 0.0f && dx > 0.0f);
+}
+
+static __device__ __forceinline__ bool tri_inside(float px, float py, float x1, float y1, float x2, float y2,
+                    float x3, float y3) {
+  float area = tri_edge(x1, y1, x2, y2, x3, y3);
+  if (area == 0.0f) return false;
+  float s = area > 0.0f ? 1.0f : -1.0f;  // normalise the winding
+  float e1 = s * tri_edge(x1, y1, x2, y2, px, py);
+  float e2 = s * tri_edge(x2, y2, x3, y3, px, py);
+  float e3 = s * tri_edge(x3, y3, x1, y1, px, py);
+  return (e1 > 0.0f || (e1 == 0.0f && tri_owns(s * (x2 - x1), s * (y2 - y1)))) &&
+         (e2 > 0.0f || (e2 == 0.0f && tri_owns(s * (x3 - x2), s * (y3 - y2)))) &&
+         (e3 > 0.0f || (e3 == 0.0f && tri_owns(s * (x1 - x3), s * (y1 - y3))));
+}
 
 // Helper function to compute distance from point to line segment
 __device__ static inline float dist_to_segment(float2 p, float2 a, float2 b) {
@@ -145,6 +174,7 @@ __device__ static inline float dist_to_segment(float2 p, float2 a, float2 b) {
 extern "C" __kernel void triangles(int width, int height, READWRITE float4 *a, int nelements,
                         READONLY float2 *coords, READONLY float *aa_widths, READONLY float4 *colors) {
   size_t i = get_global_id(0);
+  if (i >= (size_t)width * height) return;
   float4 pixel = a[i];
   int x = X(i);
   int y = Y(i);
@@ -155,7 +185,6 @@ extern "C" __kernel void triangles(int width, int height, READWRITE float4 *a, i
     float2 v3 = *coords++;
     float aa_width = *aa_widths++;
     float4 rgba = *colors++;
-    float4 alpha = make_float4(rgba.w, rgba.w, rgba.w, 0.0f);
 
     float d1 = signex(point, v1, v2);
     float d2 = signex(point, v2, v3);
@@ -172,22 +201,58 @@ extern "C" __kernel void triangles(int width, int height, READWRITE float4 *a, i
       float edge_dist = min(min(dist1, dist2), dist3);
 
       float blend_t = smoothstep(0.0f, aa_width, edge_dist);
-      float4 clr = (rgba * alpha) + (pixel * (ONES - alpha));
-      pixel = mix(pixel, clr, blend_t * rgba.w);
+      pixel = blend_over(pixel, rgba, blend_t * rgba.w);
     } else if (inside) {
       // Hard edge (original behavior, fast path)
-      float4 clr = (rgba * alpha) + (pixel * (ONES - alpha));
-      pixel = clr;
+      pixel = blend_over(pixel, rgba, rgba.w);
     }
   }
   a[i] = pixel;
-  barrier(CLK_GLOBAL_MEM_FENCE);
+}
+
+// mesh_triangles: triangles with a top-left fill rule, for meshes (a triangulated
+// polygon). A pixel exactly on an edge shared by two triangles belongs to only one
+// of them, so translucent fills are not blended twice along the seams. Unlike
+// triangles, pixels on a triangle's non-owning edges are not drawn.
+extern "C" __kernel void mesh_triangles(int width, int height, READWRITE float4 *a, int nelements,
+                        READONLY float2 *coords, READONLY float *aa_widths, READONLY float4 *colors) {
+  size_t i = get_global_id(0);
+  if (i >= (size_t)width * height) return;
+  float4 pixel = a[i];
+  int x = X(i);
+  int y = Y(i);
+  float2 point = make_float2((float)x, (float)y);
+  for (int ielement = 0; ielement < nelements; ielement++) {
+    float2 v1 = *coords++;
+    float2 v2 = *coords++;
+    float2 v3 = *coords++;
+    float aa_width = *aa_widths++;
+    float4 rgba = *colors++;
+
+    bool inside = tri_inside(point.x, point.y, v1.x, v1.y, v2.x, v2.y, v3.x, v3.y);
+
+    if (aa_width > 0.0f && inside) {
+      // Anti-aliased edges using distance to nearest edge
+      float dist1 = dist_to_segment(point, v1, v2);
+      float dist2 = dist_to_segment(point, v2, v3);
+      float dist3 = dist_to_segment(point, v3, v1);
+      float edge_dist = min(min(dist1, dist2), dist3);
+
+      float blend_t = smoothstep(0.0f, aa_width, edge_dist);
+      pixel = blend_over(pixel, rgba, blend_t * rgba.w);
+    } else if (inside) {
+      // Hard edge (original behavior, fast path)
+      pixel = blend_over(pixel, rgba, rgba.w);
+    }
+  }
+  a[i] = pixel;
 }
 
 // (x-h)^2/a^2 + (y-k)^2/b^2 <= 1
 extern "C" __kernel void ellipses(int width, int height, READWRITE float4 *a, int nelements,
                        READONLY float4 *coords, READONLY float *aa_widths, READONLY float4 *colors) {
   size_t i = get_global_id(0);
+  if (i >= (size_t)width * height) return;
   float4 pixel = a[i];
   int x = X(i);
   int y = Y(i);
@@ -196,7 +261,6 @@ extern "C" __kernel void ellipses(int width, int height, READWRITE float4 *a, in
     float4 center_axes = *coords++;
     float aa_width = *aa_widths++;
     float4 rgba = *colors++;
-    float4 alpha = make_float4(rgba.w, rgba.w, rgba.w, 0.0f);
 
     float2 center = make_float2(center_axes.x,center_axes.y);
     float2 axes = make_float2(center_axes.z,center_axes.w);
@@ -211,22 +275,20 @@ extern "C" __kernel void ellipses(int width, int height, READWRITE float4 *a, in
       float edge_outer = aa_width;
       float edge_inner = -aa_width;
       float t = smoothstep(edge_outer, edge_inner, dist_to_edge);
-      float4 clr = (rgba * alpha) + (pixel * (ONES - alpha));
-      pixel = mix(pixel, clr, t * rgba.w);
+      pixel = blend_over(pixel, rgba, t * rgba.w);
     } else {
       // Hard edge (original behavior, fast path)
-      float4 clr = (rgba * alpha) + (pixel * (ONES - alpha));
-      pixel = (d <= 1.0f) ? clr : pixel;
+      if (d <= 1.0f) pixel = blend_over(pixel, rgba, rgba.w);
     }
   }
   a[i] = pixel;
-  barrier(CLK_GLOBAL_MEM_FENCE);
 }
 
 extern "C" __kernel void composite(int width, int height, READWRITE float4 *a, int nelements,
                         READONLY int4 *coords, READWRITE float4 *pixels,
                         READONLY int *ipixels, int npixels) {
   size_t i = get_global_id(0);
+  if (i >= (size_t)width * height) return;
   float4 pixel = a[i];
   int x = X(i);
   int y = Y(i);
@@ -248,10 +310,7 @@ extern "C" __kernel void composite(int width, int height, READWRITE float4 *a, i
     int inside = !outside && 0 <= ipixel_source && ipixel_source < npixels;
 
     float4 rgba = inside ? pixels[ipixel_source] : ZEROS;
-    float4 alpha = make_float4(rgba.w, rgba.w, rgba.w, 0.0f);
-    float4 clr = (rgba * alpha) + (pixel * (ONES - alpha));
-    pixel = inside ? clr : pixel;
+    if (inside) pixel = blend_over(pixel, rgba, rgba.w);
   }
   a[i] = pixel;
-  barrier(CLK_GLOBAL_MEM_FENCE);
 }

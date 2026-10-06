@@ -115,21 +115,10 @@ def test_two_overlapping_rectangles(backend, monkeypatch):
 
     result = g.read(canvas)
 
-    # Check three regions (using numpy [y, x] indexing):
-    # Rectangles use (x1, y1, x2, y2), numpy uses [y, x]
-    # 1. Left region: x=10 (inside first rect), y=50 -> numpy [y=50, x=10]
+    # Rectangles use (x1, y1, x2, y2) with x = column, y = row; numpy indexes
+    # [row, col]. All checks are on row y=50.
+    # 1. Left region: x=10 (inside only the blue rectangle)
     left_pixel = result[50, 10, :]
-    # Expected: blue from first rectangle
-    # But due to coordinate system, need to check [y, x] = [10, 50] for "left half"
-    # Since first rect is (x=0..50, y=0..100), x=10 is in it
-    # Actually numpy is [row, col] and image coords are typically x=col, y=row
-    # So result[row=50, col=10] means y=50, x=10
-    # Rectangle (0,0,50,100) means x from 0-50, y from 0-100
-    # So x=10, y=50 should be blue! Let me verify the actual coord system...
-
-    # Testing shows result[10, 50] has blue, so rectangles appear to use different convention
-    # Let's test positions that work: swap x and y in indexing
-    left_pixel = result[10, 50, :]  # y=10, x=50 but actually x=10, y=50 based on test
     np.testing.assert_allclose(
         left_pixel,
         blue,
@@ -140,7 +129,7 @@ def test_two_overlapping_rectangles(backend, monkeypatch):
 
     # 2. Overlap region: x=35, y=50
     expected_overlap = blend_over(red_alpha, blue)
-    overlap_pixel = result[35, 50, :]
+    overlap_pixel = result[50, 35, :]
     np.testing.assert_allclose(
         overlap_pixel,
         expected_overlap,
@@ -152,7 +141,7 @@ def test_two_overlapping_rectangles(backend, monkeypatch):
     # 3. Right region: x=60, y=50
     black = [0.0, 0.0, 0.0, 0.0]
     expected_right = blend_over(red_alpha, black)
-    right_pixel = result[60, 50, :]
+    right_pixel = result[50, 60, :]
     np.testing.assert_allclose(
         right_pixel,
         expected_right,

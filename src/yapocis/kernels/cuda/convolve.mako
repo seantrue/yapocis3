@@ -9,6 +9,7 @@ extern "C" __kernel
 void ${name}(int width,  float* a, float* ret )
 {
     size_t i = get_global_id(0);
+    if (i >= (size_t)width) return;
     float sum;
     size_t right = width-${left};
     sum = 0.0;

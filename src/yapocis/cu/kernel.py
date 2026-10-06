@@ -1,5 +1,6 @@
 #  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
 
+import re
 from collections.abc import Callable
 from typing import Any
 
@@ -34,6 +35,13 @@ class Kernel(KernelBase):
             self.global_size
         ) = None
         self.async_write = async_write
+        # Kernels whose parameter list ends with GLOBAL_SIZE_PARAM (cuda
+        # constants.mako) take the real global size as a hidden last argument,
+        # since the grid is rounded up to whole blocks.
+        source = getattr(kernel_manager, "source", None) or ""
+        self.takes_global_size = bool(
+            re.search(rf"\b{re.escape(name)}\s*\([^)]*GLOBAL_SIZE_PARAM\s*\)", source)
+        )
         self.map_arguments()
 
     def _package_dimension(self, value, dtype):
@@ -146,11 +154,14 @@ class Kernel(KernelBase):
             else:
                 # It's a scalar or other type
                 cuda_args.append(arg)
+        if self.takes_global_size:
+            cuda_args.append(np.uint64(np.prod(self.global_size)))
 
         try:
-            self.kernel(
-                *cuda_args, block=self.block, grid=self.grid, stream=self.stream
-            )
+            with self.kernel_manager.dmgr.activated():
+                self.kernel(
+                    *cuda_args, block=self.block, grid=self.grid, stream=self.stream
+                )
         except cuda.Error as e:
             print(f"CUDA error calling {self.name}: {e}")
             show_args()
@@ -166,7 +177,8 @@ class Kernel(KernelBase):
 
     def _handle_sync_completion(self, extra_kwargs):
         """Wait for CUDA stream completion."""
-        self.stream.synchronize()
+        with self.kernel_manager.dmgr.activated():
+            self.stream.synchronize()
 
     def _calculate_grid_block(self):
         """Calculate CUDA grid and block dimensions from global_size and local_size"""

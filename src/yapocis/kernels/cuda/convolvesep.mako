@@ -9,6 +9,7 @@ void ${name}(int vertical, int width, int height, float* a, float* ret )
 {
     size_t i = get_global_id(0);
     size_t n = width*height;
+    if (i >= n) return;
     float sum = 0.0;
     if (!vertical && ((size_t)(${margin}*height) < i) && (i < (n-${margin}*height))){
        // Horizontal convolution
@@ -30,11 +31,13 @@ void ${name}_h(int width, int height, float* a, float* ret )
 {
     size_t i = get_global_id(0);
     size_t n = width*height;
+    if (i >= n) return;
     float sum = 0.0;
     int x = X(i);
     int y = Y(i);
     // Horizontal convolution
-    int inside = (x >= ${margin}) && (x<width-${margin}) && (y >= ${margin}) && (y < height-${margin});
+    // CUDA X(i) runs along height and Y(i) along width (helpers.mako)
+    int inside = (x >= ${margin}) && (x<height-${margin}) && (y >= ${margin}) && (y < width-${margin});
     //int inside = (((size_t)(${margin}*height) < i) && (i < (n-${margin}*height)));
   	%for j in range(len(conv)):
     sum += inside ? a[i+(${j-margin}*height)] * ${conv[j]} : 0.0f;
@@ -47,11 +50,13 @@ void ${name}_v(int width, int height, float* a, float* ret )
 {
     size_t i = get_global_id(0);
     size_t n = width*height;
+    if (i >= n) return;
     int x = X(i);
     int y = Y(i);
     // Vertical convolution
     float sum = 0.0;
-    int inside = (x >= ${margin}) && (x<width-${margin}) && (y >= ${margin}) && (y < height-${margin});
+    // CUDA X(i) runs along height and Y(i) along width (helpers.mako)
+    int inside = (x >= ${margin}) && (x<height-${margin}) && (y >= ${margin}) && (y < width-${margin});
     //int inside = (${margin} < i) && (i < (n-${margin}));
   	%for j in range(len(conv)):
     sum +=  inside ?  a[i+(${j-margin})] * ${conv[j]} : 0.0;

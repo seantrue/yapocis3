@@ -8,13 +8,14 @@
 #define ADDRESS${planes}(xx,yy) (ADDRESS(xx,yy))*${planes}
 
 extern "C" __kernel
-void zcs${planes}(int width, int height, float threshold, float* input, float* zcs )
+void zcs${planes}(int width, int height, float threshold, float* input, float* zcs GLOBAL_SIZE_PARAM)
 {
+    RETURN_IF_OUTSIDE(get_global_id(0))
     size_t i = get_global_id(0)*${planes};
     int x = max(1, (int)X(i));
-    x = min(x, width-2);
+    x = min(x, height-2);  // CUDA X(i) runs along height
     int y = max(1, (int)Y(i));
-    y = min(y, height-2);
+    y = min(y, width-2);  // CUDA Y(i) runs along width
     float zclt;
     float v, below, left, above, right;
     float delta;
@@ -37,8 +38,9 @@ void zcs${planes}(int width, int height, float threshold, float* input, float* z
 %endfor
 
 extern "C" __kernel
-void sub(float* input1, float* input2, float *output)
+void sub(float* input1, float* input2, float *output GLOBAL_SIZE_PARAM)
 {
+    RETURN_IF_OUTSIDE(get_global_id(0))
     size_t i;
     i = get_global_id(0);
     output[i] = input1[i] - input2[i];

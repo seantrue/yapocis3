@@ -148,6 +148,37 @@ __kernel void circles(int width, int height, READWRITE float4 *a, int nelements,
 #define signex(p1, p2, p3)                                                     \
   ((p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y))
 
+// Triangle fill rule. A pixel exactly on an edge shared by two triangles belongs to
+// only one of them, so translucent fills are not blended twice along the seam.
+// tri_edge is exactly antisymmetric in (a, b): it is computed with the endpoints in a
+// canonical order, so the two triangles get exactly opposite values on a shared edge.
+static inline float tri_edge(float ax, float ay, float bx, float by, float px, float py) {
+  bool swap = (bx < ax) || (bx == ax && by < ay);
+  float sx = swap ? bx : ax, sy = swap ? by : ay;
+  float ex = swap ? ax : bx, ey = swap ? ay : by;
+  float v = (ex - sx) * (py - sy) - (ey - sy) * (px - sx);
+  return swap ? -v : v;
+}
+
+// With both triangles wound the same way, a shared edge runs in opposite directions,
+// and exactly one direction owns pixels lying on it
+static inline bool tri_owns(float dx, float dy) {
+  return dy > 0.0f || (dy == 0.0f && dx > 0.0f);
+}
+
+static inline bool tri_inside(float px, float py, float x1, float y1, float x2, float y2,
+                    float x3, float y3) {
+  float area = tri_edge(x1, y1, x2, y2, x3, y3);
+  if (area == 0.0f) return false;
+  float s = area > 0.0f ? 1.0f : -1.0f;  // normalise the winding
+  float e1 = s * tri_edge(x1, y1, x2, y2, px, py);
+  float e2 = s * tri_edge(x2, y2, x3, y3, px, py);
+  float e3 = s * tri_edge(x3, y3, x1, y1, px, py);
+  return (e1 > 0.0f || (e1 == 0.0f && tri_owns(s * (x2 - x1), s * (y2 - y1)))) &&
+         (e2 > 0.0f || (e2 == 0.0f && tri_owns(s * (x3 - x2), s * (y3 - y2)))) &&
+         (e3 > 0.0f || (e3 == 0.0f && tri_owns(s * (x1 - x3), s * (y1 - y3))));
+}
+
 // Helper function to compute distance from point to line segment
 static __inline float dist_to_segment(float2 p, float2 a, float2 b) {
   float2 pa = p - a;
@@ -176,6 +207,50 @@ __kernel void triangles(int width, int height, READWRITE float4 *a, int nelement
     bool has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
     bool has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
     bool inside = !(has_neg && has_pos);
+
+    if (aa_width > 0.0f && inside) {
+      // Anti-aliased edges using distance to nearest edge
+      float dist1 = dist_to_segment(point, v1, v2);
+      float dist2 = dist_to_segment(point, v2, v3);
+      float dist3 = dist_to_segment(point, v3, v1);
+      float edge_dist = min(min(dist1, dist2), dist3);
+
+      float blend_t = smoothstep(0.0f, aa_width, edge_dist);
+      // Porter-Duff "over" compositing with edge blending
+      float effective_alpha = blend_t * rgba.s3;
+      float3 rgb = rgba.s012 * effective_alpha + pixel.s012 * (1.0f - effective_alpha);
+      float alpha = effective_alpha + pixel.s3 * (1.0f - effective_alpha);
+      pixel = (float4)(rgb, alpha);
+    } else if (inside) {
+      // Hard edge - Porter-Duff "over" compositing
+      float3 rgb = rgba.s012 * rgba.s3 + pixel.s012 * (1.0f - rgba.s3);
+      float alpha = rgba.s3 + pixel.s3 * (1.0f - rgba.s3);
+      pixel = (float4)(rgb, alpha);
+    }
+  }
+  a[i] = pixel;
+  barrier(CLK_GLOBAL_MEM_FENCE);
+}
+
+// mesh_triangles: triangles with a top-left fill rule, for meshes (a triangulated
+// polygon). A pixel exactly on an edge shared by two triangles belongs to only one
+// of them, so translucent fills are not blended twice along the seams. Unlike
+// triangles, pixels on a triangle's non-owning edges are not drawn.
+__kernel void mesh_triangles(int width, int height, READWRITE float4 *a, int nelements,
+                        READONLY float2 *coords, READONLY float *aa_widths, READONLY float4 *colors) {
+  size_t i = get_global_id(0);
+  float4 pixel = a[i];
+  int x = X(i);
+  int y = Y(i);
+  float2 point = (float2)((float)x, (float)y);
+  for (int ielement = 0; ielement < nelements; ielement++) {
+    float2 v1 = *coords++;
+    float2 v2 = *coords++;
+    float2 v3 = *coords++;
+    float aa_width = *aa_widths++;
+    float4 rgba = *colors++;
+
+    bool inside = tri_inside(point.x, point.y, v1.x, v1.y, v2.x, v2.y, v3.x, v3.y);
 
     if (aa_width > 0.0f && inside) {
       // Anti-aliased edges using distance to nearest edge

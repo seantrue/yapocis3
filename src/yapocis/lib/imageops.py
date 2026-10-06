@@ -28,7 +28,7 @@ class Imageops(BoundKernels):
         Returns:
             Array with values clamped to [low, high]
         """
-        return self.kmgr.clamp_pixels(input, low, high)
+        return self.kmgr.clamp_pixels(np.ascontiguousarray(input), low, high)
 
     def stretch(
         self,
@@ -50,7 +50,9 @@ class Imageops(BoundKernels):
         Returns:
             Array with values stretched to [low, high]
         """
-        return self.kmgr.stretch(input, input_min, input_max, low, high)
+        return self.kmgr.stretch(
+            np.ascontiguousarray(input), input_min, input_max, low, high
+        )
 
     def binarize(self, input: np.ndarray, threshold: float = 0.5) -> np.ndarray:
         """Binarize pixel values using a threshold.
@@ -62,11 +64,13 @@ class Imageops(BoundKernels):
         Returns:
             Array with values 0.0 (below threshold) or 1.0 (at or above threshold)
         """
-        return self.kmgr.binarize(input, threshold)
+        return self.kmgr.binarize(np.ascontiguousarray(input), threshold)
 
     def histogram(self, input, n_bins=256, n_workers=32, low=0.0, high=1.0):
         hst = np.zeros(n_bins, dtype=np.int32)
-        self.kmgr.histogram(input, low, high, hst)
+        # Device buffers need contiguous memory; a channel slice such as
+        # hsi[:, :, 2] is a strided view
+        self.kmgr.histogram(np.ascontiguousarray(input), low, high, hst)
         return hst
 
     def histogram_res(self, input, hst, low=0.0, high=1.0):

@@ -132,10 +132,12 @@ extern "C" __global__ void fft1d(float2 *input, int n, float2 *output, int direc
 /* Window function kernel
  * window_type: 0=rectangular, 1=hann, 2=hamming, 3=blackman
  */
-extern "C" __global__ void window(float *input, int const window_type, float *output)
+extern "C" __global__ void window(float *input, int const window_type, float *output GLOBAL_SIZE_PARAM)
 {
     uint gid = blockIdx.x * blockDim.x + threadIdx.x;
-    uint n = gridDim.x * blockDim.x;
+    RETURN_IF_OUTSIDE(gid)
+    // The real length, not the block-rounded thread count
+    uint n = (uint)yapocis_global_size;
 
     float w = 1.0f;
     float pos = (float)gid / (n - 1);
@@ -159,10 +161,11 @@ extern "C" __global__ void window(float *input, int const window_type, float *ou
 }
 
 /* Power spectrum kernel - compute magnitude squared */
-extern "C" __global__ void power_spectrum(float2 *fft_output, float *power)
+extern "C" __global__ void power_spectrum(float2 *fft_output, float *power GLOBAL_SIZE_PARAM)
 {
     uint gid = blockIdx.x * blockDim.x + threadIdx.x;
-    uint n = gridDim.x * blockDim.x;
+    // The real length, not the block-rounded thread count
+    uint n = (uint)yapocis_global_size;
 
     if (gid >= n) return;
 

@@ -4,6 +4,7 @@ Comprehensive tests for yapocis-tools unified CLI.
 
 Tests all subcommands: assets, backends, devices, interfaces
 """
+
 import json
 from unittest.mock import patch
 
@@ -315,6 +316,8 @@ class TestInterfacesCommand:
             opencl=False,
             python=False,
             interfaces=["mandelbrot"],
+            stubs=False,
+            write_lib=False,
         )
 
         result = cmd_interfaces(args)
@@ -333,6 +336,8 @@ class TestInterfacesCommand:
             opencl=True,
             python=False,
             interfaces=["mandelbrot"],
+            stubs=False,
+            write_lib=False,
         )
 
         result = cmd_interfaces(args)
@@ -350,6 +355,8 @@ class TestInterfacesCommand:
             opencl=False,
             python=True,
             interfaces=["mandelbrot"],
+            stubs=False,
+            write_lib=False,
         )
 
         result = cmd_interfaces(args)
@@ -367,6 +374,8 @@ class TestInterfacesCommand:
             opencl=False,
             python=False,
             interfaces=["mandelbrot"],
+            stubs=False,
+            write_lib=False,
         )
 
         result = cmd_interfaces(args)
@@ -385,6 +394,8 @@ class TestInterfacesCommand:
             opencl=False,
             python=False,
             interfaces=[],  # Empty means all
+            stubs=False,
+            write_lib=False,
         )
 
         result = cmd_interfaces(args)

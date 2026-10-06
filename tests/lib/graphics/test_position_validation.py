@@ -21,7 +21,7 @@ CANVAS_WIDTH = 401
 CANVAS_HEIGHT = 317
 
 # Asymmetric test positions in each quadrant (avoid center lines and symmetry)
-# NOTE: Graphics coordinates are (row, col) not (col, row)!
+# Positions are stored as (row, col); the drawing API takes (x, y) = (col, row).
 # Quadrants relative to center (row=158, col=200)
 POSITIONS = {
     "q1_top_left": (59, 73),  # Upper-left: row=59, col=73
@@ -73,11 +73,11 @@ def test_rects_position_validation(backend, monkeypatch):
     canvas = np.zeros((CANVAS_HEIGHT, CANVAS_WIDTH), dtype=np.float32)
 
     # Draw small white rectangles at each quadrant position
-    # Coordinates are (row, col, row2, col2)
+    # Coordinates are (x1, y1, x2, y2) = (col, row, col2, row2)
     rect_size = 10
     rectangles = []
     for name, (row, col) in POSITIONS.items():
-        rectangles.append((row, col, row + rect_size, col + rect_size))
+        rectangles.append((col, row, col + rect_size, row + rect_size))
 
     with StopWatcher("rects_position", kernel=g) as sw:
         g.rects(canvas, rectangles, color=1.0, alpha=1.0, aa_width=0.0)
@@ -125,11 +125,11 @@ def test_circles_position_validation(backend, monkeypatch):
     canvas = np.zeros((CANVAS_HEIGHT, CANVAS_WIDTH), dtype=np.float32)
 
     # Draw white circles at each quadrant position
-    # Coordinates are (row, col, radius)
+    # Coordinates are (x, y, radius) = (col, row, radius)
     radius = 7
     circles = []
     for name, (row, col) in POSITIONS.items():
-        circles.append((row, col, radius))
+        circles.append((col, row, radius))
 
     with StopWatcher("circles_position", kernel=g) as sw:
         g.circles(canvas, circles, color=1.0, alpha=1.0, aa_width=0.0)
@@ -170,11 +170,11 @@ def test_lines_position_validation(backend, monkeypatch):
     canvas = np.zeros((CANVAS_HEIGHT, CANVAS_WIDTH), dtype=np.float32)
 
     # Draw white lines from center to each quadrant position
-    # Coordinates are (row, col) - note the center calculation
+    # Coordinates are (x, y) = (col, row)
     center_row, center_col = CANVAS_HEIGHT // 2, CANVAS_WIDTH // 2
     lines = []
     for name, (row, col) in POSITIONS.items():
-        lines.append((center_row, center_col, row, col))
+        lines.append((center_col, center_row, col, row))
 
     with StopWatcher("lines_position", kernel=g) as sw:
         g.lines(canvas, lines, distance=3.0, color=1.0, alpha=1.0, aa_width=0.0)
@@ -216,11 +216,11 @@ def test_ellipses_position_validation(backend, monkeypatch):
     canvas = np.zeros((CANVAS_HEIGHT, CANVAS_WIDTH), dtype=np.float32)
 
     # Draw white ellipses at each quadrant position
-    # Coordinates are (row, col, width, height)
+    # Coordinates are (x, y, rx, ry) = (col, row, width, height)
     width, height = 14, 10  # Asymmetric ellipse dimensions
     ellipses = []
     for name, (row, col) in POSITIONS.items():
-        ellipses.append((row, col, width, height))
+        ellipses.append((col, row, width, height))
 
     with StopWatcher("ellipses_position", kernel=g) as sw:
         g.ellipses(canvas, ellipses, color=1.0, alpha=1.0, aa_width=0.0)
@@ -257,19 +257,19 @@ def test_triangles_position_validation(backend, monkeypatch):
     canvas = np.zeros((CANVAS_HEIGHT, CANVAS_WIDTH), dtype=np.float32)
 
     # Draw white triangles at each quadrant position
-    # Coordinates are (row1, col1, row2, col2, row3, col3)
+    # Coordinates are (x1, y1, x2, y2, x3, y3) = (col, row) per vertex
     triangle_size = 12
     triangles = []
     for name, (row, col) in POSITIONS.items():
-        # Create a triangle with one vertex at (row, col)
+        # Create a triangle with one vertex at (x, y) = (col, row)
         triangles.append(
             (
-                row,
-                col,  # Vertex 1
-                row,
-                col + triangle_size,  # Vertex 2 (same row, moved right)
-                row + triangle_size,
-                col + triangle_size // 2,  # Vertex 3 (moved down)
+                col,
+                row,  # Vertex 1
+                col + triangle_size,
+                row,  # Vertex 2 (same row, moved right)
+                col + triangle_size // 2,
+                row + triangle_size,  # Vertex 3 (moved down)
             )
         )
 
@@ -305,7 +305,7 @@ def test_coordinate_system_validation(backend, monkeypatch):
     canvas = np.zeros((CANVAS_HEIGHT, CANVAS_WIDTH), dtype=np.float32)
 
     # Draw white rectangles at the four corners to verify coordinate system
-    # Coordinates are (row, col, row2, col2)
+    # corners are (row1, col1, row2, col2); rects take (x1, y1, x2, y2)
     corner_size = 20
     corners = [
         (0, 0, corner_size, corner_size),  # Top-left
@@ -320,7 +320,13 @@ def test_coordinate_system_validation(backend, monkeypatch):
     ]
 
     with StopWatcher("coordinate_system", kernel=g) as sw:
-        g.rects(canvas, corners, color=1.0, alpha=1.0, aa_width=0.0)
+        g.rects(
+            canvas,
+            [(c1, r1, c2, r2) for r1, c1, r2, c2 in corners],
+            color=1.0,
+            alpha=1.0,
+            aa_width=0.0,
+        )
         result = g.read(canvas)
         sw.show(result)
 
@@ -363,7 +369,7 @@ def test_edge_positions_validation(backend, monkeypatch):
     canvas = np.zeros((CANVAS_HEIGHT, CANVAS_WIDTH), dtype=np.float32)
 
     # Draw white circles at edge positions
-    # Coordinates are (row, col, radius)
+    # edge_positions are (row, col); circles take (x, y, radius)
     radius = 5
     edge_positions = [
         (5, 5),  # Near origin (top-left)
@@ -375,7 +381,7 @@ def test_edge_positions_validation(backend, monkeypatch):
     with StopWatcher("edge_positions", kernel=g) as sw:
         g.circles(
             canvas,
-            [(row, col, radius) for row, col in edge_positions],
+            [(col, row, radius) for row, col in edge_positions],
             color=1.0,
             alpha=1.0,
             aa_width=0.0,

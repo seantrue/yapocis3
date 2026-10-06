@@ -87,7 +87,6 @@ YAPOCIS_BACKEND=ocl|metal|cuda|numba   # Backend selection
 YAPOCIS_DEVICE=<name_or_index>         # Device selection
 YAPOCIS_CACHE=<directory>              # Kernel cache directory
 YAPOCIS_PROJECT=<directory>            # Additional asset root
-YAPOCIS_KERNELPACK=1|true|yes          # Enable compiled kernel packages
 YAPOCIS_VALIDATION                     # Enable reproducible test seeding
 ```
 
@@ -95,7 +94,7 @@ YAPOCIS_VALIDATION                     # Enable reproducible test seeding
 
 Tests are in `tests/` with structure: `tests/{category}/{subcategory}/`
 
-**Categories**: backend/, lib/, kernelpack/, async/, performance/, regression/, integration/
+**Categories**: backend/, lib/, async/, performance/, regression/, integration/
 
 **Markers**:
 ```python

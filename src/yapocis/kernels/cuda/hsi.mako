@@ -76,7 +76,8 @@ static __device__ __inline__ float3 _xyz2lab(float3 xyz) {
 
 
 extern "C" __kernel
-void rgb2hsi(float *ra, float *ga, float *ba, float *ha, float *sa, float *ia) {
+void rgb2hsi(float *ra, float *ga, float *ba, float *ha, float *sa, float *ia GLOBAL_SIZE_PARAM) {
+    RETURN_IF_OUTSIDE(get_global_id(0))
     size_t i = get_global_id(0);
     float3 c = make_float3(ra[i], ba[i], ga[i]);
     float3 hsi = _rgb2hsi(c);
@@ -87,7 +88,8 @@ void rgb2hsi(float *ra, float *ga, float *ba, float *ha, float *sa, float *ia) {
 
 
 extern "C" __kernel
-void hsi2rgb(float *ha, float *sa, float *ia, float *ra, float *ga, float *ba) {
+void hsi2rgb(float *ha, float *sa, float *ia, float *ra, float *ga, float *ba GLOBAL_SIZE_PARAM) {
+    RETURN_IF_OUTSIDE(get_global_id(0))
 	size_t i = get_global_id(0);
 	float3 hsi = make_float3(ha[i],sa[i],ia[i]);
     float3 c = _hsi2rgb(hsi);
@@ -99,7 +101,8 @@ void hsi2rgb(float *ha, float *sa, float *ia, float *ra, float *ga, float *ba) {
 
 
 extern "C" __kernel
-void rgb2hsi3(int depth, float *input, float *output) {
+void rgb2hsi3(int depth, float *input, float *output GLOBAL_SIZE_PARAM) {
+    RETURN_IF_OUTSIDE(get_global_id(0))
     size_t i = get_global_id(0) * depth;
     float3 c = make_float3(input[i], input[i+2],input[i+1]);
     float3 hsi = _rgb2hsi(c);
@@ -113,7 +116,8 @@ void rgb2hsi3(int depth, float *input, float *output) {
 
 
 extern "C" __kernel
-void hsi2rgb3(int depth, float *input, float *output) {
+void hsi2rgb3(int depth, float *input, float *output GLOBAL_SIZE_PARAM) {
+    RETURN_IF_OUTSIDE(get_global_id(0))
 	size_t i = get_global_id(0)*depth;
 	float3 hsi = make_float3(input[i],input[i+1],input[i+2]);
     float3 c = _hsi2rgb(hsi);
@@ -126,7 +130,8 @@ void hsi2rgb3(int depth, float *input, float *output) {
 }
 
 extern "C" __kernel
-void rgb2lab3(int depth, float *input, float *output) {
+void rgb2lab3(int depth, float *input, float *output GLOBAL_SIZE_PARAM) {
+    RETURN_IF_OUTSIDE(get_global_id(0))
     size_t i = get_global_id(0) * depth;
     float3 c = make_float3(input[i], input[i+2],input[i+1]);
     float3 xyz = _rgb2xyz(c);

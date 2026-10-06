@@ -3,8 +3,9 @@
 
 /* Kernel to compute mandelbrot set values for a given set of points */
 
-extern "C" __global__ void mandelbrot(float2 *q, short *output, int const maxiter)
+extern "C" __global__ void mandelbrot(float2 *q, short *output, int const maxiter GLOBAL_SIZE_PARAM)
 {
+    RETURN_IF_OUTSIDE(get_global_id(0))
     size_t gid = get_global_id(0);
     float nreal, real = 0;
     float imag = 0;

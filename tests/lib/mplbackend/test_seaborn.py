@@ -84,6 +84,9 @@ class TestSeabornComparison:
                     style="event",
                     data=fmri,
                     ax=ax,
+                    # The confidence band is bootstrapped; without a fixed seed the
+                    # Agg and yapocis renders draw different bands
+                    seed=0,
                 )
                 return fig
 

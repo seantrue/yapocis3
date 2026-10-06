@@ -18,6 +18,22 @@ from yapocis.lib.gaussian import Gaussian
 from yapocis.lib.zc import ZC
 from yapocis.utils.basic import imread
 
+# The tests below set these directly in os.environ
+_ENV_KEYS = ("YAPOCIS_BACKEND", "YAPOCIS_DEVICE", "YAPOCIS_ASYNC", "YAPOCIS_ASYNC_WRITE")
+
+
+@pytest.fixture(autouse=True)
+def _restore_env(monkeypatch):
+    """Undo each test's os.environ changes, so its backend doesn't leak into later tests."""
+    for key in _ENV_KEYS:
+        if key in os.environ:
+            monkeypatch.setenv(key, os.environ[key])
+        else:
+            # delenv records nothing for an absent key; setenv first records that it
+            # was unset, so undo removes whatever the test sets
+            monkeypatch.setenv(key, "")
+            monkeypatch.delenv(key)
+
 
 def load_test_image(size=512):
     """Load and prepare test image."""

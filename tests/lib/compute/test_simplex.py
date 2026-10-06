@@ -262,7 +262,7 @@ def test_offset(backend, monkeypatch):
     assert not np.allclose(noise1, noise2, rtol=0.1), f"{backend}: Offset had no effect"
 
 
-def test_cross_backend_consistency():
+def test_cross_backend_consistency(monkeypatch):
     """Test that all backends produce output in the expected range.
 
     Note: Due to column-major (OpenCL/Metal) vs row-major (Numba) differences,
@@ -274,9 +274,8 @@ def test_cross_backend_consistency():
         pytest.skip("Need at least 2 backends for cross-backend testing")
 
     for backend in backends[:3]:  # Test up to 3 backends
-        import os
-
-        os.environ["YAPOCIS_BACKEND"] = backend
+        # monkeypatch, not os.environ: the backend must not leak into later tests
+        monkeypatch.setenv("YAPOCIS_BACKEND", backend)
         s = Simplex()
         noise = s.simplex2d(128, 128, seed=42, scale=0.01, octaves=3)
 

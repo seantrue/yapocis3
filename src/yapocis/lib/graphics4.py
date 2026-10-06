@@ -98,9 +98,8 @@ class GraphicsSetup4(AbstractGraphicsSetup):
             assert depth == 4
             block = block.ravel()
             pixel_buffer.append(block)
-            row, col = location  # Location is (row, col)
-            # OCL/Metal kernels expect (x, y, w, h) where x=col, y=row (from X/Y macros)
-            coords.append((col, row, width, height))
+            x, y = location  # x = column, y = row; the kernel takes the same
+            coords.append((x, y, width, height))
             ipixels.append(ipixel)
             ipixel += len(block) // 4
         buffer = np.concatenate(pixel_buffer)
@@ -145,7 +144,7 @@ class GraphicsSetup4(AbstractGraphicsSetup):
         return coords, buffer, ipixels
 
     def setup_texts(
-        lself,
+        self,
         locations,
         texts,
         font=None,
@@ -184,7 +183,7 @@ class GraphicsSetup4(AbstractGraphicsSetup):
             for ((_, _, w, h), angle) in zip(bboxes, rotations, strict=False)
         ]
         locations = [
-            (y + dy, x + dx)
+            (x + dx, y + dy)
             for ((x, y), (dx, dy)) in zip(locations, dxdy, strict=False)
         ]
 

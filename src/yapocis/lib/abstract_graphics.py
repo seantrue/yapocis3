@@ -7,6 +7,30 @@ import numpy as np
 from ..utils.basic import chunker
 from .bound_kernels import BoundKernels
 
+# The drawing API takes points as (x, y) with x = column and y = row. The OCL,
+# Metal and Numba shape kernels take (row, col); CUDA's already take (x, y).
+# Each entry reorders one shape's coordinate row for a (row, col) kernel;
+# ellipse radii (rx, ry) swap along with the center.
+KERNEL_ORDER = {
+    "lines": [1, 0, 3, 2],
+    "rects": [1, 0, 3, 2],
+    "circles": [1, 0, 2],
+    "triangles": [1, 0, 3, 2, 5, 4],
+    "mesh_triangles": [1, 0, 3, 2, 5, 4],
+    "ellipses": [1, 0, 3, 2],
+}
+
+
+XY_SHAPE_BACKENDS = {"cuda"}
+
+
+def to_kernel_order(coords: np.ndarray, shape: str, kmgr) -> np.ndarray:
+    """Reorder (x, y) shape coordinates into the order kmgr's kernels take."""
+    # The numbax KernelManager does not define _backend_name
+    if getattr(kmgr, "_backend_name", None) in XY_SHAPE_BACKENDS:
+        return coords
+    return np.ascontiguousarray(coords[:, KERNEL_ORDER[shape]])
+
 
 class AbstractGraphicsSetup:
     CHANNELS: int = 1
@@ -86,6 +110,7 @@ class AbstractGraphics(BoundKernels):
         if not coords:
             return
         coords = self.coerce_coords(coords, 4)
+        coords = to_kernel_order(coords, "lines", self.kmgr)
         colors = self.coerce_colors(coords, **kwargs)
         widths = self.coerce_widths(coords, **kwargs)
         aa_widths = self.coerce_aa_widths(coords, **kwargs)
@@ -102,6 +127,7 @@ class AbstractGraphics(BoundKernels):
         if not coords:
             return
         coords = self.coerce_coords(coords, 4)
+        coords = to_kernel_order(coords, "rects", self.kmgr)
         colors = self.coerce_colors(coords, **kwargs)
         aa_widths = self.coerce_aa_widths(coords, **kwargs)
         self.kmgr.rects(
@@ -112,6 +138,7 @@ class AbstractGraphics(BoundKernels):
         if not coords:
             return
         coords = self.coerce_coords(coords, 3)
+        coords = to_kernel_order(coords, "circles", self.kmgr)
         colors = self.coerce_colors(coords, **kwargs)
         aa_widths = self.coerce_aa_widths(coords, **kwargs)
         self.kmgr.circles(
@@ -122,9 +149,24 @@ class AbstractGraphics(BoundKernels):
         if not coords:
             return
         coords = self.coerce_coords(coords, 6)
+        coords = to_kernel_order(coords, "triangles", self.kmgr)
         colors = self.coerce_colors(coords, **kwargs)
         aa_widths = self.coerce_aa_widths(coords, **kwargs)
         self.kmgr.triangles(
+            image, coords, aa_widths, colors, global_size=image.size // self.CHANNELS
+        )
+
+    def mesh_triangles(self, image, coords, **kwargs):
+        """Triangles of a mesh (a triangulated polygon). A pixel on an edge shared by
+        two triangles is drawn by only one of them, so translucent fills have no seams;
+        unlike triangles, pixels on a triangle's non-owning edges are not drawn."""
+        if not coords:
+            return
+        coords = self.coerce_coords(coords, 6)
+        coords = to_kernel_order(coords, "mesh_triangles", self.kmgr)
+        colors = self.coerce_colors(coords, **kwargs)
+        aa_widths = self.coerce_aa_widths(coords, **kwargs)
+        self.kmgr.mesh_triangles(
             image, coords, aa_widths, colors, global_size=image.size // self.CHANNELS
         )
 
@@ -132,6 +174,7 @@ class AbstractGraphics(BoundKernels):
         if not coords:
             return
         coords = self.coerce_coords(coords, 4)
+        coords = to_kernel_order(coords, "ellipses", self.kmgr)
         colors = self.coerce_colors(coords, **kwargs)
         aa_widths = self.coerce_aa_widths(coords, **kwargs)
         self.kmgr.ellipses(
@@ -215,6 +258,7 @@ class AbstractKernelDraw:
         self._rects = []
         self._circles = []
         self._triangles = []
+        self._mesh_triangles = []
         self._ellipses = []
         self._sprites = []
         self._draw_strings = []
@@ -302,6 +346,10 @@ class AbstractKernelDraw:
     def triangle(self, triangle, **kwargs):
         self._triangles.append((triangle, kwargs))
 
+    def mesh_triangle(self, triangle, **kwargs):
+        """A triangle of a mesh: shared edges are drawn once (see mesh_triangles)."""
+        self._mesh_triangles.append((triangle, kwargs))
+
     def ellipse(self, ellipse, **kwargs):
         self._ellipses.append((ellipse, kwargs))
 
@@ -363,6 +411,9 @@ class AbstractKernelDraw:
     def render_triangles(self):
         self.render_display_list("triangles")
 
+    def render_mesh_triangles(self):
+        self.render_display_list("mesh_triangles")
+
     def render_ellipses(self):
         self.render_display_list("ellipses")
 
@@ -377,6 +428,7 @@ class AbstractKernelDraw:
         self.render_circles()
         self.render_ellipses()
         self.render_triangles()
+        self.render_mesh_triangles()
         self.render_lines()
         self.render_draw_strings()
         self.render_sprites()
@@ -393,30 +445,42 @@ class AbstractKernelDraw:
 
     def lines(self, coords, **kwargs):
         coords, colors, widths, aa_widths = self.prepare_args(coords, 4, **kwargs)
+        coords = to_kernel_order(coords, "lines", self.graphics.kmgr)
         self.graphics.kmgr.lines_res(
             self.a, coords, widths, aa_widths, colors, global_size=self.global_size
         )
 
     def rects(self, coords, **kwargs):
         coords, colors, _, aa_widths = self.prepare_args(coords, 4, **kwargs)
+        coords = to_kernel_order(coords, "rects", self.graphics.kmgr)
         self.graphics.kmgr.rects_res(
             self.a, coords, aa_widths, colors, global_size=self.global_size
         )
 
     def circles(self, coords, **kwargs):
         coords, colors, _, aa_widths = self.prepare_args(coords, 3, **kwargs)
+        coords = to_kernel_order(coords, "circles", self.graphics.kmgr)
         self.graphics.kmgr.circles_res(
             self.a, coords, aa_widths, colors, global_size=self.global_size
         )
 
     def triangles(self, coords, **kwargs):
         coords, colors, _, aa_widths = self.prepare_args(coords, 6, **kwargs)
+        coords = to_kernel_order(coords, "triangles", self.graphics.kmgr)
         self.graphics.kmgr.triangles_res(
+            self.a, coords, aa_widths, colors, global_size=self.global_size
+        )
+
+    def mesh_triangles(self, coords, **kwargs):
+        coords, colors, _, aa_widths = self.prepare_args(coords, 6, **kwargs)
+        coords = to_kernel_order(coords, "mesh_triangles", self.graphics.kmgr)
+        self.graphics.kmgr.mesh_triangles_res(
             self.a, coords, aa_widths, colors, global_size=self.global_size
         )
 
     def ellipses(self, coords, **kwargs):
         coords, colors, _, aa_widths = self.prepare_args(coords, 4, **kwargs)
+        coords = to_kernel_order(coords, "ellipses", self.graphics.kmgr)
         self.graphics.kmgr.ellipses_res(
             self.a, coords, aa_widths, colors, global_size=self.global_size
         )
