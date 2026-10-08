@@ -37,8 +37,17 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~800 lines: One (x, y) drawing convention, CUDA bounds/blending/multi-GPU fixes, stub generator, dependency cleanup (2026-10-06); plus ~1,100 lines of mesh-triangle work found uncommitted, author not recorded
   - ~170 lines: FP16 image read/write in `utils/basic.py` plus tests (2026-10-08); FP16 evaluation reports in `claude-debug/`
   - ~165 lines: anisodiff off-by-one and RGB layout fixes, get_manager backend argument, f16 dtype, stale Makefile targets, plus tests (2026-10-08)
+  - ~15 lines: `test_vimp_common` default-queue test corrected (2026-10-08)
 
 ## Detailed Contributions
+
+### 2026-10-08: test_vimp_common Default-Queue Test Corrected
+
+**Maintainer direction:** "fix the test_vimp_common failure", the one failure left in the yellowfin deploys of the last two merges, which also failed on `main` before them.
+
+**Cause (Claude):** `test_show_array_default_queue_dir` was wrong on two counts, and neither library was changed. It passed an all-zero array, which yapocis `show_array` rejects on purpose (`checkzero`: "No one likes an empty picture"). It also expected the default output in `./queue` under the working directory, but yapocis saves to `VIEWING_QUEUE`, which is fixed at import time under the performance directory.
+
+**Fix (Claude, ~15 LOC in `tests/test_vimp_common.py`):** the test now uses a non-zero 2x2 array, redirects `yapocis.utils.basic.VIEWING_QUEUE` to a temp folder with monkeypatch (so it no longer writes into the real queue), and checks the file lands there. All 10 tests in the file pass on the Mac.
 
 ### 2026-10-08: Anisodiff Iteration Count and RGB Layout, get_manager Backend Argument, f16 dtype, Stale Make Targets
 
