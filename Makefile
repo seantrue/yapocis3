@@ -205,12 +205,12 @@ test-all-backends: test-ocl test-metal test-numbax ## Run tests on all available
 .PHONY: test-smoke
 test-smoke: venv ## Run smoke tests (quick backend validation)
 	@echo "$(YELLOW)Running smoke tests...$(NC)"
-	$(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)/test_backend_smoke.py
+	$(VENV_PYTHON) -m pytest $(PYTEST_ARGS) -m smoke $(TESTS_DIR)
 
 .PHONY: test-runtime
 test-runtime: venv ## Run runtime sanity tests
 	@echo "$(YELLOW)Running runtime tests...$(NC)"
-	$(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)/test_backend_runtime.py
+	$(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)/backend/test_runtime.py
 
 .PHONY: test-graphics
 test-graphics: venv ## Run graphics tests
@@ -231,34 +231,17 @@ test-perf: venv ## Run performance tests (library and kernel)
 .PHONY: test-perf-lib
 test-perf-lib: venv ## Run library performance tests only
 	@echo "$(YELLOW)Running library performance tests...$(NC)"
-	$(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)/test_library_performance.py
+	$(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)/performance/test_library_perf.py
 
 .PHONY: test-perf-kernel
 test-perf-kernel: venv ## Run kernel performance tests only
 	@echo "$(YELLOW)Running kernel performance tests...$(NC)"
-	$(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)/test_kernel_performance.py
+	$(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)/performance/test_kernel_perf.py
 
 .PHONY: test-all
 test-all: venv ## Run all tests including performance tests
 	@echo "$(YELLOW)Running all tests (including performance)...$(NC)"
 	$(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)
-
-##@ Cross-validation
-
-.PHONY: crosschecks
-crosschecks: crosscheck-ocl crosscheck-numbax ## Run cross-backend validation tests
-
-.PHONY: crosscheck-ocl
-crosscheck-ocl: venv ## Cross-validate OpenCL vs Metal
-	@echo "$(YELLOW)Cross-checking OpenCL vs Metal...$(NC)"
-	YAPOCIS_BACKEND= YAPOCIS_CROSSCHECK_REF=metal YAPOCIS_CROSSCHECK_TEST=ocl \
-		$(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)/test_backend_crosscheck.py
-
-.PHONY: crosscheck-numbax
-crosscheck-numbax: venv ## Cross-validate Numba vs Metal
-	@echo "$(YELLOW)Cross-checking Numba vs Metal...$(NC)"
-	YAPOCIS_BACKEND= YAPOCIS_CROSSCHECK_REF=metal YAPOCIS_CROSSCHECK_TEST=numbax \
-		$(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)/test_backend_crosscheck.py
 
 ##@ Changelog & Version Management
 

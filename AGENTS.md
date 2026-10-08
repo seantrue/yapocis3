@@ -19,7 +19,7 @@
   - `make test` (all available backends)
   - `make test-ocl` (OpenCL only)
   - `make test-metal` (Metal only)
-  - `pytest -q` (direct pytest, example: `pytest tests/test_backend_smoke.py -q`)
+  - `pytest -q` (direct pytest, example: `pytest tests/backend/test_smoke.py -q`)
 - Run examples: `python examples/matplotlib_median_performance.py`.
 
 ## Coding Style & Naming Conventions

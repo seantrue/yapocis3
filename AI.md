@@ -6,7 +6,7 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Summary Statistics
 
-- **Total AI-assisted commits**: ~32
+- **Total AI-assisted commits**: ~33
 - **Major features developed with AI assistance**:
   - Infrastructure: Package modernization (hatchling, modern tooling), automated changelog generation, type annotation modernization, release automation system
   - Backend work: CUDA kernel compilation fixes, CUDA row-major addressing fixes, Metal backend fixes, coordinate system standardization, Numba backend completeness, truetrace kernel port, separable convolution boundary fix
@@ -36,8 +36,36 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~270 lines: Colorspace matrix/xyY fixes and content-keyed Mako module cache (2026-10-04, colleague-authored; AI verified)
   - ~800 lines: One (x, y) drawing convention, CUDA bounds/blending/multi-GPU fixes, stub generator, dependency cleanup (2026-10-06); plus ~1,100 lines of mesh-triangle work found uncommitted, author not recorded
   - ~170 lines: FP16 image read/write in `utils/basic.py` plus tests (2026-10-08); FP16 evaluation reports in `claude-debug/`
+  - ~165 lines: anisodiff off-by-one and RGB layout fixes, get_manager backend argument, f16 dtype, stale Makefile targets, plus tests (2026-10-08)
 
 ## Detailed Contributions
+
+### 2026-10-08: Anisodiff Iteration Count and RGB Layout, get_manager Backend Argument, f16 dtype, Stale Make Targets
+
+**Maintainer direction:** "Fix and test" the four issues the FP16 work had turned up. Then "What are the other stale make targets?", and "Yes" to the proposal to fix the renamed ones and remove the crosscheck targets.
+
+**Fixes (Claude, ~35 LOC in `src/`, ~25 net LOC removed from the Makefile):**
+- `Anisodiff.anisodiff_n(img, n)` returned n−1 iterations: after the last buffer swap it read the stale buffer. It now reads the buffer the last iteration wrote.
+- `core.get_manager(backend)` overwrote its argument with `YAPOCIS_BACKEND`, so `load_program(..., backend=...)` silently ran on the environment's backend. An explicit backend (any case) now wins; None still uses the environment, and unknown names still raise.
+- `ctype_to_nptype` gained `f16`, placed so that the reverse map still gives `half` for float16.
+- Makefile: `test-smoke` now runs `pytest -m smoke tests`. `test-runtime`, `test-perf-lib` and `test-perf-kernel` point at the renamed files. The `crosschecks`/`crosscheck-ocl`/`crosscheck-numbax` targets were removed: `test_backend_crosscheck.py` was never in this repository's history, and nothing reads the `YAPOCIS_CROSSCHECK_*` variables they set. `docs/kernel-development/testing-kernels.md` and `AGENTS.md` no longer name the old files; `HISTORY.md` and older AI.md entries were left as history.
+
+**A pre-existing bug exposed by the off-by-one fix.** Once `anisodiff_n` returned its last iteration, the new reference test failed on yellowfin's CUDA for RGB images only, with NaNs and values up to 1e36. On unpatched `main`, n=2 already gave garbage; n=1 had hidden it by returning the input. The cause is that `float3` is 16 bytes in OpenCL and Metal but 12 bytes in CUDA:
+- `anisodiff_n` padded RGB to 4 channels but still ran the 3-plane kernel, so CUDA misread the buffer.
+- The streaming `anisodiff` generator did not pad at all, so it was wrong on OpenCL and Metal (errors up to 1.0) and right on CUDA and Numba. Claude predicted this from the layout and confirmed it with a probe.
+
+A new `Anisodiff.pad_planes` helper now pads 3 planes to 4 and selects the 4-plane kernel for both paths on every backend. No CUDA kernel or convention was changed.
+
+**Tests (Claude, ~124 LOC, 34 cases on the Mac's 3 backends).** These compare `anisodiff_n` and the generator against a float64 Perona–Malik reference (grey and RGB, every backend). They also cover backend selection with a conflicting `YAPOCIS_BACKEND`, and the `f16`/`half` dtype mapping. Against the old code, 20 of the first 28 failed. The 6 generator cases were added later and were not re-run against the old code; the probe showed the same wrong RGB output.
+
+Results:
+- Targeted runs: Mac (Metal, OpenCL, Numba) 240 passed, 1 skipped; yellowfin (OpenCL, CUDA, Numba, patched worktree) 246 passed, 28 skipped.
+- Full suite: Mac 1085 passed, 1 failed, 1 skipped; yellowfin 1076 passed, 1 failed, 1 skipped. The one failure, `test_vimp_common::test_show_array_default_queue_dir`, also fails on `main`. It feeds an all-zero image into `show_array`'s `checkzero` assertion and is not addressed here.
+- `make test-smoke` gives 121 passed, 1 skipped; `make test-runtime` gives 3 passed, 1 skipped. The performance targets were only checked to collect (10 and 22 tests), so that running them would not add rows to the performance database.
+
+**AI defects, and how each was caught:**
+- **Untested case in the earlier FP16 work:** Claude's earlier claim that its anisodiff port matched the library on CUDA covered grey images only, so the CUDA RGB failure went unseen until the new reference test ran on yellowfin.
+- **Probe and wait-script mistakes, no effect on the change:** a debugging probe set `YAPOCIS_BACKEND=numba` (the accepted name is `numbax`) and crashed; caught on running. In the previous deploy step, a remote wait loop used `pgrep -f` with a pattern from its own command line, so it could never exit. The maintainer had already been bitten by this pattern once and asked for it to be avoided in all cases; it is now a standing rule.
 
 ### 2026-10-08: FP16 Evaluation; imread/byte_scale/imwrite Handle FP16 Without Full-Size FP32 Copies
 

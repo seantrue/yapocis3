@@ -150,3 +150,48 @@ def test_4plane(backend, monkeypatch):
                 with sw.checkpoint("iterate"):
                     rgba2 = aniso.anisodiff_n(rgba, N)
                 sw.showcheck(rgba2[:, :, :3])
+
+
+def _perona_malik_reference(image, n, scale=3.0, step_size=0.2):
+    """n Perona-Malik iterations in float64, same scaling and border handling as Anisodiff."""
+    img = image.astype(np.float64) * 256.0
+    for _ in range(n):
+        acc = np.zeros_like(img)
+        for shift, axis in ((1, 0), (-1, 0), (1, 1), (-1, 1)):
+            di = np.roll(img, shift, axis) - img
+            cf = di / scale
+            acc += di / (1.0 + cf * cf)
+        nxt = img.copy()
+        nxt[1:-1, 1:-1] = (img + step_size * acc)[1:-1, 1:-1]
+        img = nxt
+    return img / 256.0
+
+
+@pytest.mark.parametrize("backend", get_test_backends())
+@pytest.mark.parametrize("planes", [1, 3])
+@pytest.mark.parametrize("n", [1, 3])
+def test_anisodiff_n_runs_n_iterations(backend, planes, n, monkeypatch):
+    """anisodiff_n(img, n) used to return the result of n-1 iterations."""
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+    rng = np.random.default_rng(0)
+    shape = (37, 53) if planes == 1 else (37, 53, 3)
+    image = rng.uniform(0.0, 1.0, shape).astype(np.float32)
+    result = Anisodiff().anisodiff_n(image, n)
+    expected = _perona_malik_reference(image, n)
+    assert result.shape == image.shape
+    np.testing.assert_allclose(result, expected, atol=1e-5)
+
+
+@pytest.mark.parametrize("backend", get_test_backends())
+@pytest.mark.parametrize("planes", [1, 3])
+def test_anisodiff_generator_matches_reference(backend, planes, monkeypatch):
+    """3 planes used to be read with the wrong float3 stride on OpenCL/Metal."""
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+    rng = np.random.default_rng(1)
+    shape = (37, 53) if planes == 1 else (37, 53, 3)
+    image = rng.uniform(0.001, 0.999, shape).astype(np.float32)
+    steps = Anisodiff().anisodiff(image)
+    for k in range(1, 4):
+        result = next(steps)
+        assert result.shape == image.shape
+        np.testing.assert_allclose(result, _perona_malik_reference(image, k), atol=1e-5)
