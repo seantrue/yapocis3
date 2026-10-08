@@ -94,13 +94,18 @@ def test_show_array_unsupported_channels_and_dims(tmp_path: Path):
 
 
 def test_show_array_default_queue_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    # Run within a temp CWD so default queue dir is created there
-    monkeypatch.chdir(tmp_path)
-    arr = np.zeros((2, 2), dtype=np.float32)
+    # With no queue_dir, yapocis saves to its VIEWING_QUEUE (fixed at import);
+    # point that at a temp dir so the test doesn't write into the real queue.
+    import yapocis.utils.basic as basic
+
+    queue = tmp_path / "queue"
+    queue.mkdir()
+    monkeypatch.setattr(basic, "VIEWING_QUEUE", str(queue))
+    # Non-zero: yapocis show_array rejects empty pictures (checkzero)
+    arr = np.array([[0.0, 0.5], [0.5, 1.0]], dtype=np.float32)
     out = show_array(arr, name="default_queue")
     assert out.exists()
-    # Ensure it saved to ./queue
-    assert out.parent == tmp_path / "queue"
+    assert out.parent == queue
 
 
 def test_save_and_load_npz_and_metadata_yaml(tmp_path: Path):
