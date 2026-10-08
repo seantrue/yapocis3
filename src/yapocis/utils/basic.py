@@ -44,6 +44,41 @@ def _current_backend() -> str:
     return (b or "ocl").lower()
 
 
+# Image conversions run over slabs of this many rows, so float32 temporaries stay
+# small instead of being full-size copies (numpy does float16 math in software).
+_SLAB_ROWS = 64
+
+
+def _row_slabs(a: Array) -> Iterator[tuple[slice, Array]]:
+    for r in range(0, a.shape[0], _SLAB_ROWS):
+        rows = slice(r, r + _SLAB_ROWS)
+        yield rows, a[rows]
+
+
+def _to_unit_float(img: Array, max_value: float, dtype: np.dtype) -> Array:
+    """img / max_value as dtype, computed in float32 (float64 for wider dtypes) one slab at a time."""
+    work = np.float64 if np.dtype(dtype).itemsize > 4 else np.float32
+    out = np.empty(img.shape, dtype=dtype)
+    for rows, slab in _row_slabs(img):
+        out[rows] = slab.astype(work) / work(max_value)
+    return out
+
+
+def _byte_scale_float16(data: Array, cmin, cmax, high: int, low: int) -> Array:
+    """byte_scale for float16: the same float32 math, one slab at a time."""
+    if cmin is None or cmax is None:
+        lo, hi = np.float32(np.inf), np.float32(-np.inf)
+        for _, slab in _row_slabs(data):
+            slab = slab.astype(np.float32)
+            lo, hi = np.minimum(lo, slab.min()), np.maximum(hi, slab.max())
+        cmin = lo if cmin is None else cmin
+        cmax = hi if cmax is None else cmax
+    out = np.empty(data.shape, dtype=np.uint8)
+    for rows, slab in _row_slabs(data):
+        out[rows] = byte_scale(slab.astype(np.float32), cmin, cmax, high, low)
+    return out
+
+
 # bytescale, toimage borrowed from scipy.misc
 # Used under the liberal BSD license
 # Returns a byte-scaled image
@@ -56,6 +91,8 @@ def byte_scale(
 ) -> Array:
     if data.dtype == np.uint8:
         return data
+    if data.dtype == np.float16 and data.ndim:
+        return _byte_scale_float16(data, cmin, cmax, high, low)
     high = high - low
     cmin = data.min() if cmin is None else cmin
     cmax = data.max() if cmax is None else cmax
@@ -202,8 +239,16 @@ def newsize(width: int, height: int, longest: int) -> tuple[bool, int, int]:
 
 
 def imread(
-    filename: str, longest: int | None = None, keep_alpha: bool = False
+    filename: str,
+    longest: int | None = None,
+    keep_alpha: bool = False,
+    dtype: npt.DTypeLike = np.float32,
 ) -> Union[Image1, Image3]:
+    """Read an image as floats in [0, 1].
+
+    dtype=np.float16 converts straight to half precision without a full-size
+    float32 copy; values are identical to imread(...).astype(np.float16).
+    """
     img = skimage.io.imread(filename)
     if keep_alpha:
         # skimage drops tRNS transparency (palette/grayscale PNGs) when
@@ -217,17 +262,15 @@ def imread(
         img = skimage.transform.resize(
             img, (h, w), preserve_range=True, anti_aliasing=True
         )
-    a = img.astype(np.float32) / np.iinfo(img_dtype).max
-    if not keep_alpha and len(a.shape) == 3 and a.shape[2] == 4:
-        a = a[:, :, 0:3]
-    return a
+    if not keep_alpha and len(img.shape) == 3 and img.shape[2] == 4:
+        img = img[:, :, 0:3]
+    return _to_unit_float(img, np.iinfo(img_dtype).max, dtype)
 
 
 def imwrite(filename: str, img: Union[Image1, Image3, Image4]):
-    img = np.nan_to_num(img, neginf=0, posinf=1.0)
-    img *= 255.0
-    img = img.to_image()
-    img.save(filename)
+    """Save a [0, 1] float image. Out-of-range values are clipped, not rescaled."""
+    img = np.clip(np.nan_to_num(img, nan=0.0, neginf=0.0, posinf=1.0), 0.0, 1.0)
+    to_image(img, cmin=0.0, cmax=1.0).save(filename)
 
 
 import time
@@ -295,7 +338,8 @@ def array_to_image(array):
     if len(array.shape) == 3 and array.shape[2] == 4:
         array = array[:, :, :3]
     if array.dtype != np.uint8:
-        array = array.copy()
+        # float16 is widened: numpy does half-precision math in software
+        array = array.astype(np.float32) if array.dtype == np.float16 else array.copy()
         if array.dtype in (np.float32, np.float64, float):
             array -= array.min()
             mx = array.max()

@@ -6,7 +6,7 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Summary Statistics
 
-- **Total AI-assisted commits**: ~31
+- **Total AI-assisted commits**: ~32
 - **Major features developed with AI assistance**:
   - Infrastructure: Package modernization (hatchling, modern tooling), automated changelog generation, type annotation modernization, release automation system
   - Backend work: CUDA kernel compilation fixes, CUDA row-major addressing fixes, Metal backend fixes, coordinate system standardization, Numba backend completeness, truetrace kernel port, separable convolution boundary fix
@@ -35,8 +35,40 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~1870 lines: Extension project support, enhanced imageops, stub generation (2026-03-05)
   - ~270 lines: Colorspace matrix/xyY fixes and content-keyed Mako module cache (2026-10-04, colleague-authored; AI verified)
   - ~800 lines: One (x, y) drawing convention, CUDA bounds/blending/multi-GPU fixes, stub generator, dependency cleanup (2026-10-06); plus ~1,100 lines of mesh-triangle work found uncommitted, author not recorded
+  - ~170 lines: FP16 image read/write in `utils/basic.py` plus tests (2026-10-08); FP16 evaluation reports in `claude-debug/`
 
 ## Detailed Contributions
+
+### 2026-10-08: FP16 Evaluation; imread/byte_scale/imwrite Handle FP16 Without Full-Size FP32 Copies
+
+**Maintainer direction:** "Evaluate adding FP16 type in parallel with the current FP32 default", then "Run on yellowfin", then "Run result comparisons on ZC detection with FP32 vs FP16, and for anisodiff". Next they asked whether `imread` could "return FP16 on request, w/o cycling through FP32 on the way" and whether there was a common write path for the same treatment. On `imwrite`, they decided: "No automagic rescaling."
+
+**Evaluation (Claude, research and reports; no library code).** The core already carries `half` from the IDL through to `float16` arrays; the cost is the ~750–940 hard-coded `float` tokens in each GPU backend's templates. Probe kernels (Metal, OpenCL, CUDA) on the M4 Max and on yellowfin's P40, 3060 and 3080 showed:
+- FP16 storage halves transfer-bound time on every device.
+- FP16 arithmetic is no faster on Apple or Ampere, and about 48x slower on the P40.
+- NVIDIA OpenCL has no `cl_khr_fp16`.
+
+The result comparisons used FP16 ports of `zcs` and anisodiff, first validated against the library and a numpy reference, and ran identically on all five device/backend combinations:
+- The ZC kernel is FP16-safe (IoU ≥ 0.9986).
+- In the DoG pipeline, storing the two Gaussian outputs in FP16 is what drifts (IoU down to 0.915). Keep those in FP32.
+- Anisodiff state drifts with iteration count (2.5–7% of pixels off by more than one grey level at 100 iterations; 25–36% at 400). Its state should stay FP32.
+
+Reports: `claude-debug/FP16_EVALUATION.md`, `claude-debug/fp16_eval/ZC_ANISO_TABLES.md`, `claude-debug/fp16_io/FP16_IO.md`. The probe scripts and kernels stay uncommitted in `claude-debug/`.
+
+**FP16 image I/O (Claude, ~54 added / 10 removed LOC in `utils/basic.py`, ~116 LOC tests).** `imread(..., dtype=)` converts through 64-row float32 slabs into the target dtype. The float32 default is bit-identical to the old output (with and without `longest=`), and FP16 is bit-identical to `.astype(np.float16)` of it. On a 4060x4055 RGB image, peak memory was 97 MB against 377 MB, at the same speed. `byte_scale` takes FP16 through a two-pass slab path: 36 ms instead of 772 ms (numpy's FP16 arithmetic is software), with identical bytes. `array_to_image` accepted only float32/float64 and raised `TypeError` on FP16; it now widens FP16 to float32. `imwrite` had been broken for every dtype (`ndarray` has no `to_image`). Following the maintainer's "no automagic rescaling", it now maps NaN to 0, clips to [0, 1] and calls `to_image(..., cmin=0, cmax=1)`.
+
+New tests in `tests/integration/test_image_io.py` (19). All pass on the Mac. Regression runs on the Mac: graphics position validation, anisodiff and `tests/integration` (126 passed), and `pytest -m smoke tests` (121 passed, 1 skipped). Not run on yellowfin.
+
+**Library bugs found and reported, not fixed:**
+- `Anisodiff.anisodiff_n(img, n)` returns n−1 iterations: after the last swap it reads the stale buffer, so `n=1` returns its input. Confirmed bit-exact on Metal and OpenCL.
+- `core.get_manager(backend)` ignores its argument, so `load_program(..., backend=...)` always uses `YAPOCIS_BACKEND`.
+- `ctype_to_nptype` has no `f16` entry, although the grammar accepts it.
+- `make test-smoke` points at a test file that does not exist.
+
+**AI defects, and how each was caught:**
+- **Mislabelled benchmarks:** the first FP16 report's Mac "ocl" rows were actually Metal (because of the `get_manager` bug), and its speedup range was quoted from them. A `clBuildProgram` error from a run labelled CUDA on yellowfin exposed the problem. The scripts now set `YAPOCIS_BACKEND`, and the Mac numbers were re-measured and corrected in the report.
+- **Device selection:** the benchmark script turned names like `3060` into device indices (`IndexError`); caught by the run.
+- **Tests:** one expectation assumed 0.5 → 128, but `byte_scale` rounds with +0.4999, giving 127; caught by running the test. The first alpha test used a JPEG with no alpha channel, so it passed vacuously; Claude caught this on review and replaced it with a generated RGBA PNG.
 
 ### 2026-10-06: yellowfin on Python 3.13; Seaborn Comparison Tests Pin Their Font
 
