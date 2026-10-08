@@ -51,6 +51,7 @@ ctype_to_nptype = {
     "short": "int16",
     "long": "int64",
     "float": "float32",
+    "f16": "float16",  # alias; listed before "half" so the reverse map gives "half"
     "half": "float16",
     "double": "float64",
 }

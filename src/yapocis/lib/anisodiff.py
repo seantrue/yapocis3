@@ -42,6 +42,19 @@ class Anisodiff(BoundKernels):
             raise ValueError(f"No {attr} kernel found for array shape {image.shape}")
         return selected
 
+    @staticmethod
+    def pad_planes(image):
+        """Pad a 3-plane image to 4 planes, so it runs through the 4-plane kernel.
+
+        float3 is 16 bytes in OpenCL/Metal but 12 in CUDA, so no single 3-plane
+        buffer layout reads correctly on every backend.
+        Returns (array, padded).
+        """
+        if image.ndim == 3 and image.shape[2] == 3:
+            zeros = np.zeros(image.shape[:2], dtype=image.dtype)
+            return np.dstack((image, zeros)), True
+        return image, False
+
     def global_size_by_depth(self, image):
         depth = get_image_depth(image)
         return image.size // depth
@@ -65,17 +78,11 @@ class Anisodiff(BoundKernels):
             raise ValueError(
                 "step_size parameter must be <= 0.25 for numerical stability."
             )
-        filter_res = self.select_by_depth(image, suffix="_res")
-        global_size = self.global_size_by_depth(image)
         image = image.copy() if image.max() > 1.0 else image * 256.0
-        # Pad to make Cuda happy
-        padding_required = len(image.shape) == 3 and image.shape[2] == 3
-        if padding_required:
-            zeros = np.zeros(image.shape[:2], dtype=image.dtype)
-            input = np.dstack((image, zeros))
-        else:
-            input = image
+        input, padding_required = self.pad_planes(image)
         output = np.empty_like(input)
+        filter_res = self.select_by_depth(input, suffix="_res")
+        global_size = self.global_size_by_depth(input)
 
         filter_res.write(input)
         filter_res.write(output)
@@ -106,10 +113,12 @@ class Anisodiff(BoundKernels):
                 )
                 input, output = output, input
 
-        filter_res.read(output)
+        # After the final swap, `input` holds the result of the last iteration
+        result = input
+        filter_res.read(result)
         if padding_required:
-            output = output[:, :, :3]
-        return output / 256.0
+            result = result[:, :, :3]
+        return result / 256.0
 
     def anisodiff(
         self, image: Image1234, scale: float = 3.0, step_size: float = 0.2
@@ -129,14 +138,14 @@ class Anisodiff(BoundKernels):
             raise ValueError(
                 "step_size parameter must be <= 0.25 for numerical stability."
             )
-        filter_res = self.select_by_depth(image, suffix="_res")
-        global_size = self.global_size_by_depth(image)
         image = image.copy()
         if image.max() <= 1.0:
             print("Rescaling")
             image *= 256.0
-        input = image
+        input, padded = self.pad_planes(image)
         output = np.empty_like(input)
+        filter_res = self.select_by_depth(input, suffix="_res")
+        global_size = self.global_size_by_depth(input)
         filter_res.write(input)
         filter_res.write(output)
         while True:
@@ -149,7 +158,7 @@ class Anisodiff(BoundKernels):
                 resident=(input, output),
             )
             filter_res.read(output)
-            yield output / 256
+            yield (output[:, :, :3] if padded else output) / 256
             input, output = output, input
 
     def anisodiff_rgbI(

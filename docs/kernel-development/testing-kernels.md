@@ -6,10 +6,12 @@ Comprehensive testing ensures kernels work correctly across all backends.
 
 ```
 tests/
-├── test_backend_smoke.py       # Compile all interfaces
-├── test_backend_runtime.py     # Basic execution tests
-├── test_backend_crosscheck.py  # Cross-backend comparison
-└── test_<kernel>_*.py          # Kernel-specific tests
+├── backend/
+│   ├── test_smoke.py           # Compile all interfaces (make test-smoke runs all smoke-marked tests)
+│   └── test_runtime.py         # Basic execution tests (make test-runtime)
+├── lib/<category>/test_*.py    # Kernel- and library-specific tests
+├── performance/                # Benchmarks, opt-in (make test-perf-lib, make test-perf-kernel)
+└── async/, integration/, regression/
 ```
 
 ## Basic Kernel Test

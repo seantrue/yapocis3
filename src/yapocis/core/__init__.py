@@ -91,8 +91,11 @@ def get_manager(backend: str | None = None):
     Historically this returned instantiated KernelManager objects, but the
     constructors require an interface and device. Returning the module keeps
     the API simple and consistent: callers use `mgr.load_program(...)`.
+
+    Args:
+        backend: Backend name or alias; None uses the active backend (YAPOCIS_BACKEND).
     """
-    backend = get_backend()
+    backend = backend.lower() if backend else get_backend()
     if backend == "cuda":
         # Return the CUDA kernel_manager module (has load_program/import_program)
         from yapocis.cu import kernel_manager as km
