@@ -29,7 +29,8 @@ __kernel void lines(int width, int height, READWRITE float4 *a, int nelements,
     float linemag2 = dxdy2(lineend, linestart);
     float2 delta = lineend - linestart;
     float2 u2 = (point - linestart) * (delta);
-    float u = (u2.x + u2.y) / linemag2;
+    // A zero-length line is a dot at its start (as numbax draws it); 0/0 would skip it
+    float u = linemag2 > 0.0f ? (u2.x + u2.y) / linemag2 : 0.0f;
     float2 intersection = linestart + (u * delta);
     float dist2 = dxdy2(point,intersection);
 
