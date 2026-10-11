@@ -38,8 +38,25 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~170 lines: FP16 image read/write in `utils/basic.py` plus tests (2026-10-08); FP16 evaluation reports in `claude-debug/`
   - ~165 lines: anisodiff off-by-one and RGB layout fixes, get_manager backend argument, f16 dtype, stale Makefile targets, plus tests (2026-10-08)
   - ~15 lines: `test_vimp_common` default-queue test corrected (2026-10-08)
+  - ~52 lines: zero-length `lines` drawn as dots on Metal, OpenCL and CUDA, plus a test (2026-10-10)
 
 ## Detailed Contributions
+
+### 2026-10-10: Zero-Length Lines Drawn as Dots on Every Backend
+
+**Maintainer direction:** the bug turned up in Virtual Impressionist's stroke-rendering work, where durer's strokes were drawn with `Graphics1.lines`. The maintainer accepted the plan to fix it here ("CP. Then start on the rest of the list.") and asked for it to ship ("Cpmd").
+
+**Cause (Claude):** `lines` in `graphics` and `graphics4` on Metal, OpenCL and CUDA divided the projection by the squared length, so a zero-length line gave u = 0/0. NaN fails both `u >= 0` and `u <= 1`, so the line was silently skipped. numbax adds 1e-20 to the length and draws a dot at the start. Two thirds of durer's segments are zero length, so on the GPU most of a stroke's ink vanished. Virtual Impressionist had worked around it by drawing the dots with `circles`.
+
+**Fix (Claude, 6 lines changed in six kernel files):** `u = linemag2 > 0 ? … : 0`, so a zero-length line is a dot at its start, pixel-identical to numbax. The guard is explicit rather than an epsilon, because NaN handling under GPU fast-math is not guaranteed.
+
+**Tests (Claude, ~40 LOC, `tests/lib/graphics/test_zero_length_lines.py`):** a dot alone, and a dot before and after a line, on `Graphics1` and `Graphics4`, compared with numbax pixel for pixel.
+- With the fix: Metal and OpenCL on the Mac pass (12 cases); CUDA, OpenCL and numbax on yellowfin pass (18 cases).
+- Without it, every Metal, CUDA and OpenCL case fails.
+- The graphics suite passes: 172 tests on the Mac, 251 on yellowfin.
+- The yellowfin run used a temporary worktree, removed afterwards, so its checkout was not touched.
+
+**Defect in the AI's process:** the first commit of this change left this entry out, because the script that wrote it failed on a heading match and the commit ran anyway. It was amended before pushing.
 
 ### 2026-10-08: test_vimp_common Default-Queue Test Corrected
 
