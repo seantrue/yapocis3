@@ -40,8 +40,30 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~15 lines: `test_vimp_common` default-queue test corrected (2026-10-08)
   - ~52 lines: zero-length `lines` drawn as dots on Metal, OpenCL and CUDA, plus a test (2026-10-10)
   - ~28 lines: numbax gradient fallback, kernel search order and numbax loading by package name, plus ~143 lines of tests (2026-10-12)
+  - 3 lines: CUDA gradient angle used swapped axes (2026-10-12)
 
 ## Detailed Contributions
+
+### 2026-10-12: CUDA Gradient Angle Used Swapped Axes
+
+**Maintainer direction:** deploying the previous change ("CPMD the revised yapocis3"), the maintainer ran the full suite on yellowfin, where the new gradient tests failed on CUDA. When Claude proposed a fix, the maintainer warned: "we've had problems with you treatment of CUDA vs other kernels storage order in the past. Take a second look and make sure." Then: "Go".
+
+**Cause (Claude).** Every backend stores images the same way in memory (NumPy order, `width_of` = shape[0] = rows, `height_of` = shape[1] = cols, from the shared kernel base; nothing in `cu/` transposes). The macros name the axes differently: OCL and Metal's `ADDRESS(x, y) = x*height + y` makes x the row, CUDA's `y*height + x` makes x the column. The CUDA gradient's bounds check was converted to CUDA's naming on 2026-10-06, but its angle line kept OCL's `atan2pi(dy, dx)`, which on CUDA is atan2(d/drow, d/dcol): the mirror image of every other backend's atan2(d/dcol, d/drow). Gradient magnitude is symmetric, so it was right. `zcsdog` takes its theta from this kernel, so on CUDA, Virtual Impressionist's direction-driven styles drew with directions mirrored across the diagonal.
+
+**Second look, at the maintainer's request.** Before changing anything, Claude checked the host side (dimension handlers, no transposes), confirmed that this is the only `atan2` in yapocis3's CUDA kernels, and checked yapocis_external's CUDA kernels that call `atan2`: `boundedaverage` and `labeledaverage` only average angle values, and `lic` indexes with its own `y * width + x`, identical on OCL and CUDA. It then measured on yellowfin (`claude-debug/gradient_cuda_axes_probe.py`): on a random image CUDA's theta matched the swapped angle to 1.2e-07 and missed the reference by 1.0, while OCL on the same NVIDIA cards and numbax matched the reference.
+
+**Fix (Claude, `kernels/cuda/gradient.mako`):** `atan2pi(dx, dy)`, with a comment explaining why CUDA differs from OCL here.
+
+**Tests on yellowfin.**
+- The 49 gradient tests (OCL, CUDA, numbax) pass on the patched code; CUDA's theta matches the reference to 1.2e-07.
+- Full-suite runs in one pytest process were swamped by GPU out-of-memory errors (pipekit holds most of the 3060 and 3080; the failing tests pass when run alone), so the suite was run file by file (`claude-debug/run_per_file.sh`) on the checkout and on a patched copy. The fix removes exactly the 8 CUDA gradient failures and adds none. Present in both: 12 `test_anisodiff` failures (out of memory, and a `KeyError` for the RTX 3080 these tests select themselves). Only in the copy: 8 `mplbackend` tests that write into a `claude-debug/` directory the copy did not have.
+- Not run on the Mac (no CUDA there).
+
+**AI defects.**
+- The previous entry's gradient work was checked on OCL, Metal and numba only; its PR said every backend was tested, but CUDA was not available on the Mac and the bug shipped in that merge. The new tests caught it in the yellowfin deploy.
+- Claude's first full-suite comparison on yellowfin was unusable: the patched copy stopped at collection (`test_vimp_common` needs the sibling yapocis_external), and an `--ignore` for it did not take.
+
+**LOC:** 3 lines in one kernel.
 
 ### 2026-10-12: Gradient Values Tested on Every Backend; numbax Fallback, Search Order and Loader Fixed
 

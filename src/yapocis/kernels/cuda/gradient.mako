@@ -20,7 +20,9 @@ void gradient${planes}(int width, int height, FLOAT${planes}* input, int reach, 
         FLOAT${planes} dx = input[ADDRESS(x+reach,y)] - input[ADDRESS(x-reach,y)];
         FLOAT${planes} dy = input[ADDRESS(x,y+reach)] - input[ADDRESS(x,y-reach)];
         gr = sqrt(dx*dx+dy*dy);
-        th = atan2pi(dy, dx);
+        // Here x is the column and y the row, the reverse of OCL/Metal, whose
+        // atan2pi(dy, dx) is atan2(d/dcol, d/drow): swap the arguments to match.
+        th = atan2pi(dx, dy);
     }
     grad[i] = isnan(gr) ? ZERO${planes}: gr;
     theta[i] = isnan(th) ? ZERO${planes}: th;
