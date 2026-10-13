@@ -11,7 +11,7 @@ from mako.template import Template
 
 from yapocis.core.interface import Interface, get_interface, load_interface
 from yapocis.numbax.kernel import Kernel
-from yapocis.utils.internals import get_yapocis_dirs
+from yapocis.utils.internals import get_yapocis_dir, get_yapocis_dirs
 
 
 def _load_numba_kernel_module(interface_name: str):
@@ -32,8 +32,12 @@ def _load_numba_kernel_module(interface_name: str):
     Raises:
         ModuleNotFoundError: If module not found in any location
     """
-    # First, search in yapocis directories (project, cwd)
+    # First, search in yapocis directories (project, cwd); yapocis's own kernels are
+    # imported by their package name below.
+    package_dir = os.path.realpath(get_yapocis_dir())
     for base_dir in get_yapocis_dirs():
+        if os.path.realpath(base_dir) == package_dir:
+            continue
         kernel_path = os.path.join(base_dir, "kernels", "numbax", f"{interface_name}.py")
         if os.path.exists(kernel_path):
             # Load module from file path
@@ -49,7 +53,12 @@ def _load_numba_kernel_module(interface_name: str):
 
     # Fallback to standard import
     mod_name = f"yapocis.kernels.numbax.{interface_name}"
-    return importlib.import_module(mod_name)
+    module = importlib.import_module(mod_name)
+    # Until October 2026 these were loaded from their file as yapocis_ext.kernels.numbax.*,
+    # and numba's on-disk caches (cache=True) pickled that module name. Keep the alias so
+    # those caches still load instead of raising ModuleNotFoundError.
+    sys.modules.setdefault(f"yapocis_ext.kernels.numbax.{interface_name}", module)
+    return module
 
 
 class KernelManager:

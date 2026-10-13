@@ -39,8 +39,32 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~165 lines: anisodiff off-by-one and RGB layout fixes, get_manager backend argument, f16 dtype, stale Makefile targets, plus tests (2026-10-08)
   - ~15 lines: `test_vimp_common` default-queue test corrected (2026-10-08)
   - ~52 lines: zero-length `lines` drawn as dots on Metal, OpenCL and CUDA, plus a test (2026-10-10)
+  - ~28 lines: numbax gradient fallback, kernel search order and numbax loading by package name, plus ~143 lines of tests (2026-10-12)
 
 ## Detailed Contributions
+
+### 2026-10-12: Gradient Values Tested on Every Backend; numbax Fallback, Search Order and Loader Fixed
+
+**Maintainer direction:** while fixing Virtual Impressionist's `artists/etch.py`, "take a look at the gradient kernel, and whether tests on it currently pass", then "Make the yapocis3 changes, run a complete test cycle."
+
+**Findings (Claude, by measurement: `claude-debug/gradient_backend_probe.py`, `gradient_numbax_fallback_probe.py`):**
+- The kernel is right, and OCL, Metal and numba agree to ~1e-7: central differences over 2 * reach, theta = atan2(d/dcol, d/drow) / pi, measured from +row toward +col, zero within `reach` of the border. The existing tests (`test_gaussians.py::test_gradient`, the `showarraygrad` examples) passed but only rendered and timed; none checked a value.
+- **numbax fallback wrong:** without numba, `kernels/numbax/gradient.py` took one-sided differences over `reach`, so gradients were half strength on ramps and angles off by up to 1 on noise.
+- **Search order reversed:** `get_yapocis_dirs()` returned package, cwd, project, while the docstrings and `kmgr_base` said project, cwd, package. Project kernels could not override built-ins of the same name.
+- **numbax loader:** because the package came first, built-in numbax kernels loaded from their file as `yapocis_ext.kernels.numbax.*`; numba's caches pickled that name, so importing a kernel module by its real name and calling it raised `ModuleNotFoundError: No module named 'yapocis_ext'`.
+
+**Fixes (Claude):**
+- `utils/internals.py`: `get_yapocis_dirs()` is project, cwd, package, without duplicates. No kernel or interface names collide with yapocis_external's, so no kernel resolves differently there.
+- `numbax/kernel_manager.py`: built-in kernels are imported by package name and also registered under the old `yapocis_ext.*` name, so caches already on disk (including production's) still load.
+- `kernels/numbax/gradient.py`: the fallback uses central differences and matches the kernel.
+
+**Tests (Claude):** `tests/lib/compute/test_gradient_values.py` (values and directions against a numpy reference on a non-square image, every backend, and both numbax paths) and `tests/backend/test_search_order.py` (order, duplicates, package-name loading, project override). With the old code 13 of them fail. Full suite: 877 passed and 1 skipped before, 920 passed and 1 skipped after (CUDA skipped: no pycuda on the Mac); the new gradient tests also pass with OCL listed explicitly (49). yapocis_external's suite passes (542) from its existing venv; `uv run` there can't resolve, because its `pyproject.toml` asks PyPI for `yapocis>=0.3.0` with no path source. Virtual Impressionist's suite is unchanged by this (174 passed, 3 known failures from its DoG model).
+
+**Defects in the AI's process:** it first suggested the numbax kernel used a different angle convention (it doesn't), and its first reference had the axes swapped, so every backend appeared wrong until the ramps showed otherwise. Its first fallback probe patched a module the backend never used (the `yapocis_ext` copy), which hid the fallback bug until the loader was read.
+
+**Not fixed, noted:** `numbax/kernel_manager.py`'s stub for an unimplemented kernel refers to an undefined `mod_name` (ruff F821), so it raises `NameError` instead of `NotImplementedError`, and binds `func_name` late.
+
+**LOC (measured):** source +28/−25 across three files; tests +143.
 
 ### 2026-10-10: Zero-Length Lines Drawn as Dots on Every Backend
 

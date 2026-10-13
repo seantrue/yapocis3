@@ -71,12 +71,12 @@ def get_project_dir() -> str | None:
 
 
 def get_yapocis_dirs() -> list[str]:
-    yapocis_dir = get_yapocis_dir()
-    current_dir = os.getcwd()
-    directories = [yapocis_dir, current_dir]
-    project_dir = get_project_dir()
-    if project_dir:
-        directories.append(project_dir)
+    """Directories searched for kernels, interfaces and assets, first match wins:
+    $YAPOCIS_PROJECT (if set), the current directory, then the yapocis package."""
+    directories = []
+    for d in (get_project_dir(), os.getcwd(), get_yapocis_dir()):
+        if d and d not in directories:
+            directories.append(d)
     return directories
 
 
