@@ -5,12 +5,74 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2026-10-17
+
+### Changed
+
+- **Breaking:** the graphics API uses one coordinate convention, x = column and y = row, for shapes and `Graphics4` compositing on every backend, matching text and the docs. Code that swapped coordinates per backend should drop the swap.
+- **Breaking:** `histeq` moved from `yapocis.lib.channels` to the `Imageops` class (`Imageops().histeq(...)`)
+- `YAPOCIS_BACKEND` accepts the same aliases as `get_manager()`: `numba`, `opencl`, `metallic` and `mtl`
+- `core.get_manager(backend)` and `load_program(..., backend=...)` honour the backend argument instead of always using `YAPOCIS_BACKEND`
+- Kernel, interface and asset search order is `$YAPOCIS_PROJECT`, then the current directory, then the package, as documented, so a project can override a built-in kernel
+- pymetallic is installed by default on macOS, so the Metal backend works after `pip install yapocis`
+- `split_channels` returns a tuple, as annotated
+- Compiled Mako modules are keyed by template content, so an edited template is never served from a stale cache
+- Built-in Numba kernels load by package name; existing Numba caches still load
+
+### Added
+
+- Extension projects: multi-directory kernel and template search through `YAPOCIS_PROJECT`, and a scaffold command for new projects
+- `Imageops` methods `histmatch`, `clamp_pixels`, `stretch` and `binarize`
+- `.pyi` stub generation for interfaces (`--stubs`, `--write-lib`)
+- FP16 image I/O: `imread(..., dtype=np.float16)` converts in slabs, at about a quarter of the peak memory; `byte_scale` and `array_to_image` accept float16
+- `yapocis-cuda-cards`: per-card CUDA benchmark across GPUs and CUDA toolkits
+- `canonical_backend()` and `BACKEND_ALIASES` in `yapocis.core`
+- `src/yapocis/images/CREDITS.md` records where each demo image came from
+
+### Fixed
+
+- Colour-space transform matrices were applied transposed on every backend. `xyz2xyY` returned Z instead of Y as its third channel, and `xyY2xyz` swapped its Y and Z outputs.
+- CUDA: shared helper functions were defined twice, so the HSI kernel failed to compile and left the CUDA context unusable
+- CUDA: bounds guards for out-of-range threads, plus blending and multi-GPU fixes
+- CUDA: the gradient angle was computed with swapped axes, mirroring the other backends' angle across the diagonal
+- `Anisodiff.anisodiff_n(img, n)` ran n-1 iterations; RGB anisotropic diffusion returned garbage on CUDA and was wrong on OpenCL and Metal
+- Zero-length lines were skipped on Metal, OpenCL and CUDA; they are now drawn as dots, as on Numba
+- The Numba gradient fallback (used without numba) used one-sided differences, giving half-strength gradients and wrong angles
+- `imwrite` was broken for every dtype; it now saves [0, 1] data, mapping NaN to 0 and clipping out-of-range values
+- `ctype_to_nptype` maps `f16` to float16
+- `yapocis-cuda-cards --help` gave the wrong separator for cards in `--matrix` (`+`, not `,`)
+- `yapocis-doctest --help` examples pointed at a `newdocs/` directory that doesn't exist
+
+### Documentation
+
+- README examples rewritten so they run on every backend. The broken code fence is fixed, CUDA is correctly described as PyCUDA, and links are absolute so they work on PyPI.
+- Fixed `get_backends` imports on five pages, the `channels` examples, and references to APIs that don't exist (`yapocis.assets.add_asset_path`, `parse_interface_file`, `yapocis.numba`)
+- Documented `yapocis-cuda-cards` and the real `yapocis-doctest` options
+- Read the Docs builds on Python 3.13 and installs the package, so the API pages have content. The docs build with no Sphinx warnings.
+- Corrected the Perona–Malik attribution in the anisodiff kernels (Pietro Perona and Jitendra Malik, 1990)
+
+### Licensing
+
+- The 13 classifier demo photos are replaced with CC0 images
+- `lib/typeset.py` carries freetype-py's BSD notice
+- Copyright is "Sean D. True and Swapwizard LLC", 2011–2026
+
+### Build
+
+- The `dev` extra includes the docs tooling; twine 7 is required for publishing (it accepts Metadata-Version 2.5)
+- `make test-smoke` runs the smoke-marked tests; stale Makefile targets fixed
+
+## [0.3.8] - 2025-12-03
 
 ### Documentation
 
 - Complete documentation rewrite with executable examples
+- Add `yapocis-doctest` for validating documentation examples
 - Update AI.md with documentation rewrite contribution
+
+### Added
+
+- Tests for `median3x3`
 
 ## [0.3.7] - 2025-12-01
 
