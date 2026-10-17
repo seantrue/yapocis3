@@ -19,7 +19,7 @@ def split_channels(rgb: Image3) -> tuple[Image1, Image1, Image1]:
         tuple of 2D arrays that are copies of the original data
     """
     channels = np.dsplit(rgb, indices_or_sections=3)
-    return [np.ascontiguousarray(np.squeeze(channel)) for channel in channels]
+    return tuple(np.ascontiguousarray(np.squeeze(channel)) for channel in channels)
 
 
 def join_channels(r: Image1, g: Image1, b: Image1) -> Image3:
