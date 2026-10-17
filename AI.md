@@ -46,6 +46,16 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2026-10-17: PDF Index Built with makeindex Instead of xindy
+
+**What the maintainer asked for.** "try latex_use_xindy = False, then CPM". Claude had proposed this after the first Read the Docs xelatex build.
+
+**Cause (Claude, from the Read the Docs log).** With `latex_engine = "xelatex"`, Sphinx defaults to xindy for the PDF index. On Read the Docs, xindy failed with `*** - PROGN: variable LANG/GENERAL/LATIN9-LANG.XDY has no value`, which means its language modules are missing. latexmk logged `makeindex yapocis.idx … gave return code 256` and wrote the PDF without a rebuilt index. Before the switch to xelatex, makeindex had worked there.
+
+**Fix.** `docs/conf.py` sets `latex_use_xindy = False`, so Sphinx's `latexmkrc` runs `makeindex -s python.ist`. One line, plus a comment.
+
+**Verification (local).** A clean PDF build through Sphinx's Makefile exits 0, with no LaTeX errors and no missing characters (247 pages). The generated index includes entries such as `load_program() (in module yapocis.core), 213`. `sphinx-build -W -b html` still passes. Not yet confirmed on Read the Docs.
+
 ### 2026-10-17: Read the Docs Shows 1.0; Missing FFT Images; PDF Unicode
 
 **What the maintainer asked for.** "ReadTheDocs is not building the expected docs. Looks like the old 0.3 docs." The maintainer pasted the raw build log. Before that, the maintainer had updated the Read the Docs settings (repository and default branch) and triggered the build. Then: "Go ahead, then CPM".

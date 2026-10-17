@@ -86,6 +86,9 @@ html_context = {
 # that pdflatex drops. Text stays in Sphinx's default GNU FreeFont; code blocks use
 # DejaVu Sans Mono, because FreeMono has no box-drawing characters.
 latex_engine = "xelatex"
+# Sphinx defaults to xindy with xelatex; Read the Docs' xindy lacks its language
+# modules ("LATIN9-LANG.XDY has no value"), so build the index with makeindex.
+latex_use_xindy = False
 latex_elements = {
     "fontpkg": r"""
 \setmainfont{FreeSerif}[Extension=.otf, UprightFont=*, ItalicFont=*Italic,
