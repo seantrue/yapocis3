@@ -29,10 +29,12 @@ Evaluated at HEAD `872e8e8`. Nothing was released, tagged, or changed in the rep
 | Ubuntu fonts (8 .ttf, ~2.4 MB) | Ubuntu Font Licence 1.0. `UFL.txt` ships next to them. OK. |
 | `lib/typeset.py` | **Fixed.** The empty terms block now holds freetype-py's full BSD notice: the `wordle.py` header and the licence text from freetype-py's LICENSE.txt. |
 | `kernels/{ocl,cuda}/hsi.mako` | The RGB-HSV code is from a StackOverflow answer (CC BY-SA, a share-alike license). The original is Sam Hocevar's lolengine post (WTFPL). Cite that source instead of SO to avoid the CC BY-SA question. Low risk. |
-| `src/yapocis/images/*.jpg` | **Replaced.** The 13 classifier demo photos (probably ILSVRC; not from BSR) are now CC0 1.0 photos found through Openverse and listed in `src/yapocis/images/CREDITS.md`, with their sources: Wikimedia, rawpixel, Flickr, StockSnap. ResNet50 classifies 12 of the 13 as their own class; cassette_player (chosen by eye) comes out as "cassette", the tape beside the recorder. `test.jpg` (2021, source unknown) is **still open**: dozens of validation references depend on it. |
+| `src/yapocis/images/*.jpg` | **Replaced.** The 13 classifier demo photos (probably ILSVRC; not from BSR) are now CC0 1.0 photos found through Openverse and listed in `src/yapocis/images/CREDITS.md`, with their sources: Wikimedia, rawpixel, Flickr, StockSnap. ResNet50 classifies 12 of the 13 as their own class; cassette_player (chosen by eye) comes out as "cassette", the tape beside the recorder. `test.jpg` is the package author's own photograph, distributed under the package's MIT licence (recorded in CREDITS.md). |
 | Model weights | `.npz` is excluded from the wheel and sdist. The models README says to run `python scripts/download_vgg16.py`, which isn't in the wheel. Torchvision weights are BSD, but they were trained on ImageNet; mention that if you document downloads. |
 
 **Dates (fixed):** copyright end years are 2026 in 73 source headers and `LICENSE.txt` (holder names unchanged). The ChatGPT-written Perona–Malik comment in the OCL/CUDA anisodiff kernels credited "Carlo Perona and João Malik"; it now says Pietro Perona and Jitendra Malik, IEEE PAMI 12(7), 1990.
+
+**Known issue (shipping with it):** OpenCL FFT gives wrong results on the Tesla P40 (8 tests in `tests/lib/fft`). It predates 1.0.0 (it reproduces at `8b049af`); CUDA on the P40 and OpenCL on the 3080 pass. It is recorded in CHANGELOG under 1.0.0.
 
 ## Packaging
 
