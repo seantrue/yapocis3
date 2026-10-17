@@ -46,6 +46,14 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2026-10-17: twine 7 for Metadata-Version 2.5; History Secret Scan Before Going Public
+
+**What the maintainer asked for.** "Update twine as needed", and before that, "Make yapocis3 a public repository".
+
+**twine (Claude).** Current hatchling writes Metadata-Version 2.5. The locked twine 6.2.0, with packaging 25.0, rejected it ("'2.5' is not a valid metadata version"), so `make publish` would have failed. The `dev` extra now requires `twine>=7.0.0`. `uv lock --upgrade-package twine --upgrade-package packaging` moved only those two packages (to twine 7.0.0 and packaging 26.3). With the venv's twine, `twine check` passes on a fresh wheel and sdist. The backend tests pass after the packaging upgrade (120 passed, 1 skipped). 1 line, plus the lockfile.
+
+**Secret scan before going public (Claude; the maintainer revoked the token).** Before changing the repo's visibility, Claude searched all 369 commits for credentials. A PyPI API token (`TWINE_PASSWORD`, `TWINE_USERNAME=__token__`) was in a `.env` committed in `e04de08` (2025-10-06) and deleted in the next commit. It is still in the history of `main`, every branch since and tags v0.3.3 onwards. Claude stopped before making the repo public. The maintainer had already replaced the token that day. Claude compared the new `~/.pypirc` token with the leaked one by hash only and confirmed they differ. The maintainer then confirmed from the PyPI token list that the old token was gone. The repository was made public with its history unchanged, since a revoked token is harmless. Nothing else turned up: the rest of that `.env` held `YAPOCIS_*` settings.
+
 ### 2026-10-17: PyPI Release-Readiness Pass
 
 **What the maintainer asked for.** "Evaluate yapocis3 for a pypi release (don't DO it, just evaluate). Check software against current documentation, GPL or license contamination, etc." The maintainer then directed each fix in turn: pymetallic installed by default on macOS, "fix the README examples and the numba alias", replace the demo photos with CC0 images, fill in the freetype-py notice, fix the docs and docstring warnings, fix the README links and badges, add Sphinx to the dev dependencies, update the copyright years and holders, scan the dependency tree for "poison licenses", and skip `test_vimp_common` when `yapocis_external` is missing.
