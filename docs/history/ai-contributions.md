@@ -45,11 +45,9 @@ AI assistance in yapocis follows these principles:
 
 ## Commit Attribution
 
-AI-assisted commits include:
+AI-assisted commits end with a co-author trailer, and pull requests opened by the assistant end with a "Generated with Claude Code" line:
 
 ```
-🤖 Generated with Claude Code (https://claude.com/claude-code)
-
 Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 

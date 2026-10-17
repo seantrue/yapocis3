@@ -80,6 +80,28 @@ html_context = {
     "conf_py_path": "/docs/",
 }
 
+# -- Options for LaTeX/PDF output --------------------------------------------
+
+# xelatex handles the Unicode in the docs (box-drawing diagrams, arrows, check marks)
+# that pdflatex drops. Text stays in Sphinx's default GNU FreeFont; code blocks use
+# DejaVu Sans Mono, because FreeMono has no box-drawing characters.
+latex_engine = "xelatex"
+latex_elements = {
+    "fontpkg": r"""
+\setmainfont{FreeSerif}[Extension=.otf, UprightFont=*, ItalicFont=*Italic,
+  BoldFont=*Bold, BoldItalicFont=*BoldItalic]
+\setsansfont{FreeSans}[Extension=.otf, UprightFont=*, ItalicFont=*Oblique,
+  BoldFont=*Bold, BoldItalicFont=*BoldOblique]
+\IfFontExistsTF{DejaVuSansMono.ttf}{
+  \setmonofont{DejaVuSansMono}[Extension=.ttf, UprightFont=*, BoldFont=*-Bold,
+    ItalicFont=*-Oblique, BoldItalicFont=*-BoldOblique, Scale=MatchLowercase]
+}{
+  \setmonofont{FreeMono}[Extension=.otf, UprightFont=*, ItalicFont=*Oblique,
+    BoldFont=*Bold, BoldItalicFont=*BoldOblique]
+}
+""",
+}
+
 # -- Autodoc configuration ---------------------------------------------------
 
 autodoc_default_options = {

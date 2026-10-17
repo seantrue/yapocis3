@@ -46,6 +46,26 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2026-10-17: Read the Docs Shows 1.0; Missing FFT Images; PDF Unicode
+
+**What the maintainer asked for.** "ReadTheDocs is not building the expected docs. Looks like the old 0.3 docs." The maintainer pasted the raw build log. Before that, the maintainer had updated the Read the Docs settings (repository and default branch) and triggered the build. Then: "Go ahead, then CPM".
+
+**Diagnosis (Claude).** The build was correct. It came from `4d0f3fe`, and `/en/latest/` and `/en/stable/` both served "Yapocis 1.0.0 documentation". The docs content dates from the 0.3.8 rewrite, though, and the history page's version timeline stopped at "0.3.x" and was followed by "Version 0.3.x Focus Areas". That page is the likely source of the 0.3 impression. A cached copy of the 2021 site is also possible. The log showed two real problems:
+
+- **Three Examples-page images were missing.** The `fft_library_demo_*.png` files existed in the local `docs/_static/images/` but were never committed, because `.gitignore` has a blanket `*.png` rule. The other nine images there had been force-added.
+- **The PDF lost characters.** pdflatex can't render the box-drawing diagrams, `≤`, `↔`, `✗`, or the 🤖. It reported errors and dropped them. The HTML was unaffected.
+
+**Fixes (Claude).**
+
+- `docs/history/index.md`: a 1.0.0 timeline row and a "Version 1.0 Focus Areas" section, taken from the changelog.
+- The three PNGs are force-added.
+- `docs/conf.py` sets `latex_engine = "xelatex"`. Text uses Sphinx's default GNU FreeFont. Code blocks use DejaVu Sans Mono, loaded by file name and falling back to FreeMono if it's absent. With xelatex alone, FreeMono still dropped 36 box-drawing and `✗` glyphs. Loading DejaVu by name failed on macOS, where it exists only inside TeX Live.
+- `docs/history/ai-contributions.md`: the attribution example no longer shows the emoji, which no PDF font has. It now describes the co-author trailer and the PR footer instead.
+
+**Verification.** `sphinx-build -W -b html` passed. A clean local PDF build through Sphinx's Makefile with xelatex succeeded: exit 0, 247 pages, no LaTeX errors, no missing characters. The architecture diagram renders. The Read the Docs build itself is not yet verified. Its image is expected to have DejaVu (Ubuntu's base font); if it doesn't, the fallback keeps the build green but drops those glyphs again.
+
+**Defects in Claude's process.** Two local PDF runs failed for reasons unrelated to the docs. The first ran latexmk without Sphinx's `latexmkrc`, so makeindex had no style file. The second reused latexmk's cached failure state. A clean rebuild through Sphinx's Makefile resolved both.
+
 ### 2026-10-17: yellowfin Deploy Tests; OpenCL FFT Wrong on the P40 (Known Issue); test.jpg Provenance
 
 **What the maintainer asked for.** CPMD for the release-readiness pass, which deploys by pulling on yellowfin and running the tests there. Then "Run the yellowfin opencl and cuda tests only on the P40 card". Then "Note the issue, we'll ship with it". The decision to ship with the FFT issue is the maintainer's. The maintainer also supplied the provenance of `test.jpg`: "a personal photograph of the package author".

@@ -79,6 +79,16 @@ GPU computing has evolved primarily in response to deep learning needs. NVIDIA d
 | 0.1.x | 2011 | Initial PyOpenCL wrapper with IDL parser |
 | 0.2.x | 2020 | Metal backend, improved template system |
 | 0.3.x | 2024 | CUDA backend, Numba fallback, modern packaging, AI-assisted development |
+| 1.0.0 | 2026 | First release on Python 3 PyPI: one drawing convention, colour-space and CUDA fixes, CC0 assets |
+
+### Version 1.0 Focus Areas
+
+1. **One coordinate convention**: graphics take x = column and y = row on every backend
+2. **Correctness across backends**: colour-space matrices, CUDA gradient angle and bounds, anisotropic diffusion and zero-length lines
+3. **Extension projects**: `YAPOCIS_PROJECT` search order, scaffolding and `.pyi` stub generation
+4. **Release hygiene**: MIT-clean dependency tree, CC0 demo images, documentation examples tested with `yapocis-doctest`
+
+See the [changelog](https://github.com/seantrue/yapocis3/blob/main/CHANGELOG.md) for the full list, including known issues.
 
 ### Version 0.3.x Focus Areas
 
