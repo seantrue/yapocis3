@@ -4,7 +4,8 @@ The photos below are dedicated to the public domain under CC0 1.0
 (<https://creativecommons.org/publicdomain/zero/1.0/>), found through Openverse.
 Credit is not required; it is recorded here for provenance.
 
-`test.jpg` is not covered by this file.
+`test.jpg` is a personal photograph by the package author, Sean D. True, and is
+distributed under the yapocis license (MIT, see `LICENSE.txt`).
 
 | File | Title | Creator | Source | License | Original |
 |---|---|---|---|---|---|

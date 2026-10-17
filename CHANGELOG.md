@@ -62,6 +62,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `dev` extra includes the docs tooling; twine 7 is required for publishing (it accepts Metadata-Version 2.5)
 - `make test-smoke` runs the smoke-marked tests; stale Makefile targets fixed
 
+### Known issues
+
+- OpenCL FFT gives wrong results on the NVIDIA Tesla P40 (Pascal). All 8 OpenCL tests in `tests/lib/fft` fail there: 127 of 128 output values are wrong. The same tests pass with CUDA on the P40 and with OpenCL on an RTX 3080. The bug predates 1.0.0: it reproduces on the P40 at `8b049af`. Until it is fixed, use the CUDA backend for FFT on Pascal-generation cards. Other Pascal cards are untested.
+
 ## [0.3.8] - 2025-12-03
 
 ### Documentation

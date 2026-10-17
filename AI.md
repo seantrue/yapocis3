@@ -46,6 +46,18 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2026-10-17: yellowfin Deploy Tests; OpenCL FFT Wrong on the P40 (Known Issue); test.jpg Provenance
+
+**What the maintainer asked for.** CPMD for the release-readiness pass, which deploys by pulling on yellowfin and running the tests there. Then "Run the yellowfin opencl and cuda tests only on the P40 card". Then "Note the issue, we'll ship with it". The decision to ship with the FFT issue is the maintainer's. The maintainer also supplied the provenance of `test.jpg`: "a personal photograph of the package author".
+
+**Deploy run (all devices, model tests on).** After pulling `efcd64c`, the full suite ran on every OpenCL and CUDA device, plus Numba. The committed `activate.sh` set `YAPOCIS_MODELS`, so the VGG16 and ResNet50 tests ran too. Result: 1,087 passed and 242 failed. The failures were resource exhaustion, not wrong results: `OUT_OF_RESOURCES`, `OUT_OF_HOST_MEMORY` from OpenCL builds, and `cuMemAlloc` out of memory from CUDA. The first failures were the VGG16 async tests on the 3060 and P40. Then they spread to ordinary kernels. pipekit services on the same machine were holding GPU memory (9.4 of 12 GB on the 3060). Not fully proven: no separate model-tests-only run was done.
+
+**P40-only run (Claude).** `CUDA_VISIBLE_DEVICES` was set to the P40's UUID, which hides the other cards from CUDA and from NVIDIA's OpenCL, and `YAPOCIS_TEST_DEVICES=P40`. Result: 867 passed, 8 failed, 3 skipped. Nothing ran out of memory, model tests included. All 8 failures are OpenCL FFT (`tests/lib/fft`), with 127 of 128 outputs wrong. CUDA FFT on the P40 passes, and OpenCL FFT on the 3080 passes (21 of 21). The same 8 tests fail on the P40 at `8b049af` (this morning's commit), so this is not a regression. Earlier runs passed because OpenCL's default device on yellowfin is the 3080. The FFT kernel was not debugged. It is listed as a known issue in the 1.0.0 changelog.
+
+**Defect in Claude's reporting.** Claude counted outcomes by matching lines that begin with `.sFExX`. Traceback lines also begin with `E`, so in runs with failures the counts were inflated. Claude first told the maintainer the deploy run had "477 failed, 1,260 errors", and that the P40 run had 87 errors. A strict count of the progress lines gave the correct figures above. The earlier clean-run counts (Mac 920 and 925; yellowfin worktree 1,302 passed and 30 skipped) were checked the same way and were right.
+
+**test.jpg.** `src/yapocis/images/CREDITS.md` now records `test.jpg` as the author's own photograph, distributed under the package's MIT licence. Every bundled image now has a recorded source and licence.
+
 ### 2026-10-17: Version 1.0.0, Changelog, Beta Status
 
 **What the maintainer asked for.** "Bump the version to 1.0.0 and make changelog", then "Update to dev status Beta". The 1.0.0 version number and the Beta status are the maintainer's decisions.
