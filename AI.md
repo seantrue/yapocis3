@@ -46,6 +46,14 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2026-10-17: Version 1.0.0, Changelog, Beta Status
+
+**What the maintainer asked for.** "Bump the version to 1.0.0 and make changelog", then "Update to dev status Beta". The 1.0.0 version number and the Beta status are the maintainer's decisions.
+
+**What Claude did.** The version is 1.0.0 in `pyproject.toml` and `uv.lock`. The classifier `Development Status :: 3 - Alpha` is now `4 - Beta`. CHANGELOG.md was written by hand, because `make changelog` (git-cliff, with `filter_unconventional = true`) would have kept only 4 of the 19 commits since v0.3.8. The new `[1.0.0]` section was written from those commits' messages and bodies. It marks two breaking changes: the single (x = column, y = row) drawing convention, and `histeq` moving to `Imageops`. The 0.3.8 docs rewrite had been sitting under a stale `[Unreleased]` heading; it now has its own `[0.3.8] - 2025-12-03` section. A fresh build gives `yapocis-1.0.0` wheel and sdist, which pass `twine check` with twine 7. About 65 lines of changelog and 3 lines of metadata.
+
+**Caveat recorded.** Re-running `make changelog` would regenerate the file from git history and replace these entries.
+
 ### 2026-10-17: twine 7 for Metadata-Version 2.5; History Secret Scan Before Going Public
 
 **What the maintainer asked for.** "Update twine as needed", and before that, "Make yapocis3 a public repository".
