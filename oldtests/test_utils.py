@@ -1,4 +1,4 @@
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
+#  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 import numpy as np
 import os
 from yapocis.lib.channels import (join_channels, join_planes, split_channels,

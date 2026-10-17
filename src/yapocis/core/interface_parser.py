@@ -7,7 +7,8 @@ generation. This file has **no** regex fallback; PyParsing is a hard requirement
 
 Supported language features
 ---------------------------
-File-level:
+File-level::
+
   interface <Name> {
     meta {
       layout <planar|NHWC|NCHW>;
@@ -50,7 +51,8 @@ Traits (within `with { ... }` blocks):
 Backend overrides:
   backend <name> { <same-style key value; pairs> }
 
-IR model:
+IR model::
+
   InterfaceSpec { name, meta: dict, kernels: [Kernel] }
   Kernel { name, params: [Param], shapes: dict(str->str), traits: dict,
            backend_overrides: dict(str->dict), alias_of: str | None, extends: str | None }
@@ -65,6 +67,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from pyparsing import (
+    DelimitedList,
     Group,
     Keyword,
 )
@@ -80,7 +83,6 @@ from pyparsing import (
     alphas,
     cppStyleComment,
     cStyleComment,
-    delimitedList,
     oneOf,
     pythonStyleComment,
 )
@@ -192,7 +194,7 @@ tuple3 = Group(lparen + number + comma + number + comma + number + rparen)
 # Expression tuple for dispatch_size - captures raw expression strings
 # Matches: (expr, expr) or (expr, expr, expr)
 expr_content = Regex(r"[^,)]+")  # anything except comma or close paren
-tuple_expr = Group(lparen + delimitedList(expr_content) + rparen)
+tuple_expr = Group(lparen + DelimitedList(expr_content) + rparen)
 
 # --- meta { ... } ----------------------------------------------------------
 
@@ -258,7 +260,7 @@ kernel_sig = (
     + PPOptional(Keyword("tiled")("tiled"))
     + ident("kname")
     + lparen
-    + PPOptional(delimitedList(param))("params")
+    + PPOptional(DelimitedList(param))("params")
     + rparen
     + semi
 )
@@ -303,7 +305,7 @@ alias_stmt = Group(
     + ident("base")
     + Keyword("as")
     + ident("new")
-    + PPOptional(lparen + PPOptional(delimitedList(param))("params") + rparen)
+    + PPOptional(lparen + PPOptional(DelimitedList(param))("params") + rparen)
     + semi
 )
 
@@ -315,7 +317,7 @@ ext_stmt = Group(
     + (Keyword("of") | Keyword("as"))
     + ident("base")
     + lparen
-    + PPOptional(delimitedList(param))("params")
+    + PPOptional(DelimitedList(param))("params")
     + rparen
     + PPOptional(
         Keyword("with")

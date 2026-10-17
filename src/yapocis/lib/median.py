@@ -2,7 +2,7 @@
 Provides 2d median filter for 2d arrays
 """
 
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
+#  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 
 # Provision this program with just one median filter, fixed length of 9
 from yapocis.utils.stereo_typing import *

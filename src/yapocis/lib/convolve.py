@@ -1,4 +1,4 @@
-#  Copyright Sean D. True & SwapWizard dba (c) 2011-2021.
+#  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 
 from yapocis.lib.bound_kernels import BoundKernels
 from yapocis.utils.stereo_typing import *

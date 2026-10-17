@@ -5,6 +5,11 @@
 # Required
 version: 2
 
+build:
+   os: ubuntu-24.04
+   tools:
+      python: "3.13"
+
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
    configuration: docs/conf.py
@@ -13,8 +18,9 @@ sphinx:
 formats:
    - pdf
 
-# Optionally set the version of Python and requirements required to build your docs
+# Install yapocis itself so autodoc can import it, then the Sphinx tooling
 python:
-   version: 3.7
    install:
+   - method: pip
+     path: .
    - requirements: docs/requirements.txt

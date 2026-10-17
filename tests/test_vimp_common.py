@@ -12,6 +12,10 @@ EXTERNAL_ROOT = PROJECT_ROOT.parent / "yapocis_external"
 if str(EXTERNAL_ROOT) not in sys.path:
     sys.path.insert(0, str(EXTERNAL_ROOT))
 
+# Skip the module, rather than fail collection, outside a checkout with yapocis_external beside it
+pytest.importorskip(
+    "vimp.common", reason=f"vimp not found; expects yapocis_external at {EXTERNAL_ROOT}"
+)
 
 from vimp.common import (  # noqa: E402  # isort: skip
     get_project_root,
@@ -61,7 +65,9 @@ def test_resolve_param_precedence():
 
 def test_show_array_saves_grayscale_with_normalize_and_invert(tmp_path: Path):
     arr = np.array([[0.0, 0.5], [0.5, 1.0]], dtype=np.float32)
-    out = show_array(arr, name="gray_inv", queue_dir=tmp_path, normalize=True, invert=True)
+    out = show_array(
+        arr, name="gray_inv", queue_dir=tmp_path, normalize=True, invert=True
+    )
     # TODO: show_array should return the output path
     assert out.exists()
     # Verify it saved a PNG file
@@ -70,9 +76,7 @@ def test_show_array_saves_grayscale_with_normalize_and_invert(tmp_path: Path):
 
 def test_show_array_rgb_normalization(tmp_path: Path):
     # Values > 1 trigger normalization path (division by 255 when normalize=True)
-    rgb = np.array(
-        [[[0, 128, 255], [10, 20, 30]]], dtype=np.float32
-    )  # shape (1,2,3)
+    rgb = np.array([[[0, 128, 255], [10, 20, 30]]], dtype=np.float32)  # shape (1,2,3)
     # TODO: show_array should return the output path
     out = show_array(rgb, name="rgb_norm", queue_dir=tmp_path, normalize=True)
     assert out.exists()
@@ -88,7 +92,9 @@ def test_show_array_rgba_passthrough_unit_range(tmp_path: Path):
 
 def test_show_array_unsupported_channels_and_dims(tmp_path: Path):
     with pytest.raises(ValueError):
-        show_array(np.zeros((2, 2, 5), dtype=np.float32), name="badc", queue_dir=tmp_path)
+        show_array(
+            np.zeros((2, 2, 5), dtype=np.float32), name="badc", queue_dir=tmp_path
+        )
     with pytest.raises(ValueError):
         show_array(np.zeros((1,), dtype=np.float32), name="baddim", queue_dir=tmp_path)
 
@@ -132,7 +138,9 @@ def test_save_and_load_npz_and_metadata_yaml(tmp_path: Path):
     assert np.array_equal(loaded["b"], b)
 
 
-def test_get_project_root_env_and_default(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+def test_get_project_root_env_and_default(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
     # Env var case
     env_root = tmp_path / "env_root"
     env_root.mkdir()

@@ -100,7 +100,7 @@ uv sync --group dev
 
 ```python
 # Check available backends
-from yapocis.core.manager import get_backends
+from yapocis.core import get_backends
 print(f"Backends: {get_backends()}")
 
 # Check specific backend

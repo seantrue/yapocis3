@@ -1,4 +1,4 @@
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
+#  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 
 # I adapted Holger's adaptation to show use of pyopencl.rpc
 # Thanks to Holger and Ian for the very useful demo.

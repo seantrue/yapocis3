@@ -15,7 +15,7 @@ Example:
     classes_path = get_model_path('vgg16', 'classes.txt')
 """
 
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
+#  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 
 import os
 from pathlib import Path

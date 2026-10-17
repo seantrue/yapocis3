@@ -29,7 +29,7 @@ Usage:
     # Try different backend
     YAPOCIS_BACKEND=ocl python examples/resnet50.py dog.jpg
 """
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
+#  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 
 from __future__ import annotations
 

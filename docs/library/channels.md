@@ -79,24 +79,24 @@ print(f"Rejoined image shape: {image_rejoined.shape}")
 
 **Returns:** (H, W, N) float32 array where N = number of planes
 
-### histeq
+### Imageops.histeq
 
 Histogram equalization for contrast enhancement.
 
 ```python
 
-from yapocis.lib.imageops import histeq
+from yapocis.lib.imageops import Imageops
 from yapocis.utils.basic import get_test_image
 import numpy as np
 
 gray_image = np.mean(get_test_image(), axis=2).astype(np.float32)
-equalized = histeq(gray_image, nbr_bins=65536)
+equalized = Imageops().histeq(gray_image, nbr_bins=65536)
 print(f"Equalized shape: {equalized.shape}")
 ```
 
 **Parameters:**
 
-- `im` - 2D float32 array
+- `im` - 2D float32 array with values in [0, 1]
 - `nbr_bins` - Number of histogram bins (default: 2^16)
 
 **Returns:** Equalized 2D array
@@ -138,10 +138,13 @@ rgb = get_test_image()
 
 # Convert to HSI to equalize luminance only (preserves color)
 hsi_conv = HSI()
-h, s, i = hsi_conv.rgb2hsi3(rgb)
+h, s, i = split_planes(hsi_conv.rgb2hsi3(rgb))
+
+# Equalize the intensity plane
+ops = Imageops()
+i_eq = ops.histeq(i)
 
 # Rejoin and convert back
-ops = Imageops()
 hsi_eq = join_planes(h, s, i_eq)
 result = hsi_conv.hsi2rgb3(hsi_eq)
 ```

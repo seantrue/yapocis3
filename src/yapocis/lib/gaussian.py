@@ -1,4 +1,4 @@
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
+#  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 
 from yapocis.core.interface_context import load_interface_context
 from yapocis.lib.gradient import Gradient

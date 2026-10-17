@@ -19,7 +19,7 @@ tests/
 ```python
 import numpy as np
 import pytest
-from yapocis.core.manager import get_backends
+from yapocis.core import get_backends
 from yapocis.core import manager
 
 @pytest.mark.parametrize("backend", get_backends())

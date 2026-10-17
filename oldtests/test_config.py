@@ -1,4 +1,4 @@
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
+#  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 
 from yapocis.ocl.device import get_device
 from yapocis.utils.config import print_config

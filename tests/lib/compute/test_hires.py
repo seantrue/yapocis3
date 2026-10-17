@@ -1,4 +1,4 @@
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
+#  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 
 from yapocis.images import find_image, images
 from yapocis.utils.basic import imread, show_array

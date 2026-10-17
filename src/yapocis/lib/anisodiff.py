@@ -5,7 +5,7 @@ Higher level wrapper for anisotropic filter (Perona/Malik).
 """
 import numpy as np
 
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
+#  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 # http://mail.scipy.org/pipermail/scipy-user/2009-February/020125.html
 # Anisotropic Diffusion, as per Perona and Malik's paper (see section V).
 from yapocis.lib.channels import (
@@ -190,7 +190,7 @@ class Anisodiff(BoundKernels):
         self, rgb: Image3, n: int, scale: float = 3.0, step_size: float = 0.2
     ) -> Image3:
         """
-            Perform n ç of Perona/Malik filtering on a RGB image.
+        Perform n iterations of Perona/Malik filtering on a RGB image.
         Filtering is done by extracting and filtering the intensity component.
 
         Args:
@@ -238,7 +238,7 @@ class Anisodiff(BoundKernels):
         self, rgb: Image3, n: int, scale: float = 3.0, step_size: float = 0.2
     ) -> Image3:
         """
-            Perform n iterations of Perona/Malik filtering on a RGB image.
+        Perform n iterations of Perona/Malik filtering on a RGB image.
         Filtering is done by extracting and filtering the intensity and saturation components.
 
         Args:

@@ -5,7 +5,8 @@
 /*
 
 The Perona-Malik (PM) filter algorithm is a type of edge-preserving, nonlinear diffusion filter used for image
-processing. It was developed by Carlo Perona and João Malik in 1990.
+processing. It was introduced by Pietro Perona and Jitendra Malik in 1990 ("Scale-space and edge
+detection using anisotropic diffusion", IEEE Trans. PAMI 12(7)).
 
 The PM filter algorithm is designed to remove noise from an image while preserving its edges. The algorithm works by
 diffusing the image over time, with the diffusion process being regulated by a diffusion coefficient that varies

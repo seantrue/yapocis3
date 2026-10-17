@@ -242,5 +242,5 @@ Use different kernel sizes to analyze features at multiple scales.
 
 ## License
 
-Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
+Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 Part of the yapocis project.

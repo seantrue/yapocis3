@@ -19,7 +19,7 @@ Example:
     >>> times, freqs, spec = fft.spectrogram(signal, sample_rate=1000)
 """
 
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2024.
+#  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 
 import os
 

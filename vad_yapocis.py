@@ -11,7 +11,7 @@ The algorithm is based on segment.py's AudioSegmenter but accelerated with
 GPU computation and kernel fusion.
 """
 
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
+#  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 
 import numpy as np
 import scipy.signal as sig

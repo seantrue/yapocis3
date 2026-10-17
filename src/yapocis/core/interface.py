@@ -1,4 +1,4 @@
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
+#  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 
 # Process an improper subset of the CORBA IDL grammar to facilitate calling opencl from a python Numpy framework
 # Inspired by an IDL parser by Paul McGuire, shipped as a demo with pyparser

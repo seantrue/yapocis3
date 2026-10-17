@@ -15,7 +15,7 @@ Usage:
     # Use specific backend
     YAPOCIS_BACKEND=metal python examples/vgg16.py --test --weights vgg16_weights.npz
 """
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
+#  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 
 import argparse
 import os

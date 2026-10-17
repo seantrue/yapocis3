@@ -33,7 +33,7 @@ pip install yapocis[all-backends]
 ## Verify Installation
 
 ```python
-from yapocis.core.manager import get_backends
+from yapocis.core import get_backends
 
 # List available backends
 backends = get_backends()

@@ -34,4 +34,4 @@ Backend-specific implementations (not typically used directly):
 - `yapocis.ocl` - OpenCL backend
 - `yapocis.metallic` - Metal backend
 - `yapocis.cu` - CUDA backend
-- `yapocis.numba` - Numba backend
+- `yapocis.numbax` - Numba backend

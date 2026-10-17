@@ -10,6 +10,8 @@
 # on PATH: pycuda compiles kernels with nvcc, and non-interactive shells
 # (e.g. ``ssh host 'cmd'``) don't read ~/.bashrc.
 #
+# If /data/models/yapocis3 exists, YAPOCIS_MODELS points at it (model weights).
+#
 # Usage — SOURCE this, don't execute it:
 #     source activate.sh        # or:  . ./activate.sh
 # Deactivate with the usual ``deactivate``.
@@ -32,6 +34,13 @@ if [ -x /usr/local/cuda/bin/nvcc ]; then
         *":$CUDA_HOME/bin:"*) ;;
         *) export PATH="$CUDA_HOME/bin:$PATH" ;;
     esac
+fi
+
+# Model weights (vgg16, resnet50, ...) are gitignored. On hosts that keep them
+# in /data/models/yapocis3 (e.g. yellowfin), point yapocis.models there,
+# unless YAPOCIS_MODELS is already set.
+if [ -z "${YAPOCIS_MODELS:-}" ] && [ -d /data/models/yapocis3 ]; then
+    export YAPOCIS_MODELS=/data/models/yapocis3
 fi
 
 echo "yapocis3: activated $(python --version 2>&1) at $VIRTUAL_ENV"
