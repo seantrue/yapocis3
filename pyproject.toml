@@ -256,7 +256,7 @@ module = [
     "pymetallic.*",
     "pycuda.*",
     "numba.*",
-    "mako.*",
+    "mako>=1.4.2",
     "mapbox_earcut.*",
     "freetype.*",
     "skimage.*",
