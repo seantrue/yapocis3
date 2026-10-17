@@ -29,7 +29,11 @@ def test_split_join():
     b = np.random.uniform(0, 1.0, (10, 10))
     c = np.random.uniform(0, 1.0, (10, 10))
     abc = join_channels(a, b, c)
-    a1, b1, c1 = split_channels(abc)
+    parts = split_channels(abc)
+    # a tuple, as annotated: callers that take several results by type (ImpCraft's function
+    # nodes) read a list as one value
+    assert isinstance(parts, tuple) and len(parts) == 3
+    a1, b1, c1 = parts
     assert np.sum(a - a1) == 0.0
     assert np.sum(b - b1) == 0.0
     assert np.sum(c - c1) == 0.0

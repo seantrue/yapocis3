@@ -41,8 +41,19 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~52 lines: zero-length `lines` drawn as dots on Metal, OpenCL and CUDA, plus a test (2026-10-10)
   - ~28 lines: numbax gradient fallback, kernel search order and numbax loading by package name, plus ~143 lines of tests (2026-10-12)
   - 3 lines: CUDA gradient angle used swapped axes (2026-10-12)
+  - 1 line, plus a 4-line test: `split_channels` returns a tuple, as annotated (2026-10-17)
 
 ## Detailed Contributions
+
+### 2026-10-17: split_channels Returned a List, Not the Annotated Tuple
+
+**Found by the maintainer** while testing ImpCraft (session S04). ImpCraft's `rgb2hsi` node failed with "virtual_impressionist.core.hsi.rgb2hsi returned 1 values, expected 3".
+
+**Cause (Claude).** `yapocis.lib.channels.split_channels` is annotated `-> tuple[Image1, Image1, Image1]` but returned a list comprehension. impressionist's `hsi.rgb2hsi`, `hsi.hsi2rgb`, `lab.rgb2lab` and `lab.lab2rgb` return it directly. ImpCraft's function nodes take a tuple as several outputs and anything else as one value, so all four were broken as nodes.
+
+**Fix (Claude, `src/yapocis/lib/channels.py`):** `tuple(...)` instead of the list. Every caller in yapocis3 and impressionist unpacks the result (checked by grep), so nothing else changes.
+
+**Tests:** `tests/integration/test_utils.py::test_split_join` now asserts a tuple of three. It and `tests/lib/processing/test_colormath.py` pass (27 tests). impressionist's colour tests pass (78; `-k "hsi or lab or color or palette or channel"`). ImpCraft's exactness gate is unchanged (12 of 12). ImpCraft adds the regression test `test_multi_output_colour_functions_give_each_channel`.
 
 ### 2026-10-12: CUDA Gradient Angle Used Swapped Axes
 
