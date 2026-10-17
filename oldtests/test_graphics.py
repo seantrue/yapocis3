@@ -1,4 +1,4 @@
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
+#  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 
 from yapocis.lib.graphics import Graphics1
 from yapocis.utils.stereo_typing import *

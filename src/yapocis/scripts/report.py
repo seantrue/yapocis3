@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
+#  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 """
 CLI tool for managing yapocis performance data and reports.
 

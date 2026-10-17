@@ -36,7 +36,7 @@ Usage:
     # Use yapocis backend for plot rendering (GPU-accelerated)
     YAPOCIS_MPLBACKEND=1 yapocis-performance graphics4
 """
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
+#  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 
 import argparse
 import datetime

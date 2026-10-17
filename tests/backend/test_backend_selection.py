@@ -4,7 +4,15 @@ from __future__ import annotations
 
 import pytest
 
-from yapocis.core import get_manager, get_test_backends, load_program
+from yapocis.core import (
+    BACKEND_ALIASES,
+    canonical_backend,
+    get_backend,
+    get_backends,
+    get_manager,
+    get_test_backends,
+    load_program,
+)
 
 _MODULES = {
     "ocl": "yapocis.ocl.kernel_manager",
@@ -46,3 +54,17 @@ def test_load_program_uses_backend_argument(backend, monkeypatch):
 def test_get_manager_rejects_unknown_backend():
     with pytest.raises(ValueError, match="Unknown backend"):
         get_manager("vulkan")
+
+
+@pytest.mark.parametrize("alias", sorted(BACKEND_ALIASES))
+def test_environment_accepts_backend_alias(alias, monkeypatch):
+    canonical = BACKEND_ALIASES[alias]
+    if canonical not in get_backends():
+        pytest.skip(f"{canonical} not installed")
+    monkeypatch.setenv("YAPOCIS_BACKEND", alias.upper())
+    assert get_backend() == canonical
+    assert get_manager().__name__ == _MODULES[canonical]
+
+
+def test_canonical_backend_passes_through_unknown_names():
+    assert canonical_backend("Vulkan") == "vulkan"

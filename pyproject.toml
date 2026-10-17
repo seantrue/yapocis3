@@ -26,7 +26,7 @@ classifiers = [
 ]
 keywords = ["opencl", "pyopencl", "thunk", "ocl", "image", "gpu", "computing", "metal", "cuda", "numba"]
 requires-python = ">=3.10"
-# numba and pyopencl are required everywhere
+# numba and pyopencl are required everywhere; pymetallic on macOS
 dependencies = [
     # Core dependencies - always required
     "Mako>=1.3.0",
@@ -39,6 +39,7 @@ dependencies = [
     "freetype-py>=2.5.0",
     "pyopencl>=2025.2.6",
     "numba>=0.62.1",
+    "pymetallic; sys_platform == 'darwin'",
 ]
 
 [project.urls]
@@ -50,7 +51,7 @@ Changelog = "https://github.com/seantrue/Yapocis3/blob/main/CHANGELOG.md"
 
 
 [project.optional-dependencies]
-# Backend-specific dependencies. pyopencl and numba are core dependencies; their
+# Backend-specific dependencies. pyopencl, numba (and pymetallic on macOS) are core dependencies; their
 # extras remain so `--extra opencl` / `--extra numba` keep working.
 opencl = [
     "pyopencl>=2025.2.6",
@@ -96,7 +97,7 @@ test = [
 
 # Development dependencies
 dev = [
-    "yapocis[test]",
+    "yapocis[test,docs]",
     "black>=22.0.0",
     "ruff>=0.1.0",
     "isort>=5.0.0",
@@ -120,7 +121,7 @@ dev = [
 docs = [
     "sphinx>=7.0.0",
     "myst-parser>=2.0.0",
-    "pydata-sphinx-theme>=0.14.0",
+    "sphinx-rtd-theme>=2.0",
     "sphinx-autodoc-typehints>=2.0.0",
     "sphinx-copybutton>=0.5.0",
     "sphinx-autobuild>=2024.0.0",

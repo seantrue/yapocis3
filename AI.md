@@ -42,8 +42,74 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~28 lines: numbax gradient fallback, kernel search order and numbax loading by package name, plus ~143 lines of tests (2026-10-12)
   - 3 lines: CUDA gradient angle used swapped axes (2026-10-12)
   - 1 line, plus a 4-line test: `split_channels` returns a tuple, as annotated (2026-10-17)
+  - ~250 lines of code and docs, plus 13 replacement photos and ~130 lines of reports: PyPI release-readiness pass (2026-10-17)
 
 ## Detailed Contributions
+
+### 2026-10-17: PyPI Release-Readiness Pass
+
+**What the maintainer asked for.** "Evaluate yapocis3 for a pypi release (don't DO it, just evaluate). Check software against current documentation, GPL or license contamination, etc." The maintainer then directed each fix in turn: pymetallic installed by default on macOS, "fix the README examples and the numba alias", replace the demo photos with CC0 images, fill in the freetype-py notice, fix the docs and docstring warnings, fix the README links and badges, add Sphinx to the dev dependencies, update the copyright years and holders, scan the dependency tree for "poison licenses", and skip `test_vimp_common` when `yapocis_external` is missing.
+
+**Evaluation (Claude).** I built the wheel and sdist, installed them into a clean venv, and audited the docs against the code (a subagent ran the README examples and a Sphinx build). I also scanned the licences of runtime dependencies and searched the source for third-party code. The results are in `claude-debug/release_eval_2026-10-17.md`. The main findings were:
+
+- `v0.3.8` was already tagged, with 28 commits after it, and the changelog had no 0.3.8 entry. PyPI's `yapocis` is the 2011 Python 2.7 project (0.2.x eggs).
+- Both README `core` examples failed to import, and `mandelbrot(..., maxiter=...)` passed a keyword argument, which bound kernels reject.
+- `YAPOCIS_BACKEND=numba` was documented but rejected.
+- The locked twine 6.2 rejects the Metadata-Version 2.5 that current hatchling writes.
+
+**Licensing (Claude, maintainer decisions).**
+
+- **Images.** The 13 classifier demo photos had no provenance. Checked against all 500 BSDS500 images at the maintainer's request, none came from BSR; their sizes and class names point to ILSVRC. They were replaced with CC0 photos found through Openverse and are listed in `src/yapocis/images/CREDITS.md`. The maintainer supplied the hot dog (Wikimedia) and the cassette player (rawpixel), and rejected a CC BY-NC-SA candidate after Claude flagged it. A crop the maintainer made of the cassette photo was tried and then dropped. `test.jpg` is unchanged.
+- **freetype-py notice.** `lib/typeset.py` said it was "used under the following terms" over an empty block. It now has freetype-py's full BSD notice.
+- **Copyright.** Copyright end years are now 2026, and holders are normalised to "Sean D. True and Swapwizard LLC" in 134 headers, `LICENSE.txt` and `docs/conf.py`.
+- **Perona–Malik credit.** The ChatGPT-written comment in the OCL and CUDA anisodiff kernels credited "Carlo Perona and João Malik". It now names Pietro Perona and Jitendra Malik.
+- **Dependency scan.** All 171 locked packages were checked, along with the licence files and dylibs in the runtime wheels (`claude-debug/release_eval_license_scan_2026-10-17.md`). The core install and every user-facing extra are permissive. The copyleft and proprietary licences are only in dev and docs tooling: torch's NVIDIA CUDA libraries, pygame, astroid, and MPL-licensed certifi and pathspec.
+
+**Code (Claude).**
+
+- **Backend aliases.** `core.canonical_backend` and `BACKEND_ALIASES` give `get_backend()` and `get_manager()` one alias table, so `YAPOCIS_BACKEND=numba`, `opencl` and `metallic` now work (~20 LOC, with ~20 LOC of tests).
+- **pymetallic.** It is a core dependency on darwin.
+- **Docstrings.** Six docstrings were fixed for RST.
+- **Imports.** `fonts` uses `ImageFont.*`, and `interface_parser` uses pyparsing's `DelimitedList` instead of the deprecated `delimitedList`. That removes the third-party forward-reference warnings.
+- **Help text.** `yapocis-cuda-cards --help` gave the `--matrix` card separator as `,`; the parser uses `+`. The `yapocis-doctest` help examples pointed at a `newdocs/` directory.
+- **`test_vimp_common`.** It now uses `pytest.importorskip`, so it skips when `yapocis_external` isn't next to the checkout instead of failing collection.
+
+**Docs (Claude).**
+
+- **README.** The examples are rewritten and run on Metal, Numba and OpenCL. The broken code fence is fixed; CUDA is described as PyCUDA, not CuPy; links are absolute; and the CI badge, for a workflow that doesn't exist, is gone.
+- **Five pages imported `get_backends` from `yapocis.core.manager`.** That module doesn't define it.
+- **`docs/library/channels.md`.** Two examples failed: `histeq` is an `Imageops` method, and `rgb2hsi3` returns one array.
+- **Nonexistent APIs.**
+  - `docs/architecture/extensions.md` described `yapocis.assets.add_asset_path`, which doesn't exist, and a multi-path `YAPOCIS_PROJECT`, which isn't supported.
+  - The `yapocis-doctest` options in `docs/cli/index.md` didn't exist.
+  - `docs/api/core.md` named `parse_interface_file`, which doesn't exist; the function is `parse_interface_text`.
+- **Build configuration.** `.readthedocs.yml` asked for Python 3.7 and didn't install the package, so the API pages were empty. `conf.py` used a theme the `docs` extra didn't install. The `dev` extra now includes `docs`.
+
+**Maintainer changes in this commit.**
+
+- `activate.sh` points `YAPOCIS_MODELS` at `/data/models/yapocis3` when it exists.
+- `make docs` runs through `uv run --extra docs`.
+- The tracked Emacs autosave `src/yapocis/lib/#gaussian.py#` is deleted.
+
+**Defects in AI-written work, caught during the session.**
+
+- The first pass at a full license scan treated the NVIDIA NCCL, NVSHMEM and NVTX wheels (BSD and Apache) as proprietary, because their classifier reads "Other/Proprietary". It also counted the docutils GPL classifier as a runtime problem. Reading each package's licence files corrected both.
+- The first clean-install smoke test reported that Metal was the default backend and that a fresh install failed. The shell still had `YAPOCIS_BACKEND=metal` set. Rerunning with a clean environment showed that the default, `ocl`, works.
+- The docs-audit subagent said the Emacs autosave file would ship in the wheel. Checking the built wheel and sdist showed it doesn't.
+
+**Tests.**
+
+- **Mac** (Metal and Numba): 925 passed, 1 group skipped (no pycuda).
+- **yellowfin** (OpenCL, CUDA and Numba; P40, 3060, 3080), from a worktree with this change applied: 1302 passed and 30 skipped. 27 of the skips were VGG16/ResNet50 tests, because `YAPOCIS_MODELS` wasn't set; 3 were Metal. That run predates the `test_vimp_common` skip fix.
+- **Docs:** `yapocis-doctest docs/` gives 210 passed and 0 failed, and `sphinx-build -W` has no warnings.
+
+**Still open for the release:**
+
+- Bump the version past 0.3.8 and write the changelog.
+- Upgrade twine.
+- Make the private GitHub repo public, or accept 404 links on PyPI.
+- Confirm the maintainer's PyPI account still owns `yapocis`.
+- Decide what to do with `test.jpg`.
 
 ### 2026-10-17: split_channels Returned a List, Not the Annotated Tuple
 

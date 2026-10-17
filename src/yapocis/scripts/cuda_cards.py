@@ -14,7 +14,7 @@ subprocess so that:
 - one process never holds contexts on two cards.
 
 Toolkits are given as ``LABEL=PATH`` and the run matrix as
-``LABEL:CARD,CARD,...`` where a card is a substring of its name or ``all``.
+``LABEL:CARD+CARD,...`` where a card is a substring of its name or ``all``.
 A toolkit that cannot target a card's compute capability (CUDA 13 dropped
 Maxwell and Pascal) is detected with a one-line ``nvcc`` probe and reported as
 unsupported rather than failing the run.
@@ -31,7 +31,7 @@ Outputs (under ``--output-dir``, default ``performance/``):
     directory with one log per worker. Results are also recorded in the
     performance DuckDB unless ``--no-db`` is given.
 """
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
+#  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 
 from __future__ import annotations
 

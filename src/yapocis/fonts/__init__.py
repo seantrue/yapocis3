@@ -1,15 +1,15 @@
 """Tiny registry for fonts"""
 
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
+#  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 
 import os
 
 from yapocis.utils.internals import AssetManager
 
 try:
-    from PIL.ImageFont import truetype
+    from PIL import ImageFont
 except ImportError:
-    truetype = None
+    ImageFont = None
 
 am = AssetManager(os.path.dirname(__file__), ".ttf", match="lower")
 
@@ -30,7 +30,7 @@ _fontcache = {}
 
 def image_font(
     font_name: str | None = "default", size=14, index=0, encoding="", layout_engine=None
-) -> "FreeTypeFont":
+) -> "ImageFont.FreeTypeFont":
     """
     Return a font wrapper, caching as possible
     Args:
@@ -45,13 +45,13 @@ def image_font(
     """
     font_name = "default" if font_name is None else font_name
     size = 14 if size is None else size
-    if truetype is None:
+    if ImageFont is None:
         raise RuntimeError("PIL with TrueType support is not installed")
     font_path = font(font_name)
     try:
         return _fontcache[(font_path, size, index)]
     except KeyError:
-        _fontcache[(font_path, size, index)] = fnt = truetype(
+        _fontcache[(font_path, size, index)] = fnt = ImageFont.truetype(
             font=font_path,
             size=size,
             index=index,

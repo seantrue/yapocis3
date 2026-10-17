@@ -31,7 +31,7 @@ make fix         # Auto-fix all issues
 make test                # All tests
 make test-ocl            # OpenCL backend
 make test-metal          # Metal backend
-make test-numba          # Numba backend
+make test-numbax         # Numba backend
 make test-smoke          # Quick smoke tests (~22 tests)
 
 # Single test

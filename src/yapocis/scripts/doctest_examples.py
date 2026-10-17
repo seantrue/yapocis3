@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
+#  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 """
 Extract and validate code examples from documentation.
 
@@ -787,16 +787,16 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  yapocis-doctest newdocs/                   # Test all docs
-  yapocis-doctest newdocs/library/           # Test lib reference only
-  yapocis-doctest newdocs/quickstart.md      # Test specific file
-  yapocis-doctest newdocs/ --dry-run         # Show blocks without running
-  yapocis-doctest newdocs/ -v                # Verbose output
-  yapocis-doctest newdocs/ --continue-on-error  # Run all despite failures
-  yapocis-doctest newdocs/ --filter simplex  # Only files with 'simplex'
-  yapocis-doctest newdocs/ --compile-only    # Only check syntax
-  yapocis-doctest newdocs/ --csv results.csv # Output results to CSV
-  yapocis-doctest newdocs/ --progress        # Show test being executed
+  yapocis-doctest docs/                    # Test all docs
+  yapocis-doctest docs/library/            # Test lib reference only
+  yapocis-doctest docs/quickstart/index.md # Test specific file
+  yapocis-doctest docs/ --dry-run          # Show blocks without running
+  yapocis-doctest docs/ -v                 # Verbose output
+  yapocis-doctest docs/ --continue-on-error  # Run all despite failures
+  yapocis-doctest docs/ --filter simplex   # Only files with 'simplex'
+  yapocis-doctest docs/ --compile-only     # Only check syntax
+  yapocis-doctest docs/ --csv results.csv  # Output results to CSV
+  yapocis-doctest docs/ --progress         # Show test being executed
 
 Note: This script should be run from the project root directory or a subdirectory.
       It will automatically find the project root and set up the environment.

@@ -189,22 +189,16 @@ def register():
     return os.path.dirname(__file__)
 ```
 
-## Multiple Extensions
+## Search Order
 
-Multiple extensions can be chained:
+`YAPOCIS_PROJECT` names a single directory; a path list is not supported. Interfaces,
+kernels and assets are searched in this order, and the first match wins:
 
-```bash
-export YAPOCIS_PROJECT=/path/to/ext1:/path/to/ext2
-```
+1. `$YAPOCIS_PROJECT` (if set and it is a directory)
+2. The current working directory
+3. The installed yapocis package
 
-Or use the API:
-
-```python {.no-exec}
-from yapocis.assets import add_asset_path
-
-add_asset_path('/path/to/ext1')
-add_asset_path('/path/to/ext2')
-```
+To combine several extensions, place them under one project directory.
 
 ## Best Practices
 

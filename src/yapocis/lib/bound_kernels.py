@@ -1,4 +1,4 @@
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
+#  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 import os
 from collections.abc import Callable
 
@@ -9,7 +9,8 @@ from yapocis.utils.stereo_typing import *
 class BoundKernels:
     """Lightweight wrapper that binds an interface to a backend KernelManager.
 
-    Notes
+    Notes:
+
     - Honors `YAPOCIS_BACKEND` automatically, or accept explicit `backend`.
     - `device_name` may be a device index or name string.
     - Extra `kwargs` are forwarded to the backend loader (e.g., Mako vars,

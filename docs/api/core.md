@@ -25,6 +25,6 @@ Core functionality for loading and managing kernel programs.
 
 ```{eval-rst}
 .. automodule:: yapocis.core.interface_parser
-   :members: InterfaceSpec, KernelSpec, KernelParamSpec, parse_interface_file
+   :members: InterfaceSpec, KernelSpec, KernelParamSpec, parse_interface_text
    :show-inheritance:
 ```

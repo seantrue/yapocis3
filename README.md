@@ -2,8 +2,7 @@
 
 [![PyPI version](https://badge.fury.io/py/yapocis.svg)](https://badge.fury.io/py/yapocis)
 [![Python Versions](https://img.shields.io/pypi/pyversions/yapocis.svg)](https://pypi.org/project/yapocis/)
-[![License](https://img.shields.io/github/license/seantrue/yapocis3.svg)](https://github.com/seantrue/yapocis3/blob/main/LICENSE)
-[![CI Status](https://github.com/seantrue/yapocis3/workflows/CI/badge.svg)](https://github.com/seantrue/yapocis3/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/seantrue/yapocis3/blob/main/LICENSE.txt)
 
 ## Overview
 
@@ -16,7 +15,7 @@ without code modification. Backend selection occurs at runtime through environme
 configuration, proving that Write Once, Run Anywhere™ can actually work if you squint hard enough and control all the
 variables.
 
-For the archaeological record of how this came to be, see [HISTORY.md](HISTORY.md).
+For the archaeological record of how this came to be, see [HISTORY.md](https://github.com/seantrue/yapocis3/blob/main/HISTORY.md).
 
 It includes easy-to-call-from-Python, reasonably performing implementations of kernels such as Mandelbrot, 3x3 median,
 image gradients, HSI <-> RGB conversions, color math, 2D graphics primitives (lines, circles, rectangles, text), and
@@ -72,15 +71,17 @@ In other words, it does everything except write the kernel for you. We're workin
 Execute the same code across different compute platforms:
 
 ```python
-import core
-from core import get_manager
+import numpy as np
+from yapocis import core
 
-# Select backend programmatically
-mgr = get_manager("metal")  # or "ocl", "cuda", "numba"
-prog = core.load_program("mandelbrot")
-result = prog.mandelbrot(input_data, maxiter=1000)
+# Select the backend per program: "ocl", "metal", "cuda" or "numba"
+prog = core.load_program("mandelbrot", backend="metal")
 
-# Or use environment variable
+y, x = np.mgrid[-1.5:1.5:512j, -2:1:512j]
+plane = (x + 1j * y).astype(np.complex64)
+iterations = prog.mandelbrot(plane, 1000)  # bound kernels take positional args only
+
+# Or leave backend out and set it in the environment:
 # export YAPOCIS_BACKEND=ocl
 ```
 
@@ -88,7 +89,7 @@ result = prog.mandelbrot(input_data, maxiter=1000)
 
 - **OpenCL** (via PyOpenCL): Cross-platform GPU/CPU support, runs everywhere except where it doesn't
 - **Metal** (via PyMetallic): Apple GPU acceleration, because some of us chose the shiny hardware
-- **CUDA** (via CuPy): NVIDIA GPU support, for those who prefer green LEDs
+- **CUDA** (via PyCUDA): NVIDIA GPU support, for those who prefer green LEDs
 - **Numba**: CPU fallback with JIT compilation, surprisingly fast for a "fallback"
 
 ### High-Level Graphics Libraries
@@ -108,7 +109,7 @@ Pre-built implementations for common operations:
 
 - Python 3.10+ (Python 3.13 recommended for development)
 - NumPy 2.1+ (because NumPy 1.x is so 2020)
-- Backend-specific dependencies (PyOpenCL, PyMetallic, CuPy, or Numba)
+- Backend-specific dependencies (PyOpenCL, PyMetallic, PyCUDA, or Numba)
 - Sufficient RAM
 
 **Basic Installation:**
@@ -155,25 +156,20 @@ pip install yapocis[all-backends]
   JIT).
 - Select backend via env: `export YAPOCIS_BACKEND=ocl|cuda|metal|numba`.
 - Select device via env: `export YAPOCIS_DEVICE=0` (or device name).
-- You can also select explicitly in code:
+- Select the backend in code with `backend=`; it takes precedence over `YAPOCIS_BACKEND`:
 
 ```python
-import core
-from core import get_manager
 import numpy as np
+from yapocis import core
 
-# Initialize backend
-mgr = get_manager("ocl")  # OpenCL backend
+prog = core.load_program("mandelbrot", backend="ocl")
 
-# Load and execute kernel
-prog = core.load_program("mandelbrot")
-grid = np.mgrid[-2:2:1024j, -2:2:1024j].astype(np.complex64)
-result = prog.mandelbrot(grid, maxiter=256)
+y, x = np.mgrid[-1.5:1.5:1024j, -2:1:1024j]
+plane = (x + 1j * y).astype(np.complex64)
+iterations = prog.mandelbrot(plane, 256)  # int16 iteration counts, same shape as plane
 
 # Admire the fractal
 ```
-
-### Graphics Example
 
 **CUDA backend notes:**
 
@@ -186,27 +182,30 @@ result = prog.mandelbrot(grid, maxiter=256)
 
 **Numba backend notes:**
 
-- Provides CPU fallback when GPU backends are unavailable
+- Provides a CPU backend that runs without GPU hardware
 - Uses Numba's JIT compilation for Python/NumPy code
-- Automatically selected when no GPU backend is available
+- Not selected automatically: the default backend is `ocl`, so set `YAPOCIS_BACKEND=numba` (or pass
+  `backend="numba"`) on machines without OpenCL
 - Useful for testing and development without GPU hardware
 
-# Create graphics context
+### Graphics Example
 
+```python
+import numpy as np
+from yapocis.lib.graphics4 import Graphics4
+
+# Create graphics context
 g = Graphics4()
 canvas = np.zeros((512, 512, 4), dtype=np.float32)
 
-# Draw primitives
-
+# Draw primitives: (x, y, radius)
 circles = [(256, 256, 100), (128, 128, 50)]
 g.circles(canvas, circles, color=[1.0, 0.0, 0.0, 1.0])
 
 # Retrieve result
-
 result = g.read(canvas)
 
 # Profit (not guaranteed)
-
 ```
 
 ## Development
@@ -221,7 +220,7 @@ make test
 make test-ocl    # OpenCL tests
 make test-cuda   # CUDA tests
 make test-metal  # Metal tests
-make test-numba  # Numba tests
+make test-numbax # Numba tests
 
 # Code quality
 make format      # Format with isort and black
@@ -296,20 +295,20 @@ make publish
 - **Changelog**: Automated generation with git-cliff (conventional commits appreciated)
 - **Python**: 3.13+ enforced in development environments (keeping up with the times)
 
-See [RENOVATE.md](RENOVATE.md) for detailed modernization documentation.
+See [RENOVATE.md](https://github.com/seantrue/yapocis3/blob/main/RENOVATE.md) for detailed modernization documentation.
 
 ## Documentation
 
-- **[CLAUDE.md](CLAUDE.md)**: Development guide and architecture reference
-- **[CONTRIBUTORS.md](CONTRIBUTORS.md)**: Contribution guidelines
-- **[RELEASE.md](RELEASE.md)**: PyPI release process and automation guide
-- **[CHANGELOG.md](CHANGELOG.md)**: Release notes and version history
-- **[AI.md](AI.md)**: AI-assisted development tracking (yes, really)
-- **[HISTORY.md](HISTORY.md)**: Project origins and evolution (the archaeological layer)
+- **[CLAUDE.md](https://github.com/seantrue/yapocis3/blob/main/CLAUDE.md)**: Development guide and architecture reference
+- **[CONTRIBUTORS.md](https://github.com/seantrue/yapocis3/blob/main/CONTRIBUTORS.md)**: Contribution guidelines
+- **[RELEASE.md](https://github.com/seantrue/yapocis3/blob/main/RELEASE.md)**: PyPI release process and automation guide
+- **[CHANGELOG.md](https://github.com/seantrue/yapocis3/blob/main/CHANGELOG.md)**: Release notes and version history
+- **[AI.md](https://github.com/seantrue/yapocis3/blob/main/AI.md)**: AI-assisted development tracking (yes, really)
+- **[HISTORY.md](https://github.com/seantrue/yapocis3/blob/main/HISTORY.md)**: Project origins and evolution (the archaeological layer)
 
 ## Contributing
 
-Contributions are welcome. Please see [CONTRIBUTORS.md](CONTRIBUTORS.md) for guidelines.
+Contributions are welcome. Please see [CONTRIBUTORS.md](https://github.com/seantrue/yapocis3/blob/main/CONTRIBUTORS.md) for guidelines.
 
 **Development workflow:**
 
@@ -331,7 +330,7 @@ There are several. Some we remember:
 
 ## License
 
-MIT License - see [LICENSE.txt](LICENSE.txt) for details.
+MIT License - see [LICENSE.txt](https://github.com/seantrue/yapocis3/blob/main/LICENSE.txt) for details.
 
 Because sharing is caring, and restrictive licenses are so 1990s.
 

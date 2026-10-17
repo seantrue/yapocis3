@@ -13,6 +13,7 @@ Yapocis provides several CLI tools for development, debugging, and asset managem
 | `yapocis-performance` | Performance tracking and analysis |
 | `yapocis-report` | Generate reports |
 | `yapocis-doctest` | Run documentation example tests |
+| `yapocis-cuda-cards` | Per-card CUDA benchmark across GPUs and toolkits |
 
 ## yapocis-tools
 
@@ -306,21 +307,27 @@ Run and validate documentation code examples:
 # Run all documentation examples
 $ yapocis-doctest
 
-# Run examples from specific file
-$ yapocis-doctest --file library/gaussian.md
+# Run examples from a specific file or directory
+$ yapocis-doctest docs/library/gaussian.md
+$ yapocis-doctest docs/library/
 
-# List available examples
-$ yapocis-doctest --list
+# Show the code blocks without running them
+$ yapocis-doctest --dry-run
 
 # Run with verbose output
-$ yapocis-doctest --verbose
+$ yapocis-doctest -v
 ```
 
 Options:
-- `--file FILE` - Run examples from specific documentation file
-- `--list` - List available example files
-- `--verbose` - Show detailed output
-- `--dry-run` - Parse but don't execute examples
+- `docs_path` - Docs directory or markdown file (default: `docs`)
+- `-v`, `--verbose` - Show detailed output
+- `--dry-run` - Show code blocks without running them
+- `--continue-on-error` - Keep going after a failure
+- `--filter FILTER` - Only test files whose path contains this string
+- `--isolated` - Run each block with no state shared between blocks
+- `--compile-only` - Check syntax only; don't execute
+- `--csv FILE` - Write results to CSV (`file,line,status,reason`)
+- `--progress` - Show each test before it runs
 
 ## yapocis-report
 
@@ -330,15 +337,51 @@ Generate various reports:
 $ yapocis-report
 ```
 
+## yapocis-cuda-cards
+
+Per-card CUDA performance comparison for Linux hosts with several NVIDIA GPUs. It runs the
+same library workloads on every card, once per CUDA toolkit, and writes a markdown report
+(plus a PDF via pandoc) to `performance/cuda_cards_<stamp>.*`.
+
+Each (toolkit, card) pair runs in its own subprocess. The card is pinned by UUID through
+`CUDA_VISIBLE_DEVICES`, and the toolkit is selected by putting `<toolkit>/bin` first on
+`PATH`. A toolkit that cannot target a card's compute capability is reported as
+unsupported rather than failing the run.
+
+```bash
+# Show cards, toolkits and the run plan
+$ yapocis-cuda-cards --list
+
+# Default: CUDA 12 on all cards, CUDA 13 on the 3060
+$ yapocis-cuda-cards
+
+# Explicit toolkits and matrix
+$ yapocis-cuda-cards --toolkits 12=/usr/local/cuda-12,13=/usr/local/cuda-13 \
+                     --matrix 12:all,13:3060
+
+# Bigger images, more repeats, selected workloads
+$ yapocis-cuda-cards --size 2048 --repeats 7 --workloads gaussian,median3x3
+```
+
+**Options:**
+- `--toolkits LABEL=PATH,...` - CUDA toolkits to compare
+- `--matrix LABEL:CARD+CARD,...` - Which cards each toolkit runs on (a name substring or `all`)
+- `--size`, `--repeats`, `--workloads` - Benchmark shape
+- `--output-dir DIR` - Where the report is written (default: `$YAPOCIS_PERFORMANCE_DIR` or `./performance`)
+- `--no-db` - Don't record runs in the performance DuckDB
+- `--use-cache` - Keep the PyCUDA compile cache (setup times then exclude nvcc)
+- `--list` - Show cards, toolkits and the run plan, then exit
+- `--no-pdf` - Skip the pandoc PDF
+
 ## Environment Variables
 
 CLI tools respect these environment variables:
 
 | Variable | Description |
 |----------|-------------|
-| `YAPOCIS_BACKEND` | Default backend (ocl, metal, cuda, numba) |
+| `YAPOCIS_BACKEND` | Default backend (ocl, metal, cuda, numba; default ocl) |
 | `YAPOCIS_DEVICE` | Default device name or index |
-| `YAPOCIS_PROJECT` | Additional asset search path |
+| `YAPOCIS_PROJECT` | One extra directory searched for interfaces, kernels and assets |
 | `YAPOCIS_CACHE` | Kernel cache directory |
 
 Example:

@@ -18,7 +18,7 @@ Usage:
     python examples/median_performance.py --devices "GeForce GTX","Quadro"
     python examples/median_performance.py --backends cuda --devices "Quadro GP100"
 """
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
+#  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 
 import argparse
 import os

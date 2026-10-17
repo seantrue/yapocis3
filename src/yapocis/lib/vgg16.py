@@ -5,7 +5,7 @@ Provides classification and embedding extraction for the VGG16 architecture.
 Supports GPU-resident buffers for efficient inference.
 """
 
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
+#  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 
 from __future__ import annotations
 

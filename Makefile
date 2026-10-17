@@ -305,7 +305,7 @@ license-check: venv ## Check license compliance
 docs: venv ## Generate documentation (if sphinx is configured)
 	@if [ -f $(DOCS_DIR)/conf.py ]; then \
 		echo "$(YELLOW)Building documentation...$(NC)"; \
-		cd $(DOCS_DIR) && $(VENV_PYTHON) -m sphinx -b html . _build; \
+		$(UV) run --extra docs python -m sphinx -b html $(DOCS_DIR) $(DOCS_DIR)/_build && \
 		echo "$(GREEN)Documentation built in $(DOCS_DIR)/_build$(NC)"; \
 	else \
 		echo "$(YELLOW)No sphinx configuration found$(NC)"; \

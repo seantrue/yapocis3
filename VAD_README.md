@@ -193,4 +193,4 @@ Potential optimizations:
 
 ## License
 
-Copyright Sean D. True & Swapwizard LLC (c) 2011-2025.
+Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.

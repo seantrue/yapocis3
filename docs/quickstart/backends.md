@@ -54,11 +54,11 @@ export YAPOCIS_DEVICE="AMD"
 ## Listing Available Backends
 
 ```python
-from yapocis.core.manager import get_backends
+from yapocis.core import get_backends
 
 backends = get_backends()
 print(f"Available: {backends}")
-# Example output: ['ocl', 'metal', 'numba']
+# Example output: ['ocl', 'metal', 'numbax']  ("numba" is accepted as an alias for numbax)
 ```
 
 ## Backend Details

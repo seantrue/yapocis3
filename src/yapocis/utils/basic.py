@@ -1,4 +1,4 @@
-#  Copyright Sean D. True & Swapwizard LLC (c) 2011-2022.
+#  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 import os
 import sys
 from collections.abc import Iterable, Iterator
@@ -124,10 +124,8 @@ def to_image(
     as 'F' or 'I' in which case a float and/or integer array is made
 
     For 3-D arrays, the channel_axis argument tells which dimension of the
-      array holds the channel data.
-    For 3-D arrays if one of the dimensions is 3, the mode is 'RGB'
-      by default or 'YCbCr' if selected.
-    if the
+    array holds the channel data. If one of the dimensions is 3, the mode is
+    'RGB' by default or 'YCbCr' if selected.
 
     The numpy array must be either 2 dimensional or 3 dimensional.
     """

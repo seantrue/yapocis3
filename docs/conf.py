@@ -2,6 +2,8 @@
 
 import os
 import sys
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as package_version
 
 # Add yapocis to path for autodoc
 sys.path.insert(0, os.path.abspath("../src"))
@@ -9,8 +11,15 @@ sys.path.insert(0, os.path.abspath("../src"))
 # -- Project information -----------------------------------------------------
 
 project = "Yapocis"
-copyright = "2024, Sean True"
-author = "Sean True"
+copyright = "2011-2026, Sean D. True and Swapwizard LLC"
+author = "Sean D. True"
+
+# The docs are built with the package installed (see .readthedocs.yml)
+try:
+    release = package_version("yapocis")
+except PackageNotFoundError:
+    release = "unknown"
+version = ".".join(release.split(".")[:2])
 
 # -- General configuration ---------------------------------------------------
 
@@ -66,7 +75,7 @@ html_css_files = [
 html_context = {
     "display_github": True,
     "github_user": "seantrue",
-    "github_repo": "yapocis",
+    "github_repo": "Yapocis3",
     "github_version": "main",
     "conf_py_path": "/docs/",
 }
@@ -82,6 +91,9 @@ autodoc_default_options = {
 }
 
 autodoc_typehints = "description"
+
+# Optional backends that are not installed where the docs are built
+autodoc_mock_imports = ["pycuda", "pymetallic"]
 
 # -- Intersphinx configuration -----------------------------------------------
 

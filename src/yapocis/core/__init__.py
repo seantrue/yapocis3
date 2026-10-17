@@ -17,6 +17,20 @@ _backends = None
 
 ALL_BACKENDS = ("ocl", "metal", "cuda", "numbax")
 
+# Alternate names accepted wherever a backend is named (YAPOCIS_BACKEND, get_manager)
+BACKEND_ALIASES = {
+    "opencl": "ocl",
+    "metallic": "metal",
+    "mtl": "metal",
+    "numba": "numbax",
+}
+
+
+def canonical_backend(backend: str) -> str:
+    """Map a backend name or alias, in any case, to its name in ALL_BACKENDS."""
+    backend = backend.lower()
+    return BACKEND_ALIASES.get(backend, backend)
+
 
 def get_all_backends():
     return ALL_BACKENDS
@@ -56,8 +70,7 @@ def get_backends() -> list[str]:
 
 def get_backend():
     # Returns active backend
-    backend = os.environ.get("YAPOCIS_BACKEND") or "ocl"
-    backend = backend.lower()
+    backend = canonical_backend(os.environ.get("YAPOCIS_BACKEND") or "ocl")
     backends = get_backends()
     if backend not in backends:
         raise RuntimeError(f"{backend=} is not one of available {backends=}")
@@ -95,23 +108,23 @@ def get_manager(backend: str | None = None):
     Args:
         backend: Backend name or alias; None uses the active backend (YAPOCIS_BACKEND).
     """
-    backend = backend.lower() if backend else get_backend()
+    backend = canonical_backend(backend) if backend else get_backend()
     if backend == "cuda":
         # Return the CUDA kernel_manager module (has load_program/import_program)
         from yapocis.cu import kernel_manager as km
 
         return km
-    elif backend in ("ocl", "opencl"):
+    elif backend == "ocl":
         # Return the OpenCL kernel_manager module (has load_program/import_program)
         from yapocis.ocl import kernel_manager as km
 
         return km
-    elif backend in ("metal", "metallic", "mtl"):
+    elif backend == "metal":
         # Return the Metal kernel_manager module (uses pymetallic runtime)
         from yapocis.metallic import kernel_manager as km
 
         return km
-    elif backend in ("numbax", "numba"):
+    elif backend == "numbax":
         # Return the Numba kernel_manager module (uses Numba JIT)
         from yapocis.numbax import kernel_manager as km
 
