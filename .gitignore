@@ -11,6 +11,7 @@
 *.bak
 *.swp
 *.png
+!src/yapocis/images/*.png
 *.svg
 .\#*
 *.log
