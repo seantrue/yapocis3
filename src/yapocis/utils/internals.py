@@ -153,7 +153,7 @@ class AssetManager:
                     assets.update(
                         {
                             asset_name: os.path.join(asset_dir, asset_name)
-                            for asset_name in os.listdir(asset_dir)
+                            for asset_name in sorted(os.listdir(asset_dir))
                             if has_ext(asset_name)
                         }
                     )

@@ -6,7 +6,7 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Summary Statistics
 
-- **Total AI-assisted commits**: ~33
+- **Total AI-assisted commits**: ~34
 - **Major features developed with AI assistance**:
   - Infrastructure: Package modernization (hatchling, modern tooling), automated changelog generation, type annotation modernization, release automation system
   - Backend work: CUDA kernel compilation fixes, CUDA row-major addressing fixes, Metal backend fixes, coordinate system standardization, Numba backend completeness, truetrace kernel port, separable convolution boundary fix
@@ -43,8 +43,43 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - 3 lines: CUDA gradient angle used swapped axes (2026-10-12)
   - 1 line, plus a 4-line test: `split_channels` returns a tuple, as annotated (2026-10-17)
   - ~250 lines of code and docs, plus 13 replacement photos and ~130 lines of reports: PyPI release-readiness pass (2026-10-17)
+  - ~3,210 lines of exporter code, ~345 lines of tests, ~130 lines of docs, plus ~490 lines of reports: kernel bundle exporter for the Rust port (2026-10-19)
 
 ## Detailed Contributions
+
+### 2026-10-19: Kernel Bundle Exporter for the Rust Port (yapocis-rs)
+
+**What the maintainer asked for.** An evaluation of running the yapocis kernels from Rust with no Python at runtime, then the plan that came out of it. The maintainer decided on 2026-10-18: a separate `yapocis-rs` repository; runtime-parameterised kernels handled by enumerating variants at build time; all interface kernels plus the library wrappers in the first release; CUDA through NVRTC pinned to the 12.x bindings. On 2026-10-19 the maintainer asked how to make yapocis-rs ready for check-in, and approved "do 1-5 ... Then 7". Step 1 was to land this exporter here first so the Rust repository's vendored bundle can be reproduced from a tagged commit.
+
+**What the AI did.**
+
+- **`yapocis-tools bundle`** (`scripts/tools.py`, ~170 LOC): renders every interface, and each variant listed in the new `interfaces/bundle.yml`, for the OpenCL, Metal and CUDA backends without a device. It writes `manifest.json` (parameters, derivation, pre-parsed `dispatch_size`, build options, CUDA's hidden size argument) plus the rendered sources. Options: `--fixtures` (derivation fixtures), `--parity` (kernel outputs recorded on a device) and `--parity-lib` (library wrapper outputs).
+- **`yapocis/codegen/`** (new, ~3,210 LOC): `bundle.py` (schema and writer), `fixtures.py`, `parity.py`, and the per-area library generators `parity_lib`, `parity_cnn`, `parity_convolve`, `parity_graphics` and `parity_processing`.
+- **Device-free rendering:**
+  - `core/kmgr_base.py` gains module-level `find_kernel_template` and `render_kernel_source`, which `KernelManagerBase` now uses, so the Metal kernel manager's own copy of the template search is gone.
+  - `utils/internals.py` lists asset directories sorted, so a bundle exported twice is byte-identical.
+- **NVRTC compatibility:** `kernels/cuda/constants.mako` defines `uint` and `M_PI`, which nvcc takes from host headers and NVRTC does not have. Both definitions are harmless under nvcc.
+- **Per-device parity fixtures** (added during the check-in work): fixtures go to `parity/<backend>/<device>/` and `parity/lib/<backend>/<device>/`, and both indexes record the device. Results can differ between devices in the last bit, so a consumer compares only against fixtures from its own device.
+- **Tests and docs:** `tests/integration/test_bundle_export.py` (~345 LOC, 25 tests), `docs/architecture/kernel-bundle.md`, and the `bundle` options in `docs/cli/index.md`.
+- **Reports** in `claude-debug/`: `rust_port_evaluation_2026-10-18.md`, and `rust_vs_python_timing_2026-10-19.md` (Rust vs Python timings on the M4 Max and the RTX 3080, including multi-stage resident workloads).
+
+**Defects in AI-written code.**
+
+- The kernel parity exporter recorded the CUDA device as `<bound method name of <pycuda._driver.Device ...>>`, because pycuda's `Device.name` is a method while pyopencl's and pymetallic's are attributes. Caught while designing the per-device layout; `device_name` now calls it, and the export test asserts the name is a plain string.
+- Parity fixtures were keyed by backend only, so OpenCL fixtures recorded on the Apple M4 Max made two Rust tests fail on NVIDIA's OpenCL (one Mandelbrot pixel at 6 vs 7 iterations, one `noise3d` element). Caught by running the Rust suite on yellowfin; fixed by the per-device layout.
+
+**Found in the library and not changed (recorded in the timing report).**
+
+- `Gaussian.zcsdog(res=True)` and `res=False` give different edge maps for about 0.45% of pixels. `gauss_image` (`gauss*_h`/`gauss*_v`) and the resident `gauss*_res` kernels treat the image border differently, and the cleared margin (28 px at scale 3) is sized for the smaller kernel, while the larger one is 39 wide. 4,751 of the 4,757 differing pixels lie 28 to 39 px from an edge.
+- `fft.batch_forward` documents a 256-point limit but does not enforce it.
+- Python's resident `zcsdog` on Metal at 2048² is slower than its host form (31.5 ms vs 25.7 ms). Not investigated.
+
+**Verification.**
+
+- `tests/integration/test_bundle_export.py`: 25 passed (Metal, OpenCL).
+- Full suite on thresher with this source: 934 passed, 8 skipped (Metal, OpenCL; the skips are missing ResNet50 weights and pycuda).
+- ruff reports no new errors in the changed files: 10 against 12 on `main`, all pre-existing.
+- mypy reports 82 errors in the new `codegen/` package (missing return annotations, untyped `yaml`). The package as a whole is not mypy-clean (700 errors across 46 files in the same run), and they are left as they are.
 
 ### 2026-10-19: corgi_rgba.png, an RGBA Test Image (Claude Opus 5.5)
 

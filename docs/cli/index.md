@@ -162,6 +162,31 @@ Saved to models/vgg16/weights.npz
 $ yapocis-tools models resnet50 --output my_models/
 ```
 
+#### bundle
+
+Export rendered kernel sources and a `manifest.json` for runtimes that do not
+use Python, such as [yapocis-rs](https://github.com/seantrue/yapocis-rs). No
+device is needed; see {doc}`../architecture/kernel-bundle`.
+
+```bash
+yapocis-tools bundle --out bundle/                    # ocl, metal and cuda
+yapocis-tools bundle --out bundle/ --backends ocl,cuda
+yapocis-tools bundle --out bundle/ --fixtures         # + derivation fixtures
+yapocis-tools bundle --out bundle/ --parity metal     # + recorded kernel outputs
+yapocis-tools bundle --out bundle/ demo graphics      # selected interfaces
+```
+
+| Option | Effect |
+|---|---|
+| `--out DIR` | Output directory (required) |
+| `--backends LIST` | Comma-separated subset of `ocl,metal,cuda` |
+| `--config FILE` | Alternative `bundle.yml` (variants, build options) |
+| `--include-project` | Also export interfaces found via `YAPOCIS_PROJECT` and the current directory |
+| `--fixtures` | Write `fixtures/derivation.json` |
+| `--parity BACKENDS` | Run eligible kernels on these backends and write `parity/<backend>/<device>/` |
+| `--parity-lib BACKENDS` | Run the library-level generators (`yapocis.codegen.parity_lib`) and write `parity/lib/<backend>/<device>/` |
+| `--generators NAMES` | Comma-separated subset of library generators for `--parity-lib` |
+
 ## yapocis-validate
 
 Manage validation references for regression testing.
