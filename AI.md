@@ -46,6 +46,22 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2026-10-19: corgi_rgba.png, an RGBA Test Image (Claude Opus 5.5)
+
+**Asked:** the maintainer, working in ImpCraft, asked for "a test RGBA png", then to "Move this .png into the test image suite, add to git".
+
+**Done:**
+- `src/yapocis/images/corgi_rgba.png` is `test.jpg` with an alpha channel. The centre is opaque, it fades to clear towards the edges (52% of pixels partly clear, 15% fully clear), and a band along the top is at least half clear. The colours under the alpha are left as the photo.
+- It is made by a script in ImpCraft's `claude-debug/rgba/make_rgba_png.py`, which isn't tracked.
+- `images/CREDITS.md` records it as derived from `test.jpg`, under the same license.
+- ImpCraft uses it to check Load Image's new `rgba` output: straight RGBA versus RGB composited over a background.
+
+**Checked:** `find_image("corgi_rgba.png")` finds it. No code changed, so no tests were run.
+
+**`.gitignore`:** it ignores every `*.png` (test outputs), so it gains one exception, `!src/yapocis/images/*.png`, so suite pictures are tracked.
+
+**Not changed:** the wheel's `include` list names only `test.jpg`, so, like the other suite photos, this file is not in the wheel.
+
 ### 2026-10-17: PDF Index Built with makeindex Instead of xindy
 
 **What the maintainer asked for.** "try latex_use_xindy = False, then CPM". Claude had proposed this after the first Read the Docs xelatex build.

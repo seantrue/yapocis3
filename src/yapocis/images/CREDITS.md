@@ -7,6 +7,11 @@ Credit is not required; it is recorded here for provenance.
 `test.jpg` is a personal photograph by the package author, Sean D. True, and is
 distributed under the yapocis license (MIT, see `LICENSE.txt`).
 
+`corgi_rgba.png` is `test.jpg` with an alpha channel added, under the same license. Its
+centre is opaque, fading to clear towards the edges, with a half-clear band along the top. The
+colours under the alpha are the photo's own. It tests reading pictures with transparency (straight
+RGBA versus RGB composited over a background).
+
 | File | Title | Creator | Source | License | Original |
 |---|---|---|---|---|---|
 | cassette_player.jpg | old cassette player tape laying | unknown | rawpixel | CC0 1.0 | <https://www.rawpixel.com/image/3284949/free-photo-image-tape-parquet-old-cassette> |
