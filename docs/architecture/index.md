@@ -71,4 +71,5 @@ kernel-code
 kernel-program
 bound-kernels
 extensions
+kernel-bundle
 ```

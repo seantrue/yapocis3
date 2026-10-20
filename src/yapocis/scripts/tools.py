@@ -491,7 +491,9 @@ def cmd_scaffold(args):
     # Validate project name (must be valid Python identifier)
     if not project_name.isidentifier():
         print(f"ERROR: '{project_name}' is not a valid project name")
-        print("Project name must be a valid Python identifier (letters, numbers, underscores)")
+        print(
+            "Project name must be a valid Python identifier (letters, numbers, underscores)"
+        )
         return 1
 
     # Define the structure
@@ -509,11 +511,12 @@ def cmd_scaffold(args):
             "images",
             "icons",
         ],
-        "files": {}
+        "files": {},
     }
 
     # README.md template
-    structure["files"]["README.md"] = dedent(f'''\
+    structure["files"]["README.md"] = dedent(
+        f"""\
         # {project_name}
 
         A yapocis extension project.
@@ -597,10 +600,12 @@ def cmd_scaffold(args):
         ## License
 
         MIT
-    ''')
+    """
+    )
 
     # pyproject.toml template
-    structure["files"]["pyproject.toml"] = dedent(f'''\
+    structure["files"]["pyproject.toml"] = dedent(
+        f"""\
         [project]
         name = "{project_name}"
         version = "0.1.0"
@@ -635,10 +640,12 @@ def cmd_scaffold(args):
 
         [tool.ruff.lint]
         select = ["E", "F", "I", "W"]
-    ''')
+    """
+    )
 
     # .gitignore
-    structure["files"][".gitignore"] = dedent('''\
+    structure["files"][".gitignore"] = dedent(
+        """\
         # Python
         __pycache__/
         *.py[cod]
@@ -684,11 +691,13 @@ def cmd_scaffold(args):
         mako_modules/
         *.duckdb
         *.duckdb.wal
-    ''')
+    """
+    )
 
     # Interface template
     class_name = project_name.title().replace("_", "")
-    structure["files"][f"interfaces/{project_name}.interface"] = dedent(f'''\
+    structure["files"][f"interfaces/{project_name}.interface"] = dedent(
+        f"""\
         // {project_name} interface
         // A sample yapocis kernel interface
 
@@ -707,10 +716,12 @@ def cmd_scaffold(args):
                 float value
             );
         }};
-    ''')
+    """
+    )
 
     # OpenCL kernel template
-    structure["files"][f"kernels/ocl/{project_name}.mako"] = dedent(f'''\
+    structure["files"][f"kernels/ocl/{project_name}.mako"] = dedent(
+        f"""\
         // {project_name} OpenCL kernel
 
         __kernel void fill(
@@ -722,10 +733,12 @@ def cmd_scaffold(args):
             if (idx >= size) return;
             a[idx] = value;
         }}
-    ''')
+    """
+    )
 
     # Metal kernel template
-    structure["files"][f"kernels/metal/{project_name}.mako"] = dedent(f'''\
+    structure["files"][f"kernels/metal/{project_name}.mako"] = dedent(
+        f"""\
         // {project_name} Metal kernel
         <%include file="constants.mako"/>
 
@@ -738,10 +751,12 @@ def cmd_scaffold(args):
             if (idx >= (uint)size) return;
             a[idx] = value;
         }}
-    ''')
+    """
+    )
 
     # CUDA kernel template
-    structure["files"][f"kernels/cuda/{project_name}.mako"] = dedent(f'''\
+    structure["files"][f"kernels/cuda/{project_name}.mako"] = dedent(
+        f"""\
         // {project_name} CUDA kernel
 
         extern "C" __global__ void fill(
@@ -753,10 +768,12 @@ def cmd_scaffold(args):
             if (idx >= size) return;
             a[idx] = value;
         }}
-    ''')
+    """
+    )
 
     # Numba kernel template
-    structure["files"][f"kernels/numbax/{project_name}.py"] = dedent(f'''\
+    structure["files"][f"kernels/numbax/{project_name}.py"] = dedent(
+        f'''\
         """
         {project_name} Numba kernel implementation.
         """
@@ -771,10 +788,12 @@ def cmd_scaffold(args):
             for idx in prange(size):
                 flat[idx] = value
             return a
-    ''')
+    '''
+    )
 
     # Python library wrapper
-    structure["files"][f"lib/{project_name}.py"] = dedent(f'''\
+    structure["files"][f"lib/{project_name}.py"] = dedent(
+        f'''\
         """
         {project_name} - Python wrapper for {project_name} kernels.
         """
@@ -816,20 +835,24 @@ def cmd_scaffold(args):
                     value: Value to fill the array with
                 """
                 self.kmgr.fill_res(array, value)
-    ''')
+    '''
+    )
 
     # lib/__init__.py
-    structure["files"]["lib/__init__.py"] = dedent(f'''\
+    structure["files"]["lib/__init__.py"] = dedent(
+        f'''\
         """
         {project_name} library.
         """
         from .{project_name} import {class_name}
 
         __all__ = ["{class_name}"]
-    ''')
+    '''
+    )
 
     # Test file
-    structure["files"][f"tests/test_{project_name}.py"] = dedent(f'''\
+    structure["files"][f"tests/test_{project_name}.py"] = dedent(
+        f'''\
         """
         Tests for {project_name} extension.
         """
@@ -923,10 +946,13 @@ def cmd_scaffold(args):
 
         if __name__ == "__main__":
             pytest.main([__file__, "-v"])
-    ''')
+    '''
+    )
 
     # tests/__init__.py
-    structure["files"]["tests/__init__.py"] = '"""Test suite for {project_name}."""\n'.format(project_name=project_name)
+    structure["files"]["tests/__init__.py"] = (
+        '"""Test suite for {project_name}."""\n'.format(project_name=project_name)
+    )
 
     # Dry run mode
     if args.dry_run:
@@ -1209,7 +1235,9 @@ def cmd_interfaces(args):
                 if param.hint == "out_like":
                     # Auto-allocated output - becomes return value
                     source = param.name.removeprefix("out_like_")
-                    returns.append((type_hint, f"{param.np_dtype} array (like {source})"))
+                    returns.append(
+                        (type_hint, f"{param.np_dtype} array (like {source})")
+                    )
                     continue
 
                 if param.derived:
@@ -1221,9 +1249,11 @@ def cmd_interfaces(args):
                     returns.append((type_hint, f"{param.np_dtype} array"))
                 elif param.hint in ("in", "inout", "resident"):
                     # User-provided parameter
-                    role = {"in": "input", "inout": "input/output", "resident": "resident"}[
-                        param.hint
-                    ]
+                    role = {
+                        "in": "input",
+                        "inout": "input/output",
+                        "resident": "resident",
+                    }[param.hint]
                     params.append((param.name, type_hint, f"{role} {param.np_dtype}"))
                 elif not param.pointer:
                     # Scalar parameter
@@ -1396,7 +1426,10 @@ def cmd_interfaces(args):
 
             # Compact single-line format
             params_str = ", ".join(params)
-            print(f"    def {method_name}(self, {params_str}) -> {return_type}: ...", file=file)
+            print(
+                f"    def {method_name}(self, {params_str}) -> {return_type}: ...",
+                file=file,
+            )
 
     requested_interfaces = args.interfaces if args.interfaces else []
 
@@ -1471,6 +1504,64 @@ def cmd_interfaces(args):
 
             print(f"Wrote {pyi_path}")
 
+    return 0
+
+
+def cmd_bundle(args):
+    """Export a kernel bundle (manifest.json plus rendered sources per backend)."""
+    from yapocis.codegen.bundle import (
+        BUNDLE_BACKENDS,
+        export_bundle,
+        load_bundle_config,
+    )
+
+    backends = tuple(b.strip() for b in args.backends.split(",") if b.strip())
+    unknown = [b for b in backends if b not in BUNDLE_BACKENDS]
+    if unknown:
+        print(
+            f"Unknown backends: {', '.join(unknown)} (choose from {', '.join(BUNDLE_BACKENDS)})"
+        )
+        return 1
+    config = load_bundle_config(args.config)
+    manifest = export_bundle(
+        args.out,
+        names=args.interfaces or None,
+        backends=backends,
+        config=config,
+        include_project=args.include_project,
+    )
+    if args.fixtures:
+        from yapocis.codegen.fixtures import write_derivation_fixtures
+
+        path = write_derivation_fixtures(args.out, manifest)
+        print(f"fixtures: {path}")
+    if args.parity:
+        from yapocis.codegen.parity import export_parity
+
+        for backend in args.parity.split(","):
+            backend = backend.strip()
+            if backend:
+                path = export_parity(
+                    args.out, manifest, backend, names=args.interfaces or None
+                )
+                print(f"parity[{backend}]: {path}")
+    if args.parity_lib:
+        from yapocis.codegen.parity_lib import export_parity_lib
+
+        for backend in args.parity_lib.split(","):
+            backend = backend.strip()
+            if backend:
+                generators = (
+                    [g.strip() for g in args.generators.split(",") if g.strip()]
+                    if args.generators
+                    else None
+                )
+                path = export_parity_lib(args.out, backend, names=generators)
+                print(f"parity-lib[{backend}]: {path}")
+    print(
+        f"bundle: {len(manifest.interfaces)} interface variants, "
+        f"backends {', '.join(manifest.backends)}, yapocis {manifest.yapocis_version} -> {args.out}"
+    )
     return 0
 
 
@@ -1597,6 +1688,55 @@ Examples:
         "--no-labels", action="store_true", help="Skip downloading ImageNet labels"
     )
 
+    # Bundle subcommand
+    bundle_parser = subparsers.add_parser(
+        "bundle",
+        help="Export rendered kernel sources and a manifest for non-Python runtimes",
+    )
+    bundle_parser.add_argument(
+        "--out", "-o", required=True, help="Output directory for the bundle"
+    )
+    bundle_parser.add_argument(
+        "--backends",
+        default="ocl,metal,cuda",
+        help="Comma-separated backends to render (default: ocl,metal,cuda)",
+    )
+    bundle_parser.add_argument(
+        "--config", help="bundle.yml to use (default: the packaged one)"
+    )
+    bundle_parser.add_argument(
+        "--include-project",
+        action="store_true",
+        help="Also export interfaces found via YAPOCIS_PROJECT and the current directory",
+    )
+    bundle_parser.add_argument(
+        "--fixtures",
+        action="store_true",
+        help="Also write fixtures/derivation.json (argument derivation and dispatch sizes)",
+    )
+    bundle_parser.add_argument(
+        "--parity",
+        metavar="BACKENDS",
+        help="Also run every eligible kernel on these backends (comma-separated, "
+        "needs devices) and write parity/<backend>/ fixtures with inputs and outputs",
+    )
+    bundle_parser.add_argument(
+        "--parity-lib",
+        metavar="BACKENDS",
+        help="Also run the library-level parity generators (yapocis.codegen.parity_lib) "
+        "on these backends and write parity/lib/<backend>/",
+    )
+    bundle_parser.add_argument(
+        "--generators",
+        metavar="NAMES",
+        help="Comma-separated subset of the library parity generators to run with --parity-lib",
+    )
+    bundle_parser.add_argument(
+        "interfaces",
+        nargs="*",
+        help="Interface names to export (default: all packaged)",
+    )
+
     # Scaffold subcommand
     scaffold_parser = subparsers.add_parser(
         "scaffold", help="Create scaffolding for a yapocis extension project"
@@ -1647,6 +1787,8 @@ Examples:
         return cmd_models(args)
     elif args.command == "scaffold":
         return cmd_scaffold(args)
+    elif args.command == "bundle":
+        return cmd_bundle(args)
     else:
         parser.print_help()
         return 1

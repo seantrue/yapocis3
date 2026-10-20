@@ -89,6 +89,104 @@ def kernel_template_lookup(
     )
 
 
+# Backends whose templates fall back to another backend's directory when missing.
+_TEMPLATE_FALLBACKS: dict[str, list[str]] = {"metal": ["ocl"]}
+
+# File extension of rendered kernel source per backend.
+SOURCE_EXTENSIONS: dict[str, str] = {
+    "ocl": "cl",
+    "metal": "metal",
+    "cuda": "cu",
+    "numbax": "py",
+}
+
+
+def find_kernel_template(backend: str, base_filename: str) -> str:
+    """
+    Locate the Mako kernel template for an interface on a backend.
+
+    Searches ``kernels/<backend>/<name>.mako`` in every yapocis directory
+    (YAPOCIS_PROJECT, cwd, package), then the same for each fallback backend
+    (Metal falls back to the OpenCL templates).
+
+    This is a module-level function so that kernel source can be rendered
+    without a device or a backend library (e.g. by the bundle exporter).
+    """
+    template_filename = f"{base_filename}.mako"
+    searched_paths = []
+    for candidate in [backend, *_TEMPLATE_FALLBACKS.get(backend, [])]:
+        kernel_subdir = os.path.join("kernels", candidate)
+        for base_dir in get_yapocis_dirs():
+            kernel_path = os.path.join(base_dir, kernel_subdir, template_filename)
+            searched_paths.append(kernel_path)
+            if os.path.exists(kernel_path):
+                return kernel_path
+    raise FileNotFoundError(
+        f"Template not found for '{base_filename}' (backend={backend}). "
+        f"Searched: {', '.join(searched_paths)}"
+    )
+
+
+def render_template_file(backend: str, tfilename: str, **context: Context) -> str:
+    """
+    Render a kernel template file for a backend.
+
+    The lookup path is the template's own directory followed by every
+    ``kernels/<backend>`` directory, so ``<%include file="constants.mako"/>``
+    resolves for extension templates too.
+    """
+    kernel_subdir = os.path.join("kernels", backend)
+    template_directories = [os.path.dirname(tfilename)]
+    for base_dir in get_yapocis_dirs():
+        kernel_dir = os.path.join(base_dir, kernel_subdir)
+        if os.path.isdir(kernel_dir) and kernel_dir not in template_directories:
+            template_directories.append(kernel_dir)
+
+    mako_modules = os.path.join(get_yapocis_dir(), "mako_modules", backend)
+    mylookup = kernel_template_lookup(template_directories, mako_modules)
+    filename = os.path.split(tfilename)[-1]
+    t = mylookup.get_template(filename)
+    return str(t.render(**context))
+
+
+def render_kernel_source(backend: str, base_filename: str, **context: Context) -> str:
+    """Render the kernel source for ``base_filename`` on ``backend`` (device-free)."""
+    return render_template_file(
+        backend, find_kernel_template(backend, base_filename), **context
+    )
+
+
+def render_interface_source(source: str, **context: Context) -> str:
+    """Mako-render an interface specification when it has a context."""
+    if not context:
+        return source
+    t = Template(source)
+    return str(t.render(**context))
+
+
+def prepare_program(
+    backend: str, interface_spec: str, **context: Context
+) -> tuple[Interface, dict[str, Any], str]:
+    """
+    Do everything ``load_program`` does before touching a device.
+
+    Returns the parsed interface, the merged template context (YAML, generator,
+    then ``context`` overrides) and the rendered kernel source for ``backend``.
+    """
+    merged_context = get_interface_context(interface_spec, **context)
+    source = load_interface(interface_spec)
+    source = render_interface_source(source, **merged_context)
+    interface = get_interface(source)
+    # The kernel manager constructor keeps these for itself; templates never see them.
+    template_context = {
+        k: v
+        for k, v in merged_context.items()
+        if k not in ("device_name", "debug", "options", "async_write")
+    }
+    kernel_source = render_kernel_source(backend, interface.name, **template_context)
+    return interface, merged_context, kernel_source
+
+
 class KernelManagerBase(ABC):
     """
     Base class for backend-specific kernel managers.
@@ -159,21 +257,7 @@ class KernelManagerBase(ABC):
         Raises:
             FileNotFoundError: If template not found
         """
-        # Search in all yapocis directories (project, cwd, package)
-        kernel_subdir = os.path.join("kernels", self._backend_name)
-        template_filename = f"{base_filename}.mako"
-
-        searched_paths = []
-        for base_dir in get_yapocis_dirs():
-            kernel_path = os.path.join(base_dir, kernel_subdir, template_filename)
-            searched_paths.append(kernel_path)
-            if os.path.exists(kernel_path):
-                return kernel_path
-
-        raise FileNotFoundError(
-            f"Template not found for '{base_filename}' (backend={self._backend_name}). "
-            f"Searched: {', '.join(searched_paths)}"
-        )
+        return find_kernel_template(self._backend_name, base_filename)
 
     def __init__(
         self,
@@ -237,9 +321,7 @@ class KernelManagerBase(ABC):
         # Save source to cache if YAPOCIS_CACHE is set
         cache_dir = os.environ.get("YAPOCIS_CACHE")
         if cache_dir and os.path.isdir(cache_dir):
-            ext = {"ocl": "cl", "metal": "metal", "cuda": "cu", "numbax": "py"}.get(
-                self._backend_name, "txt"
-            )
+            ext = SOURCE_EXTENSIONS.get(self._backend_name, "txt")
             source_file = os.path.join(cache_dir, f"{interface.name}.{ext}")
             with open(source_file, "w") as f:
                 f.write(source)
@@ -458,25 +540,7 @@ class KernelManagerBase(ABC):
             Rendered kernel source code
         """
         tfilename = self.find_kernel_template(base_filename)
-        kernel_subdir = os.path.join("kernels", self._backend_name)
-
-        # Build template lookup directories:
-        # 1. Directory containing the found template (for extension templates)
-        # 2. All yapocis kernel directories (for base templates like constants.mako)
-        template_directories = [os.path.dirname(tfilename)]
-        for base_dir in get_yapocis_dirs():
-            kernel_dir = os.path.join(base_dir, kernel_subdir)
-            if os.path.isdir(kernel_dir) and kernel_dir not in template_directories:
-                template_directories.append(kernel_dir)
-
-        mako_modules = os.path.join(
-            get_yapocis_dir(), "mako_modules", self._backend_name
-        )
-        mylookup = kernel_template_lookup(template_directories, mako_modules)
-        filename = os.path.split(tfilename)[-1]
-        t = mylookup.get_template(filename)
-        source = str(t.render(**context))
-        return source
+        return render_template_file(self._backend_name, tfilename, **context)
 
     @staticmethod
     def render_interface(source: str, **context: Context) -> str:
@@ -493,7 +557,4 @@ class KernelManagerBase(ABC):
         Returns:
             Rendered interface specification
         """
-        if not context:
-            return source
-        t = Template(source)
-        return str(t.render(**context))
+        return render_interface_source(source, **context)

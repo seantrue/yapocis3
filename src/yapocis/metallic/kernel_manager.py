@@ -18,7 +18,6 @@ except Exception as e:  # pragma: no cover
 
 from yapocis.core.kmgr_base import KernelManagerBase
 from yapocis.metallic.device_manager import get_device_manager
-from yapocis.utils.internals import get_yapocis_dir, get_yapocis_dirs
 
 # Runtime selection between Python and Cython implementations
 _use_cython = os.environ.get("YAPOCIS_USE_CYTHON", "0").lower() in ("1", "true", "yes")
@@ -65,44 +64,8 @@ class KernelManager(KernelManagerBase):
         # PyMetallic creates kernels individually with source
         return pm.Kernel(self.dmgr.device, source=self.source, func=kernel_name)
 
-    def find_kernel_template(self, base_filename: str) -> str:
-        """
-        Metal-specific template resolution with OCL fallback.
-
-        Searches in order across all yapocis directories (YAPOCIS_PROJECT, cwd, package):
-        1. kernels/metal/*.mako (Metal-specific)
-        2. kernels/ocl/*.mako (OCL fallback)
-
-        Args:
-            base_filename: Interface name (e.g., "mandelbrot")
-
-        Returns:
-            Full path to template file
-
-        Raises:
-            FileNotFoundError: If template not found in any location
-        """
-        template_filename = f"{base_filename}.mako"
-        searched_paths = []
-
-        # Search all yapocis directories for Metal-specific template first
-        for base_dir in get_yapocis_dirs():
-            metal_template = os.path.join(base_dir, "kernels", "metal", template_filename)
-            searched_paths.append(metal_template)
-            if os.path.exists(metal_template):
-                return metal_template
-
-        # Fallback: search all directories for OCL template
-        for base_dir in get_yapocis_dirs():
-            ocl_template = os.path.join(base_dir, "kernels", "ocl", template_filename)
-            searched_paths.append(ocl_template)
-            if os.path.exists(ocl_template):
-                return ocl_template
-
-        raise FileNotFoundError(
-            f"No template found for '{base_filename}' (backend=metal). "
-            f"Searched: {', '.join(searched_paths)}"
-        )
+    # Template resolution (kernels/metal, then the kernels/ocl fallback) is the
+    # module-level ``yapocis.core.kmgr_base.find_kernel_template``.
 
     def snapshot(self, **kwargs):
         """Add backend='metal' to snapshot metadata."""

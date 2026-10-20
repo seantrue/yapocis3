@@ -1,0 +1,44 @@
+# Kernel bundle configuration for `yapocis-tools bundle`.
+#
+# The bundle exporter renders every packaged interface for the OpenCL, Metal and
+# CUDA backends into a language-neutral directory (manifest.json plus rendered
+# kernel sources) that non-Python runtimes such as yapocis-rs consume.
+#
+# Interfaces that need no template context get one "default" variant. Interfaces
+# whose kernels are rendered from a context list their variants here; a variant's
+# mapping is merged over the interface's YAML context (and generator output) the
+# same way keyword arguments to load_program are. An empty mapping means "the
+# YAML/generator context as is".
+
+variants:
+  # operators.yml: add/sub/mul/divop
+  operators:
+    default: {}
+
+  # convolves.yml + yapocis.lib.convolve_kernels generator: windows, derivatives...
+  convolves:
+    default: {}
+
+  # convolvesep.yml + yapocis.lib.gaussian generator: the GaussianWeights() default
+  # set, which is what lib.gaussian.Gaussian() uses when no weights are passed.
+  convolvesep:
+    default: {}
+
+  # convolve.interface has no YAML; Convolve1D(name=..., conv=[...]) supplies the
+  # context at runtime. Arbitrary runtime weights are not supported by the bundle,
+  # so a few named kernels are exported instead.
+  convolve:
+    box3: {name: box3, conv: [0.3333333333, 0.3333333333, 0.3333333333]}
+    box5: {name: box5, conv: [0.2, 0.2, 0.2, 0.2, 0.2]}
+    edge3: {name: edge3, conv: [-1.0, 0.0, 1.0]}
+    binomial5: {name: binomial5, conv: [0.0625, 0.25, 0.375, 0.25, 0.0625]}
+
+# Per-interface build options that replace the backend defaults, mirroring what
+# the Python library layer passes to load_program(options=...).
+build_options:
+  # lib/fft.py: Apple's OpenCL optimizer miscompiles the FFT kernels.
+  fft:
+    ocl: ["-cl-opt-disable"]
+
+# Interfaces not to export (none today). Numba kernels are Python and never bundled.
+exclude: []

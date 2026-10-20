@@ -4,6 +4,13 @@
 #define __kernel __global__
 #define __local  __shared__
 #define __constant __constant__
+// nvcc gets `uint` and M_PI from the host headers; NVRTC (the Rust runtime)
+// has no host headers, so provide them here. Both are harmless under nvcc:
+// a typedef may be repeated with the same type, and M_PI is guarded.
+typedef unsigned int uint;
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 #define barrier(x) __syncthreads()
 __device__ __forceinline__ int get_global_id_x(){return blockIdx.x*blockDim.x+threadIdx.x;}
 __device__ __forceinline__ int get_global_id_y(){return blockIdx.y*blockDim.y+threadIdx.y;}
