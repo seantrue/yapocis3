@@ -428,6 +428,17 @@ def all_interface_names() -> list[str]:
     return sorted({n.rsplit(".", 1)[0] for n in list_interfaces()})
 
 
+def project_interface_names() -> list[str]:
+    """Interfaces found via YAPOCIS_PROJECT or cwd that the package does not ship.
+
+    An external project's bundle (for example yapocis_external's, consumed by
+    impressionist-rs) holds only these; the package's own interfaces come from the
+    package's bundle.
+    """
+    packaged = set(packaged_interface_names())
+    return [n for n in all_interface_names() if n not in packaged]
+
+
 # ---------------------------------------------------------------------------
 # Export
 # ---------------------------------------------------------------------------
@@ -494,6 +505,7 @@ def export_bundle(
     backends: tuple[str, ...] = BUNDLE_BACKENDS,
     config: BundleConfig | None = None,
     include_project: bool = False,
+    project_only: bool = False,
     log=print,
 ) -> Manifest:
     """
@@ -505,11 +517,18 @@ def export_bundle(
         backends: Subset of ``BUNDLE_BACKENDS``.
         config: Variants and build options (default: the packaged bundle.yml).
         include_project: Also export interfaces found via YAPOCIS_PROJECT / cwd.
+        project_only: Export only the interfaces found via YAPOCIS_PROJECT / cwd that
+            the package does not ship (an external project's bundle).
         log: Progress callback.
     """
     config = config or load_bundle_config()
     if names is None:
-        names = all_interface_names() if include_project else packaged_interface_names()
+        if project_only:
+            names = project_interface_names()
+        elif include_project:
+            names = all_interface_names()
+        else:
+            names = packaged_interface_names()
     names = [n for n in names if n not in config.exclude]
 
     os.makedirs(out_dir, exist_ok=True)

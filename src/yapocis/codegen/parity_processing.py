@@ -39,47 +39,6 @@ def _rings_to_arrays(rings: list[np.ndarray]) -> dict[str, np.ndarray]:
 # ----------------------------------------------------------------------------
 
 
-def _trace_segments_per_pixel(
-    tt: Any, mask_u8: np.ndarray, iso: float
-) -> tuple[np.ndarray, tuple[int, int]]:
-    """`TrueTrace.trace_segments` with an explicit per-pixel global size.
-
-    The library lets the backend infer the global size; on OpenCL and CUDA the
-    `np.int32(jump)` scalar is the first argument with a `.size`, so `jfa_step`
-    runs one thread and the distance field is never propagated (only visible
-    for iso != 0). The Rust port launches one thread per pixel everywhere, so
-    the reference does the same.
-    """
-    H, W = mask_u8.shape
-    m = np.ascontiguousarray((mask_u8 != 0).astype(np.int32).T)
-    seed_a = np.full((W, H, 4), -1.0, dtype=np.float32)
-    seed_b = np.full((W, H, 4), -1.0, dtype=np.float32)
-    dist = np.full((W, H), 1e30, dtype=np.float32)
-    gs = W * H
-    tt.kmgr.init_seed_from_mask(m, seed_a, dist, global_size=gs)
-    jump = 1
-    while (jump << 1) < max(W, H):
-        jump <<= 1
-    cur_in, cur_out = seed_a, seed_b
-    while jump >= 1:
-        tt.kmgr.jfa_step(np.int32(jump), cur_in, dist, cur_out, global_size=gs)
-        cur_in, cur_out = cur_out, cur_in
-        jump >>= 1
-    max_segments = max(0, (W - 1) * (H - 1) * 2)
-    seg_counter = np.zeros((1,), dtype=np.uint32)
-    segments_out = np.full((max_segments * 4,), np.nan, dtype=np.float32)
-    tt.kmgr.marching_squares(
-        dist, np.float32(iso), seg_counter, segments_out, global_size=gs
-    )
-    count = max(0, min(int(seg_counter[0]), max_segments))
-    segs = (
-        segments_out[: count * 4].reshape((-1, 4))
-        if count
-        else np.empty((0, 4), np.float32)
-    )
-    return segs, (W, H)
-
-
 @generator("truetrace")
 def truetrace_cases(
     out_dir: str, backend: str, log: Callable[..., None]
@@ -96,8 +55,11 @@ def truetrace_cases(
     mask[hole == 1] = 0
 
     for iso in (0.0, 1.5):
-        segs, (w, h) = _trace_segments_per_pixel(tt, mask, iso)
-        lib_segs, _ = tt.trace_segments(mask, iso)
+        # The library launches one thread per pixel itself since 2026-10-21 (and
+        # traces a signed field), so it is the reference; the exporter used to
+        # carry its own per-pixel jump flood as a workaround.
+        segs, (w, h) = tt.trace_segments(mask, iso)
+        lib_segs = segs
         fname = _save(
             out_dir, f"truetrace.gpu_iso{iso}", mask=mask, segs=segs, lib_segs=lib_segs
         )
@@ -117,7 +79,7 @@ def truetrace_cases(
     sdf = tt_mod.sdf_from_mask_cpu(mask)
     ms = tt_mod.marching_squares_cpu(sdf, 0.0)
     ms_mask = tt_mod.marching_squares_cpu(mask.astype(np.float32), 0.5)
-    polys = tt_mod.chain_segments_to_polylines(ms_mask, tol=0.25)
+    polys = tt_mod.chain_segments_to_polylines(ms_mask)
     simp = [tt_mod.douglas_peucker(p, 0.75) for p in polys if p.shape[0] >= 3]
     rings = tt_mod.trace_bitmap(mask)
     regions = tt_mod.build_regions_with_holes(rings)
@@ -190,6 +152,53 @@ def truetrace_cases(
     fname = _save(out_dir, "truetrace.lemon_thr", gray=gray, mask=m)
     cases.append(
         {"name": "lemon_thr", "file": fname, "threshold": 0.4, "image": "lemon.jpg"}
+    )
+    # Filling traced regions (the potrace replacement): a block with a hole and a
+    # speckle, through trace_mask on both engines, and fill_regions of the
+    # unsmoothed rings
+    block = np.zeros((64, 80), np.uint8)
+    block[10:50, 12:68] = 1
+    block[22:38, 30:50] = 0
+    block[55:58, 5:8] = 1
+    rings = tt_mod.trace_bitmap(block, simplify_tol_px=0.0, min_area_px2=0.0)
+    regions = tt_mod.build_regions_with_holes(rings)
+    filled_none = tt_mod.fill_regions(regions, block.shape, curve="none")
+    filled_cubic = tt_mod.fill_regions(regions, block.shape, curve="cubic", segments=8)
+    traced = {}
+    for engine in ("gpu", "cpu"):
+        for iso in (0.0, -1.0):
+            traced[f"trace_{engine}_iso{iso}"] = tt_mod.trace_mask(
+                block, iso=iso, engine=engine
+            )
+    # 1 px strokes traced inside the ink: until 2026-10-21 chaining snapped
+    # endpoints to 0.25 px, which fused their two outlines above iso 0.5, and
+    # iso 1.0 lies on the strokes' own field values (off_field_iso)
+    thin = np.zeros((48, 64), np.uint8)
+    for i in range(6, 40):
+        thin[i, i] = thin[i, i + 1] = 1
+    thin[30:44, 44:62:3] = 1
+    thin[30, 44:62] = 1
+    for engine in ("gpu", "cpu"):
+        for iso in (0.75, 1.0):
+            traced[f"thin_{engine}_iso{iso}"] = tt_mod.trace_mask(
+                thin, iso=iso, curve="none", engine=engine
+            )
+    fname = _save(
+        out_dir,
+        "truetrace.fill",
+        mask=block,
+        thin_mask=thin,
+        filled_none=filled_none,
+        filled_cubic=filled_cubic,
+        **traced,
+    )
+    cases.append(
+        {
+            "name": "fill",
+            "file": fname,
+            "regions": len(regions),
+            "traced": sorted(traced),
+        }
     )
     tt.purge()
     return cases

@@ -1529,6 +1529,7 @@ def cmd_bundle(args):
         backends=backends,
         config=config,
         include_project=args.include_project,
+        project_only=args.project_only,
     )
     if args.fixtures:
         from yapocis.codegen.fixtures import write_derivation_fixtures
@@ -1558,6 +1559,16 @@ def cmd_bundle(args):
                 )
                 path = export_parity_lib(args.out, backend, names=generators)
                 print(f"parity-lib[{backend}]: {path}")
+    if args.host_fixtures:
+        from yapocis.codegen.host_fixtures import export_host_fixtures
+
+        sections = (
+            [s.strip() for s in args.host_fixtures_sections.split(",") if s.strip()]
+            if args.host_fixtures_sections
+            else None
+        )
+        path = export_host_fixtures(args.host_fixtures, sections)
+        print(f"host-fixtures: {path}")
     print(
         f"bundle: {len(manifest.interfaces)} interface variants, "
         f"backends {', '.join(manifest.backends)}, yapocis {manifest.yapocis_version} -> {args.out}"
@@ -1710,6 +1721,12 @@ Examples:
         help="Also export interfaces found via YAPOCIS_PROJECT and the current directory",
     )
     bundle_parser.add_argument(
+        "--project-only",
+        action="store_true",
+        help="Export only the interfaces found via YAPOCIS_PROJECT and the current "
+        "directory that the package does not ship (an external project's bundle)",
+    )
+    bundle_parser.add_argument(
         "--fixtures",
         action="store_true",
         help="Also write fixtures/derivation.json (argument derivation and dispatch sizes)",
@@ -1730,6 +1747,17 @@ Examples:
         "--generators",
         metavar="NAMES",
         help="Comma-separated subset of the library parity generators to run with --parity-lib",
+    )
+    bundle_parser.add_argument(
+        "--host-fixtures",
+        metavar="DIR",
+        help="Also record this host's numpy host-numerics results (random draws, ...) "
+        "under DIR/<host slug>/ for bit-exact ports (yapocis.codegen.host_fixtures)",
+    )
+    bundle_parser.add_argument(
+        "--host-fixtures-sections",
+        metavar="NAMES",
+        help="Comma-separated subset of the host-fixture sections to record",
     )
     bundle_parser.add_argument(
         "interfaces",

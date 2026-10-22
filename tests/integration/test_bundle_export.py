@@ -343,3 +343,54 @@ def test_parity_export_on_backend(tmp_path, backend):
     data = np.load(device_dir / case["file"])
     a, b, out = data["in_0"], data["in_1"], data["out_0"]
     np.testing.assert_allclose(out, a + b, rtol=1e-6, atol=1e-6)
+
+
+# --- external project bundles (yapocis-tools bundle --project-only) ---------
+
+
+def test_project_only_exports_the_project_interfaces(tmp_path, monkeypatch):
+    """A project's bundle holds only the interfaces the package does not ship.
+
+    impressionist-rs vendors yapocis_external's bundle this way, beside the
+    package's own; the two must not overlap."""
+    import shutil
+
+    project = tmp_path / "project"
+    (project / "interfaces").mkdir(parents=True)
+    package = os.path.dirname(bundle_mod.packaged_interface_dir())
+    demo = open(os.path.join(package, "interfaces", "demo.interface")).read()
+    (project / "interfaces" / "projdemo.interface").write_text(
+        demo.replace("interface demo", "interface projdemo")
+    )
+    for backend in ("ocl", "metal", "cuda"):
+        (project / "kernels" / backend).mkdir(parents=True)
+        shutil.copy(
+            os.path.join(package, "kernels", backend, "demo.mako"),
+            project / "kernels" / backend / "projdemo.mako",
+        )
+    monkeypatch.setenv("YAPOCIS_PROJECT", str(project))
+    # The interface registry caches its search directories; an earlier test (or a
+    # YAPOCIS_PROJECT in the environment) must not leak into this one
+    import yapocis.interfaces
+
+    monkeypatch.setattr(yapocis.interfaces.am, "cached_asset_dirs", None)
+    monkeypatch.setattr(yapocis.interfaces.am, "cached_assets", None)
+
+    assert bundle_mod.project_interface_names() == ["projdemo"]
+    assert "projdemo" not in packaged_interface_names()
+
+    out = tmp_path / "bundle"
+    manifest = export_bundle(str(out), project_only=True, log=lambda *a: None)
+    assert [e.id for e in manifest.interfaces] == ["projdemo"]
+    assert (out / "ocl" / "projdemo.cl").exists()
+
+    # The CLI flag reaches export_bundle the same way
+    from yapocis.scripts import tools
+
+    cli = tmp_path / "cli"
+    monkeypatch.setattr(
+        sys, "argv", ["yapocis-tools", "bundle", "--out", str(cli), "--project-only"]
+    )
+    assert tools.main() == 0
+    data = load_manifest(str(cli / "manifest.json"))
+    assert [e["id"] for e in data["interfaces"]] == ["projdemo"]

@@ -44,8 +44,42 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - 1 line, plus a 4-line test: `split_channels` returns a tuple, as annotated (2026-10-17)
   - ~250 lines of code and docs, plus 13 replacement photos and ~130 lines of reports: PyPI release-readiness pass (2026-10-17)
   - ~3,210 lines of exporter code, ~345 lines of tests, ~130 lines of docs, plus ~490 lines of reports: kernel bundle exporter for the Rust port (2026-10-19)
+  - ~645 lines plus ~85 lines of tests: Gaussian ladder pinned as literals (~165), numpy host fixtures (~430), `bundle --project-only` (~50) (2026-10-21, Claude Fable 5.1)
+  - ~275 lines changed in `lib/truetrace.py`, ~95 in `codegen/parity_processing.py` and an 84-line `tests/test_truetrace_fill.py`, shared between the scanline fill (Claude Fable 5.1) and exact chaining with `off_field_iso` (Claude Opus 5.5) (2026-10-21); the split was not recorded line by line
 
 ## Detailed Contributions
+
+### 2026-10-21: truetrace at iso above 0.5: exact chaining (Claude Opus 5.5)
+
+**What the maintainer asked for.** "The retrace examples at .5+ have significant differences from potrace", then "Defaut to .75, fix in yapicis-rs" (Virtual Impressionist's `trace.iso` default; the same fix mirrored in yapocis-rs).
+
+**What the AI did.**
+
+- **`lib/truetrace.py`:**
+  - `chain_segments_to_polylines(segs, tol=0.0)` keys endpoints exactly, and `trace_bitmap`/`trace_mask` default `chain_tol_px` to 0.
+  - A new `off_field_iso` moves an iso level that lands exactly on a distance-field value off it, so marching squares never emits degenerate segments.
+- **Why:** above iso 0.5, the two outlines of a 1 px stroke run within 0.25 px of each other. The old 0.25 px endpoint snapping joined them into one polygon whose fill was a large black wedge.
+- **Tests:** `tests/test_truetrace_fill.py` gained thin-stroke cases at iso 0.75 and 1.0. `codegen/parity_processing.py` records a `thin_mask` case at both levels for the Rust port.
+- **Research:** `../impressionist/claude-debug/rustport_trace/` compares truetrace with potrace by iso level. At 0.75, 0.973–0.980 of pixels agree with potrace across the eight trace styles, the closest of the levels tried.
+
+**Defects.** The snapping bug predates this work; it is recorded here because this entry fixes it. It was found by comparing truetrace with potrace renders after the maintainer saw the differences.
+
+**Verification.** `test_truetrace_fill.py` passes (18 tests). The yapocis-rs truetrace stages and processing parity tests pass with the regenerated fixtures.
+
+### 2026-10-21: Pinned Gaussian ladder, numpy host fixtures, project-only bundles, truetrace scanline fill (Claude Fable 5.1)
+
+**What the maintainer asked for.** The Rust port of Virtual Impressionist (impressionist-rs), whose plan the maintainer approved with these decisions among others: "The Gaussian weight ladder is pinned as literals in Yapocis3 so every host agrees", and numpy-exact numerics in yapocis-rs, proven by fixtures numpy itself records.
+
+**What the AI did.** This entry is reconstructed from that session's report (`../impressionist/claude-debug/rustport_status_20261021.md`, `rustport_spikes_20261021.md`); it was written when the work was first committed.
+
+- **`lib/gaussian_ladder.py`** (new, ~145 lines) holds the convolvesep Gaussian weights as float64 literals. `GaussianWeights` uses them when its parameters are the convolvesep.yml defaults (`pinned=True`), and computes them otherwise. Hosts whose libm `exp` differs in the last bit then agree; `tests/test_gaussian_ladder.py` checks that the literals equal the computed ladder here.
+- **`codegen/host_fixtures.py`** (new, ~430 lines; `yapocis-tools bundle --host-fixtures`) records numpy's own results (random draws, sums, quantiles, float32 `sin`/`cos`/`tanh`, and so on) for yapocis-rs's `npexact` to replay bit for bit.
+- **`bundle --project-only`** exports only a project's own interfaces (yapocis_external's bundle for impressionist-rs), with tests in `tests/integration/test_bundle_export.py`.
+- **`lib/truetrace.py`:** polygon area, centroid and point-in-polygon in float64 with `math.fsum`. The fill is now an even-odd scanline (`fill_polygons`) in place of earcut plus the graphics kernel, because the C++ and Rust earcut libraries triangulated differently and the kernel's coverage depended on the triangulation. This changes how traced shapes are filled; Virtual Impressionist's trace styles adopted truetrace the same day.
+
+**Defects.** That session's report does not itemise the defects found along the way.
+
+**Verification at commit time** (2026-10-22, by the later session): the full suite with `YAPOCIS_TEST_BACKENDS=ocl` (the maintainer restricted it to OpenCL after a first run's pycuda skip message) gives 655 tests, 637 passed, 18 skipped (17 need two backends, one needs pycuda), none failed. pytest's summary line is hidden by the duration report, so the counts come from the progress output.
 
 ### 2026-10-19: Kernel Bundle Exporter for the Rust Port (yapocis-rs)
 

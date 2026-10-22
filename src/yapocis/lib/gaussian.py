@@ -62,7 +62,13 @@ def generate_convolvesep_context(context):
 
 
 class GaussianWeights:
-    def __init__(self, max_width=None, **kwargs):
+    def __init__(self, max_width=None, pinned: bool = True, **kwargs):
+        """Gaussian weight ladder for the convolvesep kernels.
+
+        With the convolvesep.yml defaults (and ``pinned``), the weights are the
+        literals in :mod:`yapocis.lib.gaussian_ladder`, identical on every host;
+        other parameters, or ``pinned=False``, compute them here.
+        """
         # Always load YAML defaults first
         yaml_context = load_interface_context("convolvesep")
         yaml_params = yaml_context.get("gaussian_params", {})
@@ -86,7 +92,14 @@ class GaussianWeights:
                 final_kwargs[key] = yaml_params[key]
             # If neither provided, compute_gaussian_weights will validate
 
-        self.gws = self.compute_gaussian_weights(max_width, **final_kwargs)
+        from yapocis.lib.gaussian_ladder import LADDER, LADDER_PARAMS
+
+        requested = {"max_width": max_width, **final_kwargs}
+        requested.pop("sigmas", None) if requested.get("sigmas") is None else None
+        if pinned and requested == LADDER_PARAMS:
+            self.gws = [np.array(w, dtype=np.float64) for w in LADDER]
+        else:
+            self.gws = self.compute_gaussian_weights(max_width, **final_kwargs)
 
     def gaussian_weights(self):
         return self.gws
@@ -137,6 +150,12 @@ class GaussianWeights:
             while 1:
                 gw = self.compute_gaussian_weight(sigma, limit=limit)
                 if len(gw) > max_width:
+                    break
+                if len(gw) == 1:
+                    # The peak itself fell below the limit, so wider sigmas only
+                    # give one-tap kernels and the width can never reach
+                    # max_width: stop instead of looping forever (seen with
+                    # max_width=50, limit=0.01 at sigma 1.6**9).
                     break
                 gws.append(gw)
                 sigma *= scale
