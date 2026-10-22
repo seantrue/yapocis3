@@ -2,6 +2,14 @@
 <%include file="constants.mako" />
 <%include file="helpers.mako" />
 
+/* truetrace's wrapper passes (W, H) arrays and reads x as the slow axis, as the
+   OpenCL and Metal helpers address them; CUDA's shared helpers address x as the
+   fast axis (row-major), which transposed every traced shape on CUDA. These
+   kernels keep their own addressing. */
+#define TT_ADDRESS(xx,yy) (((xx)*height)+(yy))
+#define TT_X(addr) ((addr)/height)
+#define TT_Y(addr) ((addr)%height)
+
 inline __device__ float4 make_seed(float x, float y) {
     return make_float4(x, y, 0.0f, 0.0f);
 }
@@ -14,8 +22,8 @@ extern "C" __global__ void init_seed_from_mask(
     float *dist       /* Euclidean distance (pixels) */
 ) {
     const int idx = get_global_id(0);
-    const int x = X(idx);
-    const int y = Y(idx);
+    const int x = TT_X(idx);
+    const int y = TT_Y(idx);
     if (x >= width || y >= height) return;
     if (mask[idx] != 0) {
         seed[idx] = make_seed((float)x, (float)y);
@@ -35,8 +43,8 @@ extern "C" __global__ void jfa_step(
     float4 *seed_out
 ) {
     const int idx = get_global_id(0);
-    const int x = X(idx);
-    const int y = Y(idx);
+    const int x = TT_X(idx);
+    const int y = TT_Y(idx);
     if (x >= width || y >= height) return;
 
     float4 best_seed = seed_in[idx];
@@ -47,7 +55,7 @@ extern "C" __global__ void jfa_step(
         int nx = x + dirs[k][0]*jump;
         int ny = y + dirs[k][1]*jump;
         if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
-        const int nidx = ADDRESS(nx,ny);
+        const int nidx = TT_ADDRESS(nx,ny);
         float4 nseed = seed_in[nidx];
         if (nseed.x < 0.0f) continue; // invalid seed
         float dx = nseed.x - (float)x;
@@ -71,14 +79,14 @@ extern "C" __global__ void marching_squares(
     float *segments_out
 ) {
     const int idx = get_global_id(0);
-    const int x = X(idx);
-    const int y = Y(idx);
+    const int x = TT_X(idx);
+    const int y = TT_Y(idx);
     if (x >= width-1 || y >= height-1) return;
 
     const int idx00 = idx;;
-    const int idx10 = ADDRESS(x+1, y);
-    const int idx01 = ADDRESS(x,y+1);
-    const int idx11 = ADDRESS(x+1,y+1);
+    const int idx10 = TT_ADDRESS(x+1, y);
+    const int idx01 = TT_ADDRESS(x,y+1);
+    const int idx11 = TT_ADDRESS(x+1,y+1);
 
     float v00 = dist[idx00] - iso;
     float v10 = dist[idx10] - iso;

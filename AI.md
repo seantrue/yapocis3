@@ -49,6 +49,19 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2026-10-22: truetrace transposed every shape on CUDA (Claude Opus 5.5)
+
+**What happened.** Virtual Impressionist's trace styles moved to truetrace and were deployed to yellowfin, whose workers run CUDA. While the Rust worker was being tested there, a comparison of CUDA and OpenCL renders showed Durer #2 transposed under CUDA: correlation 0.986 with the transposed OpenCL render, −0.02 with it upright. The Python and Rust renders were transposed alike, since both use these kernel sources. No production job had rendered a trace style before the fix.
+
+**Cause.** truetrace's wrapper passes `(W, H)` arrays and reads `x` as the slow axis, as the OpenCL and Metal helpers address them (`ADDRESS(x, y) = x*height + y`). The CUDA helpers address `x` as the fast axis (`y*height + x`, the row-major convention of 2026-10-06), so on CUDA the seeds, distances and segments came back with x and y swapped. Their bounds checks were also wrong for non-square images.
+
+**Fix.** `kernels/cuda/truetrace.mako` keeps its own addressing (`TT_ADDRESS`, `TT_X`, `TT_Y`) in the wrapper's convention; the shared CUDA helpers are unchanged. The new test `test_gpu_field_is_not_transposed_on_a_non_square_mask` traces an asymmetric 90×130 mask with the GPU and CPU fields and requires equal rasters.
+- On yellowfin's RTX 3080 with CUDA, that comparison went from 3,448 differing pixels to 0.
+- The six trace results of a worker dry run became pixel-identical to OpenCL's.
+- The test passes on OpenCL and Metal here.
+
+**Defect record.** The CUDA truetrace kernel has carried the mismatch since the shared helpers changed convention. The existing GPU-against-CPU test used a nearly symmetric mask and had not been run on CUDA. The AI also missed it in its own pre-deploy smoke test on CUDA, where it judged a transposed Durer #2 to look right. It was caught later the same day by comparing CUDA with OpenCL renders.
+
 ### 2026-10-21: truetrace at iso above 0.5: exact chaining (Claude Opus 5.5)
 
 **What the maintainer asked for.** "The retrace examples at .5+ have significant differences from potrace", then "Defaut to .75, fix in yapicis-rs" (Virtual Impressionist's `trace.iso` default; the same fix mirrored in yapocis-rs).

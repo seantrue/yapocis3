@@ -48,6 +48,20 @@ def test_cpu_and_gpu_engines_agree_on_the_block():
     assert (a == b).all()
 
 
+def test_gpu_field_is_not_transposed_on_a_non_square_mask():
+    """CUDA's shared helpers address x as the fast axis, unlike the OpenCL and Metal
+    ones truetrace's wrapper was written for; on CUDA every traced shape came out
+    transposed (found on yellowfin, 2026-10-22). An asymmetric, non-square mask
+    traced with the GPU field must equal the CPU field's tracing."""
+    mask = np.zeros((90, 130), np.uint8)
+    mask[10:30, 10:100] = 1  # a wide bar near the top
+    mask[40:85, 20:35] = 1  # a tall bar on the left
+    mask[50:60, 60:120] = 1  # a thin bar lower right
+    a = truetrace.trace_mask(mask, iso=0.75, engine="cpu")
+    b = truetrace.trace_mask(mask, iso=0.75, engine="gpu")
+    assert (a == b).all()
+
+
 def _thin_strokes(h=96, w=96):
     """1 px strokes, as the pen styles draw them: a diagonal, a ring and a comb."""
     mask = np.zeros((h, w), np.uint8)
