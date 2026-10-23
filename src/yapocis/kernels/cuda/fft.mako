@@ -75,7 +75,7 @@ extern "C" __global__ void fft1d(float2 *input, int n, float2 *output, int direc
 
     // Use optimized FFT only if we have exactly one block of size n
     // This is the only configuration where the shared memory algorithm works correctly
-    if (n <= 1024 && gridDim.x == 1 && blockDim.x == n) {
+    if (n <= 1024 && gridDim.x == 1 && blockDim.x == n && (n & (n - 1)) == 0) {  // radix-2 needs a power of two
         // Optimized path for small FFTs (≤ 1024) with correct block config
         shared_data[lid] = input[rev_idx];
         __syncthreads();
@@ -91,7 +91,7 @@ extern "C" __global__ void fft1d(float2 *input, int n, float2 *output, int direc
             uint j = block + k;          // Upper butterfly index
 
             // Only process if within bounds
-            if (j + m2 < n) {
+            if ((lid % m) < m2 && j + m2 < n) {  // one work-item per butterfly (lid and lid + m2 share j)
                 float2 w = twiddle_factor(k, m, direction);
                 float2 t = cmul(w, shared_data[j + m2]);
                 float2 u = shared_data[j];
@@ -229,7 +229,7 @@ extern "C" __global__ void fft1d_batch(
     // Bit-reversed input loading into shared memory
     uint rev_idx = bit_reverse(lid, log2n);
 
-    if (n <= 256) {
+    if (n <= 256 && (n & (n - 1)) == 0) {  // radix-2 needs a power of two
         // Optimized radix-2 FFT path
         shared_data[lid] = input[batch_offset + rev_idx];
         __syncthreads();
@@ -245,7 +245,7 @@ extern "C" __global__ void fft1d_batch(
             uint j = block + k;          // Upper butterfly index
 
             // Only process if within bounds
-            if (j + m2 < n) {
+            if ((lid % m) < m2 && j + m2 < n) {  // one work-item per butterfly (lid and lid + m2 share j)
                 float2 w = twiddle_factor(k, m, direction);
                 float2 t = cmul(w, shared_data[j + m2]);
                 float2 u = shared_data[j];

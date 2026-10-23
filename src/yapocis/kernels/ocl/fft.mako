@@ -82,7 +82,7 @@ __kernel void fft1d(
 
     // Use optimized FFT only if we have exactly one work-group of size n
     // This is the only configuration where the shared memory algorithm works correctly
-    if (n <= 1024 && local_size == n) {
+    if (n <= 1024 && local_size == n && (n & (n - 1)) == 0) {  // radix-2 needs a power of two
         // Optimized path for small FFTs (≤ 1024) with correct work-group config
         shared_data[lid] = input[rev_idx];
         barrier(CLK_LOCAL_MEM_FENCE);
@@ -98,7 +98,7 @@ __kernel void fft1d(
             uint j = block + k;          // Upper butterfly index
 
             // Only process if within bounds
-            if (j + m2 < n) {
+            if ((lid % m) < m2 && j + m2 < n) {  // one work-item per butterfly (lid and lid + m2 share j)
                 float2 w = twiddle_factor(k, m, direction);
                 float2 t = cmul(w, shared_data[j + m2]);
                 float2 u = shared_data[j];
@@ -235,7 +235,7 @@ __kernel void fft1d_batch(
     // Bit-reversed input loading into local memory
     size_t rev_idx = bit_reverse_int(lid, log2n);
 
-    if (n <= 256) {
+    if (n <= 256 && (n & (n - 1)) == 0) {  // radix-2 needs a power of two
         // Optimized radix-2 FFT path
         shared_data[lid] = input[batch_offset + rev_idx];
         barrier(CLK_LOCAL_MEM_FENCE);
@@ -251,7 +251,7 @@ __kernel void fft1d_batch(
             size_t j = block + k;          // Upper butterfly index
 
             // Only process if within bounds
-            if (j + m2 < n) {
+            if ((lid % m) < m2 && j + m2 < n) {  // one work-item per butterfly (lid and lid + m2 share j)
                 float2 w = twiddle_factor(k, m, direction);
                 float2 t = cmul(w, shared_data[j + m2]);
                 float2 u = shared_data[j];
