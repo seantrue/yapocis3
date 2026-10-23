@@ -49,6 +49,19 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2026-10-23: The FFT kernels raced, and took non-powers of two down the radix-2 path (Claude Opus 5.5)
+
+**What happened.** ImpCraft's local engine was being held bit-exact against its Python engine, and its FFT node gave different results from run to run on the same input. Two defects in `fft1d` and `fft1d_batch`, in the OpenCL, Metal and CUDA mako kernels, caused this.
+
+- **A race in the shared-memory butterflies.** A work-item ran a butterfly whenever `j + m2 < n`. The work-items `lid` and `lid + m2` map to the same `j`, so two work-items read and wrote the same pair at once. The fix: `(lid % m) < m2`, one work-item per butterfly.
+- **Sizes that aren't a power of two took the radix-2 path.** The fast path was taken for any `n` up to 1024 (256 for the batch kernel). It now also requires `(n & (n - 1)) == 0`; other sizes take the general path.
+
+**Testing.** On thresher (OpenCL and Metal), the 63 FFT tests pass (`pytest -k fft`), and the ImpCraft FFT and inverse-FFT cases are now repeatable and match the Python engine. The CUDA kernel received the same change but has not yet been run on CUDA. yapocis-rs vendors the same fix in its bundle.
+
+**Defect record.** These kernels predate this session. The existing tests used power-of-two sizes and compared within a tolerance, so the race went unnoticed. It was caught by a bit-exact digest that changed between runs. The fix (80884c3) was first committed without this entry, which was added in the next commit.
+
+~28 changed lines across the three kernels.
+
 ### 2026-10-22: truetrace transposed every shape on CUDA (Claude Opus 5.5)
 
 **What happened.** Virtual Impressionist's trace styles moved to truetrace and were deployed to yellowfin, whose workers run CUDA. While the Rust worker was being tested there, a comparison of CUDA and OpenCL renders showed Durer #2 transposed under CUDA: correlation 0.986 with the transposed OpenCL render, −0.02 with it upright. The Python and Rust renders were transposed alike, since both use these kernel sources. No production job had rendered a trace style before the fix.
