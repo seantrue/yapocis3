@@ -280,7 +280,7 @@ def export_parity(
         except Exception:  # noqa: BLE001
             pass
     path = os.path.join(parity_dir, "index.json")
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
         json.dump(index, f, indent=1)
         f.write("\n")
     return path

@@ -42,7 +42,7 @@ def cpu_brand() -> str:
                 ["sysctl", "-n", "machdep.cpu.brand_string"], text=True
             ).strip()
         if sys.platform.startswith("linux"):
-            with open("/proc/cpuinfo") as f:
+            with open("/proc/cpuinfo", encoding="utf-8") as f:
                 for line in f:
                     if line.lower().startswith("model name"):
                         return line.split(":", 1)[1].strip()
@@ -426,6 +426,6 @@ def export_host_fixtures(out_root: str, sections: list[str] | None = None, log=p
         log(f"host-fixtures[{section}]: {len(cases)} cases")
         index["cases"].extend(cases)
     path = os.path.join(out_dir, "index.json")
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
         json.dump(index, f, indent=1)
     return path

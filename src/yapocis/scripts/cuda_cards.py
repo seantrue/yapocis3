@@ -164,7 +164,9 @@ def nvcc_supports(nvcc: Path, sm: str) -> tuple[bool, str]:
     """Probe whether this nvcc can emit code for ``sm`` (e.g. 'sm_52')."""
     with tempfile.TemporaryDirectory(prefix="yapocis-nvcc-") as tmp:
         src = Path(tmp) / "probe.cu"
-        src.write_text("__global__ void k(float *a) { a[threadIdx.x] = 1.0f; }\n")
+        src.write_text(
+            "__global__ void k(float *a) { a[threadIdx.x] = 1.0f; }\n", encoding="utf-8"
+        )
         proc = subprocess.run(
             [str(nvcc), f"-arch={sm}", "--cubin", "-o", os.devnull, str(src)],
             capture_output=True,
@@ -476,7 +478,9 @@ def run_worker(args) -> int:
         "repeats": args.repeats,
         "results": results,
     }
-    Path(args.json_out).write_text(json.dumps(payload, indent=2, default=float))
+    Path(args.json_out).write_text(
+        json.dumps(payload, indent=2, default=float), encoding="utf-8"
+    )
     return 0
 
 
@@ -551,7 +555,7 @@ def run_plan(plan, toolkits, args, run_dir: Path) -> list[dict]:
             f"== {tag}: {card['name']} ({card['sm']}) with nvcc {record['nvcc_version']}"
         )
         t0 = time.perf_counter()
-        with open(log_path, "w") as log:
+        with open(log_path, "w", encoding="utf-8") as log:
             try:
                 proc = subprocess.run(
                     cmd,
@@ -568,11 +572,11 @@ def run_plan(plan, toolkits, args, run_dir: Path) -> list[dict]:
         if rc != 0 or not json_out.exists():
             record.update(status="failed", reason=f"worker exit {rc}, see {log_path}")
             print(f"   FAILED ({record['reason']})")
-            tail = log_path.read_text().splitlines()[-5:]
+            tail = log_path.read_text(encoding="utf-8").splitlines()[-5:]
             for line in tail:
                 print("   | " + line)
         else:
-            payload = json.loads(json_out.read_text())
+            payload = json.loads(json_out.read_text(encoding="utf-8"))
             record["info"] = payload["info"]
             record["results"] = payload["results"]
             for name, res in payload["results"].items():
@@ -1020,9 +1024,9 @@ def main(argv=None) -> int:
 
     report = build_report(records, cards, toolkits, args, started, apps)
     md_path = out_dir / f"cuda_cards_{stamp}.md"
-    md_path.write_text(report)
+    md_path.write_text(report, encoding="utf-8")
     json_path = out_dir / f"cuda_cards_{stamp}.json"
-    json_path.write_text(json.dumps(records, indent=2, default=str))
+    json_path.write_text(json.dumps(records, indent=2, default=str), encoding="utf-8")
     print(f"\nReport: {md_path}")
     print(f"Data:   {json_path}")
     if not args.no_pdf:

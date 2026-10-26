@@ -250,7 +250,7 @@ def write_derivation_fixtures(out_dir: str, manifest: Manifest) -> str:
     fixtures_dir = os.path.join(out_dir, "fixtures")
     os.makedirs(fixtures_dir, exist_ok=True)
     path = os.path.join(fixtures_dir, "derivation.json")
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
         json.dump(derivation_fixtures(manifest), f, indent=1, sort_keys=True)
         f.write("\n")
     return path

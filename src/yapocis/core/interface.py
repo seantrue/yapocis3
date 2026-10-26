@@ -347,5 +347,5 @@ def load_interface(interface_spec: str) -> str:
     path = find_interface(interface_spec)
     if path is None:
         raise RuntimeError(f"Can't find {interface_spec}")
-    with open(path) as inf:
+    with open(path, encoding="utf-8") as inf:
         return inf.read()

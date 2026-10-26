@@ -966,7 +966,7 @@ def generate_backend_comparison_report(
                 lines.append(f"- **{backend}**: {mean:.3f}s ({len(times)} run)")
 
     # Write report
-    with open(output_path, "w") as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
 
     return output_path
@@ -1083,7 +1083,7 @@ def generate_longitudinal_report(
             )
 
     # Write report
-    with open(output_path, "w") as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
 
     return output_path
@@ -1351,7 +1351,7 @@ def generate_comprehensive_report(
     )
 
     # Write report
-    with open(output_path, "w") as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
 
     return output_path
@@ -1672,7 +1672,7 @@ def generate_backend_cross_comparison_report(
     )
 
     # Write report
-    with open(output_path, "w") as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
 
     return output_path
@@ -2141,7 +2141,7 @@ def generate_branch_comparison_report(
     )
 
     # Write report
-    with open(output_path, "w") as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
 
     return output_path

@@ -47,8 +47,17 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~645 lines plus ~85 lines of tests: Gaussian ladder pinned as literals (~165), numpy host fixtures (~430), `bundle --project-only` (~50) (2026-10-21, Claude Fable 5.1)
   - ~275 lines changed in `lib/truetrace.py`, ~95 in `codegen/parity_processing.py` and an 84-line `tests/test_truetrace_fill.py`, shared between the scanline fill (Claude Fable 5.1) and exact chaining with `off_field_iso` (Claude Opus 5.5) (2026-10-21); the split was not recorded line by line
   - ~45 lines across the FFT templates, the HSI interface and the dispatch evaluator, plus 2 test cases: FFT butterfly race, HSI dispatch size, PoCL `get_global_size` link failure (2026-10-26)
+  - ~41 lines across 13 files: text file I/O as UTF-8, `\n` line endings for exports (2026-10-26)
 
 ## Detailed Contributions
+
+### 2026-10-26: Text file I/O as UTF-8; exports byte-identical on Windows (Claude Opus 5.5)
+
+**What the maintainer asked for.** Recording yapocis-rs parity fixtures on the Windows VM's PoCL failed: `yapocis-tools bundle` wrote kernel sources with Python's default encoding, cp1252 on Windows, which has no `∂`. Claude got the fixtures with `PYTHONUTF8=1`; the maintainer then asked to "fix the yapocis3 utf-8 encoding bug".
+
+**What the AI did.** An AST scan of `src/yapocis` (`claude-debug/find_default_encoding_io.py` in the maintainer's sysadmin checkout) listed every text-mode `open`, `Path.read_text` and `Path.write_text` without `encoding=`: 30 calls in 13 files (codegen, interface and YAML loading, model label files, `tools.py`, `cuda_cards.py`, performance reports). Each now passes `encoding="utf-8"`. The codegen writers (bundle sources and manifest, derivation, host and parity fixtures) also pass `newline="\n"`: Windows text mode would otherwise write `\r\n`, and the manifest's sha256 is of the `\n` text, so a Windows export would not match its own manifest or a Linux one. ~41 lines; `host_fixtures.py`, which was not black-formatted, keeps its formatting.
+
+**Verification.** A Linux export is identical to yapocis-rs dev's bundle (`scripts/compare-bundle.py`). On the Windows VM, without `PYTHONUTF8`, an export from this tree succeeds and is byte-identical to the Linux export, with no `\r`. Full suite on yellowfin (RTX 3080): one failure, the known order-dependent `test_truetrace_fill.py::test_gpu_field_is_not_transposed_on_a_non_square_mask`. ruff's 23 errors in these files are all pre-existing, the same count as on dev.
 
 ### 2026-10-26: main merged into dev; the FFT race had been fixed twice (Claude Opus 5.5)
 
