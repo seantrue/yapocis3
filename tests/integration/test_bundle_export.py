@@ -174,6 +174,8 @@ def test_export_is_deterministic(tmp_path):
         "dim_2_of input // 3",
         "dim_1_of input % 4",
         "(dim_1_of input - 1) / 2",
+        "dim_1_of input * dim_2_of input",
+        "sizeof output // dim_0_of input",
     ],
 )
 def test_dispatch_ast_matches_dispatch_expr(expr):

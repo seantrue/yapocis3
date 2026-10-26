@@ -94,7 +94,7 @@ kernel void fft1d_opt(
     // Bit-reversed input loading into threadgroup memory
     uint rev_idx = bit_reverse(lid, log2n);
 
-    if (n <= 256) {
+    if (n <= 256 && (n & (n - 1)) == 0) {
         // Optimized radix-2 FFT path with precomputed twiddles
         shared_data[lid] = input[rev_idx];
         threadgroup_barrier(mem_flags::mem_threadgroup);
@@ -109,8 +109,9 @@ kernel void fft1d_opt(
             uint block = (lid / m) * m;  // Start of butterfly block
             uint j = block + k;          // Upper butterfly index
 
-            // Only process if within bounds
-            if (j + m2 < n) {
+            // One work-item per butterfly: lid and lid + m2 map to the same j, so only the lower
+            // half of each block runs it (both running it is a read/write race on shared_data)
+            if (lid % m < m2 && j + m2 < n) {
                 // Use precomputed twiddle instead of computing cos/sin
                 float2 w = twiddle_lookup(twiddle_table, k, m, n, direction);
                 float2 t = cmul(w, shared_data[j + m2]);
@@ -191,7 +192,7 @@ kernel void fft1d(
 
     // Temporarily limit to 256 due to Metal threadgroup dispatch issues
     // TODO: Fix threadgroup configuration for larger sizes
-    if (n <= 256) {
+    if (n <= 256 && (n & (n - 1)) == 0) {
         // Optimized radix-2 FFT path
         shared_data[lid] = input[rev_idx];
         threadgroup_barrier(mem_flags::mem_threadgroup);
@@ -206,8 +207,9 @@ kernel void fft1d(
             uint block = (lid / m) * m;  // Start of butterfly block
             uint j = block + k;          // Upper butterfly index
 
-            // Only process if within bounds
-            if (j + m2 < n) {
+            // One work-item per butterfly: lid and lid + m2 map to the same j, so only the lower
+            // half of each block runs it (both running it is a read/write race on shared_data)
+            if (lid % m < m2 && j + m2 < n) {
                 float2 w = twiddle_factor(k, m, direction);
                 float2 t = cmul(w, shared_data[j + m2]);
                 float2 u = shared_data[j];
@@ -343,7 +345,7 @@ kernel void fft1d_batch(
     // Bit-reversed input loading into threadgroup memory
     uint rev_idx = bit_reverse(lid, log2n);
 
-    if (n <= 256) {
+    if (n <= 256 && (n & (n - 1)) == 0) {
         // Optimized radix-2 FFT path
         shared_data[lid] = input[batch_offset + rev_idx];
         threadgroup_barrier(mem_flags::mem_threadgroup);
@@ -358,8 +360,9 @@ kernel void fft1d_batch(
             uint block = (lid / m) * m;  // Start of butterfly block
             uint j = block + k;          // Upper butterfly index
 
-            // Only process if within bounds
-            if (j + m2 < n) {
+            // One work-item per butterfly: lid and lid + m2 map to the same j, so only the lower
+            // half of each block runs it (both running it is a read/write race on shared_data)
+            if (lid % m < m2 && j + m2 < n) {
                 float2 w = twiddle_factor(k, m, direction);
                 float2 t = cmul(w, shared_data[j + m2]);
                 float2 u = shared_data[j];
