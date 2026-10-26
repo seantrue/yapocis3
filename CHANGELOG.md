@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- FFT gave wrong results wherever a work-group does not run in lockstep. Two work-items ran each radix-2 butterfly, racing on shared memory. This fixes the 1.0.0 known issue (OpenCL FFT on the Tesla P40) and CPU OpenCL (PoCL); now one work-item runs each butterfly, on every backend
+- FFT used the radix-2 path for sizes that are not a power of two when the work-group happened to equal the size (PoCL picks a 1000-wide group for n = 1000); those sizes now take the DFT path
+- `rgb2hsi3` and `hsi2rgb3` called without `global_size` launched one work-item per float instead of per pixel, and wrote past the output buffer; the interface now declares a per-pixel `dispatch_size`
+- `dispatch_size` expressions resolve every dimension reference, not only the first (`dim_0_of rgb * dim_1_of rgb`)
+- OpenCL `window` and `power_spectrum` no longer call `get_global_size()`, which PoCL 7.2 on Windows cannot link in programs built with `-cl-opt-disable`
+
 ## [1.0.0] - 2026-10-17
 
 ### Changed
