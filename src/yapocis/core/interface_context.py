@@ -66,7 +66,7 @@ def load_interface_context(interface_name: str) -> dict[str, Any]:
 
     # Load YAML context
     try:
-        with open(yaml_path) as f:
+        with open(yaml_path, encoding="utf-8") as f:
             context = yaml.safe_load(f)
             if context is None:
                 return {}

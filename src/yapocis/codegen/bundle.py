@@ -398,7 +398,7 @@ def load_bundle_config(path: str | None = None) -> BundleConfig:
         path = os.path.join(packaged_interface_dir(), "bundle.yml")
     if not os.path.exists(path):
         return BundleConfig()
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
     return BundleConfig(
         variants={
@@ -547,7 +547,12 @@ def export_bundle(
                 log(f"{name}[{variant}]: SKIP {type(e).__name__}: {e}")
                 continue
             for backend, src in sources.items():
-                with open(os.path.join(out_dir, entry.sources[backend].path), "w") as f:
+                with open(
+                    os.path.join(out_dir, entry.sources[backend].path),
+                    "w",
+                    encoding="utf-8",
+                    newline="\n",
+                ) as f:
                     f.write(src)
             entries.append(entry)
             log(f"{entry.id}: {len(entry.kernels)} kernels, {', '.join(sources)}")
@@ -558,14 +563,16 @@ def export_bundle(
         backends=list(backends),
         interfaces=entries,
     )
-    with open(os.path.join(out_dir, "manifest.json"), "w") as f:
+    with open(
+        os.path.join(out_dir, "manifest.json"), "w", encoding="utf-8", newline="\n"
+    ) as f:
         f.write(manifest.to_json())
     return manifest
 
 
 def load_manifest(path: str) -> dict[str, Any]:
     """Read a manifest.json (as plain dicts) and check its schema version."""
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         data = json.load(f)
     if data.get("schema_version") != SCHEMA_VERSION:
         raise ValueError(

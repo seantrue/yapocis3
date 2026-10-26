@@ -684,7 +684,7 @@ def load_imagenet_labels(path: str = None, model_name: str = "vgg16") -> list[st
         # Return dummy labels if file not found
         return [f"class_{i}" for i in range(1000)]
 
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         labels = [line.strip() for line in f]
 
     return labels

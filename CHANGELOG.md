@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `rgb2hsi3` and `hsi2rgb3` called without `global_size` launched one work-item per float instead of per pixel, and wrote past the output buffer; the interface now declares a per-pixel `dispatch_size`
 - `dispatch_size` expressions resolve every dimension reference, not only the first (`dim_0_of rgb * dim_1_of rgb`)
 - OpenCL `window` and `power_spectrum` no longer call `get_global_size()`, which PoCL 7.2 on Windows cannot link in programs built with `-cl-opt-disable`
+- Text files are read and written as UTF-8 on every platform. On Windows the default encoding (cp1252) made `yapocis-tools bundle` fail on kernel sources with non-ASCII characters (`∂`), and the bundle, fixture and parity writers now also write `\n` line endings, so an export is byte-identical on Windows, Linux and macOS
 
 ## [1.0.0] - 2026-10-17
 

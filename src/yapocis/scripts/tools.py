@@ -1008,7 +1008,7 @@ def cmd_scaffold(args):
 
         if full_path.exists():
             if args.force:
-                full_path.write_text(content)
+                full_path.write_text(content, encoding="utf-8")
                 print(f"Overwrote file: {full_path}")
                 overwritten_files += 1
             elif args.complete:
@@ -1020,7 +1020,7 @@ def cmd_scaffold(args):
         else:
             # Ensure parent directory exists
             full_path.parent.mkdir(parents=True, exist_ok=True)
-            full_path.write_text(content)
+            full_path.write_text(content, encoding="utf-8")
             print(f"Created file: {full_path}")
             created_files += 1
 
@@ -1499,7 +1499,7 @@ def cmd_interfaces(args):
             lib_dir = Path(yapocis.lib.__file__).parent
             pyi_path = lib_dir / f"{interface_name}.pyi"
 
-            with open(pyi_path, "w") as f:
+            with open(pyi_path, "w", encoding="utf-8") as f:
                 python_pyi_stubs(interface_obj, file=f)
 
             print(f"Wrote {pyi_path}")

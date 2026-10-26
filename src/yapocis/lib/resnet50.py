@@ -62,7 +62,7 @@ def load_imagenet_labels(labels_path: str | None = None) -> list[str]:
                 "Please provide labels_path or install model assets."
             )
 
-    with open(labels_path) as f:
+    with open(labels_path, encoding="utf-8") as f:
         return [line.strip() for line in f]
 
 

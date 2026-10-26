@@ -82,7 +82,7 @@ def export_parity_lib(
     path = os.path.join(target, "index.json")
     if names and os.path.exists(path):
         try:
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 previous = json.load(f)
             index["generators"] = {
                 k: v
@@ -104,7 +104,7 @@ def export_parity_lib(
             continue
         index["generators"][name] = cases
         log(f"parity-lib {name}: {len(cases)} case(s)")
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
         json.dump(index, f, indent=1)
         f.write("\n")
     return path

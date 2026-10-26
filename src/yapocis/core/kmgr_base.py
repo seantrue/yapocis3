@@ -323,7 +323,7 @@ class KernelManagerBase(ABC):
         if cache_dir and os.path.isdir(cache_dir):
             ext = SOURCE_EXTENSIONS.get(self._backend_name, "txt")
             source_file = os.path.join(cache_dir, f"{interface.name}.{ext}")
-            with open(source_file, "w") as f:
+            with open(source_file, "w", encoding="utf-8") as f:
                 f.write(source)
 
         # Check program cache
