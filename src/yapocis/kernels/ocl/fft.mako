@@ -3,6 +3,12 @@
 #define M_PI 3.14159265358979323846f
 #define M_2PI 6.28318530717958647692f
 
+/* Global size without get_global_size(): PoCL 7.2 on Windows cannot link get_global_size()
+ * under -cl-opt-disable (unresolved _local_size_x/_num_groups_x), and lib/fft.py builds this
+ * program with -cl-opt-disable for Apple's OpenCL. Work-groups are uniform (OpenCL 1.2, no
+ * -cl-std=CL2.0), so local size times group count is exactly the global size. */
+#define GLOBAL_SIZE0 (get_local_size(0) * get_num_groups(0))
+
 /* Complex multiplication */
 static inline float2 cmul(float2 a, float2 b) {
     return (float2)(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
@@ -82,7 +88,7 @@ __kernel void fft1d(
 
     // Use optimized FFT only if we have exactly one work-group of size n
     // This is the only configuration where the shared memory algorithm works correctly
-    if (n <= 1024 && local_size == n && (n & (n - 1)) == 0) {  // radix-2 needs a power of two
+    if (n <= 1024 && (n & (n - 1)) == 0 && local_size == n) {
         // Optimized path for small FFTs (≤ 1024) with correct work-group config
         shared_data[lid] = input[rev_idx];
         barrier(CLK_LOCAL_MEM_FENCE);
@@ -97,8 +103,9 @@ __kernel void fft1d(
             uint block = (lid / m) * m;  // Start of butterfly block
             uint j = block + k;          // Upper butterfly index
 
-            // Only process if within bounds
-            if ((lid % m) < m2 && j + m2 < n) {  // one work-item per butterfly (lid and lid + m2 share j)
+            // One work-item per butterfly: lid and lid + m2 map to the same j, so only the lower
+            // half of each block runs it (both running it is a read/write race on shared_data)
+            if (lid % m < m2 && j + m2 < n) {
                 float2 w = twiddle_factor(k, m, direction);
                 float2 t = cmul(w, shared_data[j + m2]);
                 float2 u = shared_data[j];
@@ -142,7 +149,7 @@ __kernel void fft1d(
 __kernel void window(__global float *input, int const window_type, __global float *output)
 {
     size_t gid = get_global_id(0);
-    size_t n = get_global_size(0);
+    size_t n = GLOBAL_SIZE0;
 
     float w = 1.0f;
     float pos = (float)gid / (n - 1);
@@ -169,7 +176,7 @@ __kernel void window(__global float *input, int const window_type, __global floa
 __kernel void power_spectrum(__global float2 *fft_output, __global float *power)
 {
     size_t gid = get_global_id(0);
-    size_t n = get_global_size(0);
+    size_t n = GLOBAL_SIZE0;
 
     if (gid >= n) return;
 
@@ -235,7 +242,7 @@ __kernel void fft1d_batch(
     // Bit-reversed input loading into local memory
     size_t rev_idx = bit_reverse_int(lid, log2n);
 
-    if (n <= 256 && (n & (n - 1)) == 0) {  // radix-2 needs a power of two
+    if (n <= 256 && (n & (n - 1)) == 0) {
         // Optimized radix-2 FFT path
         shared_data[lid] = input[batch_offset + rev_idx];
         barrier(CLK_LOCAL_MEM_FENCE);
@@ -250,8 +257,9 @@ __kernel void fft1d_batch(
             size_t block = (lid / m) * m;  // Start of butterfly block
             size_t j = block + k;          // Upper butterfly index
 
-            // Only process if within bounds
-            if ((lid % m) < m2 && j + m2 < n) {  // one work-item per butterfly (lid and lid + m2 share j)
+            // One work-item per butterfly: lid and lid + m2 map to the same j, so only the lower
+            // half of each block runs it (both running it is a read/write race on shared_data)
+            if (lid % m < m2 && j + m2 < n) {
                 float2 w = twiddle_factor(k, m, direction);
                 float2 t = cmul(w, shared_data[j + m2]);
                 float2 u = shared_data[j];

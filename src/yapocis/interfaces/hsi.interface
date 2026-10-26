@@ -1,6 +1,9 @@
 interface hsi {
     kernel rgb2hsi(in float r, in float g, in float b, out_like float r, out_like float r, out_like float r);
     kernel hsi2rgb(in float h, in float s, in float i, out_like h, out_like h, out_like h);
+    # One work-item per (H, W, depth) pixel; the kernels index gid*depth with no bounds check.
     kernel rgb2hsi3(depth_of rgb, in float rgb, out_like rgb);
+    with { dispatch_size (dim_0_of rgb * dim_1_of rgb); };
     kernel hsi2rgb3(depth_of hsi, in float hsi, out_like hsi);
+    with { dispatch_size (dim_0_of hsi * dim_1_of hsi); };
 };

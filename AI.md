@@ -6,7 +6,7 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Summary Statistics
 
-- **Total AI-assisted commits**: ~34
+- **Total AI-assisted commits**: ~35
 - **Major features developed with AI assistance**:
   - Infrastructure: Package modernization (hatchling, modern tooling), automated changelog generation, type annotation modernization, release automation system
   - Backend work: CUDA kernel compilation fixes, CUDA row-major addressing fixes, Metal backend fixes, coordinate system standardization, Numba backend completeness, truetrace kernel port, separable convolution boundary fix
@@ -46,8 +46,42 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~3,210 lines of exporter code, ~345 lines of tests, ~130 lines of docs, plus ~490 lines of reports: kernel bundle exporter for the Rust port (2026-10-19)
   - ~645 lines plus ~85 lines of tests: Gaussian ladder pinned as literals (~165), numpy host fixtures (~430), `bundle --project-only` (~50) (2026-10-21, Claude Fable 5.1)
   - ~275 lines changed in `lib/truetrace.py`, ~95 in `codegen/parity_processing.py` and an 84-line `tests/test_truetrace_fill.py`, shared between the scanline fill (Claude Fable 5.1) and exact chaining with `off_field_iso` (Claude Opus 5.5) (2026-10-21); the split was not recorded line by line
+  - ~45 lines across the FFT templates, the HSI interface and the dispatch evaluator, plus 2 test cases: FFT butterfly race, HSI dispatch size, PoCL `get_global_size` link failure (2026-10-26)
 
 ## Detailed Contributions
+
+### 2026-10-26: main merged into dev; the FFT race had been fixed twice (Claude Opus 5.5)
+
+**What the maintainer asked for.** "Move the pin": point impcraft and impressionist-rs at the yapocis-rs commit with the Windows fixes. Their pin is on yapocis-rs `dev`, which had diverged from `main` in this repository and in yapocis-rs. Asked how to reconcile, the maintainer chose to merge main into dev.
+
+**Defect: duplicated work.** The FFT butterfly race and the radix-2-on-non-powers-of-two bug were already fixed on dev (`80884c3`, 2026-10-23). Claude fixed them again on main (#60) without checking dev. The two fixes are the same guard and the same power-of-two test, differing only in comments and condition order; the conflict in the three `fft.mako` templates was resolved by taking main's version, which also carries the PoCL `get_global_size` workaround. main also brings the HSI dispatch size and the dispatch evaluator fix, which dev lacked. AI.md kept both sides' entries.
+
+**Verification (yellowfin, RTX 3080 as the CUDA device).** Full suite on the merged tree: one failure, `tests/test_truetrace_fill.py::test_gpu_field_is_not_transposed_on_a_non_square_mask`. The same test fails in a full-suite run of unmerged dev, and passes three times out of three when its file runs alone, on dev and on the merged tree. It depends on test order or state left by earlier tests; it was not investigated further and is not fixed. A bundle exported from the merged tree differs from yapocis-rs dev's bundle only in the FFT sources and their hashes and the two HSI dispatch entries.
+
+### 2026-10-26: FFT Butterfly Race (the P40 Known Issue), HSI Over-Launch, PoCL Link Workaround (Claude Opus 5.5)
+
+**What the maintainer asked for.** The maintainer is porting yapocis-rs, impressionist-rs and impcraft to Windows on a KVM guest whose only OpenCL device is PoCL on the CPU, and asked to "address the windows failures". Valgrind (the maintainer asked for the command line and read the log) showed a heap overrun in the HSI test. Offered a test-side fix or a fix in yapocis3, the maintainer chose "Fix at the source. Then address FFT, div test." A later PoCL link failure got "Apply workaround, test in isolation". Then CPMD.
+
+**What the AI did.**
+
+- **FFT butterfly race** (`kernels/{ocl,cuda,metal}/fft.mako`, 7 sites). With `k = lid % m2` and `block = (lid / m) * m`, work-items `lid` and `lid + m2` compute the same `j`, and both read and write `shared_data[j]` and `shared_data[j + m2]`. Hardware that runs the block in lockstep hides this; the P40 and CPU OpenCL do not. A `lid % m < m2` guard means one work-item runs each butterfly. This was the 1.0.0 known issue: on the P40 the 8 OpenCL FFT tests fail without the change and pass with it.
+- **Radix-2 on non-power-of-two sizes.** The OpenCL `fft1d` used the shared-memory path whenever `local_size == n`. PoCL chooses a 1000-wide work-group for n = 1000, so a 1000-point FFT ran radix-2 and came out wrong (relative error 1.25). Every radix-2 path now also requires `(n & (n - 1)) == 0`, so those sizes take the DFT path.
+- **HSI over-launch** (`interfaces/hsi.interface`). `rgb2hsi3`/`hsi2rgb3` index `gid * depth` with no bounds check, and with no explicit `global_size` they launched one work-item per float. The extra work-items wrote 3x past the output buffer: a segfault on PoCL, and a heap-corruption abort in yapocis-rs. `lib/hsi.py` always passed the right size, so only raw interface callers were exposed. The interface now declares `dispatch_size (dim_0_of rgb * dim_1_of rgb)`.
+- **Dispatch evaluator** (`core/dispatch_expr.py`, ~9 LOC). It replaced only the first dimension reference in an expression, so a product of two dimensions could not be evaluated. It now resolves them all, as the bundle exporter's parser already did. There are two new cases in `test_dispatch_ast_matches_dispatch_expr`.
+- **PoCL link workaround** (`kernels/ocl/fft.mako`). PoCL 7.2 on Windows cannot link a kernel that calls `get_global_size()` when the program is built with `-cl-opt-disable` (unresolved `_local_size_x`, `_num_groups_x`). That flag is the Apple optimiser workaround in `lib/fft.py`. Tested in isolation on the guest: `get_global_size` fails only with that flag, while `get_local_size`, `get_num_groups` and the other work-item functions link. `window` and `power_spectrum` now use `get_local_size(0) * get_num_groups(0)`. That product equals the global size because without `-cl-std=CL2.0` work-groups are uniform.
+
+**Defects in AI-written code and reporting.**
+
+- Claude first diagnosed the Windows failure as "kernels that call `get_global_size()`". The isolation test the maintainer asked for showed `get_global_size` links fine on its own; the trigger is the combination with `-cl-opt-disable`.
+- While checking the companion yapocis-rs changes, Claude ran that crate's tests three times without its `ocl` feature. Each test looped over zero devices and passed, which included a `div` "pass" Claude nearly reported. Claude caught this from 0.00 s run times and reran with the backend enabled.
+
+**Verification (yellowfin).**
+
+- Full suite on the RTX 3080 before the `get_global_size` workaround: no failures (skips: model weights, Metal). After the workaround only `tests/lib/fft` and the bundle-export tests were rerun: 87 passed.
+- `tests/lib/fft` on CUDA, OpenCL and Numba: 59 passed on the 3080, 59 on the P40, and 59 on PoCL. Before the change, 8 failed on PoCL and 8 on the P40.
+- A raw `rgb2hsi3` call with no `global_size` segfaults on PoCL before the change (exit 139); after it, the output is identical to `lib/hsi.py`.
+- A bundle exported on Linux is byte-identical to the M4 export except for the FFT sources, their hashes, and the HSI dispatch entries. yapocis-rs passes against it: all 56 tests on the 3080, including a parity replay of 95 cases each on CUDA and OpenCL, and PoCL on Linux and Windows apart from the tests that have no CPU-device fixtures.
+- **Not verified:** the Metal template changes. The Metal parity run needs the M4.
 
 ### 2026-10-23: The FFT kernels raced, and took non-powers of two down the radix-2 path (Claude Opus 5.5)
 
