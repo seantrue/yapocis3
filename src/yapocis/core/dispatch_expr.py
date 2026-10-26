@@ -52,9 +52,8 @@ def evaluate_dispatch_expression(expr: str, args: tuple[Any, ...], params: list)
     # Parse dimension reference: "dimension_of parameter"
     # e.g., "height_of input", "width_of output", "sizeof input", "dim_0_of input"
     dim_pattern = r"(width_of|height_of|depth_of|sizeof|dim_\d+_of)\s+(\w+)"
-    match = re.search(dim_pattern, expr)
 
-    if match:
+    def resolve(match: re.Match) -> str:
         dim_type = match.group(1)
         param_name = match.group(2)
 
@@ -103,9 +102,11 @@ def evaluate_dispatch_expression(expr: str, args: tuple[Any, ...], params: list)
             dim_value = arg.size
         else:
             raise ValueError(f"Unknown dimension type: {dim_type}")
+        return str(dim_value)
 
-        # Replace the dimension reference with its value in the expression
-        expr = expr.replace(match.group(0), str(dim_value))
+    # Replace every dimension reference with its value, so expressions such as
+    # "dim_0_of rgb * dim_1_of rgb" resolve (the bundle exporter's AST already allows them)
+    expr = re.sub(dim_pattern, resolve, expr)
 
     # Now evaluate the arithmetic expression
     # Support: +, -, *, /, //, %
