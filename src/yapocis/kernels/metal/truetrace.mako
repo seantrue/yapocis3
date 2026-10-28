@@ -7,6 +7,13 @@ inline float4 make_seed(float x, float y) {
     return float4(x, y, 0.0f, 0.0f);
 }
 
+// A function, not a lambda: Metal compiles at the language version of the SDK the host Python
+// was built with, and the SDK 14.2 one (uv's CPython 3.13.0) rejects lambdas, while SDK 15.2 and
+// 26.1 accept them; the same source compiled under one Python and failed under another.
+inline float tt_lerp(float t, float a, float b) {
+    return a + t*(b-a);
+}
+
 kernel void init_seed_from_mask(constant int &width  [[ buffer(0) ]],
                                 constant int &height [[ buffer(1) ]],
                                 const device int *mask [[ buffer(2) ]],
@@ -84,12 +91,11 @@ kernel void marching_squares(constant int &width  [[ buffer(0) ]],
     if (v01 > 0) c |= 8;
     if (c == 0 || c == 15) return;
 
-    auto lerp = [](float t, float a, float b) -> float { return a + t*(b-a); };
     float2 p[4];
-    float t0 = v00/(v00 - v10 + 1e-20f); p[0] = float2(lerp(t0, (float)x, (float)(x+1)), (float)y);
-    float t1 = v10/(v10 - v11 + 1e-20f); p[1] = float2((float)(x+1), lerp(t1, (float)y, (float)(y+1)));
-    float t2 = v01/(v01 - v11 + 1e-20f); p[2] = float2(lerp(t2, (float)x, (float)(x+1)), (float)(y+1));
-    float t3 = v00/(v00 - v01 + 1e-20f); p[3] = float2((float)x,      lerp(t3, (float)y, (float)(y+1)));
+    float t0 = v00/(v00 - v10 + 1e-20f); p[0] = float2(tt_lerp(t0, (float)x, (float)(x+1)), (float)y);
+    float t1 = v10/(v10 - v11 + 1e-20f); p[1] = float2((float)(x+1), tt_lerp(t1, (float)y, (float)(y+1)));
+    float t2 = v01/(v01 - v11 + 1e-20f); p[2] = float2(tt_lerp(t2, (float)x, (float)(x+1)), (float)(y+1));
+    float t3 = v00/(v00 - v01 + 1e-20f); p[3] = float2((float)x,      tt_lerp(t3, (float)y, (float)(y+1)));
 
     int pairs[2][2]; int nseg = 0;
     switch(c) {

@@ -51,6 +51,18 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2026-10-28: Metal truetrace's lambda failed to compile under some Pythons (Claude Opus 5.5)
+
+**What happened.** ImpCraft's tests, run with `YAPOCIS_BACKEND=metal`, failed in every graph that traces: "lambda expressions are not supported in Metal". The maintainer said to fix it, and asked why it wasn't caught when the kernel was changed.
+
+**Why it wasn't caught.** The kernel hadn't changed. The lambda (`auto lerp = [](…)` in `marching_squares`) has been in `kernels/metal/truetrace.mako` since its first commit (2025-10-23). pymetallic's `metal_device_make_library_with_source` passes no compile options, so Metal compiles at the language version of the SDK the host Python was built with. The same source, byte for byte (dumped from both processes), compiled under Homebrew's Python 3.14 (SDK 26.1) and python.org's 3.13 (SDK 15.2), and failed under uv's CPython 3.13.0 (SDK 14.2), which is ImpCraft's venv. yapocis's smoke compile test and `test_truetrace[metal]` did compile this kernel, but on a Python whose compiler accepts lambdas. ImpCraft only started reaching it on Metal after impressionist's line tracing moved to truetrace (2026-10-21).
+
+**The fix.** The lambda became a file-scope `inline float tt_lerp(…)` with the same arithmetic, plus a comment explaining why. It was the only lambda in any Metal kernel here or in yapocis_external. ~16 changed lines.
+
+**Testing.** On thresher (Metal), impressionist's engrave and pen renders on an empty checkpoint store have the same digests before and after. Under ImpCraft's Python 3.13.0, `stages.trace` now compiles, and the 8 ImpCraft tests in the previously failing files and tests pass. Probe: `claude-debug/truetrace_metal_probe.py` (not committed: code).
+
+**Not done.** A kernel is still accepted or rejected depending on the host Python. A proposed fix: pymetallic accepts a language version, and yapocis pins the oldest one it supports.
+
 ### 2026-10-26: Text file I/O as UTF-8; exports byte-identical on Windows (Claude Opus 5.5)
 
 **What the maintainer asked for.** Recording yapocis-rs parity fixtures on the Windows VM's PoCL failed: `yapocis-tools bundle` wrote kernel sources with Python's default encoding, cp1252 on Windows, which has no `∂`. Claude got the fixtures with `PYTHONUTF8=1`; the maintainer then asked to "fix the yapocis3 utf-8 encoding bug".
