@@ -19,6 +19,8 @@ Core helpers (CPU)
   convenience to extract closed rings from a binary mask fully on CPU.
 - `write_svg_regions(path, regions, w, h, stroke_wxidth=1.0, fill=None, curve='none', tension=0.0)` —
   write nested regions (outer+holes) as a single SVG with even-odd fill.
+- `trace_regions(mask, iso=0.0, ...)` / `regions_svg(regions, w, h, ...)` — the outlines
+  `trace_mask` fills, and those outlines as an SVG document (text).
 
 Notes
 - Shapes for GPU interface use (W,H) order internally; the wrapper transposes
@@ -30,6 +32,7 @@ Notes
 from __future__ import annotations
 
 import math
+from html import escape
 
 import numpy as np
 
@@ -827,6 +830,99 @@ def fill_regions(
     return fill_polygons(polys, shape, ink=ink, paper=paper)
 
 
+def regions_svg(
+    regions: list[dict],
+    w: int,
+    h: int,
+    curve: str = "none",
+    tension: float = 0.0,
+    ink: str = "#000000",
+    paper: str | None = "#ffffff",
+) -> str:
+    """Nested regions as an SVG document: the same outlines ``fill_regions`` fills,
+    filled even-odd in ``ink`` on a ``paper`` rectangle (None: transparent).
+
+    ``curve='cubic'`` writes the real cubics of ``_ring_to_cubic_beziers`` where
+    ``fill_regions`` flattens them. Coordinates keep the image's y-down, and the group
+    is moved by half a pixel because ``fill_polygons`` samples pixel (row, col) at
+    (x=col, y=row) while SVG's pixel centres are at (col + 0.5, row + 0.5).
+
+    ``write_svg_regions`` is a different thing: outlines stroked, y flipped, for
+    looking at the tracer's output, and held to the Rust port by the parity gate.
+    """
+    if curve not in ("none", "cubic"):
+        raise ValueError(f"curve must be 'none' or 'cubic', not {curve!r}")
+
+    def num(v) -> str:
+        return f"{float(v):.2f}".rstrip("0").rstrip(".")
+
+    def ring_d(ring: np.ndarray) -> str:
+        bez = _ring_to_cubic_beziers(ring, tension=tension) if curve == "cubic" else []
+        if bez:
+            cmds = [f"M{num(bez[0][0][0])} {num(bez[0][0][1])}"]
+            for _, c1, c2, p2 in bez:
+                cmds.append(
+                    f"C{num(c1[0])} {num(c1[1])} {num(c2[0])} {num(c2[1])} "
+                    f"{num(p2[0])} {num(p2[1])}"
+                )
+        else:
+            pts = ring[:-1]
+            cmds = [f"M{num(pts[0][0])} {num(pts[0][1])}"]
+            cmds.extend(f"L{num(x)} {num(y)}" for x, y in pts[1:])
+        return "".join(cmds) + "Z"
+
+    out = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" '
+        f'viewBox="0 0 {w} {h}">'
+    ]
+    if paper is not None:
+        out.append(f'<rect width="{w}" height="{h}" fill="{escape(paper)}"/>')
+    out.append(
+        f'<g fill="{escape(ink)}" fill-rule="evenodd" transform="translate(0.5 0.5)">'
+    )
+    for region in regions:
+        rings = [region["outer"]] + list(region.get("holes", []))
+        out.append(f'<path d="{"".join(ring_d(r) for r in rings)}"/>')
+    out.append("</g></svg>\n")
+    return "\n".join(out)
+
+
+def trace_regions(
+    mask: np.ndarray,
+    iso: float = 0.0,
+    simplify_tol_px: float = 0.75,
+    min_area_px2: float = 4.0,
+    chain_tol_px: float = 0.0,
+    engine: str = "gpu",
+    device_name: str | None = None,
+) -> list[dict]:
+    """Trace a binary mask (nonzero = ink) into nested regions, the outlines
+    ``trace_mask`` fills (``build_regions_with_holes`` output): for ``regions_svg``,
+    or anything else that wants the geometry rather than the raster.
+
+    Pipeline: the signed distance field of the mask (GPU jump flood, or the CPU
+    EDT with ``engine='cpu'``) traced by marching squares at ``iso`` (0 is the
+    mask's boundary; negative moves it into the ink, so ``-0.5`` keeps only pixels
+    fully inside the shapes, as thresholding potrace's antialiased output does),
+    chained into polylines, simplified with Douglas-Peucker (``simplify_tol_px``),
+    closed and filtered by area (``min_area_px2``, potrace's turdsize), and nested
+    into regions with holes.
+    """
+    mask_u8 = (np.asarray(mask) != 0).astype(np.uint8)
+    if engine == "gpu":
+        tracer = TrueTrace(device_name=device_name)
+        segs, _ = tracer.trace_segments(mask_u8, iso=iso)
+    elif engine == "cpu":
+        sdf = sdf_from_mask_cpu(mask_u8)
+        segs = sort_segments(marching_squares_cpu(sdf, iso=off_field_iso(sdf, iso)))
+    else:
+        raise ValueError(f"engine must be 'gpu' or 'cpu', not {engine!r}")
+    polys = chain_segments_to_polylines(segs, tol=chain_tol_px)
+    simp = [douglas_peucker(p, simplify_tol_px) for p in polys if p.shape[0] >= 3]
+    rings = close_and_filter_polylines(simp, close_tol_px=1.0, min_area_px2=min_area_px2)
+    return build_regions_with_holes(rings)
+
+
 def trace_mask(
     mask: np.ndarray,
     iso: float = 0.0,
@@ -841,28 +937,12 @@ def trace_mask(
 ) -> np.ndarray:
     """Trace a binary mask (nonzero = ink) into smooth filled shapes: a raster of
     1.0 (paper) and 0.0 (ink) the size of the mask, the way potrace's PGM backend
-    is used by Virtual Impressionist.
-
-    Pipeline: the signed distance field of the mask (GPU jump flood, or the CPU
-    EDT with ``engine='cpu'``) traced by marching squares at ``iso`` (0 is the
-    mask's boundary; negative moves it into the ink, so ``-0.5`` keeps only pixels
-    fully inside the shapes, as thresholding potrace's antialiased output does),
-    chained into polylines, simplified with Douglas-Peucker (``simplify_tol_px``),
-    closed and filtered by area (``min_area_px2``, potrace's turdsize), nested
-    into regions with holes, and filled by the even-odd scanline of ``fill_regions``.
+    is used by Virtual Impressionist: ``trace_regions``, filled by the even-odd
+    scanline of ``fill_regions``.
     """
-    mask_u8 = (np.asarray(mask) != 0).astype(np.uint8)
-    h, w = mask_u8.shape
-    if engine == "gpu":
-        tracer = TrueTrace(device_name=device_name)
-        segs, _ = tracer.trace_segments(mask_u8, iso=iso)
-    elif engine == "cpu":
-        sdf = sdf_from_mask_cpu(mask_u8)
-        segs = sort_segments(marching_squares_cpu(sdf, iso=off_field_iso(sdf, iso)))
-    else:
-        raise ValueError(f"engine must be 'gpu' or 'cpu', not {engine!r}")
-    polys = chain_segments_to_polylines(segs, tol=chain_tol_px)
-    simp = [douglas_peucker(p, simplify_tol_px) for p in polys if p.shape[0] >= 3]
-    rings = close_and_filter_polylines(simp, close_tol_px=1.0, min_area_px2=min_area_px2)
-    regions = build_regions_with_holes(rings)
+    regions = trace_regions(
+        mask, iso=iso, simplify_tol_px=simplify_tol_px, min_area_px2=min_area_px2,
+        chain_tol_px=chain_tol_px, engine=engine, device_name=device_name,
+    )
+    h, w = np.asarray(mask).shape
     return fill_regions(regions, (h, w), curve=curve, tension=tension, segments=segments)
