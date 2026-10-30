@@ -51,6 +51,16 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2026-10-30: `trace_regions` and `regions_svg`: traced shapes as vector SVG (Claude Opus 5.5)
+
+The maintainer asked which of ImpCraft's intermediates could output vector SVG, not embedded rasters, then chose the traced pen strokes: "Go for 1, let's see what it makes."
+
+**What the AI did.** `trace_regions` is the part of `trace_mask` before the fill, so `trace_mask` keeps its pixels (ImpCraft's exactness gate stayed 92 of 92 with this in place). `regions_svg` writes those regions as an SVG document, in image y-down coordinates and moved half a pixel because `fill_polygons` samples pixels at integer coordinates. Measured against the raster on one style: 0.55% of pixels differ with that shift, about 2.6% without. `src/yapocis/lib/truetrace.py` +92/−12, `tests/test_truetrace_fill.py` +59 (4 tests).
+
+**Defect found, not fixed.** `write_svg_regions` has a missing `else`: with `curve="cubic"` every outer ring is overwritten with its polygon. Its Rust port and the parity gate hold it as it is, so `regions_svg` is a separate writer and the fix is left as its own change.
+
+**Tests.** `tests/test_truetrace_fill.py` passes (21 tests). The full yapocis3 suite was not run for this change. Ruff still reports older findings in `truetrace.py`, none on the new code.
+
 ### 2026-10-28: Metal truetrace's lambda failed to compile under some Pythons (Claude Opus 5.5)
 
 **What happened.** ImpCraft's tests, run with `YAPOCIS_BACKEND=metal`, failed in every graph that traces: "lambda expressions are not supported in Metal". The maintainer said to fix it, and asked why it wasn't caught when the kernel was changed.

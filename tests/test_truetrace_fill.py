@@ -1,6 +1,8 @@
 """truetrace.fill_regions / trace_mask: traced shapes rasterised back through the
 mesh_triangles kernel (the potrace replacement used by Virtual Impressionist)."""
 
+import re
+
 import numpy as np
 import pytest
 
@@ -96,3 +98,60 @@ def test_chain_segments_exact_keeps_close_contours_apart():
     exact = truetrace.chain_segments_to_polylines(truetrace.sort_segments(segs))
     assert sorted(len(p) for p in exact) == [3, 3]
     assert {float(p[0, 0]) for p in exact} == {0.875, 1.125}
+
+
+def _svg_polys(svg):
+    """Each ring of an SVG from regions_svg, with curve='none', as a polygon."""
+    polys = []
+    for d in re.findall(r' d="([^"]*)"', svg):
+        for ring in d.split("Z"):
+            if ring:
+                nums = re.findall(r"-?[\d.]+", ring)
+                polys.append([(float(x), float(y)) for x, y in zip(nums[::2], nums[1::2], strict=True)])
+    return polys
+
+
+def test_trace_regions_are_what_trace_mask_fills():
+    mask = _ring_mask()
+    regions = truetrace.trace_regions(mask, engine="cpu")
+    filled = truetrace.fill_regions(regions, mask.shape, curve="none")
+    assert np.array_equal(filled, truetrace.trace_mask(mask, curve="none", engine="cpu"))
+    assert len(regions) == 2 and sorted(len(r["holes"]) for r in regions) == [0, 1]
+
+
+def test_regions_svg_holds_the_outlines_the_raster_was_filled_from():
+    mask = _ring_mask()
+    regions = truetrace.trace_regions(mask, engine="cpu")
+    h, w = mask.shape
+    polys = _svg_polys(truetrace.regions_svg(regions, w, h))
+    rings = [r for region in regions for r in [region["outer"], *region["holes"]]]
+    assert len(polys) == len(rings)
+    for poly, ring in zip(polys, rings, strict=True):
+        assert np.abs(np.array(poly) - ring[:-1]).max() <= 0.00501
+    expected = truetrace.fill_regions(regions, (h, w), curve="none")
+    assert np.array_equal(truetrace.fill_polygons(polys, (h, w)), expected)
+
+
+def test_regions_svg_is_y_down_and_on_svg_pixel_centres():
+    mask = np.zeros((40, 60), np.uint8)
+    mask[2:10, 40:55] = 1  # top right: stays there
+    svg = truetrace.regions_svg(truetrace.trace_regions(mask, engine="cpu"), 60, 40)
+    ys = [y for poly in _svg_polys(svg) for _, y in poly]
+    xs = [x for poly in _svg_polys(svg) for x, _ in poly]
+    assert max(ys) < 12 and min(xs) > 36
+    assert 'transform="translate(0.5 0.5)"' in svg
+    assert 'viewBox="0 0 60 40"' in svg
+
+
+def test_regions_svg_cubic_writes_real_curves_and_paper_is_optional():
+    regions = truetrace.trace_regions(_ring_mask(), engine="cpu")
+    cubic = truetrace.regions_svg(regions, 80, 64, curve="cubic", ink="#102030", paper=None)
+    assert "C" in cubic and "L" not in re.sub(r"<[^p][^>]*>", "", cubic).split('d="')[1]
+    assert 'fill="#102030"' in cubic and "<rect" not in cubic
+    with pytest.raises(ValueError):
+        truetrace.regions_svg(regions, 80, 64, curve="spline")
+
+
+def test_regions_svg_with_nothing_traced_is_still_a_document():
+    svg = truetrace.regions_svg([], 8, 6)
+    assert svg.startswith("<svg") and "<path" not in svg
