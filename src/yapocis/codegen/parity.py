@@ -61,6 +61,9 @@ SHAPE = (48, 40)
 DEPTH_BY_INTERFACE = {"hsi": 3, "colormath": 3}
 KERNEL_SHAPES = {
     # (interface, kernel) -> shape for array inputs
+    # separate planes: at the interface's depth they fill a third of each output
+    ("hsi", "rgb2hsi"): (48, 40),
+    ("hsi", "hsi2rgb"): (48, 40),
     ("hsi", "rgb2hsi3"): (48, 40, 3),
     ("hsi", "hsi2rgb3"): (48, 40, 3),
     ("colormath", "transform"): (48, 40, 3),

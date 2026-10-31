@@ -51,6 +51,18 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2026-10-30: Parity cases for `extent_freetype`, and the HSI plane kernels (Claude Opus 5.5)
+
+The maintainer: "port extent_freetype; restart the python fleet; update the fixtures".
+
+**What the AI did.** The typeset generator records `extent_freetype` for each case (`parity_graphics.py` +2/−1). `parity.py` +3 gives `hsi.rgb2hsi` and `hsi.hsi2rgb` the 2-D planes they take.
+
+**Defect in the generator, found recording.** Those two kernels were given depth-3 inputs, so they dispatched over a third of each output, and the rest of each "output" was a copy of the input. The recorder usually skipped them as not reproducible, so they had no fixture on any device; on Apple OpenCL one run matched twice by luck and Rust failed against it, which exposed this. Both now have real fixtures on Metal, CUDA and OpenCL.
+
+**Investigated, left alone.** `extent_freetype`'s `_kerning_cache` stores entries under the wrong key. The AI predicted this changed results; 676 doubled-letter cases showed no difference, and none of the bundled fonts has kerning, so it can't reach a result with them.
+
+**Tests.** Ruff is clean on both files. yapocis-rs replays the output on the M4 Max and the RTX 3080. The full yapocis3 suite was not run.
+
 ### 2026-10-30: `write_svg_regions`: the missing `else` (Claude Opus 5.5)
 
 The maintainer: "fix the svg bug". With `curve="cubic"` every outer ring was overwritten with its polygon, and with `curve="none"` the function raised `UnboundLocalError`, because the line that wrote the polygon had lost its `else`. The defect is older than this ledger; the AI flagged it on 2026-10-30 while adding `regions_svg`. The yapocis-rs port had reproduced the cubic half on purpose, so both change together.
