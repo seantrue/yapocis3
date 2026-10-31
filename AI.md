@@ -51,6 +51,12 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2026-10-30: `write_svg_regions`: the missing `else` (Claude Opus 5.5)
+
+The maintainer: "fix the svg bug". With `curve="cubic"` every outer ring was overwritten with its polygon, and with `curve="none"` the function raised `UnboundLocalError`, because the line that wrote the polygon had lost its `else`. The defect is older than this ledger; the AI flagged it on 2026-10-30 while adding `regions_svg`. The yapocis-rs port had reproduced the cubic half on purpose, so both change together.
+
+`truetrace.py` +2/−1, and a regression test in `tests/test_truetrace_fill.py` (+13) that fails on the old code. `tests/test_truetrace_fill.py` passes (22 tests). The full suite was not run.
+
 ### 2026-10-30: A parity case for `regions_svg` (Claude Opus 5.5)
 
 The maintainer asked what parity with yapocis-rs was missing, then "Go for 1-3": re-export the bundle, record the Metal fixtures, port `trace_regions` and `regions_svg`.

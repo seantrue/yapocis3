@@ -654,6 +654,7 @@ def write_svg_regions(
     for reg in regions:
         if curve == "cubic":
             d = path_from_ring_cubic(reg["outer"])
+        else:
             d = path_from_ring_poly(reg["outer"])
         for hole in reg["holes"]:
             if curve == "cubic":
@@ -848,7 +849,7 @@ def regions_svg(
     (x=col, y=row) while SVG's pixel centres are at (col + 0.5, row + 0.5).
 
     ``write_svg_regions`` is a different thing: outlines stroked, y flipped, for
-    looking at the tracer's output, and held to the Rust port by the parity gate.
+    looking at the tracer's output.
     """
     if curve not in ("none", "cubic"):
         raise ValueError(f"curve must be 'none' or 'cubic', not {curve!r}")

@@ -155,3 +155,16 @@ def test_regions_svg_cubic_writes_real_curves_and_paper_is_optional():
 def test_regions_svg_with_nothing_traced_is_still_a_document():
     svg = truetrace.regions_svg([], 8, 6)
     assert svg.startswith("<svg") and "<path" not in svg
+
+
+def test_write_svg_regions_smooths_outer_rings_and_writes_polygons(tmp_path):
+    # Until 2026-10-30 cubic wrote every outer ring as a polygon, and none raised
+    # UnboundLocalError: a missing else
+    regions = truetrace.trace_regions(_ring_mask(), engine="cpu")
+    cubic = tmp_path / "cubic.svg"
+    none = tmp_path / "none.svg"
+    truetrace.write_svg_regions(str(cubic), regions, 80, 64, curve="cubic")
+    truetrace.write_svg_regions(str(none), regions, 80, 64, curve="none")
+    outers = [d.split(" Z")[0] for d in re.findall(r' d="([^"]*)"', cubic.read_text())]
+    assert outers and all(" C " in d and " L " not in d for d in outers)
+    assert " C " not in none.read_text() and " L " in none.read_text()
