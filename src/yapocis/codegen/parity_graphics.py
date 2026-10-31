@@ -946,7 +946,7 @@ def gen_kerneldraw(
 def gen_typeset(
     out_dir: str, backend: str, log: Callable[..., None]
 ) -> list[dict[str, Any]]:
-    from yapocis.lib.typeset import compute_offset, render_text
+    from yapocis.lib.typeset import compute_offset, extent_freetype, render_text
 
     specs = [
         ("hello", "Hello, yapocis!", "default", 32, 0),
@@ -975,6 +975,7 @@ def gen_typeset(
                 "size": size,
                 "rotation": rotation,
                 "bbox": [int(v) for v in bbox],
+                "extent": [int(v) for v in extent_freetype(text, font, size, rotation)],
                 "block": name,
             }
         )
