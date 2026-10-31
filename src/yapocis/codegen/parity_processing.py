@@ -183,6 +183,20 @@ def truetrace_cases(
             traced[f"thin_{engine}_iso{iso}"] = tt_mod.trace_mask(
                 thin, iso=iso, curve="none", engine=engine
             )
+    # The outlines those fills come from, as regions_svg writes them: text, byte for byte
+    svgs = {}
+    for engine in ("gpu", "cpu"):
+        thin_regions = tt_mod.trace_regions(thin, iso=0.75, engine=engine)
+        for curve in ("none", "cubic"):
+            name = f"truetrace.fill.{engine}_{curve}.svg"
+            with open(os.path.join(out_dir, name), "w", encoding="utf-8") as f:
+                f.write(tt_mod.regions_svg(thin_regions, 64, 48, curve=curve))
+            svgs[f"{engine}_{curve}"] = name
+    name = "truetrace.fill.styled.svg"
+    with open(os.path.join(out_dir, name), "w", encoding="utf-8") as f:
+        f.write(tt_mod.regions_svg(regions, 80, 64, curve="cubic", tension=0.5,
+                                   ink="#1a2b3c", paper=None))
+    svgs["styled"] = name
     fname = _save(
         out_dir,
         "truetrace.fill",
@@ -198,6 +212,7 @@ def truetrace_cases(
             "file": fname,
             "regions": len(regions),
             "traced": sorted(traced),
+            "regions_svg": svgs,
         }
     )
     tt.purge()

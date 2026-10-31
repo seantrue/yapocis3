@@ -51,6 +51,14 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2026-10-30: A parity case for `regions_svg` (Claude Opus 5.5)
+
+The maintainer asked what parity with yapocis-rs was missing, then "Go for 1-3": re-export the bundle, record the Metal fixtures, port `trace_regions` and `regions_svg`.
+
+**What the AI did.** `parity_processing.py` +15: the truetrace `fill` case now writes `regions_svg` documents as text fixtures, from `trace_regions` on both engines, in both curves, plus one with custom ink, no paper and non-zero tension, so yapocis-rs is held to them byte for byte.
+
+**Tests.** Ruff is clean on the file. The generator ran for the Metal recording, and yapocis-rs passes its output.
+
 ### 2026-10-30: `trace_regions` and `regions_svg`: traced shapes as vector SVG (Claude Opus 5.5)
 
 The maintainer asked which of ImpCraft's intermediates could output vector SVG, not embedded rasters, then chose the traced pen strokes: "Go for 1, let's see what it makes."
