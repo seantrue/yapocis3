@@ -10,7 +10,11 @@ every case, plus one ``.npz`` per case holding the inputs and outputs. A Rust te
 replays the cases recorded on its own host and compares bit patterns, with no
 tolerance.
 
-Sections (``--host-fixtures-sections``): ``random`` (SeedSequence/PCG64/Generator).
+Sections (``--host-fixtures-sections``): ``random`` (SeedSequence/PCG64/Generator),
+``simd_math``, ``reduce``, ``hist``, and the numpy behaviours PlumCraft's array engine
+needs: ``elementwise`` (minimum, maximum, clip, sign, mod, nan_to_num), ``extrema``
+(min, max, nanmin, nanmax, integer cumsum), ``order`` (sort, searchsorted, lexsort,
+quantile, median, nanpercentile, unique) and ``fft`` (fftshift, ifftshift).
 Each random case seeds one generator and makes a sequence of calls, so the
 interleaving of 64-bit and buffered 32-bit draws is covered too.
 """
@@ -396,12 +400,203 @@ def export_hist(out_dir: str) -> list[dict[str, Any]]:
     results["linspace.f32"] = np.linspace(np.float32(0.1), np.float32(0.9), 257, dtype=np.float32)
     results["linspace.f32b"] = np.linspace(np.float32(-3.5), np.float32(12.25), 65, dtype=np.float32)
     results["cumsum.f64"] = np.cumsum(rng.random(1000))
+    # linspace with Python-float bounds and dtype=float32: computed in float64, then cast
+    results["linspace.py_f32a"] = np.linspace(-2.0, 1.0, 1000, dtype=np.float32)
+    results["linspace.py_f32b"] = np.linspace(0.1, 0.7, 333, dtype=np.float32)
+    results["linspace.py_f32c"] = np.linspace(-1.5, -1.5, 9, dtype=np.float32)
     file = "hist.npz"
     np.savez(os.path.join(out_dir, file), **{f"in.{k}": v for k, v in arrays.items()}, **results)
     return [{"func": "hist", "name": "hist", "file": file, "inputs": list(arrays), "results": list(results)}]
 
 
-SECTIONS = {"random": export_random, "simd_math": export_simd_math, "reduce": export_reduce, "hist": export_hist}
+# ---------------------------------------------------------------------------
+# elementwise, extrema, order, fft: what PlumCraft's array engine reproduces
+# ---------------------------------------------------------------------------
+
+_F32_SPECIALS = [
+    0.0, -0.0, 1.0, -1.0, 0.5, -0.5, 2.5, -2.5, 7.0, -7.0, 3.0, -3.0, 360.0, -360.0,
+    180.0, 1e-45, -1e-45, 1e-38, 3.4e38, -3.4e38, 1e10, -1e10, np.inf, -np.inf, np.nan,
+]
+
+
+def _specials_f32() -> np.ndarray:
+    return np.array(_F32_SPECIALS, dtype=np.float32)
+
+
+def _save(out_dir: str, func: str, arrays: dict[str, np.ndarray], results: dict[str, np.ndarray]) -> dict[str, Any]:
+    file = f"{func}.npz"
+    np.savez(os.path.join(out_dir, file), **{f"in.{k}": v for k, v in arrays.items()}, **results)
+    return {"func": func, "name": func, "file": file, "inputs": list(arrays), "results": list(results)}
+
+
+def export_elementwise(out_dir: str) -> list[dict[str, Any]]:
+    """Binary ufuncs over every pair of specials (SIMD body and tail), and over long random
+    arrays with NaN and signed zeros sprinkled in; unary ones over the same."""
+    import warnings
+
+    rng = np.random.default_rng(4242)
+    sp = _specials_f32()
+    pa, pb = np.meshgrid(sp, sp, indexing="ij")
+    rand_a = ((rng.random(10_007, dtype=np.float32) - np.float32(0.5)) * np.float32(2000)).astype(np.float32)
+    rand_b = ((rng.random(10_007, dtype=np.float32) - np.float32(0.5)) * np.float32(2000)).astype(np.float32)
+    for arr in (rand_a, rand_b):
+        idx = rng.integers(0, arr.size, 300)
+        arr[idx[:100]] = np.nan
+        arr[idx[100:200]] = 0.0
+        arr[idx[200:]] = -0.0
+    arrays = {
+        "pairs_a": pa.ravel().copy(),
+        "pairs_b": pb.ravel().copy(),
+        "rand_a": rand_a,
+        "rand_b": rand_b,
+        "turns": np.array([360.0, -360.0, 6.2831855, 1.0, 0.0, np.inf], dtype=np.float32),
+    }
+    results: dict[str, np.ndarray] = {}
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        for tag in ("pairs", "rand"):
+            a, b = arrays[f"{tag}_a"], arrays[f"{tag}_b"]
+            results[f"minimum.{tag}"] = np.minimum(a, b)
+            results[f"maximum.{tag}"] = np.maximum(a, b)
+            results[f"mod.{tag}"] = np.mod(a, b)
+            results[f"sign.{tag}"] = np.sign(a)
+            results[f"nan_to_num.{tag}"] = np.nan_to_num(a)
+            results[f"clip0.{tag}"] = np.clip(a, 0, None)
+        # np.mod by a Python-float turn, as a scalar (the research software's Wrap Angle)
+        for i, t in enumerate(arrays["turns"]):
+            results[f"mod_scalar{i}.rand"] = np.mod(arrays["rand_a"], float(t))
+            results[f"mod_scalar{i}.pairs"] = np.mod(arrays["pairs_a"], float(t))
+    return [_save(out_dir, "elementwise", arrays, results)]
+
+
+def export_extrema(out_dir: str) -> list[dict[str, Any]]:
+    """np.min, np.max, np.nanmin, np.nanmax of float32 arrays of many lengths, with NaN
+    at different places, signed zeros and all-NaN arrays; np.cumsum of int64."""
+    import warnings
+
+    rng = np.random.default_rng(777)
+    arrays: dict[str, np.ndarray] = {}
+    for n in list(range(1, 70)) + [127, 128, 129, 1000, 4099, 100_003]:
+        arrays[f"r{n}"] = ((rng.random(n, dtype=np.float32) - np.float32(0.5)) * np.float32(100)).astype(np.float32)
+        if n >= 3:
+            a = arrays[f"r{n}"].copy()
+            a[rng.integers(0, n)] = np.nan
+            arrays[f"nan{n}"] = a
+            z = np.where(rng.random(n) < 0.5, np.float32(0.0), np.float32(-0.0)).astype(np.float32)
+            arrays[f"zeros{n}"] = z
+            arrays[f"negzero_first{n}"] = np.concatenate([[np.float32(-0.0)], np.zeros(n - 1, np.float32)])
+            arrays[f"poszero_first{n}"] = np.concatenate([[np.float32(0.0)], -np.zeros(n - 1, np.float32)])
+            arrays[f"allnan{n}"] = np.full(n, np.nan, np.float32)
+            inf = arrays[f"r{n}"].copy()
+            inf[0], inf[-1] = np.inf, -np.inf
+            arrays[f"inf{n}"] = inf
+    results: dict[str, np.ndarray] = {}
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        for k, a in arrays.items():
+            results[f"min.{k}"] = np.asarray(np.min(a))
+            results[f"max.{k}"] = np.asarray(np.max(a))
+            results[f"nanmin.{k}"] = np.asarray(np.nanmin(a))
+            results[f"nanmax.{k}"] = np.asarray(np.nanmax(a))
+    counts = rng.integers(0, 1000, 4096).astype(np.int64)
+    arrays["counts"] = counts
+    results["cumsum_i64.counts"] = np.cumsum(counts)
+    wrap = np.array([2**62, 2**62, 2**62, -5], dtype=np.int64)
+    arrays["wrap"] = wrap
+    with np.errstate(all="ignore"):
+        results["cumsum_i64.wrap"] = np.cumsum(wrap)
+    return [_save(out_dir, "extrema", arrays, results)]
+
+
+def export_order(out_dir: str) -> list[dict[str, Any]]:
+    """Sorts, searches, order statistics and unique, as numpy orders values (NaN last)."""
+    import warnings
+
+    rng = np.random.default_rng(31337)
+    sp = _specials_f32()
+    arrays: dict[str, np.ndarray] = {}
+    results: dict[str, np.ndarray] = {}
+    # sort (values, with signed zeros mixed in so their arrangement shows)
+    for n in (1, 2, 15, 16, 17, 100, 1000, 65_537):
+        a = ((rng.random(n, dtype=np.float32) - np.float32(0.5)) * np.float32(10)).astype(np.float32)
+        a[rng.random(n) < 0.05] = np.nan
+        a[rng.random(n) < 0.05] = 0.0
+        a[rng.random(n) < 0.05] = -0.0
+        a[rng.random(n) < 0.1] = np.float32(1.5)  # ties
+        arrays[f"sort{n}"] = a
+        results[f"sort.sort{n}"] = np.sort(a)
+    arrays["sortspecials"] = np.tile(sp, 9)
+    results["sort.sortspecials"] = np.sort(arrays["sortspecials"])
+    # searchsorted on float64, NaN last
+    hay = np.sort(np.concatenate([rng.random(200), [0.25, 0.25, 0.25, np.nan, np.nan]]))
+    needles = np.concatenate([rng.random(500) * 1.2 - 0.1, [0.25, np.nan, -np.inf, np.inf, 0.0, 1.0]])
+    arrays["hay"], arrays["needles"] = hay, needles
+    results["searchsorted_left"] = np.searchsorted(hay, needles, side="left").astype(np.int64)
+    results["searchsorted_right"] = np.searchsorted(hay, needles, side="right").astype(np.int64)
+    # lexsort: keys with many ties; the last key is the primary one
+    k = 3000
+    keys = [rng.integers(0, 4, k).astype(np.float32) for _ in range(4)]
+    keys[1][rng.random(k) < 0.02] = np.nan
+    for i, key in enumerate(keys):
+        arrays[f"lexkey{i}"] = key
+    results["lexsort"] = np.lexsort(keys).astype(np.int64)
+    # quantile (linear, Python-float q), median, nanpercentile (list q)
+    qs = [0.0, 0.01, 0.1, 0.25, 0.3333333333333333, 0.5, 0.7, 0.9, 0.99, 1.0]
+    arrays["qs"] = np.array(qs)
+    for n in (1, 2, 3, 4, 5, 10, 101, 1000, 4096):
+        a = ((rng.random(n, dtype=np.float32)) * np.float32(7) - np.float32(2)).astype(np.float32)
+        arrays[f"stat{n}"] = a
+        results[f"quantile.stat{n}"] = np.array([np.quantile(a, q) for q in qs], dtype=np.float32)
+        results[f"median.stat{n}"] = np.asarray(np.median(a))
+        b = a.copy()
+        b[rng.random(n) < 0.2] = np.nan
+        arrays[f"nanstat{n}"] = b
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            for j, (q1, q2) in enumerate([(2.0, 98.0), (0.0, 100.0), (1.0, 99.0), (0.5, 99.5), (25.0, 75.0)]):
+                results[f"nanpercentile{j}.nanstat{n}"] = np.nanpercentile(b, [q1, q2])
+    arrays["pct_pairs"] = np.array([(2.0, 98.0), (0.0, 100.0), (1.0, 99.0), (0.5, 99.5), (25.0, 75.0)])
+    arrays["nanstat_allnan"] = np.full(5, np.nan, np.float32)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        results["nanpercentile0.nanstat_allnan"] = np.nanpercentile(arrays["nanstat_allnan"], [2.0, 98.0])
+    # unique with its inverse, int64
+    for name, u in {
+        "labels": rng.integers(0, 50_000, 200_000),
+        "sparse": rng.integers(-(2**40), 2**40, 5000),
+        "few": np.array([5, 5, 5, -1, 3, 3, 9]),
+        "one": np.array([7]),
+    }.items():
+        u = u.astype(np.int64)
+        arrays[f"uniq_{name}"] = u
+        values, inverse = np.unique(u, return_inverse=True)
+        results[f"unique.{name}"] = values.astype(np.int64)
+        results[f"unique_inverse.{name}"] = inverse.astype(np.int64).ravel()
+    return [_save(out_dir, "order", arrays, results)]
+
+
+def export_fft(out_dir: str) -> list[dict[str, Any]]:
+    """np.fft.fftshift and ifftshift of 2-D planes of odd and even sizes."""
+    arrays: dict[str, np.ndarray] = {}
+    results: dict[str, np.ndarray] = {}
+    for h, w in ((4, 6), (5, 7), (1, 1), (1, 8), (9, 1), (6, 5), (33, 64)):
+        a = np.arange(h * w, dtype=np.float32).reshape(h, w)
+        arrays[f"p{h}x{w}"] = a
+        results[f"fftshift.p{h}x{w}"] = np.fft.fftshift(a)
+        results[f"ifftshift.p{h}x{w}"] = np.fft.ifftshift(a)
+    return [_save(out_dir, "fft", arrays, results)]
+
+
+SECTIONS = {
+    "random": export_random,
+    "simd_math": export_simd_math,
+    "reduce": export_reduce,
+    "hist": export_hist,
+    "elementwise": export_elementwise,
+    "extrema": export_extrema,
+    "order": export_order,
+    "fft": export_fft,
+}
 
 
 def export_host_fixtures(out_root: str, sections: list[str] | None = None, log=print) -> str:

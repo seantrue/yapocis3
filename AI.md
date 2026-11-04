@@ -51,6 +51,23 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2026-11-03: Host fixtures for the numpy behaviours PlumCraft had hand-ported (Claude Opus 5.5)
+
+The maintainer: "Move the hand-ported behaviours into npexact, record fixtures on Linux and test."
+
+**What the AI did.** `host_fixtures.py` (+197/−2) gains four sections for yapocis-rs's npexact to replay bit for bit:
+
+- `elementwise`: `maximum`, `minimum`, `clip`, `sign`, `mod` and `nan_to_num`, over every pair of 25 special values and over long arrays with NaN and signed zeros mixed in.
+- `extrema`: `max`, `min`, `nanmax` and `nanmin` at 75 lengths, so both the SIMD body and the tail run, plus all-NaN arrays and zero ties; also int64 `cumsum`.
+- `order`: `sort`, `searchsorted`, `lexsort`, `quantile`, `median`, `nanpercentile`, and `unique` with its inverse.
+- `fft`: `fftshift` and `ifftshift`.
+
+`hist` also gains three `linspace` cases with Python-float bounds. The script still needs only numpy.
+
+**Recorded** on the M4 Max, where the earlier cases came out byte-identical, and on yellowfin's Xeon E5-2698 v4. yellowfin's run used numpy 2.3.3, the same as the Mac, from a temporary directory. The x86 recording exposed two bugs in npexact and a difference between CPUs in how numpy breaks ties between signed zeros; those are recorded in yapocis-rs's `AI.md`.
+
+**Tests.** The full yapocis3 suite was not run.
+
 ### 2026-10-30: Parity cases for `extent_freetype`, and the HSI plane kernels (Claude Opus 5.5)
 
 The maintainer: "port extent_freetype; restart the python fleet; update the fixtures".
