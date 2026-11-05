@@ -51,6 +51,21 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2026-11-05: A `complex` host-fixture section: numpy's complex64 multiply (Claude Opus 5.5)
+
+**What the maintainer asked:** they approved seantrue/yapocis-rs#10 (the `fix approved` label) and said "fix approved bugs". The issue: npexact's only contraction rule decides by architecture at compile time, but numpy's SIMD ufunc loops are picked at run time.
+
+**What the AI did:** `export_complex` in `src/yapocis/codegen/host_fixtures.py` (~66 lines) records complex64 `a * b` and `z * z`:
+
+- through numpy's ufunc loop: every pair of 121 complex specials (11 float specials as real and imaginary parts), 10,007-long random arrays with NaN, infinities and signed zeros, every length up to 33, a stride-3 view, and an array times a scalar;
+- as numpy scalars, which go through compiled C.
+
+The values are stored as separate float32 real and imaginary parts, and the case names the CPU features numpy dispatched on (`cpu_features`: ASIMD, FMA3, AVX2, AVX512F).
+
+**Found with it:** arrays are fused the same way on an M4 Max and on yellowfin's Xeon (FMA3, AVX2), but scalars are fused on the Mac and plain on the Xeon. Recorded with numpy 2.3.3 on both machines, from a temporary directory with only numpy. Every existing case came out identical on yellowfin. On the Mac only `order.npz`'s `sort1000` and `sort65537` differed, and only in where `-0` and `+0` landed among equal values. npexact's sort test already ignores that, so the committed fixtures were kept and only the new case was added.
+
+**Not changed:** the file's existing ruff (E702 at line 399) and black findings, which predate this change.
+
 ### 2026-11-03: Host fixtures for the numpy behaviours PlumCraft had hand-ported (Claude Opus 5.5)
 
 The maintainer: "Move the hand-ported behaviours into npexact, record fixtures on Linux and test."
