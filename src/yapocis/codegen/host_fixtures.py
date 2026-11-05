@@ -14,7 +14,9 @@ Sections (``--host-fixtures-sections``): ``random`` (SeedSequence/PCG64/Generato
 ``simd_math``, ``reduce``, ``hist``, and the numpy behaviours PlumCraft's array engine
 needs: ``elementwise`` (minimum, maximum, clip, sign, mod, nan_to_num), ``extrema``
 (min, max, nanmin, nanmax, integer cumsum), ``order`` (sort, searchsorted, lexsort,
-quantile, median, nanpercentile, unique) and ``fft`` (fftshift, ifftshift).
+quantile, median, nanpercentile, unique), ``fft`` (fftshift, ifftshift) and ``complex``
+(complex64 multiply: numpy's ufunc loop over arrays and its scalar path, which round
+differently on some hosts).
 Each random case seeds one generator and makes a sequence of calls, so the
 interleaving of 64-bit and buffered 32-bit draws is covered too.
 """
@@ -587,6 +589,69 @@ def export_fft(out_dir: str) -> list[dict[str, Any]]:
     return [_save(out_dir, "fft", arrays, results)]
 
 
+def _cpu_features() -> dict[str, bool]:
+    """The CPU features numpy dispatches its SIMD loops on (the ones that change results)."""
+    try:
+        from numpy._core._multiarray_umath import __cpu_features__ as feat
+    except ImportError:  # numpy 1.x
+        from numpy.core._multiarray_umath import __cpu_features__ as feat
+    return {k: bool(feat.get(k, False)) for k in ("ASIMD", "FMA3", "AVX2", "AVX512F")}
+
+
+def _parts(name: str, z: np.ndarray) -> dict[str, np.ndarray]:
+    z = np.asarray(z, dtype=np.complex64)
+    return {f"{name}.re": np.ascontiguousarray(z.real), f"{name}.im": np.ascontiguousarray(z.imag)}
+
+
+def export_complex(out_dir: str) -> list[dict[str, Any]]:
+    """complex64 ``a * b`` (and ``z * z``) through numpy's ufunc loop: every pair of complex
+    specials, long random arrays with NaN, infinities and signed zeros, every length up to
+    33 (SIMD body and tail), a strided view, and an array times a scalar. Then the same
+    products as numpy scalars, which go through numpy's compiled C rather than the loop
+    and round differently on some hosts. Stored as separate real and imaginary float32
+    parts; the case also names the CPU features numpy dispatched on."""
+    import warnings
+
+    rng = np.random.default_rng(6464)
+    # 11 specials as real and imaginary parts: 121 values, 14,641 pairs
+    sp = np.array([0.0, -0.0, 1.0, -1.0, 0.5, 1e-45, 3.4e38, -3.4e38, np.inf, -np.inf, np.nan], dtype=np.float32)
+    re, im = np.meshgrid(sp, sp, indexing="ij")
+    specials = (re.ravel() + 1j * im.ravel()).astype(np.complex64)
+    pa, pb = np.meshgrid(specials, specials, indexing="ij")
+    pairs_a, pairs_b = pa.ravel().copy(), pb.ravel().copy()
+
+    def rand(n: int) -> np.ndarray:
+        z = (rng.standard_normal(n) * 50 + 1j * rng.standard_normal(n) * 50).astype(np.complex64)
+        idx = rng.integers(0, n, 120)
+        z.real[idx[:20]] = np.nan
+        z.imag[idx[20:40]] = np.nan
+        z.real[idx[40:60]] = np.inf
+        z.imag[idx[60:80]] = -np.inf
+        z.real[idx[80:100]] = -0.0
+        z.imag[idx[100:]] = 0.0
+        return z
+
+    rand_a, rand_b = rand(10_007), rand(10_007)
+    arrays: dict[str, np.ndarray] = {}
+    for name, z in (("pairs_a", pairs_a), ("pairs_b", pairs_b), ("rand_a", rand_a), ("rand_b", rand_b)):
+        arrays.update(_parts(name, z))
+    results: dict[str, np.ndarray] = {}
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        results.update(_parts("mul.pairs", pairs_a * pairs_b))
+        results.update(_parts("mul.rand", rand_a * rand_b))
+        results.update(_parts("square.rand", rand_a * rand_a))
+        for n in range(1, 34):
+            results.update(_parts(f"mul.len{n}", rand_a[:n] * rand_b[:n]))
+        results.update(_parts("mul.stride3", rand_a[::3] * rand_b[::3]))
+        results.update(_parts("mul.by_scalar", rand_a * rand_b[0]))
+        scal = [rand_a[i] * rand_b[i] for i in range(2_000)] + [pairs_a[i] * pairs_b[i] for i in range(0, pairs_a.size, 7)]
+        results.update(_parts("mul.scalars", np.array(scal, dtype=np.complex64)))
+    case = _save(out_dir, "complex", arrays, results)
+    case["cpu_features"] = _cpu_features()
+    return [case]
+
+
 SECTIONS = {
     "random": export_random,
     "simd_math": export_simd_math,
@@ -596,6 +661,7 @@ SECTIONS = {
     "extrema": export_extrema,
     "order": export_order,
     "fft": export_fft,
+    "complex": export_complex,
 }
 
 
