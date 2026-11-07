@@ -34,13 +34,21 @@ except Exception:
 
 
 @njit(cache=True, fastmath=True)
+def _wrap32(v: int) -> int:
+    """v as a 32-bit signed int, wrapping as the device kernels' `int` does."""
+    v &= 0xFFFFFFFF
+    return v - 0x100000000 if v >= 0x80000000 else v
+
+
+@njit(cache=True, fastmath=True)
 def _hash_int(x: int, y: int, z: int, seed: int) -> int:
-    """Deterministic pseudo-random hash function."""
-    h = seed
-    h ^= x * 374761393
-    h ^= y * 668265263
-    h ^= z * 1264258069
-    h = (h ^ (h >> 13)) * 1274126177
+    """Deterministic pseudo-random hash function, in 32-bit ints as the device kernels
+    compute it (numba's own integers are 64-bit, which picked other gradients)."""
+    h = _wrap32(seed)
+    h ^= _wrap32(x * 374761393)
+    h ^= _wrap32(y * 668265263)
+    h ^= _wrap32(z * 1264258069)
+    h = _wrap32((h ^ (h >> 13)) * 1274126177)
     return h ^ (h >> 16)
 
 
@@ -190,8 +198,10 @@ def _simplex2d_njit(
     lacunarity: float,
     tileable: int,
 ) -> None:
-    """2D simplex noise with JIT compilation."""
-    # Use column-major iteration to match GPU backends (OpenCL/Metal/CUDA)
+    """2D simplex noise with JIT compilation, as the device kernels compute it. `width` and
+    `height` are the interface's `width_of` and `height_of` the output: its rows and its
+    columns. So x walks the rows and y the columns, and pixel (x, y) is noise at
+    (x / width, y / height) times the frequency."""
     for x in prange(width):
         for y in range(height):
             total = 0.0
@@ -200,13 +210,12 @@ def _simplex2d_njit(
             max_value = 0.0
 
             for octave in range(octaves):
-                # For column-major iteration: swap x/y coordinates to match GPU layout
-                nx = (y / float(width)) * frequency + offset_x
-                ny = (x / float(height)) * frequency + offset_y
+                nx = (x / float(width)) * frequency + offset_x
+                ny = (y / float(height)) * frequency + offset_y
 
-                # Also swap tile dimensions
-                tile_w = int(height / frequency)
-                tile_h = int(width / frequency)
+                # For tiling, use width/height as tile dimensions
+                tile_w = int(width / frequency)
+                tile_h = int(height / frequency)
                 if tile_w < 1:
                     tile_w = 1
                 if tile_h < 1:
@@ -224,7 +233,7 @@ def _simplex2d_njit(
             # Normalize to [0, 1]
             value = (total / max_value + 1.0) * 0.5
             value = max(0.0, min(1.0, value))  # clamp
-            output[y, x] = value
+            output[x, y] = value
 
 
 # ============================================================================
@@ -410,7 +419,7 @@ def simplex2d(
             tileable,
         )
     else:
-        # Pure NumPy fallback (slower) - use column-major iteration to match GPU
+        # Pure NumPy fallback (slower), the same loop as _simplex2d_njit
         for x in range(width):
             for y in range(height):
                 total = 0.0
@@ -419,13 +428,10 @@ def simplex2d(
                 max_value = 0.0
 
                 for octave in range(octaves):
-                    # For column-major iteration: swap coordinates to match GPU layout
-                    nx = (y / float(width)) * frequency + offset_x
-                    ny = (x / float(height)) * frequency + offset_y
-
-                    # Also swap tile dimensions
-                    tile_w = max(1, int(height / frequency))
-                    tile_h = max(1, int(width / frequency))
+                    nx = (x / float(width)) * frequency + offset_x
+                    ny = (y / float(height)) * frequency + offset_y
+                    tile_w = max(1, int(width / frequency))
+                    tile_h = max(1, int(height / frequency))
 
                     noise = _simplex2d_single(
                         nx, ny, seed + octave, tileable, tile_w, tile_h
@@ -437,7 +443,7 @@ def simplex2d(
                     frequency *= lacunarity
 
                 value = (total / max_value + 1.0) * 0.5
-                output[y, x] = np.clip(value, 0.0, 1.0)
+                output[x, y] = np.clip(value, 0.0, 1.0)
 
     return output
 

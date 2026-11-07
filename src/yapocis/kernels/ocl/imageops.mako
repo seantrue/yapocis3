@@ -30,7 +30,7 @@ __kernel void histogram(__global float *input, int size_of_input, float low, flo
     float value = input[i];
     value = value < low ? low : value;
     value = value > high ? high : value;
-    size_t bucket = (size_t)((n_bins*value)/(high-low));
+    size_t bucket = (size_t)((n_bins*(value-low))/(high-low));  // bins span [low, high]
     bucket = min((size_t)(n_bins-1), bucket);  // value == high, as Metal clamps
     atomic_inc(hst+bucket);
     barrier(CLK_GLOBAL_MEM_FENCE);

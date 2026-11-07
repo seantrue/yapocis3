@@ -37,3 +37,25 @@ def test_mandelbrot(backend, perf_tracker, monkeypatch):
             )
 
         sw.show(out)
+
+
+@pytest.mark.parametrize("backend", [b for b in get_test_backends() if b != "numbax"])
+def test_mandelbrot_records_the_first_escape_as_the_numba_port_does(backend, monkeypatch):
+    """The device kernels stop at the first escape, as the numba port does. They differ only
+    where float arithmetic decides the escape (|z|^2 > 4 against numpy's |z| > nextafter(2),
+    with or without fused multiply-add): a few pixels in a thousand at most."""
+    import importlib
+
+    import yapocis.lib.mandelbrot as module
+
+    re = np.linspace(-2.0, 1.0, 512, dtype=np.float32)
+    im = np.linspace(-1.5, 1.5, 512, dtype=np.float32)
+    xx, yy = np.meshgrid(re, im, indexing="xy")
+    q = (xx + 1j * yy).astype(np.complex64)
+    out = {}
+    for b in ("numbax", backend):
+        monkeypatch.setenv("YAPOCIS_BACKEND", b)
+        importlib.reload(module)
+        out[b] = np.asarray(module.Mandelbrot().mandelbrot(q, 50)).astype(np.int32)
+    differ = out[backend] != out["numbax"]
+    assert differ.mean() < 1e-3, f"{differ.mean():.5f} of pixels differ"

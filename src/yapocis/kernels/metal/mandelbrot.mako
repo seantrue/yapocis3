@@ -17,7 +17,11 @@ kernel void mandelbrot(device float2 *q [[ buffer(0) ]],
         imag = 2.0f * real*imag + q[i].y;
         real = nreal;
 
-        if (real*real + imag*imag > 4.0f)
-             output[i] = (short)curiter;
+        if (real*real + imag*imag > 4.0f) {
+            // The first escape, as the numba port records it. An escape at iteration 0 reads
+            // as 0 ("inside"), so that point keeps going, as the port's out == 0 test lets it.
+            output[i] = (short)curiter;
+            if (curiter > 0) break;
+        }
     }
 }

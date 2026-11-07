@@ -332,3 +332,35 @@ def test_histmatch_between_images(backend, monkeypatch):
     # Result should be brighter (closer to reference)
     assert result.mean() > src.mean() + 0.2, "Matched image should be brighter"
     assert result.mean() > 0.5, "Matched image should have mean > 0.5"
+
+
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_histogram_bins_span_low_to_high(backend, monkeypatch):
+    # Bins cover [low, high], so low must be subtracted: with low != 0 every count used to
+    # shift. Values sit at bin centres, so each of the n_bins gets the same count.
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+    imageops = Imageops(FASTBINS=0)
+    low, high, n_bins, per_bin = 2.0, 4.0, 8, 1000
+    centres = low + (np.arange(n_bins) + 0.5) * (high - low) / n_bins
+    a = np.repeat(centres, per_bin).astype(np.float32).reshape(n_bins * 10, -1)
+    h = imageops.histogram(a, n_bins=n_bins, low=low, high=high)
+    assert h.tolist() == [per_bin] * n_bins
+
+
+@pytest.mark.parametrize("backend", [b for b in get_test_backends() if b != "numbax"])
+def test_stretch_clamps_to_the_input_range_as_the_numba_port_does(backend, monkeypatch):
+    # The device kernels clamp each value to input_min..input_max before mapping it onto
+    # low..high; the numba port mapped without clamping, so values outside the range left
+    # low..high. Now both clamp, and differ only by float rounding.
+    import importlib
+
+    import yapocis.lib.imageops as module
+
+    a = np.random.default_rng(0).uniform(-0.3, 1.4, (200, 300)).astype(np.float32)
+    out = {}
+    for b in ("numbax", backend):
+        monkeypatch.setenv("YAPOCIS_BACKEND", b)
+        importlib.reload(module)
+        out[b] = np.asarray(module.Imageops().stretch(a, 0.1, 0.9, 0.25, 0.75))
+    assert out["numbax"].min() >= 0.25 and out["numbax"].max() <= 0.75
+    assert np.abs(out[backend] - out["numbax"]).max() < 1e-6

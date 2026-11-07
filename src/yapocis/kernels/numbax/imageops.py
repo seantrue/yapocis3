@@ -43,22 +43,6 @@ def clamp_pixels(
     return output
 
 
-@njit(cache=True, fastmath=True)
-def _stretch_njit(
-    input: np.ndarray,
-    input_min: float,
-    input_max: float,
-    low: float,
-    high: float,
-    output: np.ndarray,
-) -> None:
-    it = input.ravel()
-    ot = output.ravel()
-    scale = (high - low) / (input_max - input_min + 1e-20)
-    for i in range(it.shape[0]):
-        ot[i] = (it[i] - input_min) * scale + low
-
-
 def stretch(
     input: np.ndarray,
     input_min: float,
@@ -67,19 +51,16 @@ def stretch(
     high: float,
     output: np.ndarray,
 ) -> np.ndarray:
-    if HAVE_NUMBA:
-        _stretch_njit(
-            input.astype(np.float32, copy=False),
-            float(input_min),
-            float(input_max),
-            float(low),
-            float(high),
-            output,
-        )
-    else:
-        scale = (high - low) / (input_max - input_min + 1e-20)
-        np.multiply(input - input_min, scale, out=output)
-        output += low
+    """As the device kernels compute it, in float32: each value clamped to
+    input_min..input_max, then mapped linearly onto low..high (NaN passes through)."""
+    f32 = np.float32
+    lo, hi = f32(input_min), f32(input_max)
+    v = np.asarray(input, dtype=f32)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        v = np.where(v < lo, lo, v)
+        v = np.where(v > hi, hi, v)
+        v = (v - lo) / (hi - lo)
+        output[...] = f32(low) + v * (f32(high) - f32(low))
     return output
 
 
