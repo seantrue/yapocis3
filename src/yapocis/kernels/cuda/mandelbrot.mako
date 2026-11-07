@@ -17,7 +17,11 @@ extern "C" __global__ void mandelbrot(float2 *q, short *output, int const maxite
         imag = 2* real*imag + q[gid].y;
         real = nreal;
 
-        if (real*real + imag*imag > 4.0f)
-             output[gid] = curiter;
+        if (real*real + imag*imag > 4.0f) {
+            // The first escape, as the numba port records it. An escape at iteration 0 reads
+            // as 0 ("inside"), so that point keeps going, as the port's out == 0 test lets it.
+            output[gid] = curiter;
+            if (curiter > 0) break;
+        }
     }
 }

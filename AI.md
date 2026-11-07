@@ -51,6 +51,27 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2026-11-06: Device kernels and the numba port brought into agreement: Histogram, Mandelbrot, Simplex, Stretch (Claude Opus 5.5)
+
+PlumImpress is folding PlumCraft's array engine into the Impressionist engine. Its array nodes are CPU ports of this package's numba kernels; its Impressionist twins run the device kernels. Comparing the 54 twin pairs showed four places where yapocis's own backends disagreed. The maintainer ruled on each.
+
+- **Histogram ("Fix histogram"):** the OpenCL, Metal and CUDA kernels computed the bin as `n_bins*value/(high-low)`, leaving out `low`, so any `low != 0` shifted every count. They now compute `n_bins*(value-low)/(high-low)`, as numba and numpy do. Every library caller passes `low = 0`, so nothing they compute changes. New test `test_histogram_bins_span_low_to_high`, which fails on the old kernels.
+- **Mandelbrot ("stop at first"):** the device kernels recorded the last iteration with `|z|^2 > 4`, which is where z first becomes NaN. Fast math decides that, so Metal and Apple's OpenCL counted one more than a float32 replay on nearly every escaped pixel. They now stop at the first escape, as the numba port does, including its quirk that an escape at iteration 0 keeps going. Device and numba now differ on 14 of 262,144 pixels, against 52–83% before. New test `test_mandelbrot_records_the_first_escape_as_the_numba_port_does`.
+- **Simplex ("Option 1"):** the numba port hashed lattice points in numba's 64-bit ints, while the kernels use 32-bit `int`, so the two picked the same gradient at only about half the points. The numba hash now wraps in 32 bits, and the device output is unchanged.
+
+  The numba 2-D loop also swapped its axes and wrote `output[y, x]`. On non-square fields that left the extra columns at 0 when wide, and wrote past the rows when tall, unchecked under numba. Both of its loops now follow the kernel: `width_of`/`height_of` are rows/columns, and pixel (row, column) is noise at (row/rows, column/columns).
+
+  Metal, OpenCL and numba now agree to about 2e-6 at square, wide and tall sizes. New test `test_simplex2d_device_matches_the_numba_port`, across three sizes.
+- **Stretch ("Clamp is the right answer"):** the kernels clamp each value to `input_min..input_max` before mapping it; the numba port didn't, and divided by `max - min + 1e-20`. It now clamps and maps in float32 in the kernel's order, and agrees to 6e-8. New test `test_stretch_clamps_to_the_input_range_as_the_numba_port_does`.
+
+**Verified:** each new test was run against the old code and failed. `tests/lib` passes on OpenCL, Metal and numba on the M4 MacBook (882 tests).
+
+**Not verified:** CUDA has not been run.
+
+**Found and not fixed:** the 3-D simplex kernels pick gradients with `hash % 12`, which in C is negative for a negative hash, so they index outside `grad3`.
+
+**Changed:** ~30 LOC in kernels, ~45 in the numba port, ~80 in tests.
+
 ### 2026-11-05: A `complex` host-fixture section: numpy's complex64 multiply (Claude Opus 5.5)
 
 **What the maintainer asked:** they approved seantrue/yapocis-rs#10 (the `fix approved` label) and said "fix approved bugs". The issue: npexact's only contraction rule decides by architecture at compile time, but numpy's SIMD ufunc loops are picked at run time.

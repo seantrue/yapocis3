@@ -48,7 +48,7 @@ kernel void histogram(const device float *input [[ buffer(0) ]],
     float value = input[i];
     value = value < low ? low : value;
     value = value > high ? high : value;
-    uint bucket = (uint)((n_bins*value)/(high-low));
+    uint bucket = (uint)((n_bins*(value-low))/(high-low));  // bins span [low, high]
     bucket = min((uint)(n_bins-1), bucket);
     // Atomic increment on device memory
     atomic_inc((device atomic_int*)(hst + bucket));

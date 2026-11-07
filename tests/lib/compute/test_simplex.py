@@ -376,3 +376,29 @@ if __name__ == "__main__":
     print("✓ Ridged multifractal")
 
     print(f"\n✅ All Simplex tests passed on {backend}!")
+
+
+@pytest.mark.parametrize("backend", [b for b in get_test_backends() if b != "numbax"])
+@pytest.mark.parametrize("size", [(192, 192), (320, 160), (150, 200)])
+def test_simplex2d_device_matches_the_numba_port(backend, size, monkeypatch):
+    """The numba port computes what the device kernels do: the hash in 32-bit ints (in 64-bit
+    ones it picked other gradients), and pixel (row, column) as noise at (row / rows,
+    column / columns), which wide and tall fields used to get wrong (columns left at 0, rows
+    written past the end). They differ only by float rounding."""
+    import importlib
+
+    import yapocis.lib.simplex as module
+
+    width, height = size
+    out = {}
+    for b in ("numbax", backend):
+        monkeypatch.setenv("YAPOCIS_BACKEND", b)
+        importlib.reload(module)
+        s = module.Simplex()
+        out[b] = [np.asarray(s.simplex2d(width, height, seed=7)),
+                  np.asarray(s.simplex2d(width, height, seed=7, tileable=True)),
+                  np.asarray(s.turbulence(width, height, seed=7)),
+                  np.asarray(s.ridged(width, height, seed=7))]
+    for name, got, want in zip(("simplex2d", "tileable", "turbulence", "ridged"), out[backend], out["numbax"]):
+        assert got.shape == want.shape == (height, width), name
+        assert np.abs(got.astype(np.float64) - want).max() < 1e-5, name
