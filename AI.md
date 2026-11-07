@@ -51,6 +51,14 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2026-11-07: CUDA's 2-D simplex noise matches the other backends (Claude Opus 5.5)
+
+The maintainer: "Make cuda noise match". On the RTX 3080, `test_simplex2d_device_matches_the_numba_port[cuda]` failed at every size. CUDA's `simplex2d` took its noise coordinates from CUDA's swapped `X`/`Y` helper macros, which made its field the OpenCL, Metal and numba field transposed.
+
+The kernel now computes `x = gid / height`, `y = gid % height`, as the OpenCL and Metal helpers do. CUDA now agrees with numba to about 3.6e-7, and with OpenCL to 1.2e-7, at 192x192, 320x160 and 150x200. The simplex suite passes on yellowfin (CUDA, NVIDIA OpenCL, numba) and on the M4 MacBook (Metal, OpenCL, numba): 58 tests each.
+
+**Left alone: `simplex3d`.** The AI first changed it the same way, and that made it worse. At a square size, CUDA's 3-D noise already agreed with numba (7e-4), while the OpenCL and Metal 3-D kernels differ from both, by about 0.67. Non-square 3-D fields differ everywhere. Neither PlumImpress nor PlumCraft uses 3-D noise. The `% 12` negative index noted on 2026-11-06 may be part of the cause.
+
 ### 2026-11-06: Device kernels and the numba port brought into agreement: Histogram, Mandelbrot, Simplex, Stretch (Claude Opus 5.5)
 
 PlumImpress is folding PlumCraft's array engine into the Impressionist engine. Its array nodes are CPU ports of this package's numba kernels; its Impressionist twins run the device kernels. Comparing the 54 twin pairs showed four places where yapocis's own backends disagreed. The maintainer ruled on each.

@@ -225,8 +225,10 @@ extern "C" __global__ void simplex2d(int width, int height, float *output,
                                      int tileable)
 {
     size_t gid = get_global_id(0);
-    int x = X(gid);
-    int y = Y(gid);
+    // The noise coordinates as the OpenCL and Metal kernels take them (their X/Y helpers),
+    // not CUDA's swapped ones: with those, CUDA's field was the others' transposed.
+    int x = gid / height;
+    int y = gid % height;
 
     if (x >= width || y >= height) return;
 
