@@ -62,6 +62,8 @@ def test_compile_interfaces_all_backends(backend: str, iname: str, monkeypatch):
             or "Undefined" in str(e)
             or "BUILD_PROGRAM_FAILURE" in str(e)
             or "build failed" in str(e).lower()
+            # rustcpu: an interface yapocis-rs has no CPU port for
+            or "has no CPU port" in str(e)
         ):
             pytest.skip(
                 f"Interface {iname} missing template, context, or has compilation errors for backend {backend}: {e}"

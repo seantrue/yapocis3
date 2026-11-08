@@ -20,6 +20,7 @@ _MODULES = {
     "cuda": "yapocis.cu.kernel_manager",
     "numba": "yapocis.numbax.kernel_manager",
     "numbax": "yapocis.numbax.kernel_manager",
+    "rustcpu": "yapocis.rustcpu.kernel_manager",
 }
 
 

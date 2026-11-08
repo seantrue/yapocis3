@@ -15,7 +15,9 @@ def infer_wh_from_args(args: tuple[Any, ...]) -> tuple[int, int] | None:
 
 _backends = None
 
-ALL_BACKENDS = ("ocl", "metal", "cuda", "numbax")
+# rustcpu: yapocis-rs's CPU backend (Rust ports of the OpenCL kernels), through the
+# yapocis_rs extension module.
+ALL_BACKENDS = ("ocl", "metal", "cuda", "numbax", "rustcpu")
 
 # Alternate names accepted wherever a backend is named (YAPOCIS_BACKEND, get_manager)
 BACKEND_ALIASES = {
@@ -63,6 +65,12 @@ def get_backends() -> list[str]:
 
             backends.append("numbax")
         except:
+            pass
+        try:
+            import yapocis_rs  # noqa: F401
+
+            backends.append("rustcpu")
+        except ImportError:
             pass
         _backends = backends
     return _backends
@@ -129,6 +137,11 @@ def get_manager(backend: str | None = None):
         from yapocis.numbax import kernel_manager as km
 
         return km
+    elif backend == "rustcpu":
+        # yapocis-rs's CPU backend (Rust ports of the OpenCL kernels)
+        from yapocis.rustcpu import kernel_manager as km
+
+        return km
     raise ValueError(f"Unknown backend: {backend}")
 
 
@@ -191,6 +204,11 @@ def get_backend_infos() -> dict[str, Any]:
                     backend_info[backend]["devices"] = [
                         f"CPU: {platform.processor() or platform.machine()}"
                     ]
+
+                elif backend == "rustcpu":
+                    import yapocis_rs
+
+                    backend_info[backend]["devices"] = [yapocis_rs.Device().name]
 
             except Exception as e:
                 backend_info[backend]["error"] = str(e)
@@ -282,10 +300,10 @@ def get_test_devices(
     3. Else return all available devices
 
     Device filters are only applied to GPU backends (ocl, metal, cuda).
-    CPU-only backends (numbax) always return their single device.
+    CPU-only backends (numbax, rustcpu) always return their single device.
 
     Args:
-        backend: Backend name (ocl, metal, cuda, numbax)
+        backend: Backend name (ocl, metal, cuda, numbax, rustcpu)
         device_filters: Optional list of device name filters
 
     Returns:
@@ -334,6 +352,12 @@ def get_test_devices(
             # Numba is CPU-based, single "device"
             # Don't apply device filters to CPU-only backends
             devices["CPU (Numba JIT)"] = "numbax:cpu"
+
+        elif backend == "rustcpu":
+            # yapocis-rs's one CPU device, when its engine is installed; filters don't apply
+            import yapocis_rs  # noqa: F401  (ImportError: no devices)
+
+            devices["cpu"] = "rustcpu:cpu"
 
     except Exception:
         # Silently skip backends that fail to enumerate devices

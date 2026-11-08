@@ -221,6 +221,7 @@ make test-ocl    # OpenCL tests
 make test-cuda   # CUDA tests
 make test-metal  # Metal tests
 make test-numbax # Numba tests
+make test-rustcpu # yapocis-rs's CPU backend (needs the yapocis-rs wheel)
 
 # Code quality
 make format      # Format with isort and black
