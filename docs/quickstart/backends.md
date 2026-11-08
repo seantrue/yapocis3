@@ -1,6 +1,6 @@
 # Choosing a Backend
 
-Yapocis supports four compute backends. This guide helps you choose the right one for your use case.
+Yapocis supports five compute backends. This guide helps you choose the right one for your use case.
 
 ## Available Backends
 
@@ -10,6 +10,7 @@ Yapocis supports four compute backends. This guide helps you choose the right on
 | Metal | Apple GPUs | macOS only | Excellent |
 | CUDA | NVIDIA GPUs | Linux, Windows | Excellent |
 | Numba | CPU fallback | All | Good |
+| rustcpu | CPU fallback, multithreaded | All (needs the `yapocis-rs` wheel) | Good |
 
 ## Backend Selection
 
@@ -20,6 +21,7 @@ export YAPOCIS_BACKEND=ocl    # OpenCL
 export YAPOCIS_BACKEND=metal  # Metal
 export YAPOCIS_BACKEND=cuda   # CUDA
 export YAPOCIS_BACKEND=numba  # Numba
+export YAPOCIS_BACKEND=rustcpu  # yapocis-rs's CPU backend
 ```
 
 ### Programmatic Selection
@@ -114,6 +116,31 @@ print(f"Available: {backends}")
 - Single-threaded by default
 
 **Best for:** Development, testing, CI servers, CPU-only machines
+
+### rustcpu
+
+yapocis-rs's CPU backend, called through its Python bindings: each kernel is a
+Rust port of its OpenCL source, run on every core, with argument derivation and
+dispatch sizes done by the Rust runtime. Install the wheel built from
+yapocis-rs's `bindings/python`:
+
+```bash
+cd yapocis-rs/bindings/python
+uvx maturin build --release -i /path/to/venv/bin/python --out dist
+uv pip install --python /path/to/venv/bin/python --no-deps dist/yapocis_rs-*.whl
+```
+
+**Pros:**
+- No GPU or OpenCL driver required
+- Results follow the OpenCL kernels (Numba's ports differ in places)
+- Parallel across cores
+
+**Cons:**
+- Only interfaces yapocis-rs has ported (those in its bundle); others fail to
+  load with "has no CPU port"
+- A kernel changed here needs the matching change in yapocis-rs's port
+
+**Best for:** CPU-only machines where OpenCL-identical results matter
 
 ## Performance Comparison
 

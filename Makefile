@@ -200,6 +200,11 @@ test-cuda: venv ## Run tests with CUDA backend
 	YAPOCIS_BACKEND=cuda $(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)
 
 .PHONY: test-all-backends
+.PHONY: test-rustcpu
+test-rustcpu: venv ## Run tests with yapocis-rs's CPU backend (needs the yapocis-rs wheel)
+	@echo "$(YELLOW)Running rustcpu tests...$(NC)"
+	YAPOCIS_BACKEND=rustcpu YAPOCIS_TEST_BACKENDS=rustcpu $(VENV_PYTHON) -m pytest $(PYTEST_ARGS) $(TESTS_DIR)
+
 test-all-backends: test-ocl test-metal test-numbax ## Run tests on all available backends
 
 .PHONY: test-smoke

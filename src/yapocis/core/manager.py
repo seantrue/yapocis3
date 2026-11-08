@@ -31,6 +31,11 @@ def get_manager(backend: str | None = None):
         from yapocis.numbax import kernel_manager as km
 
         return km
+    elif backend == "rustcpu":
+        # yapocis-rs's CPU backend (Rust ports of the OpenCL kernels)
+        from yapocis.rustcpu import kernel_manager as km
+
+        return km
     raise ValueError(f"Unknown backend: {backend}")
 
 
