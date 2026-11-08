@@ -51,6 +51,33 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2026-11-08: The `rustcpu` backend: yapocis-rs's CPU ports from Python (Claude Opus 5.5)
+
+The maintainer asked for a way to "tell yapocis3 to use the yapocis3-rs implementation". They rejected my first sketch, in which `YAPOCIS_DEVICE` would also choose the Rust runtime's backend. Their question, whether `YAPOCIS_BACKEND=rust YAPOCIS_DEVICE=cuda` would then do something, showed that I was overloading a device selector. They then said "go ahead with rustcpu". Later: "Make sure that yapocis (python) survives not having the rustcpu engine available."
+
+**What the AI did:**
+- **The backend:** `src/yapocis/rustcpu/kernel_manager.py` (~280 LOC), a kernel manager on yapocis-rs's Python bindings (module `yapocis_rs`, from yapocis-rs's `bindings/python`, merged there as PR #16).
+  - **Loading:** it renders an interface's manifest entry and OpenCL source with `codegen.bundle.build_interface_entry`, as `yapocis-tools bundle` does. yapocis-rs then derives the arguments, sizes the launch and runs a Rust port of each OpenCL kernel on every core.
+  - **Calls:** kernels take `global_size` and `local_size` and return outputs as the GPU backends do. NumPy arrays serve as device buffers, as on numbax.
+  - **Missing ports:** interfaces outside yapocis-rs's bundle (the 26 yapocis_external interfaces) fail to load with "has no CPU port".
+- **Registration:** `rustcpu` is registered in `yapocis.core` and `core.manager` (~30 LOC), detected by importing `yapocis_rs`, with one device, `cpu`.
+- **Docs:** a `rustcpu` section in the backend guide, and `make test-rustcpu`.
+- **Tests:** `test_backend_selection` maps `rustcpu` to its module, and `test_smoke` skips "has no CPU port" as it already skips templates a backend can't build.
+- **Without the engine:**
+  - `rustcpu` drops out of the available and test backends, and `YAPOCIS_BACKEND=rustcpu` gives the usual "not one of available backends" error;
+  - an explicit `backend="rustcpu"` raises an `ImportError` saying which wheel to install;
+  - `get_test_devices("rustcpu")` lists nothing.
+
+**Verified (M4 MacBook):**
+- **With the wheel:** the suite on numbax and rustcpu gave 958 passed, 33 skipped, 0 failed. `tests/lib` and `tests/backend` on rustcpu alone show no failures.
+- **Without the engine:** a stub module made `import yapocis_rs` fail (`claude-debug/no_yapocis_rs`). The full suite on the default backends (OpenCL, Metal, numbax) gave 1,305 passed and 1 failed: `test_truetrace_fill.py::test_gpu_field_is_not_transposed_on_a_non_square_mask`.
+  - **That failure predates this branch:** the same test fails in the full suite on `main` (which has no rustcpu code), and passes when its file runs alone, so it depends on test order.
+
+**Defects and corrections:**
+- **Upgraded NumPy:** installing the wheel into this venv first upgraded NumPy from 2.3.3 to 2.5.4. I caught it from the install output and restored 2.3.3. The docs now say to install with `--no-deps`.
+- **Missing-engine errors:** an explicit `rustcpu` request with no engine gave a bare `No module named 'yapocis_rs'`, and the device listing showed a device that couldn't open. Both were found by the no-engine probe the maintainer's request prompted, and both are fixed.
+- **Missing ledger entry:** this branch's first commit (b353b72) went out without this entry. My edit of this file was refused, and the commit ran anyway because it was chained after the edit. The entry was added in the next commit.
+
 ### 2026-11-07: CUDA's 2-D simplex noise matches the other backends (Claude Opus 5.5)
 
 The maintainer: "Make cuda noise match". On the RTX 3080, `test_simplex2d_device_matches_the_numba_port[cuda]` failed at every size. CUDA's `simplex2d` took its noise coordinates from CUDA's swapped `X`/`Y` helper macros, which made its field the OpenCL, Metal and numba field transposed.
