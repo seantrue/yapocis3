@@ -78,6 +78,8 @@ The maintainer asked for a way to "tell yapocis3 to use the yapocis3-rs implemen
 - **Missing-engine errors:** an explicit `rustcpu` request with no engine gave a bare `No module named 'yapocis_rs'`, and the device listing showed a device that couldn't open. Both were found by the no-engine probe the maintainer's request prompted, and both are fixed.
 - **Missing ledger entry:** this branch's first commit (b353b72) went out without this entry. My edit of this file was refused, and the commit ran anyway because it was chained after the edit. The entry was added in the next commit.
 
+**Merged:** PR #77, as `9d4ec87`. This repository has no CI, so the local runs above were the check. The working worktree was removed afterwards; its untracked `claude-debug` material (the no-engine stub, the probe script, the suite logs) was moved into the main checkout first and checked byte for byte.
+
 ### 2026-11-07: CUDA's 2-D simplex noise matches the other backends (Claude Opus 5.5)
 
 The maintainer: "Make cuda noise match". On the RTX 3080, `test_simplex2d_device_matches_the_numba_port[cuda]` failed at every size. CUDA's `simplex2d` took its noise coordinates from CUDA's swapped `X`/`Y` helper macros, which made its field the OpenCL, Metal and numba field transposed.
