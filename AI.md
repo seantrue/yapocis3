@@ -51,6 +51,18 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2026-11-09: Dependabot's eight bumps, as one lock update (Claude Opus 5.5)
+
+**What the maintainer asked for:** "Merge any unmerged parts of this whole project", including the open Dependabot PRs.
+
+**What the AI did:** one `uv lock --upgrade-package` for all eight bumps. They are black 26.10.1, certifi 2026.10.19, fsspec 2026.6.0, mako 1.4.2, pillow 12.3.0, setuptools 84.1.0, torch 2.13.0 and uv 0.13.4, bringing torchvision 0.28.0, triton 3.7.1, pathspec 1.1.1 and pytokens 0.4.1 with them. Merged one by one, the PRs would each conflict on `uv.lock`.
+
+**Left out:** Dependabot's own `pyproject.toml` edit for mako. It rewrote `"mako.*"` in mypy's list of untyped modules to `"mako>=1.4.2"`, which would have broken that override.
+
+**Checked:** `uv sync --extra all-backends --group dev`, then `pytest -m "not performance"` on the M4. About 1,550 tests, no failures; the skips are rustcpu interfaces without a CPU port.
+
+**Defect, caught before commit:** `uv sync` removed a `yapocis-rs` wheel that had been installed by hand into `.venv`. It was reinstalled from the same wheel.
+
 ### 2026-11-08: The `rustcpu` backend: yapocis-rs's CPU ports from Python (Claude Opus 5.5)
 
 The maintainer asked for a way to "tell yapocis3 to use the yapocis3-rs implementation". They rejected my first sketch, in which `YAPOCIS_DEVICE` would also choose the Rust runtime's backend. Their question, whether `YAPOCIS_BACKEND=rust YAPOCIS_DEVICE=cuda` would then do something, showed that I was overloading a device selector. They then said "go ahead with rustcpu". Later: "Make sure that yapocis (python) survives not having the rustcpu engine available."
