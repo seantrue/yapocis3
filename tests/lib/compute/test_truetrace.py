@@ -212,9 +212,10 @@ def test_signed_field_is_exact_near_the_boundary(backend, monkeypatch):
     "numbax" not in get_backends(), reason="numbax backend not available"
 )
 def test_numbax_jump_flood_matches_the_device_kernels():
-    """numbax's field is OpenCL's and rustcpu's to the bit; Metal and CUDA differ from
-    them by sqrt rounding (~1e-6), which now and then flips a tie (up to ~0.33 px on
-    under 0.01% of pixels). Run once, comparing numbax with each other backend."""
+    """numbax's field is rustcpu's to the bit. The GPU backends differ from it by sqrt
+    rounding (~1e-6), which now and then flips a tie (up to ~0.33 px on under 0.01% of
+    pixels): Metal and CUDA, and NVIDIA's OpenCL. Apple's OpenCL happens to match to the
+    bit, which isn't required. Run once, comparing numbax with each other backend."""
     others = [b for b in get_test_backends() if b != "numbax"]
     if not others:
         pytest.skip("no other backend to compare numbax with")
@@ -233,7 +234,7 @@ def test_numbax_jump_flood_matches_the_device_kernels():
         assert np.isfinite(mine).all(), name
         for b, tracer in tracers.items():
             theirs = _field(tracer, mask)
-            if b in ("ocl", "rustcpu"):
+            if b == "rustcpu":
                 assert np.array_equal(mine, theirs), (name, b)
             else:
                 off = np.abs(mine - theirs) > 1e-4

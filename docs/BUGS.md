@@ -54,7 +54,7 @@ The list was started on 2026-11-11 by the plum coordinator, from issues already 
 - Report: "numba truetrace: init_seed_from_mask and jfa_step are stubs, so iso has no effect"
 - Cause: confirmed. The numbax field is ±1e30 everywhere. The issue's suggested fix would give −2 × SDF (see the comment on the issue).
 - Fix: option B, an `@njit` port of OpenCL's jump flood (approved 2026-11-11). Plan: `~/workspace/plum/docs/plans/2026-11-11-yapocis3-67-truetrace-numba-sdf.md`.
-- Fixed: 2026-11-11, in the numba batch: an `@njit` port of the OpenCL jump flood, bit-identical to OpenCL and rustcpu on the test masks.
+- Fixed: 2026-11-11, in the numba batch: an `@njit` port of the OpenCL jump flood, bit-identical to rustcpu, and within sqrt rounding of the GPU backends, on the test masks.
 - Issue: #67
 
 ### B8. The rustcpu kernel cache key keeps weights to only 8 decimal places, and elides long arrays
