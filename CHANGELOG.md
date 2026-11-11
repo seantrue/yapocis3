@@ -7,21 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Backfilled on 2026-11-11 from the history since 1.0.0 (19 pull requests, #51 to #79, and the `2c7c9b5` merge of main into dev), for review before the 1.1.0 release.
+Backfilled on 2026-11-11 from the history since 1.0.0 (19 pull requests, #51 to #79; four direct commits on main, `cca8f8a`, `a42bfab`, `80884c3` and `6a90822`; and the `2c7c9b5` merge of main into dev), for review before the 1.1.0 release.
 
 ### Added
 
 - The `rustcpu` backend: `YAPOCIS_BACKEND=rustcpu` runs yapocis-rs's CPU ports of the OpenCL kernels from Python through the `yapocis_rs` wheel, with one device, `cpu`, and `make test-rustcpu`. Without the wheel the backend is simply unavailable; an explicit `backend="rustcpu"` raises an `ImportError` naming the wheel. Interfaces without a CPU port fail to load with "has no CPU port" (#77)
 - `yapocis-tools bundle`: renders every interface for OpenCL, Metal and CUDA without a device and writes `manifest.json` and the sources, for the Rust port (yapocis-rs), with derivation (`--fixtures`), kernel parity (`--parity`) and library parity (`--parity-lib`) fixtures (#54)
-- `yapocis-tools bundle --host-fixtures`: numpy results for yapocis-rs's npexact to replay bit for bit (elementwise, extrema, order, fft and complex64 multiply sections), and `bundle --project-only` (`2c7c9b5`, #72, #74)
-- truetrace: `trace_mask`, and `trace_regions` and `regions_svg`, which return the traced shapes and write them as vector SVG, as polygons or cubics (`2c7c9b5`, #68)
+- `yapocis-tools bundle --host-fixtures`: numpy results for yapocis-rs's npexact to replay bit for bit (elementwise, extrema, order, fft and complex64 multiply sections), and `bundle --project-only` (`cca8f8a`, #72, #74)
+- truetrace: `trace_mask`, and `trace_regions` and `regions_svg`, which return the traced shapes and write them as vector SVG, as polygons or cubics (`cca8f8a`, #68)
 - Parity fixtures: `regions_svg` documents in the truetrace cases (#69); `extent_freetype` cases, and the HSI plane kernels at their real shape (#71)
-- `gaussian_ladder`: the convolvesep weight ladder for the default `GaussianWeights` as float64 literals, so every host computes the same weights (`2c7c9b5`)
+- `gaussian_ladder`: the convolvesep weight ladder for the default `GaussianWeights` as float64 literals, so every host computes the same weights (`cca8f8a`)
 - `corgi_rgba.png`, an RGBA test image (#53)
 
 ### Changed
 
-- truetrace fills traced regions with an even-odd scanline fill (`fill_polygons`, `fill_regions`) in place of earcut and the graphics kernel, and chains segment endpoints exactly (`2c7c9b5`)
+- truetrace fills traced regions with an even-odd scanline fill (`fill_polygons`, `fill_regions`) in place of earcut and the graphics kernel, and chains segment endpoints exactly (`cca8f8a`)
 - numbax: project `convolve.py` and `convolvesep.py` overrides no longer apply to the `convolve` and `convolvesep` interfaces, whose kernels are built from the context (#64)
 - The simplex `tileable` docs say what it does: it wraps the gradient lattice with a period of `max(1, int(N / frequency))` cells; the output is not seamless along x or y (#65; seamless tiling is #83)
 - Dependencies: Dependabot's eight bumps as one lock update (#79)
@@ -40,8 +40,8 @@ Backfilled on 2026-11-11 from the history since 1.0.0 (19 pull requests, #51 to 
 - `xyz2xyY` of black (X + Y + Z == 0) gives x = y = 0 on OpenCL, Metal, CUDA and numbax, instead of NaN on the GPUs and an epsilon-shifted value on numbax. rustcpu still gives NaN until the `yapocis_rs` wheel is rebuilt from yapocis-rs's fix (#66)
 - numbax `xyY2xyz` with y == 0 gives (0, 0, 0), as the other backends do, instead of about 1.5e19
 - numbax truetrace: the jump-flood kernels were stubs, so `iso` had no effect on numbax; they are now a port of the OpenCL jump flood (#67)
-- truetrace on CUDA: every traced shape was transposed (`2c7c9b5`)
-- truetrace: an `iso` above 0.5 fused the two outlines of 1 px strokes into black wedges (`2c7c9b5`)
+- truetrace on CUDA: every traced shape was transposed (`a42bfab`)
+- truetrace: an `iso` above 0.5 fused the two outlines of 1 px strokes into black wedges (`cca8f8a`)
 - Metal truetrace: `marching_squares` used a lambda, which older Metal SDKs reject (#63)
 - `write_svg_regions` with `curve="cubic"` overwrote each outer ring with its polygon, and with `curve="none"` raised `UnboundLocalError` (#70)
 - The device kernels and the numba port agree: histogram bins with a non-zero `low`, Mandelbrot's first escape, the numba simplex hash (32-bit, as on the devices) and its non-square layout, and the numba stretch's clamp (#75)
