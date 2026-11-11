@@ -49,8 +49,21 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~45 lines across the FFT templates, the HSI interface and the dispatch evaluator, plus 2 test cases: FFT butterfly race, HSI dispatch size, PoCL `get_global_size` link failure (2026-10-26)
   - ~41 lines across 13 files: text file I/O as UTF-8, `\n` line endings for exports (2026-10-26)
   - ~190 lines of kernel and library code, ~630 of tests, ~45 of docs and changelog: the numba batch, #64, #66, #67, #82, the rustcpu cache key, numbax `xyY2xyz`, #65 tests (2026-11-11)
+  - ~43 lines of tests removed: the temporary rustcpu #66 xfail, after the `yapocis_rs` wheel was rebuilt from yapocis-rs `9ebcac9` (2026-11-11)
 
 ## Detailed Contributions
+
+### 2026-11-11: #66 closed on rustcpu, the temporary xfail removed, and a correction about CUDA (Claude Opus 5.5)
+
+**What the maintainer asked for:** "go for 2 and 2b, CP" (plum `docs/QUEUE.md` D5.27), after "Fold into 2b" for the stale CUDA line (D5.24) and "M" for yapocis-rs PR #22 (D5.26).
+
+**rustcpu black fix: yapocis-rs `9ebcac9` (PR #22).** The `yapocis_rs` wheel in this checkout's `.venv` was rebuilt from that commit (`maturin build --release --locked`, installed with `uv pip install --no-deps`; no other package changed). With the old wheel, rustcpu's `xyz2xyY` gave (NaN, NaN, 0) for black and (inf, −inf, −0.5) for (0.5, −0.5, 0); with the new one, (0, 0, 0) and (0, 0, −0.5). So the temporary behaviour-gated xfail from the numba batch comes out: `_rustcpu_black_is_nan`, `_black_backends` and the xfail marker are gone from `tests/lib/processing/test_colormath.py`, and the three #66 tests parametrize over `get_test_backends()` like the rest. A regression back to NaN on rustcpu now fails instead of xfailing. `docs/BUGS.md` B2 moves to Fixed, and the CHANGELOG's #66 line no longer says rustcpu gives NaN. ~43 LOC removed, ~3 changed.
+
+**Correction to the numba batch entry below.** Its "Not verified" line said CUDA and NVIDIA OpenCL weren't run. They were, before the merge: the plum coordinator ran the full suite with `YAPOCIS_BACKEND=cuda` on yellowfin's RTX 3080 at `3596ce0`, with the maintainer's approval ("Verify CUDA on yellowfin, you can use the 3080"): 1,317 passed, 23 skipped, 0 failed. `main` at `d1fb345`, before the batch, on the same GPU: 1,263 passed, 18 skipped, 1 failed (the non-square truetrace test that #67 and #82 fixed). The old line is kept, with a note pointing here. Only PoCL remains unverified. The Tesla P40 run the batch plan mentioned was not done.
+
+**Verified (M4 Max, this branch, the rebuilt wheel):** `tests/lib/processing/test_colormath.py` with `YAPOCIS_TEST_BACKENDS=ocl,metal,numbax,rustcpu`: 54 passed, none xfailed. `make test-rustcpu`: 661 passed, 45 skipped, 0 xfailed, 1 failed; the batch's run gave 658 passed and 3 xfailed, so the three former xfails now pass. The failure is `test_kernel_template_cache.py::test_old_compiled_modules_are_removed`, caused by the Mako redirect used for the run, as in the batch; that file passes (4 passed) without the redirect. **Not verified:** CUDA, NVIDIA OpenCL and PoCL for this change (it touches only tests and docs); the P40.
+
+**Division of labor:** the maintainer made the decisions; the plum coordinator ran the yellowfin CUDA check; this entry's implementer rebuilt the wheel and wrote the change.
 
 ### 2026-11-11: The numba batch: #64, #66, #67, #82, the rustcpu cache key, numbax xyY2xyz, #65 tests (Claude Opus 5.5)
 
@@ -94,7 +107,7 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 - yapocis_external's convolvesep users (`tests/test_gaussian.py`, `tests/test_dog_yapocis.py`) on numbax against this checkout: 20 passed.
 - The docs examples in `docs/library/simplex.md` and `colormath.md` run (`yapocis.scripts.doctest_examples`).
 
-**Not verified:** CUDA (yellowfin is production, so it wasn't run in this step), PoCL and NVIDIA OpenCL. The per-backend targets and the full runs started at commit 7; the lint follow-up's annotation-only edits landed in the tree while they ran, and its touched test files were re-run afterwards (113 passed, 3 xfailed).
+**Not verified:** CUDA (yellowfin is production, so it wasn't run in this step), PoCL and NVIDIA OpenCL. *(Corrected 2026-11-11, in the step-2b entry above: CUDA and NVIDIA OpenCL were run on yellowfin's RTX 3080 at `3596ce0` before the merge; only PoCL remains unverified.)* The per-backend targets and the full runs started at commit 7; the lint follow-up's annotation-only edits landed in the tree while they ran, and its touched test files were re-run afterwards (113 passed, 3 xfailed).
 
 **Division of labor:** the maintainer made every decision (D1–D5); the plum coordinator, planner and evaluator agents planned and reviewed the batch; this entry's implementer wrote the code, tests and docs from the approved plan.
 

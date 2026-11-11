@@ -6,14 +6,6 @@ The list was started on 2026-11-11 by the plum coordinator, from issues already 
 
 ## Open
 
-### B2. colormath `xyz2xyY` of black: NaN on OpenCL, 0 on numba
-
-- Reported: 2026-10-29
-- Report: "colormath xyz2xyY of black: NaN on OpenCL, 0 on numba"
-- Fix: Option Z, black gives 0 on every backend, with an explicit `sum != 0` check (approved 2026-11-11). The batch also fixes numbax `xyY2xyz` at y == 0 (1.5e19), matching the GPUs, which zero Y. Plan: `~/workspace/plum/docs/plans/2026-11-11-yapocis3-66-xyz2xyY-black.md`.
-- Status: 2026-11-11, the OpenCL, Metal, CUDA and numbax kernels are fixed in the numba batch. rustcpu still gives NaN until yapocis-rs is fixed and the `yapocis_rs` wheel is rebuilt; its three test cases xfail until then. This entry closes then.
-- Issue: #66
-
 ### B4. GPU `_fast` convolve kernels return partial output
 
 - Reported: 2026-11-11
@@ -29,6 +21,15 @@ The list was started on 2026-11-11 by the plum coordinator, from issues already 
 - Issue: #81
 
 ## Fixed
+
+### B2. colormath `xyz2xyY` of black: NaN on OpenCL, 0 on numba
+
+- Reported: 2026-10-29
+- Report: "colormath xyz2xyY of black: NaN on OpenCL, 0 on numba"
+- Fix: Option Z, black gives 0 on every backend, with an explicit `sum != 0` check (approved 2026-11-11). The batch also fixes numbax `xyY2xyz` at y == 0 (1.5e19), matching the GPUs, which zero Y. Plan: `~/workspace/plum/docs/plans/2026-11-11-yapocis3-66-xyz2xyY-black.md`.
+- Status: 2026-11-11, the OpenCL, Metal, CUDA and numbax kernels are fixed in the numba batch. rustcpu still gave NaN until yapocis-rs was fixed and the `yapocis_rs` wheel rebuilt; its three test cases carried a temporary xfail until then.
+- Fixed: 2026-11-11. rustcpu: yapocis-rs PR #22 (`9ebcac9`) fixed the CPU port, and the step-2b PR (branch `fix/66-rustcpu-xfail`) removes the temporary xfail; with a `yapocis_rs` wheel built from `9ebcac9`, the rustcpu cases pass unmarked.
+- Issue: #66
 
 ### B7. AI.md: wrong statements about the 3-D `hash % 12` and the old numba loop
 
