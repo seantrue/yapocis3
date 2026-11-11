@@ -40,6 +40,8 @@ print(f"XYZ shape: {xyz.shape}")
 
 Convert XYZ to xyY (chromaticity coordinates + luminance).
 
+Black, or any pixel whose X + Y + Z is exactly 0, has no chromaticity: it gives x = y = 0 (and Y as given) on every backend, rather than NaN. That includes a mixed-sign pixel such as (0.5, −0.5, 0). A sum that is denormal (under about 1.2e-38) is flushed to 0 on the GPU backends, so it gives 0 there and a finite chromaticity on the CPU backends.
+
 ```python
 # Using xyz from previous example
 xyY = cm.xyz2xyY(xyz)

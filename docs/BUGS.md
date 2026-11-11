@@ -11,6 +11,7 @@ The list was started on 2026-11-11 by the plum coordinator, from issues already 
 - Reported: 2026-10-29
 - Report: "colormath xyz2xyY of black: NaN on OpenCL, 0 on numba"
 - Fix: Option Z, black gives 0 on every backend, with an explicit `sum != 0` check (approved 2026-11-11). The batch also fixes numbax `xyY2xyz` at y == 0 (1.5e19), matching the GPUs, which zero Y. Plan: `~/workspace/plum/docs/plans/2026-11-11-yapocis3-66-xyz2xyY-black.md`.
+- Status: 2026-11-11, the OpenCL, Metal, CUDA and numbax kernels are fixed in the numba batch. rustcpu still gives NaN until yapocis-rs is fixed and the `yapocis_rs` wheel is rebuilt; its three test cases xfail until then. This entry closes then.
 - Issue: #66
 
 ### B3. numba truetrace: `init_seed_from_mask` and `jfa_step` are stubs, so iso has no effect
