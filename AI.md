@@ -51,6 +51,12 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2026-11-11: The numba batch: #64, #66, #67, #82, the rustcpu cache key, numbax xyY2xyz, #65 tests (Claude Opus 5.5)
+
+**What the maintainer asked for:** the plum coordinator planned the batch; the maintainer's decisions are in its `docs/QUEUE.md` (D1–D5). On #67: "1 - B 2 - Yes 3 - Batch 4 - yes". On #64: "1-a 2- own 3 ?- this 4- patch 5-accept 6-no". On #66: "Z . With check. Patch. Yapocis first. Accept 0". On #82: "Fold into this batch". On `docs/BUGS.md` and `docs/FEATURES.md`: "Commit 0 of this PR". Then "Go" and "CP".
+
+**Tracking:** `docs/BUGS.md` and `docs/FEATURES.md`, which the coordinator started on 2026-11-11 from the open issues, are now in git. Each fix below moves its entry to Fixed.
+
 ### 2026-11-09: Dependabot's eight bumps, as one lock update (Claude Opus 5.5)
 
 **What the maintainer asked for:** "Merge any unmerged parts of this whole project", including the open Dependabot PRs.
