@@ -773,9 +773,11 @@ def backend_comparison(request):
                 print(f"❌ Failed on {backend}: {e}")
                 results[backend] = None
 
-        # Restore original backend
+        # Restore original backend, or remove it when there was none
         if original_backend:
             os.environ["YAPOCIS_BACKEND"] = original_backend
+        else:
+            os.environ.pop("YAPOCIS_BACKEND", None)
 
         return results
 

@@ -28,15 +28,6 @@ The list was started on 2026-11-11 by the plum coordinator, from issues already 
 - Context: `lib/truetrace.py:53-54`.
 - Issue: #81
 
-### B6. Tests leak `YAPOCIS_BACKEND`
-
-- Reported: 2026-11-11
-- Report: "Tests leak YAPOCIS_BACKEND, so later unparametrized tests run on the last backend collected"
-- Context: `tests/async/test_performance.py:57-58`, `tests/conftest.py:310-335`, `tests/__init__.py:753-778`.
-- Cause: reproduced 2026-11-11. With `YAPOCIS_TEST_BACKENDS=ocl,metal,numbax`, running `test_performance.py` first makes `test_gpu_field_is_not_transposed_on_a_non_square_mask` fail.
-- Fix: an autouse fixture that restores `YAPOCIS_BACKEND` and `YAPOCIS_DEVICE`, folded into the numba batch (the maintainer's decision, 2026-11-11).
-- Issue: #82
-
 ### B7. AI.md: wrong statements about the 3-D `hash % 12` and the old numba loop
 
 - Reported: 2026-11-11
@@ -45,6 +36,16 @@ The list was started on 2026-11-11 by the plum coordinator, from issues already 
 - Issue: #84
 
 ## Fixed
+
+### B6. Tests leak `YAPOCIS_BACKEND`
+
+- Reported: 2026-11-11
+- Report: "Tests leak YAPOCIS_BACKEND, so later unparametrized tests run on the last backend collected"
+- Context: `tests/async/test_performance.py:57-58`, `tests/conftest.py:310-335`, `tests/__init__.py:753-778`.
+- Cause: reproduced 2026-11-11. With `YAPOCIS_TEST_BACKENDS=ocl,metal,numbax`, running `test_performance.py` first makes `test_gpu_field_is_not_transposed_on_a_non_square_mask` fail.
+- Fix: an autouse fixture that restores `YAPOCIS_BACKEND` and `YAPOCIS_DEVICE`, folded into the numba batch (the maintainer's decision, 2026-11-11).
+- Fixed: 2026-11-11, in the numba batch: an autouse fixture in `tests/conftest.py` restores `YAPOCIS_BACKEND`, `YAPOCIS_DEVICE`, `YAPOCIS_ASYNC` and `YAPOCIS_ASYNC_WRITE` after every test, and `backend_comparison` and `tests/__init__.py` remove the variable when it was unset.
+- Issue: #82
 
 ### B3. numba truetrace: `init_seed_from_mask` and `jfa_step` are stubs, so iso has no effect
 
