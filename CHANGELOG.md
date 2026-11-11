@@ -37,7 +37,8 @@ Backfilled on 2026-11-11 from the history since 1.0.0 (19 pull requests, #51 to 
 - Text files are read and written as UTF-8 on every platform. On Windows the default encoding (cp1252) made `yapocis-tools bundle` fail on kernel sources with non-ASCII characters (`∂`), and the bundle, fixture and parity writers now also write `\n` line endings, so an export is byte-identical on Windows, Linux and macOS
 - numbax: a second `Convolve1D` (or convolvesep set) with the same name ran the first one's weights; a kernel named like a module global (`np`) broke `convolve.py`; threads building same-name kernels raced (#64)
 - rustcpu: kernels whose weights differed past the 8th decimal place, in the middle of an array over 1000 elements, or under a lowered `np.set_printoptions` precision shared one cached program
-- `xyz2xyY` of black (X + Y + Z == 0) gives x = y = 0 on OpenCL, Metal, CUDA and numbax, instead of NaN on the GPUs and an epsilon-shifted value on numbax. rustcpu still gives NaN until the `yapocis_rs` wheel is rebuilt from yapocis-rs's fix (#66)
+- `xyz2xyY` of black (X + Y + Z == 0) gives x = y = 0 on OpenCL, Metal, CUDA and numbax, instead of NaN on the GPUs and an epsilon-shifted value on numbax (#66)
+- rustcpu: `xyz2xyY` of black gives x = y = 0 with a `yapocis_rs` wheel built from yapocis-rs `9ebcac9` or later (yapocis-rs #22); the temporary rustcpu xfail on the #66 tests is removed (#66)
 - numbax `xyY2xyz` with y == 0 gives (0, 0, 0), as the other backends do, instead of about 1.5e19
 - numbax truetrace: the jump-flood kernels were stubs, so `iso` had no effect on numbax; they are now a port of the OpenCL jump flood (#67)
 - truetrace on CUDA: every traced shape was transposed (`a42bfab`)

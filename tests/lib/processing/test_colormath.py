@@ -213,47 +213,7 @@ def _px(rows):
     return np.ascontiguousarray(np.array(rows, np.float32).reshape(1, -1, 3))
 
 
-def _rustcpu_black_is_nan() -> bool:
-    """True only when the installed yapocis_rs predates yapocis-rs's colormath black fix.
-
-    Runs at collection with an explicit backend, so the environment can't reach it.
-    """
-    if "rustcpu" not in get_test_backends():
-        return False
-    try:
-        out = Colormath(backend="rustcpu").xyz2xyY(np.zeros((1, 1, 3), np.float32))
-    except Exception:
-        return False
-    return bool(np.isnan(np.asarray(out)).any())
-
-
-def _black_backends():
-    """get_test_backends(), with rustcpu marked xfail while its wheel still gives NaN.
-
-    Temporary: remove with the yapocis_rs wheel rebuilt from yapocis-rs's fix (#66).
-    """
-    old_rustcpu = _rustcpu_black_is_nan()
-    return [
-        (
-            pytest.param(
-                b,
-                marks=pytest.mark.xfail(
-                    strict=True,
-                    reason="installed yapocis_rs predates yapocis-rs's colormath black fix "
-                    "(#66); remove with the rebuilt wheel",
-                ),
-            )
-            if b == "rustcpu" and old_rustcpu
-            else b
-        )
-        for b in get_test_backends()
-    ]
-
-
-_BLACK_BACKENDS = _black_backends()
-
-
-@pytest.mark.parametrize("backend", _BLACK_BACKENDS)
+@pytest.mark.parametrize("backend", get_test_backends())
 def test_xyz2xyY_of_black(backend, monkeypatch):
     monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     out = Colormath().xyz2xyY(_px([[0, 0, 0], [-0.0, -0.0, -0.0]])).reshape(-1, 3)
@@ -270,7 +230,7 @@ def test_xyz2xyY_keeps_chromaticity_near_black(backend, monkeypatch):
     np.testing.assert_allclose(out[:, :2], np.tile(want, (len(scales), 1)), rtol=1e-6)
 
 
-@pytest.mark.parametrize("backend", _BLACK_BACKENDS)
+@pytest.mark.parametrize("backend", get_test_backends())
 def test_black_rgb_round_trips_through_xyY(backend, monkeypatch):
     monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     cm = Colormath()
@@ -280,7 +240,7 @@ def test_black_rgb_round_trips_through_xyY(backend, monkeypatch):
     assert np.array_equal(back, np.zeros_like(back)), back
 
 
-@pytest.mark.parametrize("backend", _BLACK_BACKENDS)
+@pytest.mark.parametrize("backend", get_test_backends())
 def test_xyz2xyY_mixed_sign_zero_sum_is_zero(backend, monkeypatch):
     monkeypatch.setenv("YAPOCIS_BACKEND", backend)
     out = Colormath().xyz2xyY(_px([[0.5, -0.5, 0.0]])).reshape(-1)
