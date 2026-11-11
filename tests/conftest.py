@@ -242,6 +242,30 @@ def get_backend_device_combinations():
     return combinations
 
 
+# Tests that set these directly in os.environ must not leak them into later tests (#82):
+# a leaked YAPOCIS_BACKEND made every later unparametrized test run on the last backend set.
+_RESTORED_ENV_KEYS = (
+    "YAPOCIS_BACKEND",
+    "YAPOCIS_DEVICE",
+    "YAPOCIS_ASYNC",
+    "YAPOCIS_ASYNC_WRITE",
+)
+
+
+@pytest.fixture(autouse=True)
+def restore_yapocis_env(monkeypatch):
+    """Undo each test's changes to the YAPOCIS_* selection variables (as test_modes.py's
+    _restore_env does)."""
+    for key in _RESTORED_ENV_KEYS:
+        if key in os.environ:
+            monkeypatch.setenv(key, os.environ[key])
+        else:
+            # delenv records nothing for an absent key; setenv first records that it
+            # was unset, so undo removes whatever the test sets
+            monkeypatch.setenv(key, "")
+            monkeypatch.delenv(key)
+
+
 @pytest.fixture(autouse=True)
 def clean_yapocis_device():
     """Clean up YAPOCIS_DEVICE environment variable before each test."""
@@ -330,9 +354,11 @@ def backend_comparison(request):
                 print(f"❌ Failed on {backend}: {e}")
                 results[backend] = None
 
-        # Restore original backend
+        # Restore original backend, or remove it when there was none
         if original_backend:
             os.environ["YAPOCIS_BACKEND"] = original_backend
+        else:
+            os.environ.pop("YAPOCIS_BACKEND", None)
 
         return results
 

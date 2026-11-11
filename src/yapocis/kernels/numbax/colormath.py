@@ -566,9 +566,14 @@ def _xyz2xyY_njit(input: np.ndarray, output: np.ndarray) -> None:
         x = vin[i, 0]
         y = vin[i, 1]
         z = vin[i, 2]
-        s = x + y + z + 1e-20
-        vout[i, 0] = x / s
-        vout[i, 1] = y / s
+        s = x + y + z
+        if s == np.float32(0.0):
+            # Black (or a zero sum) has no chromaticity: x = y = 0, as on every backend.
+            vout[i, 0] = np.float32(0.0)
+            vout[i, 1] = np.float32(0.0)
+        else:
+            vout[i, 0] = x / s
+            vout[i, 1] = y / s
         vout[i, 2] = y
 
 
@@ -580,8 +585,12 @@ def xyz2xyY(input: np.ndarray, output: np.ndarray):
         x = v[:, 0]
         y = v[:, 1]
         z = v[:, 2]
-        s = (x + y + z) + 1e-20
-        out = np.stack([x / s, y / s, y], axis=-1)
+        s = x + y + z
+        zero = s == 0
+        safe = np.where(zero, np.float32(1.0), s)
+        cx = np.where(zero, np.float32(0.0), x / safe)
+        cy = np.where(zero, np.float32(0.0), y / safe)
+        out = np.stack([cx, cy, y], axis=-1)
         output[:] = out.reshape(output.shape)
     return output
 
@@ -595,12 +604,15 @@ def _xyY2xyz_njit(input: np.ndarray, output: np.ndarray) -> None:
         x = vin[i, 0]
         y = vin[i, 1]
         Yv = vin[i, 2]
-        denom = y + 1e-20
-        X = x * Yv / denom
-        Z = (1.0 - x - y) * Yv / denom
-        vout[i, 0] = X
-        vout[i, 1] = Yv
-        vout[i, 2] = Z
+        if y == np.float32(0.0):
+            # As the device kernels and rustcpu: y == 0 gives (0, 0, 0), Y included.
+            vout[i, 0] = np.float32(0.0)
+            vout[i, 1] = np.float32(0.0)
+            vout[i, 2] = np.float32(0.0)
+        else:
+            vout[i, 0] = x * Yv / y
+            vout[i, 1] = Yv
+            vout[i, 2] = (1.0 - x - y) * Yv / y
 
 
 def xyY2xyz(input: np.ndarray, output: np.ndarray):
@@ -611,8 +623,10 @@ def xyY2xyz(input: np.ndarray, output: np.ndarray):
         x = v[:, 0]
         y = v[:, 1]
         Y = v[:, 2]
-        X = x * Y / (y + 1e-20)
-        Z = ((1.0 - x - y) * Y) / (y + 1e-20)
-        out = np.stack([X, Y, Z], axis=-1)
+        zero = y == 0
+        safe = np.where(zero, np.float32(1.0), y)
+        X = np.where(zero, np.float32(0.0), x * Y / safe)
+        Z = np.where(zero, np.float32(0.0), ((1.0 - x - y) * Y) / safe)
+        out = np.stack([X, np.where(zero, np.float32(0.0), Y), Z], axis=-1)
         output[:] = out.reshape(output.shape)
     return output

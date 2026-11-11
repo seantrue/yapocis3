@@ -106,8 +106,10 @@ class Simplex(BoundKernels):
                 Controls detail scaling between octaves
                 2.0 = each octave is twice the frequency
                 Higher values = more variation between scales
-            tileable: Generate seamless tileable pattern (default: False)
-                When True, output wraps seamlessly for tiling textures
+            tileable: Wrap the gradient lattice (default: False)
+                When True, the lattice wraps with a period of max(1, int(N / frequency))
+                cells per axis and octave. The output is not seamless along x or y
+                (simplex's skewed lattice repeats along the diagonal); see #83
 
         Returns:
             np.ndarray: (height, width) array of float32 values in [0.0, 1.0]

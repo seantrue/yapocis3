@@ -30,6 +30,19 @@ _MANAGER_KWARGS = ("device_name", "debug", "options", "async_write")
 _device = None
 
 
+def _key_default(o: object) -> object:
+    """JSON for the program-cache key: arrays and numpy scalars exactly, with dtype and shape.
+
+    ``repr`` keeps only numpy's print precision (8 decimal places), elides arrays over
+    1000 elements and follows ``np.set_printoptions``, so different weights shared a key.
+    """
+    if isinstance(o, np.ndarray):
+        return ["ndarray", str(o.dtype), list(o.shape), o.tolist()]
+    if isinstance(o, np.generic):
+        return [type(o).__name__, o.item()]
+    return repr(o)
+
+
 def _engine():
     """The `yapocis_rs` module, or an ImportError saying how to install it."""
     try:
@@ -174,7 +187,7 @@ class KernelManager:
         }
         key = (
             interface_spec,
-            json.dumps(template_context, sort_keys=True, default=repr),
+            json.dumps(template_context, sort_keys=True, default=_key_default),
         )
         if key not in self._programs:
             entry, sources = build_interface_entry(

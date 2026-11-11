@@ -38,12 +38,13 @@ def _load_numba_kernel_module(interface_name: str):
     for base_dir in get_yapocis_dirs():
         if os.path.realpath(base_dir) == package_dir:
             continue
-        kernel_path = os.path.join(base_dir, "kernels", "numbax", f"{interface_name}.py")
+        kernel_path = os.path.join(
+            base_dir, "kernels", "numbax", f"{interface_name}.py"
+        )
         if os.path.exists(kernel_path):
             # Load module from file path
             spec = importlib.util.spec_from_file_location(
-                f"yapocis_ext.kernels.numbax.{interface_name}",
-                kernel_path
+                f"yapocis_ext.kernels.numbax.{interface_name}", kernel_path
             )
             if spec and spec.loader:
                 module = importlib.util.module_from_spec(spec)
@@ -59,6 +60,9 @@ def _load_numba_kernel_module(interface_name: str):
     # those caches still load instead of raising ModuleNotFoundError.
     sys.modules.setdefault(f"yapocis_ext.kernels.numbax.{interface_name}", module)
     return module
+
+
+_DYNAMIC_INTERFACES = frozenset({"convolve", "convolvesep"})
 
 
 class KernelManager:
@@ -92,62 +96,57 @@ class KernelManager:
             self.module_missing = True  # type: ignore[attr-defined]
             self.missing_module_name = f"yapocis.kernels.numbax.{interface.name}"  # type: ignore[attr-defined]
             return
-        # Wire up kernels
+        # Wire up kernels. Kernels generated from the context (convolve, convolvesep) are
+        # built for this manager only and never stored on the shared module (#64).
+        built: dict[str, dict[str, Callable]] = {}
+        mod_name = mod.__name__
         for k in interface.kernels:
             name = k.alias if k.alias else k.name
             func_name = name
-            if not hasattr(mod, func_name):
-                # Dynamic fallbacks for parameterized interfaces
-                fn = self._make_dynamic_fn(interface.name, k, mod)
-                if fn is None:
-                    # Provide a lazy stub that raises when called, so compile-only paths work
-                    def _stub(*args, **kwargs):
-                        raise NotImplementedError(
-                            f"Numba backend: function '{func_name}' not implemented in {mod_name}"
-                        )
-
-                    fn = _stub
-            else:
+            if interface.name in _DYNAMIC_INTERFACES:
+                fn = self._make_dynamic_fn(interface.name, k, built)
+            elif hasattr(mod, func_name):
                 fn = getattr(mod, func_name)
+            else:
+                fn = None
+            if fn is None:
+                # Provide a lazy stub that raises when called, so compile-only paths work
+                def _stub(*args, _f=func_name, **kwargs):
+                    raise NotImplementedError(
+                        f"Numba backend: function '{_f}' not implemented in {mod_name}"
+                    )
+
+                fn = _stub
             self.callable[k.name] = Kernel(name, fn, k.parameters, kernel_manager=self)
 
-    def _make_dynamic_fn(self, iface_name: str, kernel, mod):
-        """Create missing functions for parameterized interfaces on demand.
+    def _make_dynamic_fn(self, iface_name: str, kernel, built: dict):
+        """This manager's function for a kernel generated from the context.
 
-        Uses kernel.alias (when present) as the logical base name so that
-        extensions like "_res", "_h", and "_v" resolve to the same base
-        implementation.
+        Functions are built once per base name into ``built`` (one manager's memo),
+        never on the shared kernel module.
         """
-        name = kernel.name
-        alias = getattr(kernel, "alias", None)
+        name = kernel.alias or kernel.name
         ctx = self.context
         if iface_name == "convolve":
             from yapocis.kernels.numbax.convolve import make_convolve_functions
 
-            base = (alias or name).replace("_fast", "")
-            kmain, kfast = make_convolve_functions(base, ctx.get("conv"))
-            setattr(mod, base, kmain)
-            setattr(mod, base + "_fast", kfast)
-            # Return function matching the requested callable name
-            return getattr(mod, alias or name)
+            base = name.removesuffix("_fast")
+            if base not in built:
+                kmain, kfast = make_convolve_functions(base, ctx.get("conv"))
+                built[base] = {base: kmain, base + "_fast": kfast}
+            return built[base].get(name)
         if iface_name == "convolvesep":
             from yapocis.kernels.numbax.convolvesep import make_sep_functions
 
-            convs_list = ctx.get("convs", [])
-            convs = {n: v for (n, v) in convs_list}
-            base = alias or name
+            base = name
             # Normalize suffixes to the base kernel name
             if base.endswith(("_h", "_v", "_res")):
                 base = base.rsplit("_", 1)[0]
-            km, kh, kv = make_sep_functions(base, convs)
-            setattr(mod, base, km)
-            setattr(mod, base + "_h", kh)
-            setattr(mod, base + "_v", kv)
-            # Return function matching the requested callable name
-            return getattr(mod, alias or name)
-        if iface_name == "operators":
-            # operators provided in module statically
-            return None
+            if base not in built:
+                convs = dict(ctx.get("convs", []))
+                km, kh, kv = make_sep_functions(base, convs)
+                built[base] = {base: km, base + "_h": kh, base + "_v": kv}
+            return built[base].get(name)
         return None
 
     def __getattr__(self, attr: str) -> Callable:

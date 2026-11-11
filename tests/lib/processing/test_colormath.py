@@ -1,8 +1,9 @@
 #  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 
+import numpy as np
 import pytest
 
-from yapocis.core import get_test_backends
+from yapocis.core import get_backends, get_test_backends
 from yapocis.lib.channels import join_channels, split_channels
 from yapocis.lib.colormath import Colormath, transform_names
 from yapocis.lib.hsi import HSI
@@ -201,3 +202,126 @@ def test_xyY_values_and_round_trip(backend, monkeypatch):
     np.testing.assert_allclose(xyY[0, 1], [0.2 / 0.95, 0.25 / 0.95, 0.25], atol=1e-6)
     back = cm.xyY2xyz(np.ascontiguousarray(xyY))
     np.testing.assert_allclose(back, xyz, atol=1e-5)
+
+
+# #66: xyz2xyY of black (X + Y + Z == 0) gives x = y = 0 on every backend.
+
+D65 = np.array([0.9505, 1.0, 1.089])
+
+
+def _px(rows):
+    return np.ascontiguousarray(np.array(rows, np.float32).reshape(1, -1, 3))
+
+
+def _rustcpu_black_is_nan() -> bool:
+    """True only when the installed yapocis_rs predates yapocis-rs's colormath black fix.
+
+    Runs at collection with an explicit backend, so the environment can't reach it.
+    """
+    if "rustcpu" not in get_test_backends():
+        return False
+    try:
+        out = Colormath(backend="rustcpu").xyz2xyY(np.zeros((1, 1, 3), np.float32))
+    except Exception:
+        return False
+    return bool(np.isnan(np.asarray(out)).any())
+
+
+def _black_backends():
+    """get_test_backends(), with rustcpu marked xfail while its wheel still gives NaN.
+
+    Temporary: remove with the yapocis_rs wheel rebuilt from yapocis-rs's fix (#66).
+    """
+    old_rustcpu = _rustcpu_black_is_nan()
+    return [
+        (
+            pytest.param(
+                b,
+                marks=pytest.mark.xfail(
+                    strict=True,
+                    reason="installed yapocis_rs predates yapocis-rs's colormath black fix "
+                    "(#66); remove with the rebuilt wheel",
+                ),
+            )
+            if b == "rustcpu" and old_rustcpu
+            else b
+        )
+        for b in get_test_backends()
+    ]
+
+
+_BLACK_BACKENDS = _black_backends()
+
+
+@pytest.mark.parametrize("backend", _BLACK_BACKENDS)
+def test_xyz2xyY_of_black(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+    out = Colormath().xyz2xyY(_px([[0, 0, 0], [-0.0, -0.0, -0.0]])).reshape(-1, 3)
+    assert np.array_equal(out, np.zeros((2, 3), np.float32)), out
+
+
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_xyz2xyY_keeps_chromaticity_near_black(backend, monkeypatch):
+    # Normal floats only: the GPUs flush denormals to zero.
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+    scales = [1e-30, 1e-19, 1e-16, 1e-10, 1e-4]
+    out = Colormath().xyz2xyY(_px([D65 * s for s in scales])).reshape(-1, 3)
+    want = D65[:2] / D65.sum()
+    np.testing.assert_allclose(out[:, :2], np.tile(want, (len(scales), 1)), rtol=1e-6)
+
+
+@pytest.mark.parametrize("backend", _BLACK_BACKENDS)
+def test_black_rgb_round_trips_through_xyY(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+    cm = Colormath()
+    xyz = cm.transform_named("srgb_d65.rgb2xyz", _px([[0, 0, 0]]))
+    xyY = np.ascontiguousarray(cm.xyz2xyY(xyz))
+    back = cm.transform_named("srgb_d65.xyz2rgb", np.ascontiguousarray(cm.xyY2xyz(xyY)))
+    assert np.array_equal(back, np.zeros_like(back)), back
+
+
+@pytest.mark.parametrize("backend", _BLACK_BACKENDS)
+def test_xyz2xyY_mixed_sign_zero_sum_is_zero(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+    out = Colormath().xyz2xyY(_px([[0.5, -0.5, 0.0]])).reshape(-1)
+    assert np.array_equal(out, np.array([0, 0, -0.5], np.float32)), out
+
+
+@pytest.mark.skipif(
+    "numbax" not in get_backends(), reason="numbax backend not available"
+)
+def test_numbax_fallback_xyz2xyY_black_and_mixed_sign(monkeypatch):
+    """The numpy fallback numbax uses when numba is missing."""
+    import yapocis.kernels.numbax.colormath as numbax_colormath
+
+    monkeypatch.setenv("YAPOCIS_BACKEND", "numbax")
+    monkeypatch.setattr(numbax_colormath, "HAVE_NUMBA", False)
+    out = Colormath().xyz2xyY(_px([[0, 0, 0], [0.5, -0.5, 0.0]])).reshape(-1, 3)
+    assert np.array_equal(out, np.array([[0, 0, 0], [0, 0, -0.5]], np.float32)), out
+
+
+# numbax xyY2xyz divided by y + 1e-20 and gave 1.5e19 at y == 0; the device kernels and
+# rustcpu give (0, 0, 0), Y included.
+
+
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_xyY2xyz_y_zero(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+    rows = [[0.3, 0.0, 0.5], [0.3, -0.0, 0.5], [0.3127, 0.329, 1.0]]
+    out = Colormath().xyY2xyz(_px(rows)).reshape(-1, 3)
+    assert np.array_equal(out[:2], np.zeros((2, 3), np.float32)), out
+    want = [0.3127 / 0.329, 1.0, (1 - 0.3127 - 0.329) / 0.329]
+    np.testing.assert_allclose(out[2], want, rtol=1e-6)
+
+
+@pytest.mark.skipif(
+    "numbax" not in get_backends(), reason="numbax backend not available"
+)
+def test_numbax_fallback_xyY2xyz_y_zero(monkeypatch):
+    """The numpy fallback numbax uses when numba is missing."""
+    import yapocis.kernels.numbax.colormath as numbax_colormath
+
+    monkeypatch.setenv("YAPOCIS_BACKEND", "numbax")
+    monkeypatch.setattr(numbax_colormath, "HAVE_NUMBA", False)
+    out = Colormath().xyY2xyz(_px([[0.3, 0.0, 0.5], [0.3, -0.0, 0.5]])).reshape(-1, 3)
+    assert np.array_equal(out, np.zeros((2, 3), np.float32)), out

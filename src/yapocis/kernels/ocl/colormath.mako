@@ -229,8 +229,8 @@ __kernel void xyz2xyY(__global float *input, __global  float *output) {
     float y = input[i+1];
     float z = input[i+2];
     float sum = x+y+z;
-    output[i]   = x/sum;
-    output[i+1] = y/sum;
+    output[i]   = sum != 0.0f ? x/sum : 0.0f;
+    output[i+1] = sum != 0.0f ? y/sum : 0.0f;
     output[i+2] = y;
 }
 

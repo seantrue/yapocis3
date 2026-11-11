@@ -234,8 +234,8 @@ kernel void xyz2xyY(const device float *input [[ buffer(0) ]],
     float y = input[idx+1];
     float z = input[idx+2];
     float sum = x+y+z;
-    output[idx]   = x/sum;
-    output[idx+1] = y/sum;
+    output[idx]   = sum != 0.0f ? x/sum : 0.0f;
+    output[idx+1] = sum != 0.0f ? y/sum : 0.0f;
     output[idx+2] = y;
 }
 
