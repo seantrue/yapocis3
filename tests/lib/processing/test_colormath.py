@@ -297,3 +297,30 @@ def test_numbax_fallback_xyz2xyY_black_and_mixed_sign(monkeypatch):
     monkeypatch.setattr(numbax_colormath, "HAVE_NUMBA", False)
     out = Colormath().xyz2xyY(_px([[0, 0, 0], [0.5, -0.5, 0.0]])).reshape(-1, 3)
     assert np.array_equal(out, np.array([[0, 0, 0], [0, 0, -0.5]], np.float32)), out
+
+
+# numbax xyY2xyz divided by y + 1e-20 and gave 1.5e19 at y == 0; the device kernels and
+# rustcpu give (0, 0, 0), Y included.
+
+
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_xyY2xyz_y_zero(backend, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+    rows = [[0.3, 0.0, 0.5], [0.3, -0.0, 0.5], [0.3127, 0.329, 1.0]]
+    out = Colormath().xyY2xyz(_px(rows)).reshape(-1, 3)
+    assert np.array_equal(out[:2], np.zeros((2, 3), np.float32)), out
+    want = [0.3127 / 0.329, 1.0, (1 - 0.3127 - 0.329) / 0.329]
+    np.testing.assert_allclose(out[2], want, rtol=1e-6)
+
+
+@pytest.mark.skipif(
+    "numbax" not in get_backends(), reason="numbax backend not available"
+)
+def test_numbax_fallback_xyY2xyz_y_zero(monkeypatch):
+    """The numpy fallback numbax uses when numba is missing."""
+    import yapocis.kernels.numbax.colormath as numbax_colormath
+
+    monkeypatch.setenv("YAPOCIS_BACKEND", "numbax")
+    monkeypatch.setattr(numbax_colormath, "HAVE_NUMBA", False)
+    out = Colormath().xyY2xyz(_px([[0.3, 0.0, 0.5], [0.3, -0.0, 0.5]])).reshape(-1, 3)
+    assert np.array_equal(out, np.zeros((2, 3), np.float32)), out

@@ -52,6 +52,8 @@ print(f"xyY shape: {xyY.shape}")
 
 Convert xyY back to XYZ.
 
+A pixel with y == 0 gives (0, 0, 0), Y included, on every backend.
+
 ```python
 # Using xyY from previous example
 xyz_back = cm.xyY2xyz(xyY)
