@@ -44,7 +44,7 @@ noise = s.simplex2d(
 | `octaves` | 4 | Number of noise layers (1-8 typical) |
 | `persistence` | 0.5 | Amplitude decay per octave |
 | `lacunarity` | 2.0 | Frequency increase per octave |
-| `tileable` | False | Generate seamless tileable pattern |
+| `tileable` | False | Wrap the gradient lattice (see Tileable Lattice below); the output is not seamless |
 
 **Returns:** (height, width) float32 array in [0.0, 1.0]
 
@@ -126,14 +126,15 @@ detail = s.simplex2d(1024, 1024, seed=43, scale=0.02, octaves=4)
 final = 0.8 * terrain + 0.2 * detail
 ```
 
-### Tileable Texture
+### Tileable Lattice
+
+`tileable=True` wraps the gradient lattice with a period of `max(1, int(N / frequency))` cells on each axis, for each octave. It changes the output only once that period is shorter than the lattice the image covers, at large `scale` values. The output is **not** seamless along the image's x or y axes: simplex noise is laid out on a skewed lattice, so the wrap repeats along the diagonal. `np.tile` of the result shows seams. Seamless tiling is a requested feature (#83).
 
 ```python
 s = Simplex()
-tile = s.simplex2d(256, 256, seed=123, tileable=True)
-
-# Can be tiled seamlessly
-tiled = np.tile(tile, (3, 3))
+on = s.simplex2d(64, 64, seed=123, scale=8.0, tileable=True)
+off = s.simplex2d(64, 64, seed=123, scale=8.0, tileable=False)
+print(f"tileable changes the output by up to {np.abs(on - off).max():.2f}")
 ```
 
 ### Animated Noise (Time Dimension)

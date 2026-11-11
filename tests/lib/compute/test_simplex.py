@@ -5,15 +5,16 @@ Tests for Simplex noise generation.
 Validates 2D and 3D simplex noise across all backends, including:
 - Output range validation ([0.0, 1.0])
 - Deterministic seeding
-- Tiling/seamless patterns
+- The tileable lattice option
 - Cross-backend consistency
 - Visual output validation
 """
+
 import numpy as np
 import pytest
 
 from tests import StopWatcher
-from yapocis.core import get_test_backends
+from yapocis.core import get_backends, get_test_backends
 from yapocis.lib.simplex import Simplex, make_simplex2d, make_simplex3d
 
 
@@ -90,31 +91,22 @@ def test_simplex2d_visual(backend, monkeypatch):
 
 @pytest.mark.parametrize("backend", get_test_backends())
 def test_simplex2d_tileable(backend, monkeypatch):
-    """Test tileable/seamless noise generation."""
+    """`tileable` wraps the gradient lattice with a period of max(1, int(N / frequency))
+    cells per axis and octave. It changes the output once the lattice wraps (8 cells on
+    64x64 here), and the output stays in 0..1. It does not make the image seamless on x
+    or y (#83), so no seam is checked here."""
     monkeypatch.setenv("YAPOCIS_BACKEND", backend)
 
     s = Simplex()
-    noise = s.simplex2d(256, 256, seed=42, tileable=True, scale=0.01, octaves=4)
+    on = s.simplex2d(64, 64, seed=42, tileable=True, scale=8.0, octaves=4)
+    off = s.simplex2d(64, 64, seed=42, tileable=False, scale=8.0, octaves=4)
 
-    # Check that edges match (seamless tiling)
-    # Top edge should match bottom edge
-    top_edge = noise[0, :]
-    bottom_edge = noise[-1, :]
-    edge_diff = np.abs(top_edge - bottom_edge).mean()
-    assert (
-        edge_diff < 0.1
-    ), f"{backend}: Top/bottom edges don't match (diff={edge_diff:.4f})"
-
-    # Left edge should match right edge
-    left_edge = noise[:, 0]
-    right_edge = noise[:, -1]
-    edge_diff = np.abs(left_edge - right_edge).mean()
-    assert (
-        edge_diff < 0.1
-    ), f"{backend}: Left/right edges don't match (diff={edge_diff:.4f})"
+    assert np.abs(on - off).max() > 0.1, f"{backend}: tileable changed nothing"
+    for noise in (on, off):
+        assert noise.min() >= 0.0 and noise.max() <= 1.0, backend
 
     with StopWatcher("tileable", kernel=s) as sw:
-        sw.show(noise, "tileable_noise")
+        sw.show(on, "tileable_noise")
 
 
 @pytest.mark.parametrize("backend", get_test_backends())
@@ -395,10 +387,99 @@ def test_simplex2d_device_matches_the_numba_port(backend, size, monkeypatch):
         monkeypatch.setenv("YAPOCIS_BACKEND", b)
         importlib.reload(module)
         s = module.Simplex()
-        out[b] = [np.asarray(s.simplex2d(width, height, seed=7)),
-                  np.asarray(s.simplex2d(width, height, seed=7, tileable=True)),
-                  np.asarray(s.turbulence(width, height, seed=7)),
-                  np.asarray(s.ridged(width, height, seed=7))]
-    for name, got, want in zip(("simplex2d", "tileable", "turbulence", "ridged"), out[backend], out["numbax"]):
+        out[b] = [
+            np.asarray(s.simplex2d(width, height, seed=7)),
+            np.asarray(s.simplex2d(width, height, seed=7, tileable=True)),
+            np.asarray(s.turbulence(width, height, seed=7)),
+            np.asarray(s.ridged(width, height, seed=7)),
+        ]
+    for name, got, want in zip(
+        ("simplex2d", "tileable", "turbulence", "ridged"), out[backend], out["numbax"]
+    ):
         assert got.shape == want.shape == (height, width), name
         assert np.abs(got.astype(np.float64) - want).max() < 1e-5, name
+
+
+# #65: the numba port's non-square fields. Before 29f8403 it swapped its axes: wide fields
+# wrote past the output buffer and tall ones left pixels unwritten. These call the numba
+# module directly. Each output sits between a head canary and a tail canary long enough
+# for the old kernel's worst overshoot ((cols - rows) * cols elements), so even that
+# kernel can't write outside the test's own buffer.
+
+_CANARY_HEAD = 64
+
+
+def _numbax_simplex2d_in_canaries(rows, cols, tileable, octaves=4, scale=4.0):
+    from yapocis.kernels.numbax import simplex as numbax_simplex
+
+    tail = cols * cols + 64
+    buf = np.full(_CANARY_HEAD + rows * cols + tail, -1.0, np.float32)
+    out = buf[_CANARY_HEAD : _CANARY_HEAD + rows * cols].reshape(rows, cols)
+    try:
+        numbax_simplex.simplex2d(
+            rows, cols, out, 0, scale, 0.0, 0.0, octaves, 0.5, 2.0, tileable
+        )
+    except (
+        IndexError
+    ):  # under NUMBA_BOUNDSCHECK=1 a bad write raises; the checks below fail
+        pass
+    head = buf[:_CANARY_HEAD]
+    after = buf[_CANARY_HEAD + rows * cols :]
+    return out, head, after
+
+
+_needs_numbax = pytest.mark.skipif(
+    "numbax" not in get_backends(), reason="numbax backend not available"
+)
+
+
+@_needs_numbax
+@pytest.mark.parametrize("tileable", [0, 1])
+@pytest.mark.parametrize("size", [(7, 5), (5, 7), (33, 9), (9, 33)])
+def test_numbax_simplex2d_writes_only_inside_a_non_square_output(size, tileable):
+    width, height = size  # Simplex().simplex2d(width, height) gives (height, width)
+    out, head, after = _numbax_simplex2d_in_canaries(height, width, tileable)
+    assert (head == -1.0).all(), "wrote before the output"
+    assert (
+        after == -1.0
+    ).all(), f"wrote {int((after != -1.0).sum())} values past the end"
+    assert (out >= 0.0).all(), f"left {int((out < 0).sum())} pixels unwritten"
+
+
+@_needs_numbax
+@pytest.mark.parametrize("tileable", [0, 1])
+@pytest.mark.parametrize("size", [(7, 5), (5, 7)])
+def test_numbax_simplex2d_pixel_is_noise_at_row_over_rows_column_over_columns(
+    size, tileable
+):
+    """Pixel (r, c) is fBm of the module's own single-octave noise at (r / rows,
+    c / columns) times the frequency, with tile periods (rows / f, columns / f)."""
+    from yapocis.kernels.numbax.simplex import _simplex2d_single
+
+    width, height = size
+    rows, cols = height, width
+    octaves, scale = 4, 4.0
+    out, head, after = _numbax_simplex2d_in_canaries(
+        rows, cols, tileable, octaves=octaves, scale=scale
+    )
+    assert (head == -1.0).all() and (after == -1.0).all(), "wrote outside the output"
+
+    want = np.empty((rows, cols), np.float64)
+    for r in range(rows):
+        for c in range(cols):
+            total, amplitude, frequency, max_value = 0.0, 1.0, scale, 0.0
+            for octave in range(octaves):
+                n = _simplex2d_single(
+                    r / rows * frequency,
+                    c / cols * frequency,
+                    octave,
+                    tileable,
+                    max(1, int(rows / frequency)),
+                    max(1, int(cols / frequency)),
+                )
+                total += n * amplitude
+                max_value += amplitude
+                amplitude *= 0.5
+                frequency *= 2.0
+            want[r, c] = min(1.0, max(0.0, (total / max_value + 1.0) * 0.5))
+    np.testing.assert_allclose(out, want, atol=1e-6)
