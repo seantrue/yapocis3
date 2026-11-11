@@ -1,5 +1,6 @@
 #  Copyright Sean D. True and Swapwizard LLC (c) 2011-2026.
 
+import numpy as np
 import pytest
 
 from yapocis.core import get_backends, get_test_backends

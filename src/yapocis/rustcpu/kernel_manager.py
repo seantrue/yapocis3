@@ -30,7 +30,7 @@ _MANAGER_KWARGS = ("device_name", "debug", "options", "async_write")
 _device = None
 
 
-def _key_default(o):
+def _key_default(o: object) -> object:
     """JSON for the program-cache key: arrays and numpy scalars exactly, with dtype and shape.
 
     ``repr`` keeps only numpy's print precision (8 decimal places), elides arrays over

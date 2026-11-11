@@ -37,7 +37,9 @@ _DIRS = np.array(
 
 
 @njit(cache=True, fastmath=False, parallel=True)
-def _init_seed_from_mask(width, height, mask, seed, dist):
+def _init_seed_from_mask(
+    width: int, height: int, mask: np.ndarray, seed: np.ndarray, dist: np.ndarray
+) -> None:
     for x in prange(width):
         for y in range(height):
             if mask[x, y] != 0:
@@ -53,7 +55,15 @@ def _init_seed_from_mask(width, height, mask, seed, dist):
 
 
 @njit(cache=True, fastmath=False, parallel=True)
-def _jfa_step(width, height, jump, seed_in, dist, seed_out, dirs):
+def _jfa_step(
+    width: int,
+    height: int,
+    jump: int,
+    seed_in: np.ndarray,
+    dist: np.ndarray,
+    seed_out: np.ndarray,
+    dirs: np.ndarray,
+) -> None:
     for x in prange(width):
         fx = np.float32(x)
         for y in range(height):
