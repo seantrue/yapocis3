@@ -51,14 +51,15 @@ The list was started on 2026-11-11 by the plum coordinator, from issues already 
 - Fix: a correcting entry in the numba batch's `AI.md` update.
 - Issue: #84
 
-### B8. The rustcpu kernel cache key keeps weights to only 8 significant digits
+## Fixed
+
+### B8. The rustcpu kernel cache key keeps weights to only 8 decimal places, and elides long arrays
 
 - Reported: 2026-11-11
 - Report: (from the #64 review) "Weight ladders that differ only in the 9th significant digit share one cached program."
 - Fix: in the numba batch (the maintainer's decision, 2026-11-11).
+- Fixed: 2026-11-11, in the numba batch: the key holds every weight exactly, with its dtype and shape.
 - Issue: none
-
-## Fixed
 
 ### B1. numba: a second `Convolve1D(name="custom")` reuses the first one's weights
 

@@ -159,3 +159,97 @@ def test_numba_concurrent_same_name_kernels_use_their_own_weights(monkeypatch):
     assert (
         not wrong
     ), f"{len(wrong)} of {len(weights)} threads got other weights: {wrong}"
+
+
+# rustcpu caches loaded programs by interface and context for the whole process. The key
+# used repr() of the weights, which keeps numpy's print precision (8 decimal places),
+# elides arrays over 1000 elements and follows np.set_printoptions, so different weights
+# shared one program. Each case's weights are float64 ndarrays with equal reprs (a Python
+# list never collided: json writes floats exactly).
+
+
+def _key_case_ninth_digit():
+    w1 = np.array([0.1234567812, 0.25, 0.5, 0.25, 0.1234567812])
+    w2 = w1.copy()
+    w2[0] = w2[4] = 0.1234567849
+    return "sep", w1, w2, None
+
+
+def _key_case_small_taps():
+    w1 = np.array([0.00123456781, 0.5, 0.00123456781])
+    w2 = w1.copy()
+    w2[0] = w2[2] = 0.00123456849
+    return "conv", w1, w2, None
+
+
+def _key_case_long():
+    w1 = np.zeros(1001)
+    w1[0] = w1[-1] = w1[500] = 1.0
+    w2 = w1.copy()
+    w2[500] = 2.0
+    return "conv", w1, w2, None
+
+
+def _key_case_printoptions():
+    return "conv", np.array([0.5012, 0.25]), np.array([0.5014, 0.25]), 3
+
+
+@pytest.mark.skipif(
+    "rustcpu" not in get_backends(), reason="rustcpu backend not available"
+)
+@pytest.mark.parametrize(
+    "case",
+    [
+        _key_case_ninth_digit,
+        _key_case_small_taps,
+        _key_case_long,
+        _key_case_printoptions,
+    ],
+    ids=["ninth_digit", "small_taps_seventh_digit", "1001_taps", "printoptions"],
+)
+def test_rustcpu_same_name_kernel_gets_its_own_program(case):
+    import contextlib
+
+    from yapocis.rustcpu.kernel_manager import KernelManager
+
+    kind, w1, w2, precision = case()
+    shared, fresh = f"rk{_tag()}", f"rf{_tag()}"
+    rng = np.random.default_rng(64)
+
+    if kind == "sep":
+
+        class Sep(BoundKernels):
+            INTERFACE = "convolvesep"
+
+        img = rng.random((64, 48), dtype=np.float32)
+
+        def run(name, w):
+            s = Sep(convs=[(name, w)], backend="rustcpu")
+            i, o = img.copy(), np.zeros_like(img)
+            s.write(i)
+            s.write(o)
+            getattr(s, name + "_h")(i, o)
+            s.read(o)
+            return o
+
+    else:
+        a = rng.random(4096, dtype=np.float32)
+
+        def run(name, w):
+            return _run(Convolve1D(name=name, conv=w, backend="rustcpu"), name, a)
+
+    printing = (
+        np.printoptions(precision=precision) if precision else contextlib.nullcontext()
+    )
+    with printing:
+        assert repr(w1) == repr(w2), "the case no longer collides under repr()"
+        r1 = run(shared, w1)
+        before = len(KernelManager._programs)
+        r2 = run(shared, w2)
+        grew = len(KernelManager._programs) - before
+        rf = run(fresh, w2)
+    same = np.array_equal(r2, rf)
+    assert same, "the second same-name kernel did not use its own weights"
+    assert grew == 1, "the second same-name kernel reused the first one's program"
+    if kind == "conv" and precision is None:
+        assert not np.array_equal(r1, r2)
