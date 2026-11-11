@@ -6,15 +6,6 @@ The list was started on 2026-11-11 by the plum coordinator, from issues already 
 
 ## Open
 
-### B1. numba: a second `Convolve1D(name="custom")` reuses the first one's weights
-
-- Reported: 2026-10-29
-- Report: "numba backend: a second Convolve1D(name="custom") reuses the first one's weights"
-- Context: `numbax/kernel_manager.py` stores generated functions on the shared module by name. convolvesep has the same flaw.
-- Cause: confirmed in planning. The `hasattr`/`setattr(mod, …)` store dates from `77fc317`. `3c0d53c` hid it and `2d8c6d5` re-exposed it.
-- Fix: approach A, per-manager closures (approved 2026-11-11). Plan: `~/workspace/plum/docs/plans/2026-11-11-yapocis3-64-custom-convolve-cache.md`.
-- Issue: #64
-
 ### B2. colormath `xyz2xyY` of black: NaN on OpenCL, 0 on numba
 
 - Reported: 2026-10-29
@@ -68,6 +59,16 @@ The list was started on 2026-11-11 by the plum coordinator, from issues already 
 - Issue: none
 
 ## Fixed
+
+### B1. numba: a second `Convolve1D(name="custom")` reuses the first one's weights
+
+- Reported: 2026-10-29
+- Report: "numba backend: a second Convolve1D(name="custom") reuses the first one's weights"
+- Context: `numbax/kernel_manager.py` stores generated functions on the shared module by name. convolvesep has the same flaw.
+- Cause: confirmed in planning. The `hasattr`/`setattr(mod, …)` store dates from `77fc317`. `3c0d53c` hid it and `2d8c6d5` re-exposed it.
+- Fix: approach A, per-manager closures (approved 2026-11-11). Plan: `~/workspace/plum/docs/plans/2026-11-11-yapocis3-64-custom-convolve-cache.md`.
+- Fixed: 2026-11-11, in the numba batch (branch `fix/numba-batch-64-66-67`): each numbax kernel manager builds its own convolve and convolvesep functions and never stores them on the shared module.
+- Issue: #64
 
 ### B9. numba `simplex2d` is wrong for non-square sizes
 
