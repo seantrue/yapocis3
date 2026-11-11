@@ -1,28 +1,101 @@
+"""Numba kernels for the truetrace interface (interfaces/truetrace.interface).
+
+``init_seed_from_mask`` and ``jfa_step`` are a port of the OpenCL jump flood
+(kernels/ocl/truetrace.mako), step for step, so the numbax field matches the
+device backends and rustcpu: each call is one pass, and ``TrueTrace.trace_segments``
+drives the step schedule and the seed ping-pong. Arrays are (W, H), indexed
+``[x, y]``, as ``ADDRESS(x, y) = x*height + y`` on the devices; ``seed`` is (W, H, 4).
+
+Every value is float32, as on the devices: numba would otherwise promote an int
+index minus a float32 to float64, and a float64 ``best * best`` would resolve ties
+differently.
+"""
+
 from __future__ import annotations
 
 import numpy as np
 
-# Lightweight CPU implementations to satisfy the truetrace interface for the
-# Numba backend. These mirror the signatures from interfaces/truetrace.interface
-# and allow tests to run even when GPU backends are unavailable.
+try:
+    from numba import njit, prange
+
+    HAVE_NUMBA = True
+except Exception:
+    HAVE_NUMBA = False
+
+    def njit(*a, **k):  # type: ignore
+        return lambda f: f
+
+    prange = range  # type: ignore
 
 
 INF = np.float32(1e30)
+
+# The neighbour order of ocl/truetrace.mako's dirs: the first seed found wins a tie.
+_DIRS = np.array(
+    [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]], np.int64
+)
+
+
+@njit(cache=True, fastmath=False, parallel=True)
+def _init_seed_from_mask(width, height, mask, seed, dist):
+    for x in prange(width):
+        for y in range(height):
+            if mask[x, y] != 0:
+                seed[x, y, 0] = np.float32(x)
+                seed[x, y, 1] = np.float32(y)
+                dist[x, y] = np.float32(0.0)
+            else:
+                seed[x, y, 0] = np.float32(-1.0)
+                seed[x, y, 1] = np.float32(-1.0)
+                dist[x, y] = np.float32(1e30)
+            seed[x, y, 2] = np.float32(0.0)
+            seed[x, y, 3] = np.float32(0.0)
+
+
+@njit(cache=True, fastmath=False, parallel=True)
+def _jfa_step(width, height, jump, seed_in, dist, seed_out, dirs):
+    for x in prange(width):
+        fx = np.float32(x)
+        for y in range(height):
+            fy = np.float32(y)
+            bx = seed_in[x, y, 0]
+            by = seed_in[x, y, 1]
+            bz = seed_in[x, y, 2]
+            bw = seed_in[x, y, 3]
+            best = dist[x, y]
+            for k in range(8):
+                nx = x + dirs[k, 0] * jump
+                ny = y + dirs[k, 1] * jump
+                if nx < 0 or ny < 0 or nx >= width or ny >= height:
+                    continue
+                sx = seed_in[nx, ny, 0]
+                if sx < np.float32(0.0):
+                    continue
+                dx = np.float32(sx - fx)
+                dy = np.float32(seed_in[nx, ny, 1] - fy)
+                d2 = np.float32(dx * dx + dy * dy)
+                if d2 < np.float32(best * best):
+                    best = np.float32(np.sqrt(d2))
+                    bx = sx
+                    by = seed_in[nx, ny, 1]
+                    bz = seed_in[nx, ny, 2]
+                    bw = seed_in[nx, ny, 3]
+            seed_out[x, y, 0] = bx
+            seed_out[x, y, 1] = by
+            seed_out[x, y, 2] = bz
+            seed_out[x, y, 3] = bw
+            dist[x, y] = best
 
 
 def init_seed_from_mask(
     width: int, height: int, mask: np.ndarray, seed: np.ndarray, dist: np.ndarray
 ):
-    """Initialize distance and seed buffers from a binary mask.
+    """Seed the jump flood from a (W, H) mask.
 
-    For the Numba backend, compute the distance directly for simplicity and
-    leave seeds as-is (not used by subsequent simplified steps).
+    Mask pixels get their own coordinates as seed, at distance 0; every other pixel
+    gets seed (-1, -1) at 1e30. An empty mask leaves 1e30 everywhere, as on the devices.
     """
-    # mask is (W,H) int32 with 0/1; dist is (W,H) float32
-    m = mask != 0
-    # Distance 0 at foreground, +INF elsewhere initially
-    dist[:] = np.where(m, 0.0, INF).astype(np.float32)
-    # Seed can carry source coordinates for JFA; keep as -1 by default
+    _init_seed_from_mask(int(width), int(height), mask, seed, dist)
     return dist
 
 
@@ -34,12 +107,14 @@ def jfa_step(
     dist: np.ndarray,
     seed_out: np.ndarray,
 ):
-    """No-op JFA step for CPU fallback.
+    """One jump-flood pass at ``jump``.
 
-    The full distance is computed up-front in init_seed_from_mask; just
-    copy seeds through to match the expected dataflow.
+    Each pixel starts from its own seed and distance, looks at the eight neighbours at
+    +-jump in the OpenCL order, keeps a neighbour's seed only when it is strictly
+    nearer, and writes ``seed_out`` and ``dist`` (in place). The result is the
+    approximate unsigned distance to the nearest mask pixel after the last pass.
     """
-    seed_out[:] = seed_in
+    _jfa_step(int(width), int(height), int(jump), seed_in, dist, seed_out, _DIRS)
     return seed_out
 
 

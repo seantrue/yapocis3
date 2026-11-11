@@ -1,8 +1,10 @@
+from pathlib import Path
+
 import numpy as np
 import pytest
 from PIL import Image, ImageDraw
 
-from yapocis.core import get_test_backends
+from yapocis.core import get_backends, get_test_backends
 from yapocis.lib.truetrace import (
     TrueTrace,
     build_circle_mask,
@@ -10,9 +12,14 @@ from yapocis.lib.truetrace import (
     chain_segments_to_polylines,
     close_and_filter_polylines,
     douglas_peucker,
+    marching_squares_cpu,
+    off_field_iso,
+    sdf_from_mask_cpu,
+    sort_segments,
     trace_bitmap,
 )
 
+from ...test_truetrace_fill import _ring_mask, _thin_strokes
 from . import (
     ASIZE,
     StopWatcher,
@@ -127,3 +134,113 @@ def test_truetrace_matches_original_fill_iou_ssim(backend, tmp_path, monkeypatch
     # Expect very high agreement; allow small tolerance for contour discretization
     assert iou > 0.97, f"IoU too low: {iou}"
     assert ssim > 0.977, f"SSIM too low: {ssim}"
+
+
+# #67: truetrace's numbax jump flood. The numbax kernels were stubs that left the field
+# at +-1e30, so iso had no effect there; they are now a port of the OpenCL jump flood.
+
+
+def _bars_mask():
+    m = np.zeros((90, 130), np.uint8)
+    m[10:30, 10:100] = 1
+    m[40:85, 20:35] = 1
+    m[50:60, 60:120] = 1
+    return m
+
+
+def _disc_mask(n=256):
+    yy, xx = np.mgrid[:n, :n]
+    m = (np.hypot(yy - n / 2 + 0.3, xx - n / 2 - 0.7) < n / 3).astype(np.uint8)
+    m[np.hypot(yy - n / 2, xx - n / 2) < n / 9] = 0
+    return m
+
+
+def _stored_mask(name):
+    """Masks too irregular to draw here, stored bit-packed: "blobs", 300x420, 25
+    random ellipses xor'd together (numpy default_rng seed 11); "noise", 256x256,
+    5% random pixels (seed 9)."""
+    with np.load(Path(__file__).with_name("truetrace_masks.npz")) as z:
+        shape = tuple(int(n) for n in z[name + "_shape"])
+        return np.unpackbits(z[name], count=shape[0] * shape[1]).reshape(shape)
+
+
+def _field(tracer, mask):
+    """The signed field trace_segments hands to marching_squares, as (H, W)."""
+    captured = {}
+    kmgr = tracer.kmgr
+    orig = kmgr.marching_squares
+
+    def spy(dist, iso, *a, **k):
+        captured["dist"] = np.array(dist, copy=True)
+        return orig(dist, iso, *a, **k)
+
+    kmgr.marching_squares = spy
+    try:
+        tracer.trace_segments(mask, iso=0.0)
+    finally:
+        kmgr.marching_squares = orig
+    return captured["dist"].T
+
+
+@pytest.mark.parametrize("iso", [0.75, 1.5, -1.0])
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_trace_segments_follow_iso_on_every_backend(backend, iso, monkeypatch):
+    """Within a few pixels of the edge the jump flood is exact, so the traced segments
+    equal marching squares on the exact field."""
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+    mask = _ring_mask()
+    segs, _ = TrueTrace().trace_segments(mask, iso=iso)
+    sdf = sdf_from_mask_cpu(mask)
+    want = sort_segments(marching_squares_cpu(sdf, off_field_iso(sdf, iso)))
+    assert segs.shape == want.shape
+    assert np.allclose(segs, want, atol=1e-4)
+
+
+@pytest.mark.parametrize("backend", get_test_backends())
+def test_signed_field_is_exact_near_the_boundary(backend, monkeypatch):
+    """Where |sdf| <= 2 the field equals the exact one. Further in, the jump flood is
+    approximate (up to about 1.5 px), so there is no bound there."""
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+    for mask in (_ring_mask(), _bars_mask(), _thin_strokes()):
+        sdf = sdf_from_mask_cpu(mask)
+        field = _field(TrueTrace(), mask)
+        band = np.abs(sdf) <= 2
+        assert np.abs(field - sdf)[band].max() <= 1e-4
+
+
+@pytest.mark.skipif(
+    "numbax" not in get_backends(), reason="numbax backend not available"
+)
+def test_numbax_jump_flood_matches_the_device_kernels():
+    """numbax's field is OpenCL's and rustcpu's to the bit; Metal and CUDA differ from
+    them by sqrt rounding (~1e-6), which now and then flips a tie (up to ~0.33 px on
+    under 0.01% of pixels). Run once, comparing numbax with each other backend."""
+    others = [b for b in get_test_backends() if b != "numbax"]
+    if not others:
+        pytest.skip("no other backend to compare numbax with")
+    masks = {
+        "ring": _ring_mask(),
+        "bars": _bars_mask(),
+        "disc256": _disc_mask(),
+        "blobs": _stored_mask("blobs"),
+        "noise5": _stored_mask("noise"),
+        "strokes": _thin_strokes(),
+    }
+    numbax = TrueTrace(backend="numbax")
+    tracers = {b: TrueTrace(backend=b) for b in others}
+    for name, mask in masks.items():
+        mine = _field(numbax, mask)
+        assert np.isfinite(mine).all(), name
+        for b, tracer in tracers.items():
+            theirs = _field(tracer, mask)
+            if b in ("ocl", "rustcpu"):
+                assert np.array_equal(mine, theirs), (name, b)
+            else:
+                off = np.abs(mine - theirs) > 1e-4
+                assert off.mean() <= 1e-3, (name, b, int(off.sum()))
+    if "ocl" in tracers:
+        blobs = masks["blobs"]
+        mine, _ = numbax.trace_segments(blobs, iso=20.0)
+        theirs, _ = tracers["ocl"].trace_segments(blobs, iso=20.0)
+        assert mine.shape == theirs.shape
+        assert np.allclose(mine, theirs, atol=1e-4)
