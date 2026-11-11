@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Backfilled on 2026-11-11 from the history since 1.0.0 (19 pull requests, #51 to #79, and the `2c7c9b5` merge of main into dev), for review before the 1.1.0 release.
+
+### Added
+
+- The `rustcpu` backend: `YAPOCIS_BACKEND=rustcpu` runs yapocis-rs's CPU ports of the OpenCL kernels from Python through the `yapocis_rs` wheel, with one device, `cpu`, and `make test-rustcpu`. Without the wheel the backend is simply unavailable; an explicit `backend="rustcpu"` raises an `ImportError` naming the wheel. Interfaces without a CPU port fail to load with "has no CPU port" (#77)
+- `yapocis-tools bundle`: renders every interface for OpenCL, Metal and CUDA without a device and writes `manifest.json` and the sources, for the Rust port (yapocis-rs), with derivation (`--fixtures`), kernel parity (`--parity`) and library parity (`--parity-lib`) fixtures (#54)
+- `yapocis-tools bundle --host-fixtures`: numpy results for yapocis-rs's npexact to replay bit for bit (elementwise, extrema, order, fft and complex64 multiply sections), and `bundle --project-only` (`2c7c9b5`, #72, #74)
+- truetrace: `trace_mask`, and `trace_regions` and `regions_svg`, which return the traced shapes and write them as vector SVG, as polygons or cubics (`2c7c9b5`, #68)
+- Parity fixtures: `regions_svg` documents in the truetrace cases (#69); `extent_freetype` cases, and the HSI plane kernels at their real shape (#71)
+- `gaussian_ladder`: the convolvesep weight ladder for the default `GaussianWeights` as float64 literals, so every host computes the same weights (`2c7c9b5`)
+- `corgi_rgba.png`, an RGBA test image (#53)
+
+### Changed
+
+- truetrace fills traced regions with an even-odd scanline fill (`fill_polygons`, `fill_regions`) in place of earcut and the graphics kernel, and chains segment endpoints exactly (`2c7c9b5`)
+- numbax: project `convolve.py` and `convolvesep.py` overrides no longer apply to the `convolve` and `convolvesep` interfaces, whose kernels are built from the context (#64)
+- The simplex `tileable` docs say what it does: it wraps the gradient lattice with a period of `max(1, int(N / frequency))` cells; the output is not seamless along x or y (#65; seamless tiling is #83)
+- Dependencies: Dependabot's eight bumps as one lock update (#79)
+- Docs: the 1.0 history page, the missing FFT images, and a xelatex PDF with a makeindex index (#51, #52)
+
 ### Fixed
 
 - FFT gave wrong results wherever a work-group does not run in lockstep. Two work-items ran each radix-2 butterfly, racing on shared memory. This fixes the 1.0.0 known issue (OpenCL FFT on the Tesla P40) and CPU OpenCL (PoCL); now one work-item runs each butterfly, on every backend
@@ -15,6 +35,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `dispatch_size` expressions resolve every dimension reference, not only the first (`dim_0_of rgb * dim_1_of rgb`)
 - OpenCL `window` and `power_spectrum` no longer call `get_global_size()`, which PoCL 7.2 on Windows cannot link in programs built with `-cl-opt-disable`
 - Text files are read and written as UTF-8 on every platform. On Windows the default encoding (cp1252) made `yapocis-tools bundle` fail on kernel sources with non-ASCII characters (`∂`), and the bundle, fixture and parity writers now also write `\n` line endings, so an export is byte-identical on Windows, Linux and macOS
+- numbax: a second `Convolve1D` (or convolvesep set) with the same name ran the first one's weights; a kernel named like a module global (`np`) broke `convolve.py`; threads building same-name kernels raced (#64)
+- rustcpu: kernels whose weights differed past the 8th decimal place, in the middle of an array over 1000 elements, or under a lowered `np.set_printoptions` precision shared one cached program
+- `xyz2xyY` of black (X + Y + Z == 0) gives x = y = 0 on OpenCL, Metal, CUDA and numbax, instead of NaN on the GPUs and an epsilon-shifted value on numbax. rustcpu still gives NaN until the `yapocis_rs` wheel is rebuilt from yapocis-rs's fix (#66)
+- numbax `xyY2xyz` with y == 0 gives (0, 0, 0), as the other backends do, instead of about 1.5e19
+- numbax truetrace: the jump-flood kernels were stubs, so `iso` had no effect on numbax; they are now a port of the OpenCL jump flood (#67)
+- truetrace on CUDA: every traced shape was transposed (`2c7c9b5`)
+- truetrace: an `iso` above 0.5 fused the two outlines of 1 px strokes into black wedges (`2c7c9b5`)
+- Metal truetrace: `marching_squares` used a lambda, which older Metal SDKs reject (#63)
+- `write_svg_regions` with `curve="cubic"` overwrote each outer ring with its polygon, and with `curve="none"` raised `UnboundLocalError` (#70)
+- The device kernels and the numba port agree: histogram bins with a non-zero `low`, Mandelbrot's first escape, the numba simplex hash (32-bit, as on the devices) and its non-square layout, and the numba stretch's clamp (#75)
+- CUDA `simplex2d` gave the other backends' field transposed (#76)
+- Tests: `YAPOCIS_BACKEND` set by one test leaked into later ones, so unparametrized tests ran on the last backend set (#82)
 
 ## [1.0.0] - 2026-10-17
 

@@ -48,6 +48,7 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~275 lines changed in `lib/truetrace.py`, ~95 in `codegen/parity_processing.py` and an 84-line `tests/test_truetrace_fill.py`, shared between the scanline fill (Claude Fable 5.1) and exact chaining with `off_field_iso` (Claude Opus 5.5) (2026-10-21); the split was not recorded line by line
   - ~45 lines across the FFT templates, the HSI interface and the dispatch evaluator, plus 2 test cases: FFT butterfly race, HSI dispatch size, PoCL `get_global_size` link failure (2026-10-26)
   - ~41 lines across 13 files: text file I/O as UTF-8, `\n` line endings for exports (2026-10-26)
+  - ~190 lines of kernel and library code, ~630 of tests, ~45 of docs and changelog: the numba batch, #64, #66, #67, #82, the rustcpu cache key, numbax `xyY2xyz`, #65 tests (2026-11-11)
 
 ## Detailed Contributions
 
@@ -72,6 +73,32 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 **#65, numba simplex regression tests and the `tileable` docs:** #65 was fixed on 2026-11-07 by `29f8403` (PR #75) and `7e98bb0` (PR #76) and closed on 2026-11-11. This batch adds the numba-only regression tests it lacked, in `tests/lib/compute/test_simplex.py`. One writes the numba kernel's output into a buffer between a 64-element head canary and a tail canary long enough for the old kernel's worst overshoot, so even the old kernel can't write outside the test's own memory, and checks both canaries and that no pixel was left unwritten, at (7,5), (5,7), (33,9) and (9,33), tileable on and off. The other checks each pixel against fBm of the module's own single-octave noise at (row / rows, column / columns). `test_simplex2d_tileable` could not fail: at its `scale=0.01` the lattice never wrapped, so the output was identical with `tileable` on and off. It now checks, on every backend, that `tileable` changes the output at 8 cells on 64×64 and that the output stays in 0..1. The `tileable` docs (`lib/simplex.py`, `docs/library/simplex.md`) promised seamless output; they now say it wraps the gradient lattice with period `max(1, int(N / frequency))` and that the output is not seamless on x or y (option 2A, D3). Seamless tiling is feature #83. No kernel code changes. ~150 lines of tests and docs.
 
 **Lint follow-up (a commit the plan didn't list):** comparing ruff, black, isort and mypy on the touched files against `main` showed three new mypy `no-untyped-def` findings (the new jump-flood helpers and `_key_default`) and 30 new ruff F405s (the new colormath tests used `np` through the file's star import). A small commit after #65's fixes both; nothing else on the touched files got worse. `make check` itself fails on `main` too (530 ruff findings, 1,104 mypy errors, and black and isort findings, some in generated `mako_modules`), so it is not a usable gate here.
+
+**Corrections to earlier entries (#84).** The old entries stay as they were written; these replace two statements in them:
+
+1. 2026-11-06, on the old numba simplex loop, "left the extra columns at 0 when wide, and wrote past the rows when tall": the effects were the other way round. **Wide** fields wrote past the output buffer (up to `(cols − rows) × cols` elements) and left the extra columns at 0; **tall** fields stayed inside the buffer but ran each row into the next and left trailing pixels unwritten (8 of 35 at 5×7). The new canary test above shows both.
+2. 2026-11-06 and 2026-11-07, "the 3-D simplex kernels pick gradients with `hash % 12`, which in C is negative for a negative hash": the hash is never negative, because `h ^ (h >> 16)` clears the sign bit (the planner's probes found no negatives in 84,000 and 120,000 sampled inputs). So it doesn't explain why the OpenCL and Metal 3-D kernels differ from CUDA and numba, which stays unexplained.
+
+**CHANGELOG:** `[Unreleased]` is backfilled with everything since 1.0.0. It was drafted by AI from `git log v1.0.0..main` and the bodies of PRs #51–#79 and the `2c7c9b5` merge, plus this batch, and is for the maintainer to review before 1.1.0 (D5.10).
+
+**Defects in AI-written plans, caught before implementation:** the #66 draft missed rustcpu's mixed-sign case; the #64 key suggestion had no fallback for non-numpy values; the #65 test 2 prototype, and the first version of the batch plan's pre-fix run, could write past a numpy allocation on the old kernel; the batch plan's first rustcpu key test could have been written with Python lists, which never collide, so it could not have failed.
+
+**Defect in this implementation, caught before push:** commit 0 was first made without its AI.md entry. The AI.md edit failed (its anchor heading occurs twice in this file), and the commit, sent as a separate command right after the edit, ran anyway, as on 2026-11-08. I noticed it from the commit's file list and amended the unpushed commit. After that, each commit was made only after checking that its edits had applied.
+
+**Verified (M4 Max MacBook: OpenCL, Metal, numbax, rustcpu with the 0.1.0 `yapocis_rs` wheel), with numba and Mako caches redirected outside the checkout:**
+
+- Each new test was run against the code before its fix and failed there, as listed above. The #65 run used only the two new numba tests, on `29f8403^`'s kernel, with `NUMBA_BOUNDSCHECK=1` and a fresh numba cache.
+- `make test-ocl`, `test-metal`, `test-numbax`: 1,681 passed, 28 skipped, 3 xfailed each; `make test-rustcpu`: 658 passed, 45 skipped, 3 xfailed; `make test`: 1,589 passed, 28 skipped, 3 xfailed; `make test-smoke`: 232 passed; `YAPOCIS_TEST_BACKENDS=ocl,metal,numbax pytest tests`: 1,374 passed, 1 skipped. Each also had one failure, `test_kernel_template_cache.py::test_old_compiled_modules_are_removed`, caused by the Mako redirect used for these runs; it passes in the checkout without the redirect. The xfails are the three rustcpu #66 cases.
+- **What #82 exposed: nothing.** On `main` the same four per-backend targets gave 1,594 passed and 40 skipped (613 and 48 on rustcpu), with only that redirect failure, and after #82 every target still has only that failure, now running the unparametrized tests on its named backend.
+- The order checks: on `main`, `test_performance.py` then the non-square truetrace test with `YAPOCIS_TEST_BACKENDS=ocl,metal,numbax` fails; after #67 it passes, and after #82 it passes under `YAPOCIS_BACKEND=numbax`, where it now really runs on numbax. The six touched test files give 205 passed and 3 xfailed forward and in reverse order, and each passes alone.
+- yapocis_external's convolvesep users (`tests/test_gaussian.py`, `tests/test_dog_yapocis.py`) on numbax against this checkout: 20 passed.
+- The docs examples in `docs/library/simplex.md` and `colormath.md` run (`yapocis.scripts.doctest_examples`).
+
+**Not verified:** CUDA (yellowfin is production, so it wasn't run in this step), PoCL and NVIDIA OpenCL. The per-backend targets and the full runs started at commit 7; the lint follow-up's annotation-only edits landed in the tree while they ran, and its touched test files were re-run afterwards (113 passed, 3 xfailed).
+
+**Division of labor:** the maintainer made every decision (D1–D5); the plum coordinator, planner and evaluator agents planned and reviewed the batch; this entry's implementer wrote the code, tests and docs from the approved plan.
+
+**Lines (measured, `git diff --numstat main..HEAD`):** ~190 added and ~80 removed in kernels and library code; ~630 added in tests, plus a 7 KB mask fixture; ~11 in docs; ~32 in the changelog. `docs/BUGS.md` and `docs/FEATURES.md` (~98) are the coordinator's.
 
 ### 2026-11-09: Dependabot's eight bumps, as one lock update (Claude Opus 5.5)
 

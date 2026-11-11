@@ -28,14 +28,15 @@ The list was started on 2026-11-11 by the plum coordinator, from issues already 
 - Context: `lib/truetrace.py:53-54`.
 - Issue: #81
 
+## Fixed
+
 ### B7. AI.md: wrong statements about the 3-D `hash % 12` and the old numba loop
 
 - Reported: 2026-11-11
 - Report: "AI.md: the 3-D hash % 12 is never negative, and the old numba loop's wide/tall effects are swapped"
 - Fix: a correcting entry in the numba batch's `AI.md` update.
+- Fixed: 2026-11-11, in the numba batch: AI.md's batch entry corrects both statements; the old entries are left as written.
 - Issue: #84
-
-## Fixed
 
 ### B6. Tests leak `YAPOCIS_BACKEND`
 
