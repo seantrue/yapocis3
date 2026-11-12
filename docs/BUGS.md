@@ -13,13 +13,6 @@ The list was started on 2026-11-11 by the plum coordinator, from issues already 
 - Context: `kernels/metal/convolve.mako:23-45`. Found while reviewing #64.
 - Issue: #80
 
-### B5. The `trace_segments` docstring has the iso direction backwards
-
-- Reported: 2026-11-11
-- Report: "trace_segments docstring has the iso direction backwards (positive moves the contour inward)"
-- Context: `lib/truetrace.py:53-54`.
-- Issue: #81
-
 ### B10. 56 open Dependabot alerts in `uv.lock`
 
 - Reported: 2026-11-11
@@ -35,6 +28,20 @@ The list was started on 2026-11-11 by the plum coordinator, from issues already 
 - Open question: is it yapocis, or Apple's GPU stack when several processes share the GPU? Separating them needs an unrelated GPU load, and a run on yellowfin (CUDA, NVIDIA OpenCL).
 - Issue: #88
 
+### B13. OpenCL `write_buffer` and `read_buffer` fail on Fortran-ordered or transposed arrays
+
+- Reported: 2026-11-11
+- Report: "OpenCL write_buffer/read_buffer flatten in place and fail on Fortran-ordered or transposed arrays"
+- Context: `ocl/device_manager.py`: `make_buffer` refuses non-contiguous arrays (`:89-90`), and `write_buffer` and `read_buffer` flatten in place, with `a.shape = (a.size,)` (`:127-139`). With `base.T`, OpenCL raises `AttributeError: Incompatible shape for in-place modification`; with `base[:, ::2]`, `RuntimeError: … is not contiguous`. CUDA has the same contiguity check (`cu/device_manager.py:119-120`). Found while planning #89, which fixes the Metal path only, so the two GPU backends now disagree on F-ordered inputs.
+- Issue: #92
+
+### B14. `Convolve1D` edges: numbax reflects where the GPUs write 0, and the GPU main kernel leaves `ret[left]` at 0
+
+- Reported: 2026-11-11
+- Report: "Convolve1D edges: numbax reflects where GPUs write 0, and the GPU main kernel leaves ret[left] at 0 (i > left)"
+- Context: numbax pads by reflection (`kernels/numbax/convolve.py:19-37`), and the GPU kernels write 0, so they differ in the first `left + 1` and the last `left` samples (`left = len(conv)//2`; indices `[0, 1, 63]` for 3 taps and `[0, 1, 2, 62, 63]` for 5 taps on 64 samples). The GPU kernels' strict `i > left` (`kernels/ocl/convolve.mako:12`, and the Metal and CUDA equivalents) writes 0 to `ret[left]`, although the window fits there. Found while planning #80; neither is a `_fast` bug. Changing either changes recorded outputs (yapocis-rs parity bundles, the backend-comparison tests), so it needs a plan of its own.
+- Issue: #93
+
 ### B12. Metal device manager registers a non-contiguous input's copy under the copy's id
 
 - Reported: 2026-11-11
@@ -43,6 +50,14 @@ The list was started on 2026-11-11 by the plum coordinator, from issues already 
 - Issue: #89
 
 ## Fixed
+
+### B5. The `trace_segments` docstring has the iso direction backwards
+
+- Reported: 2026-11-11
+- Report: "trace_segments docstring has the iso direction backwards (positive moves the contour inward)"
+- Context: `lib/truetrace.py:53-54`. The field is positive inside, so a positive iso shrinks the shape: `trace_mask` ink on a 1552 px ring is 1924, 1600, 1556, 1512 and 1174 at iso −1.5, −0.5, 0, 0.5 and 1.5, on the CPU engine and on OpenCL.
+- Fixed: 2026-11-11, branch `fix/81-iso-docs`: the `trace_segments` and `trace_regions` docstrings and `docs/library/truetrace.md` (the parameter line and the ISO table) say that a positive iso moves the contour inward. The code was right and is unchanged.
+- Issue: #81
 
 ### B2. colormath `xyz2xyY` of black: NaN on OpenCL, 0 on numba
 

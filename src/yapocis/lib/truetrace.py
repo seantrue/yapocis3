@@ -51,7 +51,8 @@ class TrueTrace(BoundKernels):
             mask_u8: HxW uint8/char array, values 0/1 (or 0/255; nonzero treated as 1).
             iso: iso value on the signed distance field.
                  - 0.0 traces the zero-crossing (contour between foreground/background)
-                 - Positive moves contour outward, negative inward (in pixels)
+                 - Positive moves the contour inward (into the mask), negative
+                   outward (in pixels)
 
         Returns:
             segs: Nx4 float32 array of segments [x0, y0, x1, y1].
@@ -903,7 +904,7 @@ def trace_regions(
 
     Pipeline: the signed distance field of the mask (GPU jump flood, or the CPU
     EDT with ``engine='cpu'``) traced by marching squares at ``iso`` (0 is the
-    mask's boundary; negative moves it into the ink, so ``-0.5`` keeps only pixels
+    mask's boundary; positive moves it into the ink, so ``0.5`` keeps only pixels
     fully inside the shapes, as thresholding potrace's antialiased output does),
     chained into polylines, simplified with Douglas-Peucker (``simplify_tol_px``),
     closed and filtered by area (``min_area_px2``, potrace's turdsize), and nested

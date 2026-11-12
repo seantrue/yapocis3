@@ -52,8 +52,23 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~43 lines of tests removed: the temporary rustcpu #66 xfail, after the `yapocis_rs` wheel was rebuilt from yapocis-rs `9ebcac9` (2026-11-11)
   - ~10 lines of version, changelog and this entry: version 1.1.0 released to PyPI (2026-11-11)
   - ~15 lines of docs: BUGS.md B12 and issues #89/#90 from the pymetallic check (2026-11-11)
+  - ~7 lines of docstrings and docs, ~35 of BUGS.md, changelog and ledger: #81 iso direction, BUGS.md B13 (#92) and B14 (#93) (2026-11-11)
 
 ## Detailed Contributions
+
+### 2026-11-11: #81, the truetrace iso direction in the docs; BUGS.md B13 and B14 (Claude Opus 5.5)
+
+**What the maintainer asked for.** "continue with 89,87,80,81" (plum `docs/QUEUE.md` D5.37), and, for the plan's side findings, "File (a), and (b) with (c) together" (D7.9): filed as #92 and #93, to go into `docs/BUGS.md` with the first PR of the series. The issue's own fix: "Correct the docstring. The code is right."
+
+**What the AI did.** The plum planner and evaluator found four places that had the direction backwards; this change corrects them and changes no code:
+- `lib/truetrace.py`: the `trace_segments` docstring (positive moves the contour inward, into the mask) and the `trace_regions` docstring (positive moves it into the ink, so `0.5`, not `-0.5`, keeps only the pixels fully inside);
+- `docs/library/truetrace.md`: the `iso` parameter line and the ISO table, where "creates outline" now belongs to −2.0.
+
+`docs/BUGS.md`: B5 moves to Fixed, and B13 (#92, OpenCL F-order) and B14 (#93, the `Convolve1D` edge rules, with the evaluator's corrected wording: the first `left + 1` and the last `left` samples) are added under Open. ~7 lines of docstrings and docs, ~30 lines of BUGS.md and CHANGELOG.
+
+**Checked.** The planner's iso probe, rerun against this branch in a scratch venv (plum `claude-debug/y4_b5_iso_probe_ocl_out.txt`): `trace_mask` ink on a 1552 px ring is 1924, 1600, 1556, 1512 and 1174 at iso −1.5, −0.5, 0, 0.5 and 1.5, on both the CPU engine and OpenCL, so a positive iso shrinks the shape. No test was added, because only text changed. The Metal suite on this branch: 1,581 passed, 14 skipped, 1 failed (`test_old_compiled_modules_are_removed`, from the Mako redirect the run used).
+
+**Division of labor:** the maintainer approved the work and decided how the side findings were filed; the plum planner and evaluator found the four places; Claude wrote the corrections and the ledger entries.
 
 ### 2026-11-11: BUGS.md B12, and issues #89 and #90 from the pymetallic check (Claude Opus 5.5)
 

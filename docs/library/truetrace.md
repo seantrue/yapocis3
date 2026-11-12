@@ -30,7 +30,7 @@ segments, (width, height) = tt.trace_segments(mask, iso=0.0)
 
 **Parameters:**
 - `mask` - HxW uint8 array (0/1 or 0/255)
-- `iso` - Distance from edge (0.0 = exact edge, positive = outward, negative = inward)
+- `iso` - Distance from edge (0.0 = exact edge, positive = inward, negative = outward)
 
 **Returns:**
 - `segments` - Nx4 float32 array of [x0, y0, x1, y1] line segments
@@ -150,9 +150,9 @@ The `iso` parameter controls the contour offset from the mask edge:
 | Value | Effect |
 |-------|--------|
 | 0.0 | Exact edge of mask |
-| 1.0 | 1 pixel outward |
-| -1.0 | 1 pixel inward |
-| 2.0 | 2 pixels outward (creates outline) |
+| 1.0 | 1 pixel inward |
+| -1.0 | 1 pixel outward |
+| -2.0 | 2 pixels outward (creates outline) |
 
 ## Simplification Parameters
 
