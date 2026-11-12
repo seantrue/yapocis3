@@ -6,6 +6,20 @@ The list was started on 2026-11-11 by the plum coordinator, from issues already 
 
 ## Open
 
+### B16. Three console scripts fail on a plain `pip install yapocis`
+
+- Reported: 2026-11-12
+- Report: "Three console scripts fail on a plain pip install: yapocis-report, yapocis-imagewatcher, yapocis-performance"
+- Context: found smoke-testing the 1.2.0 wheel in a fresh venv. `yapocis-report` needs duckdb (imported at module level in `utils/performance.py`), `yapocis-imagewatcher` needs pygame and watchdog, `yapocis-performance` needs matplotlib and seaborn. They are only in the `dev` extras. 1.1.0 was the same. The maintainer: "Ship 1.2.0 with it listed as a known issue, and file a bug to fix in 1.2.1".
+- Issue: #107
+
+### B17. `yapocis-tools devices` crashes without an OpenCL platform
+
+- Reported: 2026-11-12
+- Report: "yapocis-tools devices crashes on a machine with no OpenCL platform"
+- Context: `pyopencl._cl.LogicError: clGetPlatformIDs failed: PLATFORM_NOT_FOUND_KHR`, found by the first rustcpu CI run (#102). The maintainer: "File it as a bug".
+- Issue: #108
+
 ### B15. `yapocis-report compare-branches` crashes on tests with zero mean time
 
 - Reported: 2026-11-12

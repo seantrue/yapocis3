@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-12
+
+### Added
+
+- CI: GitHub Actions runs the test suite on yapocis-rs's CPU backend (`rustcpu`) on Linux with Python 3.13, building the `yapocis_rs` wheel from a pinned yapocis-rs commit ; OpenCL tests skip when no OpenCL platform exists (#102)
+
 ### Changed
 
 - Dependencies: pymetallic 0.2.3 → 0.3.1 in `uv.lock`. yapocis still writes Metal buffers with the synchronous `Buffer.from_numpy`, not 0.3's async blit writes (#90)
@@ -26,13 +32,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Kernels no longer keep their last call's arguments, and async calls no longer keep their `out_like` and `inout` arrays until the kernel's next call (#100)
 - CUDA: `close()` left the device manager holding arrays strongly, so their buffers were never purged (#100)
 
+### Known issues
+
+- `yapocis-report`, `yapocis-imagewatcher` and `yapocis-performance` fail after a plain `pip install yapocis`: they need duckdb, pygame and watchdog, or matplotlib and seaborn, which are only in the `dev` extras. 1.1.0 was the same. To be fixed in 1.2.1 (#107)
+- `yapocis-tools devices` raises `LogicError` (`PLATFORM_NOT_FOUND_KHR`) on a machine with no OpenCL platform (#108)
+- On Apple M4, GPU results can still differ from run to run when several processes use the GPU at once (#88, as in 1.1.0)
+
 ## [1.1.0] - 2026-11-11
 
 Backfilled on 2026-11-11 from the history since 1.0.0 (19 pull requests, #51 to #79; four direct commits on main, `cca8f8a`, `a42bfab`, `80884c3` and `6a90822`; and the `2c7c9b5` merge of main into dev).
 
 ### Added
 
-- CI: GitHub Actions runs the test suite on yapocis-rs's CPU backend (`rustcpu`) on Linux with Python 3.13, building the `yapocis_rs` wheel from a pinned yapocis-rs commit (#102)
 - The `rustcpu` backend: `YAPOCIS_BACKEND=rustcpu` runs yapocis-rs's CPU ports of the OpenCL kernels from Python through the `yapocis_rs` wheel, with one device, `cpu`, and `make test-rustcpu`. Without the wheel the backend is simply unavailable; an explicit `backend="rustcpu"` raises an `ImportError` naming the wheel. Interfaces without a CPU port fail to load with "has no CPU port" (#77)
 - `yapocis-tools bundle`: renders every interface for OpenCL, Metal and CUDA without a device and writes `manifest.json` and the sources, for the Rust port (yapocis-rs), with derivation (`--fixtures`), kernel parity (`--parity`) and library parity (`--parity-lib`) fixtures (#54)
 - `yapocis-tools bundle --host-fixtures`: numpy results for yapocis-rs's npexact to replay bit for bit (elementwise, extrema, order, fft and complex64 multiply sections), and `bundle --project-only` (`cca8f8a`, #72, #74)

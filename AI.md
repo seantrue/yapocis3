@@ -62,8 +62,25 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~360 lines added and ~145 removed in the device managers, kernel base and kernel manager base, ~660 lines of tests, ~4 of changelog: buffer lifetime, #100: kernels drop their arguments, one guarded `id → (ref, buffer)` store, fast buffer free, CUDA close (2026-11-12)
   - ~17 lines of BUGS.md and FEATURES.md: B15 (#103, `compare-branches` divides by a zero mean) and F2 (#102, CI on the rustcpu backend) (2026-11-12)
   - ~70 lines: `.github/workflows/ci.yml`, the first CI workflow, the test suite on the rustcpu backend, and ~26 lines of tests so OpenCL tests skip without an OpenCL platform, #102 (2026-11-12)
+  - ~45 lines of version, changelog, BUGS.md/FEATURES.md and this entry: version 1.2.0 released to PyPI (2026-11-12)
 
 ## Detailed Contributions
+
+### 2026-11-12: Version 1.2.0 (Claude Opus 5.5)
+
+**What the maintainer asked for.** Version 1.2.0, with #100 folded in (plum `docs/QUEUE.md` D12: "Release: Fold into 1.2.0"). Then "get ready to send yapocis to PyPI", and the answers pasted from the decisions page: "M: mark #106 ready and merge it, then release from the merge commit", "Ship 1.2.0 with it listed as a known issue, and file a bug to fix in 1.2.1" (the console scripts), "Go: release 1.2.0, upload to PyPI, push main and the tag, make the GitHub release", and "File it as a bug" (`yapocis-tools devices`). The version, the release and shipping with the known issues are the maintainer's decisions.
+
+**What Claude did.**
+- The version is 1.2.0 in `pyproject.toml` and in `uv.lock`'s yapocis entry (`uv lock --check` passes). CHANGELOG `[Unreleased]` is now `[1.2.0] - 2026-11-12`, with an Added section (CI) and Known issues (#107, #108, #88).
+- Filed #107 (B16: `yapocis-report`, `yapocis-imagewatcher` and `yapocis-performance` fail after a plain install, because their dependencies are only in the `dev` extras; 1.1.0 was the same) and #108 (B17: `yapocis-tools devices` crashes without an OpenCL platform). F2 (#102) moves to Done.
+- `make release` is interactive, so its steps were run by hand, as for 1.1.0: bump, changelog, AI.md, commit, annotated tag `v1.2.0`, `python -m build`, `twine check`, `twine upload`, push `main` and the tag, GitHub release.
+
+**A defect in the AI's own change, caught at the release.** #106 added its CHANGELOG line under `[1.1.0]`'s Added section instead of `[Unreleased]`: the edit searched for the first "### Added" after `[Unreleased]`, and `[Unreleased]` had none. It was merged that way and caught while writing the 1.2.0 section; this commit moves it.
+
+**Gates.**
+- **Repo and PyPI.** PyPI's latest was 1.1.0; no `v1.2.0` tag existed locally or on origin; the checkout was clean on `main`.
+- **Suites on `b0af6ea`** (M4 Max, one GPU process at a time, Mako and numba caches redirected into plum `claude-debug/`): metal 1,767 passed, 52 skipped, 1 failed; ocl 1,767 passed, 52 skipped, 1 failed; numbax 1,763 passed, 56 skipped, 1 failed; rustcpu 675 passed, 117 skipped, 1 failed. The failure is `test_old_compiled_modules_are_removed`, the Mako-redirect artefact; CI shows it passes in a clean checkout. `0ce20ed` adds only the workflow and test-skip changes from #106, whose CI run passed (rustcpu on Linux: 639 passed, 118 skipped). `make check` (lint, types) was not run; it has failed at every release.
+- **Artifacts.** A trial build from `b0af6ea` with the version at 1.2.0 passed `twine check`, installed in a fresh Python 3.13 venv, reported 1.2.0, and ran a numbax kernel correctly. The same smoke test found #107.
 
 ### 2026-11-12: #102, CI on the rustcpu backend (Claude Opus 5.5)
 
