@@ -36,8 +36,11 @@ def metal():
 def demo(metal):
     prog = metal[0]
     # Other tests leave orphaned out_like buffers; start each test from none.
-    prog.dmgr.purge()
+    # Collect first: arrays that earlier tests left in reference cycles (a dropped
+    # program's kernels hold their last call's arguments) die only in a full
+    # collection, and a purge before it would leave their buffers counted as leaks.
     gc.collect()
+    prog.dmgr.purge()
     return prog
 
 
