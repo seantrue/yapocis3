@@ -5,6 +5,9 @@ import pytest
 from yapocis.ocl.device import get_device
 from yapocis.utils.config import print_config
 
+# Both tests read the OpenCL platform and device
+pytestmark = pytest.mark.ocl
+
 
 @pytest.mark.smoke
 def test_print_device_config():

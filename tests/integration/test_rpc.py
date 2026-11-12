@@ -10,6 +10,7 @@ from yapocis.ocl.kernel_manager import import_program, load_program
 from yapocis.utils.stereo_typing import *
 
 
+@pytest.mark.ocl
 def test_buffers():
     # TODO: Test all available devices
     bmgr = DeviceManager()
@@ -50,6 +51,7 @@ def test_buffers():
     bmgr.snapshot(name="buffers")
 
 
+@pytest.mark.ocl
 def test_buffers_async_write():
     # TODO: Test all available devices
     bmgr = DeviceManager(device_name=0, timed=True)
@@ -88,6 +90,7 @@ interface demo {
     # assert len(interface.aliases) == 2
 
 
+@pytest.mark.ocl
 def test_compiling():
     interfaces = [
         ("convolve", dict(name="convolve", conv=[1, 2, 3, 4, 3, 2, 1])),
@@ -113,6 +116,7 @@ def test_compiling():
             print(f"Kernels: {len(program.interface.kernels)}")
 
 
+@pytest.mark.ocl
 def test_context():
     engine = DeviceManager()
     a = np.random.sample((100,)).astype(np.float32)
@@ -127,6 +131,7 @@ def test_context():
         engine.read(b)
 
 
+@pytest.mark.ocl
 def test_demo_kernel():
     # TODO: use load_program instead
     _, entrypoints = import_program("demo", import_kernels="*")
@@ -156,6 +161,7 @@ def test_demo_kernel():
     assert a.sum() == 20
 
 
+@pytest.mark.ocl
 def test_import():
     import_program("demo", sum="frabjous_day")
     assert callable(frabjous_day)
@@ -190,6 +196,7 @@ def test_kernel_level_tiled_only_one():
     assert interface.kernels[1].tiled is False
 
 
+@pytest.mark.ocl
 def test_devices():
     print()
     for device_name in get_available_device_names():
