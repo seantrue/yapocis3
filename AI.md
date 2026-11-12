@@ -61,8 +61,17 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~5 lines of tests: #89's orphan-buffer test collects garbage before it purges, so earlier tests' buffers no longer count as leaks in full-suite runs (2026-11-12)
   - ~360 lines added and ~145 removed in the device managers, kernel base and kernel manager base, ~660 lines of tests, ~4 of changelog: buffer lifetime, #100: kernels drop their arguments, one guarded `id → (ref, buffer)` store, fast buffer free, CUDA close (2026-11-12)
   - ~17 lines of BUGS.md and FEATURES.md: B15 (#103, `compare-branches` divides by a zero mean) and F2 (#102, CI on the rustcpu backend) (2026-11-12)
+  - ~70 lines: `.github/workflows/ci.yml`, the first CI workflow, the test suite on the rustcpu backend, #102 (2026-11-12)
 
 ## Detailed Contributions
+
+### 2026-11-12: #102, CI on the rustcpu backend (Claude Opus 5.5)
+
+**What the maintainer asked for.** "Feature: Add ci for yapocis, on the rustcpu backend only", then "For CI on yapocis, build a local wheel to test rustcpu", "We never test CI on MacOS -- check your notes. Test on the most recent supported Python.", "1: not yet, 2: yes" (no ruff/typecheck yet; confirm the Mako-redirect test passes in a clean checkout) and "run the CI job".
+
+**What the AI did.** `.github/workflows/ci.yml` (~70 lines), the repository's first workflow: on `ubuntu-latest` with Python 3.13, it installs yapocis and its `test` extra from `uv.lock` (without the `dev` group, which pulls in torch; `duckdb` and `tabulate` are added at their locked versions because the test fixtures use them), builds the `yapocis_rs` wheel with maturin from yapocis-rs `556ef5c` (pinned by full SHA), installs it with `--no-deps`, and runs `make test-rustcpu`. No macOS job, by the maintainer's standing rule. A CHANGELOG line.
+
+**A miss, caught by the maintainer.** When listing F2's open questions, the AI asked which runners to use, though the maintainer had already ruled out macOS CI (twice, in another project's notes). The maintainer: "check your notes". The rule is now in the global instructions.
 
 ### 2026-11-12: BUGS.md B15 and FEATURES.md F2 recorded; the maintainer's zero-mean guard in `performance.py` (Claude Opus 5.5)
 

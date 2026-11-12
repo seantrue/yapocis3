@@ -32,6 +32,7 @@ Backfilled on 2026-11-11 from the history since 1.0.0 (19 pull requests, #51 to 
 
 ### Added
 
+- CI: GitHub Actions runs the test suite on yapocis-rs's CPU backend (`rustcpu`) on Linux with Python 3.13, building the `yapocis_rs` wheel from a pinned yapocis-rs commit (#102)
 - The `rustcpu` backend: `YAPOCIS_BACKEND=rustcpu` runs yapocis-rs's CPU ports of the OpenCL kernels from Python through the `yapocis_rs` wheel, with one device, `cpu`, and `make test-rustcpu`. Without the wheel the backend is simply unavailable; an explicit `backend="rustcpu"` raises an `ImportError` naming the wheel. Interfaces without a CPU port fail to load with "has no CPU port" (#77)
 - `yapocis-tools bundle`: renders every interface for OpenCL, Metal and CUDA without a device and writes `manifest.json` and the sources, for the Rust port (yapocis-rs), with derivation (`--fixtures`), kernel parity (`--parity`) and library parity (`--parity-lib`) fixtures (#54)
 - `yapocis-tools bundle --host-fixtures`: numpy results for yapocis-rs's npexact to replay bit for bit (elementwise, extrema, order, fft and complex64 multiply sections), and `bundle --project-only` (`cca8f8a`, #72, #74)
