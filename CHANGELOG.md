@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Dependencies: pymetallic 0.2.3 → 0.3.1 in `uv.lock`. yapocis still writes Metal buffers with the synchronous `Buffer.from_numpy`, not 0.3's async blit writes (#90)
+
 ### Fixed
 
 - Docs: the `trace_segments` and `trace_regions` docstrings and the truetrace library page had the iso direction backwards. A positive iso moves the contour inward, into the mask, and a negative one outward; the code is unchanged (#81)
