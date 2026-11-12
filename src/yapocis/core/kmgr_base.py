@@ -298,6 +298,8 @@ class KernelManagerBase(ABC):
 
         # Async execution support
         self.pending_events: list[Any] = []  # Track pending async operations
+        # Device buffers (and packaged scalars) of async calls, held until wait_all()
+        self._inflight: list[tuple] = []
         self._default_async = False  # Default to synchronous execution
 
         # Get backend-specific device manager
@@ -364,6 +366,13 @@ class KernelManagerBase(ABC):
         return self.dmgr.write(a, wait=not async_write)
 
     def purge(self):
+        """Wait for pending async work, then purge the device manager.
+
+        Blocks until every async call has finished, so the buffers they hold are
+        released too. Buffers of dead arrays are released at the next manager call
+        anyway; purge() is a safety net and a sync point.
+        """
+        self.wait_all()
         self.stats()
         return self.dmgr.purge()
 
@@ -380,12 +389,19 @@ class KernelManagerBase(ABC):
         specific event types (OpenCL events, Metal command buffers, CUDA streams).
 
         The default implementation calls the backend-specific wait method if available.
+
+        Async calls hold the device buffers they used until this returns. A caller
+        that makes async calls must call wait_all(), leave async_mode(), or call
+        purge(), or those buffers stay allocated.
         """
         if self.pending_events:
             # Call backend-specific wait implementation
             if hasattr(self.dmgr, "wait_events"):
                 self.dmgr.wait_events(self.pending_events)
             self.pending_events.clear()
+        if self._inflight:
+            with self.dmgr._release_context():
+                self._inflight.clear()
 
     @contextmanager
     def async_mode(self):
@@ -394,7 +410,8 @@ class KernelManagerBase(ABC):
 
         All kernel calls within this context will be enqueued without waiting,
         allowing the GPU to execute them asynchronously. The context manager
-        automatically waits for all operations to complete on exit.
+        automatically waits for all operations to complete on exit, and releases
+        the device buffers the calls held.
 
         Usage:
             with prog.async_mode():

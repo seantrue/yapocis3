@@ -89,9 +89,7 @@ class DeviceManager(DeviceManagerBase):
         if not a.data.contiguous:
             raise RuntimeError(f"Array {id(a)} {a.shape} is not contiguous")
         buf = pyopencl.Buffer(self.ctx, self.MEMFLAGS, hostbuf=a)
-        buffer_id = id(a)
-        self.arrays[buffer_id] = a
-        self.buffers[buffer_id] = buf
+        self._register(a, buf)
         return buf
 
     def read_buffer(self, a: Array) -> Array:
@@ -138,27 +136,6 @@ class DeviceManager(DeviceManagerBase):
         a.shape = shape
         a.strides = strides
         return buf
-
-    def find_buffer(self, a: Array, op: int) -> pyopencl.Buffer | None:
-        """Find existing PyOpenCL buffer for array."""
-        assert op in (self.READ, self.WRITE)
-        buffer_id = id(a)
-        havea = buffer_id in self.buffers and buffer_id in self.arrays
-        # Complete match, easy decision
-        if havea:
-            self.hits += 1
-            return self.buffers[buffer_id]
-        else:
-            self.misses += 1
-        # No match at all, also easy.
-        if not havea:
-            # Reading an array back with no matching buffer is fatal
-            if op == self.READ:
-                raise ValueError(
-                    "Array not in yapocis management, you may have written to it, or be using an assigned or .copy"
-                )
-            return None
-        raise RuntimeError(f"Failed to find a buffer for {op} {a}")
 
     def wait_events(self, events: list[pyopencl.Event]) -> None:
         """
