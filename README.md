@@ -107,7 +107,7 @@ Pre-built implementations for common operations:
 
 **Requirements:**
 
-- Python 3.10+ (Python 3.13 recommended for development)
+- Python 3.11+ (Python 3.13 recommended for development)
 - NumPy 2.1+ (because NumPy 1.x is so 2020)
 - Backend-specific dependencies (PyOpenCL, PyMetallic, PyCUDA, or Numba)
 - Sufficient RAM

@@ -13,7 +13,7 @@ images
 
 ## Prerequisites
 
-- Python 3.10 or later (3.13 recommended)
+- Python 3.11 or later (3.13 recommended)
 - NumPy 2.1+
 - At least one supported backend (OpenCL, Metal, CUDA, or Numba)
 

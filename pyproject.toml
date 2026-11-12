@@ -17,7 +17,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Topic :: Scientific/Engineering :: Image Recognition",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -25,12 +24,12 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 keywords = ["opencl", "pyopencl", "thunk", "ocl", "image", "gpu", "computing", "metal", "cuda", "numba"]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 # numba and pyopencl are required everywhere; pymetallic on macOS
 dependencies = [
     # Core dependencies - always required
     "Mako>=1.3.0",
-    "Pillow>=10.3.0",
+    "Pillow>=13.0.0",  # the first release outside all 41 Pillow advisories (#87)
     "numpy>=2.1.0",
     "pyyaml>=6.0.0",
     "pyparsing>=3.2.0",
@@ -198,7 +197,7 @@ exclude = [
 
 [tool.black]
 line-length = 88
-target-version = ['py310', 'py311', 'py312', 'py313']
+target-version = ['py311', 'py312', 'py313']
 include = '\.pyi?$'
 exclude = '''
 /(
@@ -216,7 +215,7 @@ exclude = '''
 '''
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 line-length = 88
 
 [tool.ruff.lint]
@@ -244,7 +243,7 @@ ignore = [
 max-complexity = 10
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

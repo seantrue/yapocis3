@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Dependencies: pymetallic 0.2.3 → 0.3.1 in `uv.lock`. yapocis still writes Metal buffers with the synchronous `Buffer.from_numpy`, not 0.3's async blit writes (#90)
+- Python 3.11 or later is required; Python 3.10 users stay on yapocis 1.1.0 (#87)
+- The published Pillow floor is `Pillow>=13.0.0`, the first release outside all 41 Pillow security advisories (#87)
+- Dependencies: Pillow 13.0.0, starlette 1.10.0, filelock 4.2.10, wheel 0.48.0, pytest 9.2.0, idna 3.20, requests 2.34.2, fonttools 4.68.0 and Pygments 2.21.0 in `uv.lock`, which closes all 56 Dependabot alerts (#87)
+- Dependencies: pytest-benchmark 5.1.0 → 5.3.1 (which replaces py-cpuinfo with py-cpuinfo2) in `uv.lock`, because pytest 9 removed `Node._nodeid`, which 5.1.0 reads (#87)
 
 ### Fixed
 
