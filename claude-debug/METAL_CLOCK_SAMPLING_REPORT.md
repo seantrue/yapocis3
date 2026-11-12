@@ -124,3 +124,54 @@ The 3060 and 3080 were running other jobs during these runs, so expect a few per
 | Metal (M4 Max) | 1.37–1.40 | 1.23–1.29 | about 9% |
 | OpenCL (M4 Max) | 3.15–3.29 | 2.06–2.10 | about 34% |
 | CUDA (Tesla P40) | 5.81–6.06 | 4.92–5.36 | about 12% |
+
+## Follow-up: plain `out` without an upload, compared on Metal
+
+Three source trees on the M4 Max, all in the `yapocis-outlight` venv and chosen through `PYTHONPATH`, run in alternating order:
+
+- original: `main` at 6fa5e01
+- out_like only: commit `2cbad59`
+- out_like + out: the `yapocis-outlight` working tree, which also contains the maintainer's uncommitted interface migration to `inout`
+
+Three new workloads use plain `out`: `simplex2d` at 512², `simplex3d` at 128³ (3 octaves) and truetrace `trace_segments` on a 512² mask. Each workload ran for at least 1.5 s or 500 iterations. Script: `out_nocopy_compare.py`; raw results: `out_nocopy_compare_metal.jsonl`. "Setup" is the share of sampled time under `handle_out` and `handle_outlike`.
+
+All eight workloads, three rounds (ms per iteration, min–max):
+
+| workload | original | out_like only | out_like + out |
+|---|---|---|---|
+| gaussian_multiscale | 2.81–2.86 | 2.51–2.87 | 2.49–2.86 |
+| edge_detection | 1.10–1.12 | 1.08–1.10 | 1.03–1.10 |
+| color_conversion | 1.37–1.45 | 1.27–1.30 | 1.25–1.31 |
+| graphics_circles | 1.11–1.14 | 1.16–1.21 | 1.15–1.19 |
+| denoise | 2.24–2.31 | 1.96–2.27 | 2.20–2.24 |
+| simplex2d_512 | 0.36–0.37 | 0.32–0.37 | 0.35–0.35 |
+| simplex3d_128 | 1.10–1.47 | 1.09–1.13 | 0.85–0.86 |
+| truetrace_512 | 25.67–30.42 | 25.87–27.95 | 31.19–40.88 |
+
+The simplex3d gain in this table did not reproduce. Four more rounds of the simplex workloads alone:
+
+| workload | original | out_like only | out_like + out | setup share (original → both) |
+|---|---|---|---|---|
+| simplex2d_512 | 0.339–0.367 | 0.341–0.360 | 0.329–0.357 | 3% → 0–1% |
+| simplex3d_128 | 0.837–0.844 | 0.861–0.883 | 0.834–0.905 | 95% → 0% |
+
+### On Metal, skipping the upload moves the cost; it does not remove it
+
+In simplex3d, setup fell from 95% of sampled time to 0% with no change in time per iteration. The call trees for 300 iterations show where the cost went:
+
+- **original:** the upload in `make_buffer`/`from_numpy` takes 0.160 s, GPU wait 0.093 s, readback under 0.01 s.
+- **out_like + out:** no upload, GPU wait 0.130 s, readback 0.127 s.
+
+On unified memory, a new buffer's pages are touched for the first time somewhere. Either the CPU does it during the upload, or the GPU does it on its first write and the CPU again on readback. Skipping the upload only moves that first-touch cost to the kernel and the readback. This also explains why edge_detection did not change after the `out_like` fix on Metal. On discrete GPUs (CUDA) and on Apple OpenCL's deferred copy, the upload was a real extra transfer, and those gains held (12% and 34% on color_conversion). On Metal, removing the per-call cost would need buffer reuse (a pool keyed by size), not a cheaper allocation.
+
+### truetrace: the slowdown comes from the `inout` migration, not the `out` change
+
+To separate the two, a fourth tree was timed: the `yapocis-outlight` working tree with `init_seed_from_mask` (`seed`, `dist`) and `jfa_step` (`seed_out`) put back to `out`, keeping `segments_out` as `inout`. Three alternating rounds:
+
+| truetrace_512 variant | ms/iter | setup |
+|---|---|---|
+| out_like only | 14.80–15.04 | 11% |
+| out_like + out, `segments_out` inout | 14.36–14.89 | 0% |
+| out_like + out, seed/dist/seed_out also inout (working tree) | 19.43–22.10 | 0% |
+
+The `out` change is worth about 2% here. Turning `seed`, `dist` and `seed_out` into `inout` costs about 35%: each jump-flood step now uploads `seed_out` (4 MB at 512²) and reads it back. The audit found that these kernels write every element on every backend, using the same -1 and 1e30 sentinels as the caller's `np.full` pre-fill, so `out` is sufficient for them. Only `histogram.hst` and `segments_out` (which is accumulated through `seg_counter`) need `inout`.

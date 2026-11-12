@@ -112,6 +112,10 @@ class KernelBase(ABC):
         """
         Handle output parameter: ensure GPU buffer exists and track for return.
 
+        ``out`` is write-only: a new buffer is not initialised from ``arg``,
+        so a kernel that reads or accumulates into its output must declare
+        it ``inout``.
+
         Args:
             arg: NumPy array for output
             dtype: Target data type
@@ -120,7 +124,7 @@ class KernelBase(ABC):
             GPU buffer handle
         """
         arg = arg.astype(dtype, copy=False)
-        buf = self.ensure(arg)
+        buf = self.kernel_manager.dmgr.ensure_output_buffer(arg)
         self.returns.append((arg, buf))
         return buf
 

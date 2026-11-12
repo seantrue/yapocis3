@@ -128,9 +128,9 @@ class DeviceManager(DeviceManagerBase):
     def make_output_buffer(self, a: Array) -> gpuarray.GPUArray:
         """Allocate a buffer for an output array without copying its contents.
 
-        For out_like results only: the host array is a fresh ``np.empty_like``
-        whose bytes are garbage, so ``make_buffer``'s upload is wasted. Arrays
-        whose contents matter (in, inout, out, resident) must keep using
+        For write-only arrays (``out`` and ``out_like``): the kernel writes
+        every element and never reads it, so ``make_buffer``'s upload is wasted. Arrays
+        whose contents matter (in, inout, resident) must keep using
         ``make_buffer``. The layout matches ``a`` so ``read_buffer`` can copy
         straight back into it.
         """

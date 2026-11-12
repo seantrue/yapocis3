@@ -64,8 +64,29 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~70 lines: `.github/workflows/ci.yml`, the first CI workflow, the test suite on the rustcpu backend, and ~26 lines of tests so OpenCL tests skip without an OpenCL platform, #102 (2026-11-12)
   - ~45 lines of version, changelog, BUGS.md/FEATURES.md and this entry: version 1.2.0 released to PyPI (2026-11-12)
   - ~57 lines across the Metal, OpenCL and CUDA device managers and kernels, plus a ~150-line report: `out_like` outputs allocated without a host upload, after wall-clock sampling of the Metal backend (2026-11-12)
+  - ~35 lines in the kernel and device-manager bases, backend docstrings, two interfaces and a stub, plus ~50 lines of report and ~9 of FEATURES.md: plain `out` made write-only, with `histogram` and `marching_squares` moved to `inout` (the maintainer's edits) and F3 recorded (2026-11-12)
 
 ## Detailed Contributions
+
+### 2026-11-12: Plain `out` is write-only; kernels that accumulate move to `inout` (Claude Opus 5.5, with the maintainer)
+
+**What the maintainer asked for.** "What kernels actually depend on initializing the output buffer?", then "I'm already migrating these to inout (histogram,truetype so far)", "OK. Change extending make_output_buffer to plain out", "Profile metal locally and compare to the original and just out_like tweak", "Fix the inout->out thinkos I made, make yapocos-outlight have the best changes", and "Add a feature: kernels to initialize GPU memory".
+
+**Division of labor.** The maintainer moved `histogram.hst` and `marching_squares`' `segments_out` from `out` to `inout`. Claude made `out` write-only, audited the other `out` parameters, measured the result, and reverted three `inout` changes that the audit showed were not needed.
+
+**What Claude did.**
+- **Audit.** Of the 34 `out` parameters, only `histogram.hst` (`atomic_inc` into a zeroed array) and `segments_out` (appended through `seg_counter`, so only partly written) read or depend on the incoming contents. truetrace's `init_seed_from_mask` and `jfa_step`, `median3x3` and `simplex` write every element on every GPU backend. No CNN, VGG or audio template reads or accumulates into its output, and the numba CNN `+=` loops set the output from `bias` first. Limit: the audit was grep-based, and full coverage of every element was confirmed only for truetrace, median and simplex.
+- **Code.** `DeviceManagerBase.make_output_buffer` (by default it uploads, like `make_buffer`) and `ensure_output_buffer`. `KernelBase.handle_out` now uses the latter, so the Metal, OpenCL and CUDA no-copy allocators serve `out` as well as `out_like`. The docstrings state the write-only contract. `truetrace.pyi` was regenerated for `marching_squares`' new `inout` argument.
+- **The maintainer's slips, fixed at their request.** The migration had also turned `init_seed_from_mask`'s `seed` and `dist`, and `jfa_step`'s `seed_out`, into `inout`. Those kernels write every element, using the same -1 and 1e30 sentinels as the caller's `np.full`. As `inout`, each jump-flood step uploaded and read back a 4 MB array, and truetrace at 512² went from 14.8–15.0 ms to 19.4–22.1 ms. They are `out` again, with comments in the interface; the final tree runs at 14.6–17.1 ms.
+- **Recorded F3** (kernels to initialize GPU memory) with the native fills each backend offers and two open questions.
+
+**Results.** Final tree, `-m "not performance"`: Metal 700 passed, 70 skipped; OpenCL (Apple) 700 passed, 70 skipped; CUDA on yellowfin's P40 only, 653 passed, 80 skipped; 0 failures. Timing on Metal, three source trees alternated: the plain-`out` change is worth about 2% on truetrace and nothing measurable on simplex2d or simplex3d. In simplex3d, output setup fell from 95% of sampled time to 0%, but readback rose from under 0.01 s to 0.127 s and GPU wait from 0.093 s to 0.130 s. On unified memory a new buffer's first-touch cost moves rather than disappearing, so on Metal a per-call saving would need buffer reuse. The `out` change was not timed on CUDA or OpenCL.
+
+**What the AI got wrong along the way.**
+- The first answer about `out` gave `histogram`'s parameter as `out int hst` without saying it was quoting 6fa5e01. When the working tree showed `inout` mid-audit, that was the maintainer's live edit, not an error in the file.
+- A three-way run made simplex3d look 26% faster with the `out` change; four more rounds showed no difference.
+- A lint comparison used `git stash` in the maintainer's working tree, briefly removing their uncommitted interface edits; `stash pop` restored them.
+- When the `yapocis-outlight` venv was rebuilt after the worktree move, it left out the locally built `yapocis_rs` wheel. `YAPOCIS_BACKEND=rustcpu pytest` then failed with "backend='rustcpu' is not one of available backends", which the maintainer hit. Fixed by installing the same wheel the main checkout uses.
 
 ### 2026-11-12: Wall-clock sampling of the Metal backend; `out_like` outputs allocated without an upload (Claude Opus 5.5)
 

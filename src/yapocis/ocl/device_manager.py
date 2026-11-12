@@ -95,10 +95,10 @@ class DeviceManager(DeviceManagerBase):
     def make_output_buffer(self, a: Array) -> pyopencl.Buffer:
         """Allocate a buffer for an output array without copying its contents.
 
-        For out_like results only: the host array is a fresh ``np.empty_like``
-        whose bytes are garbage, so ``make_buffer``'s COPY_HOST_PTR upload is
-        wasted. Arrays whose contents matter (in, inout, out, resident) must
-        keep using ``make_buffer``.
+        For write-only arrays (``out`` and ``out_like``): the kernel writes
+        every element and never reads it, so ``make_buffer``'s COPY_HOST_PTR upload is
+        wasted. Arrays whose contents matter (in, inout, resident) must keep
+        using ``make_buffer``.
         """
         if a.nbytes == 0:
             return self.make_buffer(a)

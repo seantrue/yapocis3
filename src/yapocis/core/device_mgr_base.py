@@ -566,6 +566,27 @@ class DeviceManagerBase(ABC):
             buf = self.make_buffer(a)
         return buf
 
+    def make_output_buffer(self, a: Array) -> Any:
+        """
+        Create a device buffer for a write-only array, without uploading it.
+
+        The default uploads like ``make_buffer``; backends override it with an
+        uninitialised allocation. Only for ``out`` and ``out_like`` arrays,
+        whose kernels write every element and never read it. A kernel that
+        accumulates into its output must declare it ``inout``.
+        """
+        return self.make_buffer(a)
+
+    def ensure_output_buffer(self, a: Array) -> Any:
+        """
+        Like ``ensure_buffer``, but a new buffer is made with
+        ``make_output_buffer``. An existing buffer is reused as is.
+        """
+        buf = self.find_buffer(a, self.WRITE)
+        if buf is None:
+            buf = self.make_output_buffer(a)
+        return buf
+
     def ensure(self, a: Array) -> Any:
         """
         Ensure device buffer exists for array (convenience wrapper).

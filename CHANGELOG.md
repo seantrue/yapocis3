@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Performance: `out_like` output buffers are allocated without uploading the uninitialised host array on Metal, OpenCL and CUDA. The HSI round trip at 512×512 is about 9% faster on Metal, 34% on Apple OpenCL and 12% on a Tesla P40. Plain `out` arrays are still uploaded, because kernels such as `histogram` accumulate into them.
+- Performance: `out_like` output buffers are allocated without uploading the uninitialised host array on Metal, OpenCL and CUDA. The HSI round trip at 512×512 is about 9% faster on Metal, 34% on Apple OpenCL and 12% on a Tesla P40.
+- `out` parameters are now write-only: a new buffer for an `out` array is no longer initialised from the caller's array, on any GPU backend. A kernel that reads or accumulates into its output must declare it `inout`. `histogram`'s `hst` and `marching_squares`' `segments_out` are now `inout`. Interfaces outside yapocis that relied on `out` arrays arriving pre-filled must switch those parameters to `inout`.
 
 ## [1.2.0] - 2026-11-12
 
