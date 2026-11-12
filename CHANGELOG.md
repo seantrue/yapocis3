@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Performance: `out_like` output buffers are allocated without uploading the uninitialised host array on Metal, OpenCL and CUDA. The HSI round trip at 512×512 is about 9% faster on Metal, 34% on Apple OpenCL and 12% on a Tesla P40. Plain `out` arrays are still uploaded, because kernels such as `histogram` accumulate into them.
+
 ## [1.2.0] - 2026-11-12
 
 ### Added

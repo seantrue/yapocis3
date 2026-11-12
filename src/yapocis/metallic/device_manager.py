@@ -80,6 +80,21 @@ class DeviceManager(DeviceManagerBase):
         self._register(a, buf)
         return buf
 
+    def make_output_buffer(self, a: Array) -> pymetallic.Buffer:
+        """Allocate a buffer for an output array without copying its contents.
+
+        For out_like results only: the host array is a fresh ``np.empty_like``
+        whose bytes are garbage, so ``make_buffer``'s host-to-device copy is
+        wasted (12x slower at 512x512 float32, 400x at 2048x2048x4). Arrays
+        whose contents matter (in, inout, resident) must keep using
+        ``make_buffer``.
+        """
+        if a.nbytes == 0:
+            return self.make_buffer(a)
+        buf = pymetallic.Buffer(self.device, a.nbytes)
+        self._register(a, buf)
+        return buf
+
     def read_buffer(self, a: Array) -> Array:
         """Read PyMetallic buffer back to numpy array."""
         buf = self.find_buffer(a, self.READ)

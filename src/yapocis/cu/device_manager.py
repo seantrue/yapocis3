@@ -125,6 +125,25 @@ class DeviceManager(DeviceManagerBase):
         self._register(a, buf)
         return buf
 
+    def make_output_buffer(self, a: Array) -> gpuarray.GPUArray:
+        """Allocate a buffer for an output array without copying its contents.
+
+        For out_like results only: the host array is a fresh ``np.empty_like``
+        whose bytes are garbage, so ``make_buffer``'s upload is wasted. Arrays
+        whose contents matter (in, inout, out, resident) must keep using
+        ``make_buffer``. The layout matches ``a`` so ``read_buffer`` can copy
+        straight back into it.
+        """
+        if a.nbytes == 0:
+            return self.make_buffer(a)
+        if not a.data.contiguous:
+            raise RuntimeError(f"Array {id(a)} {a.shape} is not contiguous")
+        order = "F" if a.flags.f_contiguous and not a.flags.c_contiguous else "C"
+        with self.activated():
+            buf = gpuarray.empty(a.shape, a.dtype, order=order)
+        self._register(a, buf)
+        return buf
+
     def read_buffer(self, a: Array) -> Array:
         """Read PyCUDA GPUArray back to numpy array."""
         buf = self.find_buffer(a, self.READ)

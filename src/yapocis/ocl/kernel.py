@@ -86,7 +86,9 @@ class Kernel(KernelBase):
         if not dtype:
             dtype = arg.dtype
         a = np.empty_like(arg, dtype=dtype)
-        buf = self.ensure(a)
+        # A fresh array has no buffer yet; allocate one without copying its
+        # uninitialised bytes to the device.
+        buf = self.kernel_manager.dmgr.make_output_buffer(a)
         self.returns.append((a, buf))
         return buf
 

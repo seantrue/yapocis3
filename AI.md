@@ -63,8 +63,25 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~17 lines of BUGS.md and FEATURES.md: B15 (#103, `compare-branches` divides by a zero mean) and F2 (#102, CI on the rustcpu backend) (2026-11-12)
   - ~70 lines: `.github/workflows/ci.yml`, the first CI workflow, the test suite on the rustcpu backend, and ~26 lines of tests so OpenCL tests skip without an OpenCL platform, #102 (2026-11-12)
   - ~45 lines of version, changelog, BUGS.md/FEATURES.md and this entry: version 1.2.0 released to PyPI (2026-11-12)
+  - ~57 lines across the Metal, OpenCL and CUDA device managers and kernels, plus a ~150-line report: `out_like` outputs allocated without a host upload, after wall-clock sampling of the Metal backend (2026-11-12)
 
 ## Detailed Contributions
+
+### 2026-11-12: Wall-clock sampling of the Metal backend; `out_like` outputs allocated without an upload (Claude Opus 5.5)
+
+**What the maintainer asked for.** "start a separate worktree and do clock based performance sampling on the metal backend". After the report: "Yes. Fix out_like", then "Try the same specialization for opencl" and "Test this for CUDA on yellowfin". The maintainer also asked how plain `out` arrays are allocated; the decision to leave `out` alone for now is theirs.
+
+**What Claude did.**
+- **Sampling.** pyinstrument (wall clock, 0.5 ms interval) over the five workflows from `tests/performance/test_library_perf.py` at 512×512 on the M4 Max: 500 steady-state iterations each, time bucketed into GPU wait, output-buffer allocation, input upload, readback and Python overhead. Report: `claude-debug/METAL_CLOCK_SAMPLING_REPORT.md`. The scripts and profiles are in the main checkout's `claude-debug/`, not in git. Findings: every kernel call waits synchronously for the GPU; each input upload is a new buffer plus a copy; there is 25–33% Python overhead at this size; and `handle_outlike` builds a buffer from an `np.empty_like` array, uploading garbage.
+- **The fix.** `make_output_buffer` on the Metal (`pymetallic.Buffer(device, nbytes)`), OpenCL (`READ_WRITE` with no `COPY_HOST_PTR`) and CUDA (`gpuarray.empty` in the host array's order) device managers. Only `handle_outlike` calls it; `in`, `inout`, `out` and `resident` keep the copying path. ~57 LOC in six files.
+- **Plain `out` left alone, on purpose.** Every backend uploads the caller's `out` array, and `ImageOps.histogram` depends on that: it passes `np.zeros` and the Metal kernel `atomic_inc`s into it. A no-copy `out` would need a new interface hint or an audit of all 34 `out` parameters.
+
+**Results.** All suites run on this change with no failures: Metal 700 passed, 70 skipped; OpenCL (Apple) 700 passed, 70 skipped; CUDA on yellowfin's Tesla P40 only, 654 passed, 79 skipped. Each suite ran with `-m "not performance"`. color_conversion, the workload with the most `out_like` output, got faster on every backend: Metal 1.37–1.40 → 1.23–1.29 ms (about 9%), OpenCL 3.15–3.29 → 2.06–2.10 ms (about 34%), CUDA 5.81–6.06 → 4.92–5.36 ms (about 12%). edge_detection gained about 3% on OpenCL and about 6% on CUDA, with no measurable change on Metal. The other workloads have no `out_like` outputs and did not change. The OpenCL change was not run on NVIDIA OpenCL.
+
+**What the AI got wrong along the way.**
+- The first hotspot table merged every pyinstrument `[self]` frame into one row, because the pseudo-frames all report line 0. Replaced by bucketing on owning frames. Cross-checking against the call tree showed that the remaining gap was run-to-run variance (±10 points per bucket), not a bug.
+- The first Metal re-profile after the fix ran while the test suite was using the GPU. GPU wait jumped to 80–95% and the numbers were discarded and rerun on a quiet GPU.
+- On OpenCL, the sampler showed about 0% in `make_buffer` before the fix, because the `COPY_HOST_PTR` copy is deferred to the first enqueue. Only end-to-end timing showed the 34% gain; frame buckets cannot measure this cost on OpenCL.
 
 ### 2026-11-12: Version 1.2.0 (Claude Opus 5.5)
 
