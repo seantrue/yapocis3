@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# The test suite on yapocis-rs's CPU backend (YAPOCIS_BACKEND=rustcpu), #102.
+# Linux only: hosted runners have no GPU, and macOS runners are not used.
+# Metal, OpenCL, CUDA and numbax are tested on the maintainer's machines.
+# Python: the newest version yapocis supports (pyproject classifiers).
+
+env:
+  # The yapocis-rs commit the yapocis_rs wheel is built from. Move it to a
+  # merged yapocis-rs commit, never a branch.
+  YAPOCIS_RS_REF: 556ef5c477efe2eb55c157cb0b47381d55d249de
+  PYTHON_VERSION: "3.13"
+  CARGO_TERM_COLOR: always
+  CARGO_PROFILE_RELEASE_DEBUG: "0"
+
+jobs:
+  rustcpu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check out yapocis-rs at the pinned commit
+        uses: actions/checkout@v7
+        with:
+          repository: seantrue/yapocis-rs
+          ref: ${{ env.YAPOCIS_RS_REF }}
+          path: yapocis-rs
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: yapocis-rs/bindings/python
+
+      - name: Install yapocis and its test dependencies (from uv.lock)
+        run: |
+          uv venv .venv --python "$PYTHON_VERSION"
+          uv sync --locked --no-dev --extra test
+          # Used by the test fixtures (performance database, reports); in the
+          # dev group, which also pulls in torch, so install just these, at
+          # the locked versions.
+          uv export --locked --group dev --no-hashes --no-emit-project \
+            | grep -E '^(duckdb|tabulate)==' > ci-extra.txt
+          uv pip install --python .venv/bin/python -r ci-extra.txt
+
+      - name: Build and install the yapocis_rs wheel
+        working-directory: yapocis-rs/bindings/python
+        run: |
+          uvx maturin build --release -i "$GITHUB_WORKSPACE/.venv/bin/python" --out dist
+          # --no-deps: keep the NumPy that uv.lock chose
+          uv pip install --python "$GITHUB_WORKSPACE/.venv/bin/python" --no-deps dist/yapocis_rs-*.whl
+
+      - name: Versions
+        run: |
+          .venv/bin/python -c "import sys, numpy, yapocis, yapocis_rs; print(sys.version); print('numpy', numpy.__version__); print('yapocis', yapocis.__file__); print('yapocis_rs', yapocis_rs.__file__)"
+
+      - name: Tests (rustcpu)
+        run: make test-rustcpu

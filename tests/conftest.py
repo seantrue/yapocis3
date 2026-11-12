@@ -1,3 +1,4 @@
+import functools
 import importlib
 import os
 import sys
@@ -155,6 +156,17 @@ def validation_helper(validation_enabled, update_validation, validation_toleranc
     return ValidationHelper(validation_enabled, update_validation, validation_tolerance)
 
 
+@functools.cache
+def _have_opencl_platform() -> bool:
+    """True when pyopencl finds at least one platform (none on a GPU-less CI runner)."""
+    import pyopencl
+
+    try:
+        return bool(pyopencl.get_platforms())
+    except pyopencl.Error:
+        return False
+
+
 # Mark for skipping tests that require backends but dependencies are not installed
 def pytest_runtest_setup(item):
     """Skip backend tests when dependencies are not available."""
@@ -181,6 +193,8 @@ def pytest_runtest_setup(item):
             import pyopencl  # noqa: F401
         except ImportError:
             pytest.skip("pyopencl not installed - skipping OpenCL tests")
+        if not _have_opencl_platform():
+            pytest.skip("no OpenCL platform - skipping OpenCL tests")
 
     # Check for Numba marker
     numba_marker = item.get_closest_marker("numba")

@@ -233,6 +233,7 @@ class TestBackendsCommand:
         assert "←" in captured.out
 
 
+@pytest.mark.ocl
 class TestDevicesCommand:
     """Tests for yapocis-tools devices subcommand."""
 
@@ -447,6 +448,7 @@ class TestMainFunction:
             assert result == 0
             assert "Available Interfaces" in captured.out
 
+    @pytest.mark.ocl
     def test_main_devices_list(self, capsys):
         """Test main with devices list subcommand."""
         with patch("sys.argv", ["yapocis-tools", "devices", "--list"]):
