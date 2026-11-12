@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Docs: the `trace_segments` and `trace_regions` docstrings and the truetrace library page had the iso direction backwards. A positive iso moves the contour inward, into the mask, and a negative one outward; the code is unchanged (#81)
+
 ## [1.1.0] - 2026-11-11
 
 Backfilled on 2026-11-11 from the history since 1.0.0 (19 pull requests, #51 to #79; four direct commits on main, `cca8f8a`, `a42bfab`, `80884c3` and `6a90822`; and the `2c7c9b5` merge of main into dev).
