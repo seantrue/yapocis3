@@ -87,6 +87,8 @@ This is a templated interface—`${name}` is replaced with the kernel name at lo
 | `output` | `float*` | Convolved output |
 | `chunk` | `int` | Chunk size for fast variant |
 
+`${name}_fast(a, chunk)` gives the same output as `${name}(a)`, with each work item computing `chunk` consecutive outputs (a `chunk` below 1 counts as 1). Any global size of at least `ceil(len(a) / chunk)` is correct: pass `global_size=` to launch that many work items; the default, one per element, is also correct but leaves most of them idle.
+
 ### Direct Kernel Access
 
 ```python

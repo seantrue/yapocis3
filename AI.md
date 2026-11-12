@@ -56,8 +56,24 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~8 lines in `metallic/device_manager.py` and a 93-line `tests/backend/test_metal_noncontiguous.py`: Metal buffers for non-contiguous arrays registered under the caller's array, #89 (2026-11-11)
   - ~8 lines of comments in `metallic/device_manager.py`, and the lock: pymetallic 0.2.3 → 0.3.1, #90 (2026-11-11)
   - ~10 lines of pyproject and docs, plus the lock: Python 3.11, `Pillow>=13.0.0` and nine package upgrades that close the 56 Dependabot alerts, plus pytest-benchmark 5.3.1 for pytest 9, #87 (2026-11-11)
+  - ~35 lines across the OpenCL, Metal and CUDA convolve templates, ~105 of tests, ~10 of docs and comments: the GPU `_fast` convolve kernels compute every output, #80 (2026-11-11)
 
 ## Detailed Contributions
+
+### 2026-11-11: #80, the GPU `_fast` convolve kernels compute every output (Claude Opus 5.5)
+
+**What the maintainer asked for.** "continue with 89,87,80,81" (plum `docs/QUEUE.md` D5.37); for #80, "Fix it" (D7.6), "Keep the skip for now" for the parity fixtures (D7.7), no downstream pin moves (D7.8), and "Yes for the #80 PR" to a CUDA run on yellowfin (D7.5).
+
+**What the AI did.** The plum planner found the causes and prototyped the templates (`claude-debug/n5_proj`); the evaluator confirmed them. In the OpenCL, Metal and CUDA `convolve.mako`, `${name}_fast` had each work item compute only `chunk - len(conv)` outputs, clamp its writes to `right - 1`, and either multiply `a[j]` (the loop index; OpenCL, CUDA) or read a `threadgroup` buffer that every thread wrote without a barrier (Metal). Now work item `g` computes `ret[g*chunk .. g*chunk+chunk-1]`, each with the main kernel's expression and edge test, and stops at the width; a `chunk` below 1 counts as 1; the shared buffer, the clamp and `#define FAST` go (~35 lines across the three templates, the planner's prototypes unchanged). The parity skip stays, with its comment corrected (`codegen/parity.py`); `docs/library/convolve.md` gets a paragraph on `chunk` and the global size.
+
+**Tests** (`tests/lib/processing/test_convolve.py`, ~105 lines): `test_fast_variant_matches_the_main_kernel`, over the test backends and seven cases (5, 3 and 100 taps; `chunk` 64, 1, 7, 100, `chunk > width` and `chunk = 0`), each with the default dispatch and with `global_size = ceil(n/chunk)`, three times. `_fast(A)` must equal `main(A)` exactly, so an unwritten output fails (it holds garbage on OpenCL and zeros on Metal), and must match a float64 reference away from the edges (numbax reflects there, #93). The main kernel also runs on another input before each `_fast(A)` call, at the evaluator's suggestion, to keep recycled memory from passing for a result; the independent PR review's probe showed `out_like` buffers aren't reused between calls, so that step only varies what ran before, and the comment says so. Also, `test_convolve` now asserts `convolve_fast(a, 100) == convolve(a)`; before, it had no assertion. rustcpu's CPU port in yapocis-rs copies the old behaviour, so rustcpu's cases carry a temporary xfail that applies only while the installed `yapocis_rs` still gives the old output, as #66's did. One defect in the first draft: `test_convolve`'s new assertion failed on rustcpu, because only the new test had the xfail; it now has the same behaviour-gated xfail.
+
+**Results.**
+- M4 Max, a scratch venv from the shipping lock (#90's and #87's changes together, plum `claude-debug/y4_venv_ship`), `YAPOCIS_TEST_BACKENDS=ocl,metal,numbax,rustcpu`: with the shipped templates, 16 failed (every OpenCL and Metal case), 23 passed, 8 xfailed (rustcpu); with this change, 39 passed, 8 xfailed.
+- **CUDA, the merge gate:** yellowfin's RTX 3080 (pinned by UUID), yellowfin's `.venv` python with this branch's `src` on `PYTHONPATH`: `test_convolve.py` 13 passed, 4 skipped (rustcpu-only tests); `tests/backend/test_smoke.py` and `tests/integration/test_rpc.py` 31 passed. With the shipped templates the same file gave 8 failed, 5 passed, 4 skipped. So the new `_fast` compiles, and so does the main kernel in the same program.
+- OpenCL suite (`YAPOCIS_VALIDATION=1`) and Metal suite on the shipping lock (with #87's pytest-benchmark 5.3.1): each 1,601 passed, 14 skipped, 8 xfailed (rustcpu), 1 failed, the Mako-redirect artefact (`test_old_compiled_modules_are_removed`). An earlier run on #87's first, nine-package lock gave 1,597 passed and 4 `test_modes.py` errors, from pytest-benchmark 5.1.0 against pytest 9 (see #87's entry).
+
+**Division of labor:** the maintainer decided to fix it, keep the parity skip and approved the CUDA run; the plum planner found the causes and wrote the templates, and the evaluator strengthened the test design; Claude wrote the tests, docs and ledger entries and ran the gates.
 
 ### 2026-11-11: #87, Python 3.11, `Pillow>=13.0.0`, and the nine locked packages with Dependabot alerts (Claude Opus 5.5)
 
