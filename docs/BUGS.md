@@ -35,6 +35,13 @@ The list was started on 2026-11-11 by the plum coordinator, from issues already 
 - Open question: is it yapocis, or Apple's GPU stack when several processes share the GPU? Separating them needs an unrelated GPU load, and a run on yellowfin (CUDA, NVIDIA OpenCL).
 - Issue: #88
 
+### B12. Metal device manager registers a non-contiguous input's copy under the copy's id
+
+- Reported: 2026-11-11
+- Report: (found while checking pymetallic for #88) "`make_buffer` and `write_buffer` … register the buffer under the copy's id", so later lookups for the original array miss and the buffer leaks until a purge.
+- Context: `src/yapocis/metallic/device_manager.py`, `make_buffer` and `write_buffer`. This is not #88's cause, because ResNet's arrays are contiguous.
+- Issue: #89
+
 ## Fixed
 
 ### B2. colormath `xyz2xyY` of black: NaN on OpenCL, 0 on numba
