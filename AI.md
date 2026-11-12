@@ -51,8 +51,20 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~190 lines of kernel and library code, ~630 of tests, ~45 of docs and changelog: the numba batch, #64, #66, #67, #82, the rustcpu cache key, numbax `xyY2xyz`, #65 tests (2026-11-11)
   - ~43 lines of tests removed: the temporary rustcpu #66 xfail, after the `yapocis_rs` wheel was rebuilt from yapocis-rs `9ebcac9` (2026-11-11)
   - ~10 lines of version, changelog and this entry: version 1.1.0 released to PyPI (2026-11-11)
+  - ~15 lines of docs: BUGS.md B12 and issues #89/#90 from the pymetallic check (2026-11-11)
 
 ## Detailed Contributions
+
+### 2026-11-11: BUGS.md B12, and issues #89 and #90 from the pymetallic check (Claude Opus 5.5)
+
+**What the maintainer asked for.** After 1.1.0 shipped with #88 as a known issue: "Check pymetallic for possible memory issues", then "file both. Note to move to 0.3.1 at the start of the next release cycle."
+
+**What the AI did.** The plum coordinator read pymetallic 0.2.3 (the version in `uv.lock`) and this repo's `metallic/device_manager.py`. It found no cross-process path that would explain #88, and filed what it did find:
+- **#89, BUGS.md B12:** `make_buffer` and `write_buffer` register a non-contiguous input's contiguous copy under the copy's id. The weak entry dies at once, so lookups miss and the buffer leaks until a purge.
+- **seantrue/pymetallic#2:** the `to_numpy` view doesn't keep its `Buffer` alive. This repo copies out of the view at once, so it isn't affected.
+- **#90 (`dependencies`):** at the start of the next release cycle, move pymetallic 0.2.3 → 0.3.1. 0.3.1 is already on PyPI.
+
+~15 lines of Markdown; no code changed.
 
 ### 2026-11-11: Version 1.1.0 (Claude Opus 5.5)
 
