@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- **Python**: 3.10 or later (3.13 recommended for development)
+- **Python**: 3.11 or later (3.13 recommended for development)
 - **NumPy**: 2.1+ (automatically installed)
 - **Backend**: At least one of OpenCL, Metal, CUDA, or Numba
 

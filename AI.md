@@ -55,8 +55,30 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~7 lines of docstrings and docs, ~35 of BUGS.md, changelog and ledger: #81 iso direction, BUGS.md B13 (#92) and B14 (#93) (2026-11-11)
   - ~8 lines in `metallic/device_manager.py` and a 93-line `tests/backend/test_metal_noncontiguous.py`: Metal buffers for non-contiguous arrays registered under the caller's array, #89 (2026-11-11)
   - ~8 lines of comments in `metallic/device_manager.py`, and the lock: pymetallic 0.2.3 → 0.3.1, #90 (2026-11-11)
+  - ~10 lines of pyproject and docs, plus the lock: Python 3.11, `Pillow>=13.0.0` and nine package upgrades that close the 56 Dependabot alerts, plus pytest-benchmark 5.3.1 for pytest 9, #87 (2026-11-11)
 
 ## Detailed Contributions
+
+### 2026-11-11: #87, Python 3.11, `Pillow>=13.0.0`, and the nine locked packages with Dependabot alerts (Claude Opus 5.5)
+
+**What the maintainer asked for.** "continue with 89,87,80,81" (plum `docs/QUEUE.md` D5.37); for #87, "3: requires-python >=3.11 (all 56 close)" (D7.2), and "Yes" to raising the published Pillow floor (D7.3); after the first gate, option 1 for the pytest 9 problem below: also upgrade pytest-benchmark to 5.3.1 (D7.11); after review, folding ruff and black from py310 to py311 into this change (D8.2); and "Scratch venv; sync and reinstall after merge" (D7.10), so this checkout's `.venv` is synced by the coordinator after the merge, not here.
+
+**What the AI did.** The plum planner found the cause: nothing held Pillow below 13 on purpose; `requires-python = ">=3.10"` did, because Pillow 13.0.0 (and filelock 4.2, starlette 1.10 and fonttools 4.68) need Python 3.11, so uv kept a 3.10 fork at the vulnerable versions. This change:
+- `pyproject.toml`: `requires-python = ">=3.11"`, the 3.10 classifier removed, mypy's `python_version = "3.11"`, black's and ruff's `target-version` py311 (D8.2; ruff gives the same 493 findings on `src/yapocis` and `tests` before and after, and `black --check` the same 39 files; the extension scaffold template in `scripts/tools.py`, which still writes `requires-python = ">=3.10"`, is left for a follow-up), and `Pillow>=13.0.0` (the first release outside all 41 Pillow advisories);
+- README and `docs/quickstart/{index,installation}.md`: Python 3.11 or later (the plan named README; the two quickstart pages said 3.10 too);
+- `uv.lock`: `uv lock --upgrade-package` for Pillow, starlette, wheel, filelock, idna, pytest, requests, fonttools and Pygments, with yapocis3's `.venv` uv (0.13.4). Only those nine move; the 3.10-only versions of eleven packages (numpy, scipy, contourpy and 8 others) drop out, and exceptiongroup goes. Then, on the maintainer's decision D7.11, `--upgrade-package pytest-benchmark` (5.1.0 → 5.3.1, which replaces py-cpuinfo 9.0.0 with py-cpuinfo2 10.1.1); nothing else moves. Before that step the lock was identical to the planner's trial `n5_lock311_pil`. pymetallic stays at 0.2.3; #90 moves it.
+
+~9 lines of pyproject, ~3 of docs, ~20 of BUGS.md, CHANGELOG and this entry; the lock diff is 238 lines added and 893 removed.
+
+**Checked.** The plan's matcher (`n5_lock_vuln_check.py`, against the 56 alerts saved in planning) finds 56 of 56 on `main`'s lock and 0 of 56 on this one. `uv lock --check` passes with uv 0.12.5 and 0.13.4.
+
+- **First gate, nine packages only** (scratch venv `y4_venv87`, Apple M4 Max, one suite at a time): OpenCL, Metal and numbax each 1,577 passed, 14 skipped, 1 failed, 4 errors; rustcpu 647 passed, 22 skipped, 1 failed, 1 error. **The errors were new**: `tests/async/test_modes.py::test_async_modes_small_pipeline`, one per backend, because pytest-benchmark 5.1.0 reads `node._nodeid`, which pytest 9 removed. They passed on `main`'s lock (pytest 8.4.2). The plan's evaluator had run only `tests/lib`, which doesn't use the `benchmark` fixture, so the plan didn't see it. A trial with pytest-benchmark 5.3.1 passed `test_modes.py`, 40 of 40, and the maintainer chose that fix (D7.11).
+- **Gate on the final lock** (scratch venv `y4_venv_ship`, built from this lock with #90's pymetallic 0.3.1 on top, as it ships): OpenCL (`YAPOCIS_VALIDATION=1`), Metal and numbax each 1,581 passed, 14 skipped, 1 failed; rustcpu 648 passed, 22 skipped, 1 failed. No errors; the `test_modes.py` cases pass on every backend. The failure is `test_kernel_template_cache.py::test_old_compiled_modules_are_removed`, from the Mako redirect the runs use, as on `main`, whose Metal suite gives the same 1,581 passed.
+- The sphinx build (nine-package lock) gives the same two warnings as on `main` (BUGS.md and FEATURES.md not in a toctree).
+
+Not run: CUDA (optional for this PR, D7.5), Python 3.11 and 3.12 (the venvs are 3.13).
+
+**Division of labor:** the maintainer chose the Python floor and the Pillow floor; the plum planner found the cause and the nine packages, and the evaluator ran `tests/lib` on the new lock; Claude made the change, ran the suites, found the pytest-benchmark errors and trialled the fix the maintainer then chose, and wrote the ledger entries.
 
 ### 2026-11-11: #90, pymetallic 0.2.3 → 0.3.1 (Claude Opus 5.5)
 

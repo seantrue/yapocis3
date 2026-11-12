@@ -13,13 +13,6 @@ The list was started on 2026-11-11 by the plum coordinator, from issues already 
 - Context: `kernels/metal/convolve.mako:23-45`. Found while reviewing #64.
 - Issue: #80
 
-### B10. 56 open Dependabot alerts in `uv.lock`
-
-- Reported: 2026-11-11
-- Report: (GitHub, on push) "56 vulnerabilities on seantrue/yapocis3's default branch (5 critical, 26 high, 23 moderate, 2 low)"
-- Context: all of them are in `uv.lock`; 41 are Pillow (all 5 critical). The table by package is on the issue.
-- Issue: #87
-
 ### B11. GPU results nondeterministic under multi-process contention on Apple M4
 
 - Reported: 2026-11-11
@@ -43,6 +36,16 @@ The list was started on 2026-11-11 by the plum coordinator, from issues already 
 - Issue: #93
 
 ## Fixed
+
+### B10. 56 open Dependabot alerts in `uv.lock`
+
+- Reported: 2026-11-11
+- Report: (GitHub, on push) "56 vulnerabilities on seantrue/yapocis3's default branch (5 critical, 26 high, 23 moderate, 2 low)"
+- Context: all of them are in `uv.lock`; 41 are Pillow (all 5 critical). The table by package is on the issue.
+- Cause: confirmed in planning. Nothing held Pillow below 13 on purpose. `requires-python = ">=3.10"` did: Pillow 13.0.0 (and filelock 4.2, starlette 1.10 and fonttools 4.68) need Python 3.11, so uv kept a Python 3.10 fork at the vulnerable versions.
+- Fix: `requires-python = ">=3.11"` (decision D7.2), the published floor raised to `Pillow>=13.0.0`, the first release outside all 41 Pillow advisories (D7.3), and a lock upgrade of the nine packages with alerts: Pillow, starlette, filelock, wheel, pytest, idna, requests, fonttools and Pygments, plus pytest-benchmark 5.1.0 → 5.3.1, because pytest 9 removed `Node._nodeid`, which 5.1.0 read (D7.11). Plan: `~/workspace/plum/docs/plans/2026-11-11-yapocis3-89-87-80-81.md`.
+- Fixed: 2026-11-11, branch `fix/87-lock-alerts`: the new lock matches 0 of the 56 alerts (against 56 before). Python 3.10 users stay on yapocis 1.1.0.
+- Issue: #87
 
 ### B12. Metal device manager registers a non-contiguous input's copy under the copy's id
 
