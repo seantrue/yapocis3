@@ -58,8 +58,26 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~10 lines of pyproject and docs, plus the lock: Python 3.11, `Pillow>=13.0.0` and nine package upgrades that close the 56 Dependabot alerts, plus pytest-benchmark 5.3.1 for pytest 9, #87 (2026-11-11)
   - ~35 lines across the OpenCL, Metal and CUDA convolve templates, ~105 of tests, ~10 of docs and comments: the GPU `_fast` convolve kernels compute every output, #80 (2026-11-11)
   - ~47 lines of tests removed: the temporary rustcpu #80 xfail, after the `yapocis_rs` wheel was rebuilt from yapocis-rs `556ef5c` (2026-11-11)
+  - ~5 lines of tests: #89's orphan-buffer test collects garbage before it purges, so earlier tests' buffers no longer count as leaks in full-suite runs (2026-11-12)
 
 ## Detailed Contributions
+
+### 2026-11-12: #89's orphan-buffer test, isolated from earlier tests (Claude Opus 5.5)
+
+**What the maintainer asked for.** "Fix the test", after the 1.2.0 release gate failed on `test_metal_noncontiguous.py::test_strided_in_leaves_no_orphan_buffer` (37 leaked buffers in `make test-metal`, 35 in `make test-numbax`), though it passed alone and with all of `tests/backend`.
+
+**Cause, confirmed by experiment.** The `demo` fixture ran `prog.dmgr.purge()` and then `gc.collect()`, and `count_leaked_buffers()` counts the whole shared Metal device manager. Earlier tests that load a program into a local variable (`tests/async/test_execution.py` loads `imageops` in each test) leave it as cyclic garbage: a kernel and its manager refer to each other, and each kernel keeps its last call's arguments. Those arrays live until a full collection. A probe plugin that logged the accounting inside the fixture (plum `claude-debug/f89iso_probe.py`) showed, in the full-suite prefix, 51 buffers left live after the purge, and the fixture's `gc.collect()` turning all 51 into leaks; a `DEBUG_SAVEALL` pass found the dead arrays held by `yapocis.metallic.kernel.Kernel` objects in the garbage. Whether the arrays were already gone depended on when Python's automatic collector last ran, which is why the test passed in smaller runs. Smallest reproducer: `tests/async/test_execution.py` plus the test, on Metal, failing with 5 leaks every time.
+
+**What the AI did.** The fixture now calls `gc.collect()` before `purge()` (~5 lines with the comment). The assertion is unchanged. With #89's library fix reverted in the working tree, the test still fails, alone (4 leaks) and after `test_execution.py` (5); with it restored, the reproducer passes, 3 of 3. One CHANGELOG line.
+
+**Suites** (M4 Max, alone on the GPU, Mako modules and the numba cache redirected to plum `claude-debug/`): `make test-metal` and `make test-numbax` each gave 1,718 passed, 28 skipped, 1 failed. The failure is `test_kernel_template_cache.py::test_old_compiled_modules_are_removed`, the Mako-redirect artefact seen in every gate run.
+
+**Not changed, for the maintainer:** a dropped program's kernels keep their last call's arrays, and the device buffers behind them, alive until the cycle collector runs. It isn't a leak (a full collection and a purge free them), but it does delay the release of device memory.
+
+**The maintainer's question, "Should we add gc.collect to .purge?"** The coordinator advised against it: a full collection walks the whole heap and runs every pending finalizer, and it would only shorten the window for the two causes underneath, kernels keeping their arguments and buffers keyed by a reusable `id()`. Filed as #100 ("Commit, file, investigate").
+
+**Division of labor:** the coordinator proposed the cause and the fix; Claude confirmed both by experiment, made the change and ran the suites.
+
 
 ### 2026-11-11: #80 closed on rustcpu: yapocis-rs re-export and CPU port, the rebuilt wheel, the temporary xfail removed (Claude Opus 5.5)
 
