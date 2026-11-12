@@ -1869,7 +1869,7 @@ def generate_branch_comparison_report(
                     and backend_name in branch_stats[branch_name]
                 ):
                     stats = branch_stats[branch_name][backend_name]
-                    speedup = baseline_mean / stats["mean"]
+                    speedup = baseline_mean / stats["mean"] if stats["mean"] else 0.0
 
                     if stats["std"] > 0:
                         cell = f"{stats['mean'] * 1000:.2f}±{stats['std'] * 1000:.2f}ms"

@@ -60,8 +60,17 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~47 lines of tests removed: the temporary rustcpu #80 xfail, after the `yapocis_rs` wheel was rebuilt from yapocis-rs `556ef5c` (2026-11-11)
   - ~5 lines of tests: #89's orphan-buffer test collects garbage before it purges, so earlier tests' buffers no longer count as leaks in full-suite runs (2026-11-12)
   - ~360 lines added and ~145 removed in the device managers, kernel base and kernel manager base, ~660 lines of tests, ~4 of changelog: buffer lifetime, #100: kernels drop their arguments, one guarded `id → (ref, buffer)` store, fast buffer free, CUDA close (2026-11-12)
+  - ~17 lines of BUGS.md and FEATURES.md: B15 (#103, `compare-branches` divides by a zero mean) and F2 (#102, CI on the rustcpu backend) (2026-11-12)
 
 ## Detailed Contributions
+
+### 2026-11-12: BUGS.md B15 and FEATURES.md F2 recorded; the maintainer's zero-mean guard in `performance.py` (Claude Opus 5.5)
+
+**What the maintainer asked for.** "Feature: Add ci for yapocis, on the rustcpu backend only", and a "bug:" after the plum coordinator found `yapocis-report compare-branches --component graphics` crashing. Then "Commit the other changes in fix/100-buffer-lifetime".
+
+**What the AI did.** The plum coordinator wrote F2 in `docs/FEATURES.md` (10 lines: the context, three open questions, #102) and B15 in `docs/BUGS.md` (7 lines: the `ZeroDivisionError` in `generate_branch_comparison_report`, #103), and filed both issues.
+
+**What the maintainer did.** The one-line guard in `src/yapocis/utils/performance.py` (`speedup = … if stats["mean"] else 0.0`) is the maintainer's. As B15 records, it covers the division at line 1869 but not the one at line 1926, where `baseline_mean` can also be 0, so #103 stays open. Nothing here was tested by the AI.
 
 ### 2026-11-12: #100, buffer lifetime: kernels drop their arguments, one guarded store, fast buffer free, CUDA close (Claude Opus 5.5)
 

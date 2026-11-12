@@ -6,6 +6,13 @@ The list was started on 2026-11-11 by the plum coordinator, from issues already 
 
 ## Open
 
+### B15. `yapocis-report compare-branches` crashes on tests with zero mean time
+
+- Reported: 2026-11-12
+- Report: "bug:" (the maintainer, after the coordinator found `compare-branches --component graphics` crashing while charting graphics performance across backends and branches)
+- Context: `ZeroDivisionError` at `src/yapocis/utils/performance.py:1926` (`speedup = baseline_mean / stats["mean"]`) in `generate_branch_comparison_report`. The `position_validation_graphics4` tests record `mean_time = 0`. The maintainer's working-tree guard covers the same division at line 1869, not 1926; `baseline_mean` can also be 0.
+- Issue: #103
+
 ### B11. GPU results nondeterministic under multi-process contention on Apple M4
 
 - Reported: 2026-11-11
