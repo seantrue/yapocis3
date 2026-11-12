@@ -57,8 +57,23 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~8 lines of comments in `metallic/device_manager.py`, and the lock: pymetallic 0.2.3 → 0.3.1, #90 (2026-11-11)
   - ~10 lines of pyproject and docs, plus the lock: Python 3.11, `Pillow>=13.0.0` and nine package upgrades that close the 56 Dependabot alerts, plus pytest-benchmark 5.3.1 for pytest 9, #87 (2026-11-11)
   - ~35 lines across the OpenCL, Metal and CUDA convolve templates, ~105 of tests, ~10 of docs and comments: the GPU `_fast` convolve kernels compute every output, #80 (2026-11-11)
+  - ~47 lines of tests removed: the temporary rustcpu #80 xfail, after the `yapocis_rs` wheel was rebuilt from yapocis-rs `556ef5c` (2026-11-11)
 
 ## Detailed Contributions
+
+### 2026-11-11: #80 closed on rustcpu: yapocis-rs re-export and CPU port, the rebuilt wheel, the temporary xfail removed (Claude Opus 5.5)
+
+**What the maintainer asked for.** Steps 6–8 of the #89/#87/#80/#81 plan, with CPM (plum `docs/QUEUE.md` D9.6).
+
+**Step 6, yapocis-rs PR #23 (`556ef5c`).** The bundle was re-exported with `yapocis-tools bundle --fixtures` from a fresh scratch venv with this repository installed from git at `bf9a0b8` (#98's merge), so the manifest records `yapocis_version` 1.1.0. The diff was the expected one: the `_fast` kernels in the 12 `convolve.*` sources, their 12 hashes, `yapocis_version`, and `SOURCE`. The Rust text port (`convolve_source`) and the CPU `convolve_fast`, which had copied the old template on purpose, were rewritten to the new kernel; a new yapocis-rs test, `fast_variant_matches_the_main_kernel`, failed on rustcpu with the old ports and passes with the new ones. `scripts/check-bundle.sh` passed locally, and CI's build, rustcpu and bundle-drift jobs passed.
+
+**Step 7, the wheel.** `yapocis_rs` 0.1.0 rebuilt from yapocis-rs `556ef5c` with `uvx maturin build --release --locked` (plum `claude-debug/s7_wheel/`, sha256 `d46be301…`), and reinstalled in this checkout's `.venv` with `uv pip install --no-deps --reinstall`; no other package changed. rustcpu's `_fast` now equals its main kernel in all 12 checked cases, including `chunk` 0, `chunk > width` and both dispatches (`claude-debug/s7_fast_check_out.txt`).
+
+**Step 8, this change.** `_rustcpu_fast_is_partial`, `_fast_backends` and the runtime `pytest.xfail` in `test_convolve` are gone from `tests/lib/processing/test_convolve.py`; `test_fast_variant_matches_the_main_kernel` parametrizes over `get_test_backends()`, so a regression on rustcpu now fails instead of xfailing. `docs/BUGS.md` B4 moves to Fixed, and the CHANGELOG's #80 line says where rustcpu's fix comes from. ~47 lines of tests removed, ~2 changed.
+
+**Gate** (M4 Max, this checkout's `.venv` with the new wheel, this branch's `src` first on the path, caches redirected): `test_convolve.py` with `YAPOCIS_TEST_BACKENDS=ocl,metal,numbax,rustcpu`: 47 passed, none xfailed. The rustcpu suite (`make test-rustcpu`'s command): 661 passed, 22 skipped, 1 failed; the failure is `test_kernel_template_cache.py::test_old_compiled_modules_are_removed`, from the Mako redirect, and that file passes (4 passed) without it. Not verified: CUDA and NVIDIA OpenCL for this change (it touches only tests and docs), and the Python 3.11/3.12 builds of the wheel.
+
+**Division of labor:** the maintainer approved the steps; Claude re-exported, ported, rebuilt, removed the xfail and wrote the entries.
 
 ### 2026-11-11: #80, the GPU `_fast` convolve kernels compute every output (Claude Opus 5.5)
 

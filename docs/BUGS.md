@@ -6,16 +6,6 @@ The list was started on 2026-11-11 by the plum coordinator, from issues already 
 
 ## Open
 
-### B4. GPU `_fast` convolve kernels return partial output
-
-- Reported: 2026-11-11
-- Report: "GPU _fast convolve kernels return partial output (Metal wrong every call, OpenCL varies)"
-- Context: `kernels/metal/convolve.mako:23-45`. Found while reviewing #64.
-- Cause: confirmed in planning. In all three GPU templates each work item computed only `chunk - len(conv)` outputs, so `len(conv)` outputs per chunk (all of them when `chunk <= len(conv)`) were never written, and writes were clamped to `right - 1`. OpenCL and CUDA multiplied `a[j]`, the loop index, instead of `a[i + k - left]`; Metal read a racy `threadgroup` buffer. OpenCL's "variation" was leftover memory in the unwritten outputs. rustcpu's CPU port (yapocis-rs) copies the old behaviour.
-- Fix: work item `g` computes `ret[g*chunk .. g*chunk+chunk-1]`, each exactly as the main kernel does, and stops at the width (approved 2026-11-11: "Fix it"). Plan: `~/workspace/plum/docs/plans/2026-11-11-yapocis3-89-87-80-81.md`.
-- Status: 2026-11-11, branch `fix/80-convolve-fast`: fixed on OpenCL, Metal and CUDA. rustcpu waits for yapocis-rs's port and a rebuilt `yapocis_rs` wheel; until then its cases of `test_fast_variant_matches_the_main_kernel` carry a temporary xfail that applies only while the installed wheel still gives the old output.
-- Issue: #80
-
 ### B11. GPU results nondeterministic under multi-process contention on Apple M4
 
 - Reported: 2026-11-11
@@ -39,6 +29,17 @@ The list was started on 2026-11-11 by the plum coordinator, from issues already 
 - Issue: #93
 
 ## Fixed
+
+### B4. GPU `_fast` convolve kernels return partial output
+
+- Reported: 2026-11-11
+- Report: "GPU _fast convolve kernels return partial output (Metal wrong every call, OpenCL varies)"
+- Context: `kernels/metal/convolve.mako:23-45`. Found while reviewing #64.
+- Cause: confirmed in planning. In all three GPU templates each work item computed only `chunk - len(conv)` outputs, so `len(conv)` outputs per chunk (all of them when `chunk <= len(conv)`) were never written, and writes were clamped to `right - 1`. OpenCL and CUDA multiplied `a[j]`, the loop index, instead of `a[i + k - left]`; Metal read a racy `threadgroup` buffer. OpenCL's "variation" was leftover memory in the unwritten outputs. rustcpu's CPU port (yapocis-rs) copies the old behaviour.
+- Fix: work item `g` computes `ret[g*chunk .. g*chunk+chunk-1]`, each exactly as the main kernel does, and stops at the width (approved 2026-11-11: "Fix it"). Plan: `~/workspace/plum/docs/plans/2026-11-11-yapocis3-89-87-80-81.md`.
+- Status: 2026-11-11, PR #98 (`bf9a0b8`): fixed on OpenCL, Metal and CUDA, with a temporary behaviour-gated xfail for rustcpu.
+- Fixed: 2026-11-11. rustcpu: yapocis-rs PR #23 (`556ef5c`) re-exported the bundle from `bf9a0b8` and fixed the CPU port; with a `yapocis_rs` wheel built from `556ef5c`, branch `fix/80-rustcpu-xfail` removes the xfail, and rustcpu's cases pass unmarked.
+- Issue: #80
 
 ### B10. 56 open Dependabot alerts in `uv.lock`
 
