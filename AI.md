@@ -53,8 +53,21 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~10 lines of version, changelog and this entry: version 1.1.0 released to PyPI (2026-11-11)
   - ~15 lines of docs: BUGS.md B12 and issues #89/#90 from the pymetallic check (2026-11-11)
   - ~7 lines of docstrings and docs, ~35 of BUGS.md, changelog and ledger: #81 iso direction, BUGS.md B13 (#92) and B14 (#93) (2026-11-11)
+  - ~8 lines in `metallic/device_manager.py` and a 93-line `tests/backend/test_metal_noncontiguous.py`: Metal buffers for non-contiguous arrays registered under the caller's array, #89 (2026-11-11)
 
 ## Detailed Contributions
+
+### 2026-11-11: #89, Metal buffers for non-contiguous arrays registered under the caller's array (Claude Opus 5.5)
+
+**What the maintainer asked for.** "continue with 89,87,80,81" (plum `docs/QUEUE.md` D5.37), and for #89 "A: register the buffer under the caller's array" (D7.1).
+
+**What the AI did.** In `metallic/device_manager.py`, `make_buffer` and `write_buffer` no longer rebind the argument to `np.ascontiguousarray(a)`; they pass the caller's array to `pymetallic.Buffer.from_numpy` and register the buffer under its `id()`. The plum planner and evaluator had read that `from_numpy` makes its own contiguous copy and that Metal's `makeBuffer(bytes:length:options:)` copies the bytes, in pymetallic 0.2.3 and 0.3.1, so no copy needs keeping alive; `read_buffer`'s `np.copyto` writes back through any layout. ~4 lines removed, ~4 of comments. New `tests/backend/test_metal_noncontiguous.py` (93 lines, six tests, marked `metal`): the planner's five drafted cases (strided `in` without a leaked buffer, a strided `out`, a strided write then read, F-ordered and transposed inputs) and the evaluator's suggested sixth, a strided `inout` (graphics `rects` on `base[::2]`) that must write the even rows of `base` and leave the odd ones.
+
+**Tests.** In a scratch venv built from `uv.lock` (plum `claude-debug/y4_venv_main`), Apple M4 Max, alone on the GPU: before the change, 6 of 6 fail (the leak count, and "not in yapocis management" for the other five); after it, 6 of 6 pass. The Metal suite on this branch (`YAPOCIS_BACKEND=metal pytest tests`): 1,587 passed, 14 skipped, 1 failed; the failure is `test_kernel_template_cache.py::test_old_compiled_modules_are_removed`, caused by the Mako redirect the run uses, as in the 1.1.0 gate.
+
+**Not done here:** OpenCL's F-order failure (B13, #92); CUDA (its `make_buffer` refuses non-contiguous arrays outright).
+
+**Division of labor:** the maintainer chose the fix; the plum planner found the F-order case and drafted five tests, and the evaluator suggested the `inout` test; Claude wrote the change, the sixth test and the ledger entries.
 
 ### 2026-11-11: #81, the truetrace iso direction in the docs; BUGS.md B13 and B14 (Claude Opus 5.5)
 

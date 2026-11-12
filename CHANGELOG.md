@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Docs: the `trace_segments` and `trace_regions` docstrings and the truetrace library page had the iso direction backwards. A positive iso moves the contour inward, into the mask, and a negative one outward; the code is unchanged (#81)
+- Metal: non-C-contiguous arrays (strided views, Fortran order, transposes) as kernel arguments. The device manager registered the buffer under a temporary contiguous copy, so strided inputs leaked their buffers until a purge, and strided `out` and `inout` arguments, and F-ordered inputs with an `out_like` result, failed with "not in yapocis management". It now registers under the caller's array (#89)
 
 ## [1.1.0] - 2026-11-11
 

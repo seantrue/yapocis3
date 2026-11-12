@@ -73,9 +73,9 @@ class DeviceManager(DeviceManagerBase):
     # Implement abstract methods from DeviceManagerBase
     def make_buffer(self, a: Array) -> pymetallic.Buffer:
         """Create PyMetallic buffer from numpy array."""
-        # Ensure contiguous data for low-level transfer
-        if not a.flags.c_contiguous:
-            a = np.ascontiguousarray(a)
+        # Register under the caller's array, whatever its layout (#89).
+        # Buffer.from_numpy makes its own C-contiguous copy and Metal copies
+        # the bytes, so no copy has to be kept alive here.
         buf = pymetallic.Buffer.from_numpy(self.device, a)
         buffer_id = id(a)
         self.arrays[buffer_id] = a
@@ -107,8 +107,7 @@ class DeviceManager(DeviceManagerBase):
             The wait parameter is accepted for API compatibility but currently
             ignored - all writes use the fast synchronous Buffer.from_numpy().
         """
-        if not a.flags.c_contiguous:
-            a = np.ascontiguousarray(a)
+        # Register under the caller's array, as make_buffer does (#89).
 
         # Always use synchronous Buffer.from_numpy on Metal
         # Reasons:

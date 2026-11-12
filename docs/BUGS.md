@@ -42,14 +42,17 @@ The list was started on 2026-11-11 by the plum coordinator, from issues already 
 - Context: numbax pads by reflection (`kernels/numbax/convolve.py:19-37`), and the GPU kernels write 0, so they differ in the first `left + 1` and the last `left` samples (`left = len(conv)//2`; indices `[0, 1, 63]` for 3 taps and `[0, 1, 2, 62, 63]` for 5 taps on 64 samples). The GPU kernels' strict `i > left` (`kernels/ocl/convolve.mako:12`, and the Metal and CUDA equivalents) writes 0 to `ret[left]`, although the window fits there. Found while planning #80; neither is a `_fast` bug. Changing either changes recorded outputs (yapocis-rs parity bundles, the backend-comparison tests), so it needs a plan of its own.
 - Issue: #93
 
+## Fixed
+
 ### B12. Metal device manager registers a non-contiguous input's copy under the copy's id
 
 - Reported: 2026-11-11
 - Report: (found while checking pymetallic for #88) "`make_buffer` and `write_buffer` … register the buffer under the copy's id", so later lookups for the original array miss and the buffer leaks until a purge.
 - Context: `src/yapocis/metallic/device_manager.py`, `make_buffer` and `write_buffer`. This is not #88's cause, because ResNet's arrays are contiguous.
+- Cause: confirmed in planning. Besides the leak, a strided `out` argument, a strided write followed by a read, and an F-ordered input with an `out_like` result (a `.T` view) all raised "not in yapocis management".
+- Fix: option A, register the buffer under the caller's array (approved 2026-11-11). `pymetallic.Buffer.from_numpy` makes its own contiguous copy and Metal copies the bytes, in 0.2.3 and 0.3.1, so no copy is kept. Plan: `~/workspace/plum/docs/plans/2026-11-11-yapocis3-89-87-80-81.md`.
+- Fixed: 2026-11-11, branch `fix/89-metal-noncontiguous`, with `tests/backend/test_metal_noncontiguous.py` (strided `in`, `out` and `inout` arguments, a strided write and read, F-ordered and transposed inputs). OpenCL's F-order failure is B13 (#92), not fixed here.
 - Issue: #89
-
-## Fixed
 
 ### B5. The `trace_segments` docstring has the iso direction backwards
 
