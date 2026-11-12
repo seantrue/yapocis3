@@ -29,11 +29,6 @@ def test_convolve(backend, monkeypatch):
             b = np.asarray(cnv.convolve_fast(a.copy(), 100)).copy()
     plt.plot(b)
     plt.show()
-    if backend == "rustcpu" and _rustcpu_fast_is_partial():
-        # Temporary, as for test_fast_variant_matches_the_main_kernel (#80)
-        pytest.xfail(
-            "installed yapocis_rs predates yapocis-rs's convolve_fast fix (#80)"
-        )
     np.testing.assert_array_equal(b, np.asarray(cnv.convolve(a.copy())))
 
 
@@ -270,6 +265,7 @@ def test_rustcpu_same_name_kernel_gets_its_own_program(case):
 # the right value. The main kernel also runs on another input B before each `_fast(A)`;
 # out_like buffers are not reused between calls (a probe of a `_fast` that writes
 # nothing never returned main(B)'s values), so this only varies what ran before.
+# rustcpu's port (yapocis-rs) copied the old kernels until yapocis-rs PR #23.
 
 FAST_CASES = [
     # (taps, length, chunk)
@@ -283,47 +279,6 @@ FAST_CASES = [
 ]
 
 
-def _rustcpu_fast_is_partial() -> bool:
-    """True only while the installed yapocis_rs still ports the old `_fast` (#80).
-
-    Runs at collection with an explicit backend, so the environment can't reach it.
-    """
-    if "rustcpu" not in get_test_backends():
-        return False
-    try:
-        name = "x" + _tag()
-        c = Convolve1D(name=name, conv=K1, backend="rustcpu")
-        a = np.arange(256, dtype=np.float32) ** 0.5
-        fast = np.asarray(getattr(c, name + "_fast")(a.copy(), 16)).copy()
-        main = np.asarray(getattr(c, name)(a.copy())).copy()
-    except Exception:
-        return False
-    return not np.array_equal(fast, main)
-
-
-def _fast_backends():
-    """get_test_backends(), with rustcpu marked xfail while its wheel has the old `_fast`.
-
-    Temporary: remove with the yapocis_rs wheel rebuilt from yapocis-rs's fix (#80).
-    """
-    old_rustcpu = _rustcpu_fast_is_partial()
-    return [
-        (
-            pytest.param(
-                b,
-                marks=pytest.mark.xfail(
-                    strict=True,
-                    reason="installed yapocis_rs predates yapocis-rs's convolve_fast fix "
-                    "(#80); remove with the rebuilt wheel",
-                ),
-            )
-            if b == "rustcpu" and old_rustcpu
-            else b
-        )
-        for b in get_test_backends()
-    ]
-
-
 def _gpu_edge_reference(a, w):
     """float64 `<name>` on the GPU edge rule: zero unless left < i < len(a) - left."""
     n, left = len(w), len(w) // 2
@@ -333,7 +288,7 @@ def _gpu_edge_reference(a, w):
     return out
 
 
-@pytest.mark.parametrize("backend", _fast_backends())
+@pytest.mark.parametrize("backend", get_test_backends())
 @pytest.mark.parametrize(
     "w,n,chunk",
     FAST_CASES,
