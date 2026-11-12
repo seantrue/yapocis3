@@ -50,9 +50,10 @@ SKIP_KERNELS = {("anisodiff", "filterImage3")}
 def skipped(interface: str, kernel: str) -> bool:
     if interface in SKIP or (interface, kernel) in SKIP_KERNELS:
         return True
-    # convolve's `<name>_fast` kernels process `chunk` elements per thread and
-    # expect a global size of size/chunk; with the default global size they
-    # write far past the output, so their results are not comparable.
+    # convolve's `<name>_fast` kernels compute `chunk` outputs per work item.
+    # Since #80 they give the main kernel's output for any global size of at
+    # least ceil(size/chunk), and tests/lib/processing/test_convolve.py checks
+    # them against it; they stay out of the parity fixtures for now.
     return interface.split(".")[0] == "convolve" and kernel.endswith("_fast")
 
 

@@ -26,9 +26,15 @@ def test_convolve(backend, monkeypatch):
     cnv = Convolve1D(name="convolve", conv=[0.01] * 100)
     with StopWatcher("convolve", kernel=cnv) as sw:
         with sw.checkpoint("convolve_fast"):
-            b = cnv.convolve_fast(a, 100)
+            b = np.asarray(cnv.convolve_fast(a.copy(), 100)).copy()
     plt.plot(b)
     plt.show()
+    if backend == "rustcpu" and _rustcpu_fast_is_partial():
+        # Temporary, as for test_fast_variant_matches_the_main_kernel (#80)
+        pytest.xfail(
+            "installed yapocis_rs predates yapocis-rs's convolve_fast fix (#80)"
+        )
+    np.testing.assert_array_equal(b, np.asarray(cnv.convolve(a.copy())))
 
 
 # #64: kernels generated from the context (Convolve1D, convolvesep) must use their own
@@ -66,7 +72,8 @@ def test_second_kernel_of_the_same_name_uses_its_own_weights(backend, monkeypatc
     assert np.array_equal(_run(c1, shared, a), r1), "first kernel changed weights"
 
 
-# numba only: the GPU _fast kernels give partial output, a separate bug (#80)
+# numba only: this checks numbax's per-manager `_fast` closures (#64); every backend's
+# `_fast` output is checked by test_fast_variant_matches_the_main_kernel (#80)
 @needs_numbax
 def test_numba_fast_variant_of_the_same_name_uses_its_own_weights(monkeypatch):
     monkeypatch.setenv("YAPOCIS_BACKEND", "numbax")
@@ -253,3 +260,105 @@ def test_rustcpu_same_name_kernel_gets_its_own_program(case):
     assert grew == 1, "the second same-name kernel reused the first one's program"
     if kind == "conv" and precision is None:
         assert not np.array_equal(r1, r2)
+
+
+# #80: `<name>_fast(a, chunk)` computes `chunk` outputs per work item, each exactly as
+# `<name>` computes it. Before the fix, the GPU templates left most outputs unwritten
+# (and Metal raced on a threadgroup buffer), so those outputs held whatever the fresh
+# out_like buffer held: garbage on OpenCL, zeros on Metal. Each `_fast(A)` is compared
+# with `main(A)` run after it, so an unwritten output fails unless it happens to equal
+# the right value. The main kernel also runs on another input B before each `_fast(A)`;
+# out_like buffers are not reused between calls (a probe of a `_fast` that writes
+# nothing never returned main(B)'s values), so this only varies what ran before.
+
+FAST_CASES = [
+    # (taps, length, chunk)
+    ([0.2] * 5, 4096, 64),
+    ([0.2] * 5, 4096, 1),
+    ([1.0, 0.0, -1.0, 0.0, 2.0], 1000, 7),
+    (K1, 1001, 64),
+    ([0.01] * 100, 1000, 100),
+    ([0.2] * 5, 50, 64),  # chunk > width: one work item does everything
+    ([0.2] * 5, 1000, 0),  # chunk 0 counts as 1
+]
+
+
+def _rustcpu_fast_is_partial() -> bool:
+    """True only while the installed yapocis_rs still ports the old `_fast` (#80).
+
+    Runs at collection with an explicit backend, so the environment can't reach it.
+    """
+    if "rustcpu" not in get_test_backends():
+        return False
+    try:
+        name = "x" + _tag()
+        c = Convolve1D(name=name, conv=K1, backend="rustcpu")
+        a = np.arange(256, dtype=np.float32) ** 0.5
+        fast = np.asarray(getattr(c, name + "_fast")(a.copy(), 16)).copy()
+        main = np.asarray(getattr(c, name)(a.copy())).copy()
+    except Exception:
+        return False
+    return not np.array_equal(fast, main)
+
+
+def _fast_backends():
+    """get_test_backends(), with rustcpu marked xfail while its wheel has the old `_fast`.
+
+    Temporary: remove with the yapocis_rs wheel rebuilt from yapocis-rs's fix (#80).
+    """
+    old_rustcpu = _rustcpu_fast_is_partial()
+    return [
+        (
+            pytest.param(
+                b,
+                marks=pytest.mark.xfail(
+                    strict=True,
+                    reason="installed yapocis_rs predates yapocis-rs's convolve_fast fix "
+                    "(#80); remove with the rebuilt wheel",
+                ),
+            )
+            if b == "rustcpu" and old_rustcpu
+            else b
+        )
+        for b in get_test_backends()
+    ]
+
+
+def _gpu_edge_reference(a, w):
+    """float64 `<name>` on the GPU edge rule: zero unless left < i < len(a) - left."""
+    n, left = len(w), len(w) // 2
+    out = np.zeros(len(a), dtype=np.float64)
+    for i in range(left + 1, len(a) - left):
+        out[i] = sum(float(a[i + k - left]) * w[k] for k in range(n))
+    return out
+
+
+@pytest.mark.parametrize("backend", _fast_backends())
+@pytest.mark.parametrize(
+    "w,n,chunk",
+    FAST_CASES,
+    ids=[f"taps{len(w)}-n{n}-chunk{c}" for w, n, c in FAST_CASES],
+)
+def test_fast_variant_matches_the_main_kernel(backend, w, n, chunk, monkeypatch):
+    monkeypatch.setenv("YAPOCIS_BACKEND", backend)
+    rng = np.random.default_rng(80)
+    A = rng.uniform(-1, 1, n).astype(np.float32)
+    B = rng.uniform(5, 9, n).astype(np.float32)
+    name = "q" + _tag()
+    c = Convolve1D(name=name, conv=w)
+    main, fast = getattr(c, name), getattr(c, name + "_fast")
+    ref = _gpu_edge_reference(A, w)
+    # numbax reflects at the edges where the GPUs write 0 (#93), so the reference is
+    # compared only where every backend agrees.
+    left = len(w) // 2
+    inner = slice(left + 1, max(left + 1, n - left))
+    for dispatch in ({}, {"global_size": max(1, -(-n // max(chunk, 1)))}):
+        for _ in range(3):
+            np.asarray(main(B.copy()))  # another input first (see above)
+            f = np.asarray(fast(A.copy(), chunk, **dispatch)).copy()
+            m = np.asarray(main(A.copy())).copy()
+            assert np.array_equal(f, m), (
+                f"{dispatch or 'default dispatch'}: {int((f != m).sum())} of {n} "
+                "outputs differ from the main kernel"
+            )
+            np.testing.assert_allclose(f[inner], ref[inner], rtol=1e-5, atol=1e-5)
