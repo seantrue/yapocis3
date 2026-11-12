@@ -50,8 +50,55 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~41 lines across 13 files: text file I/O as UTF-8, `\n` line endings for exports (2026-10-26)
   - ~190 lines of kernel and library code, ~630 of tests, ~45 of docs and changelog: the numba batch, #64, #66, #67, #82, the rustcpu cache key, numbax `xyY2xyz`, #65 tests (2026-11-11)
   - ~43 lines of tests removed: the temporary rustcpu #66 xfail, after the `yapocis_rs` wheel was rebuilt from yapocis-rs `9ebcac9` (2026-11-11)
+  - ~10 lines of version, changelog and this entry: version 1.1.0 released to PyPI (2026-11-11)
 
 ## Detailed Contributions
+
+### 2026-11-11: Version 1.1.0 (Claude Opus 5.5)
+
+**What the maintainer asked for.** "go for release" (plum `docs/QUEUE.md` D5.28), version 1.1.0 (D5.2), from `main` at `842f4d0`. When the first test gate failed, the maintainer decided "Yapocis can release with those terms" (Q4): ship with #88 as a known issue, and rerun the gate on a quiet GPU. The version, the release and the decision to ship with #88 are the maintainer's.
+
+**What Claude did.**
+
+- The version is 1.1.0 in `pyproject.toml` and in `uv.lock`'s yapocis entry.
+- CHANGELOG `[Unreleased]` is now `[1.1.0] - 2026-11-11`, with a new "Known issues" entry for #88. "For review before the 1.1.0 release" is dropped from the backfill note.
+- The plum coordinator's `docs/BUGS.md` entries B10 (#87) and B11 (#88) go into the same commit.
+- `make release` is interactive, so its steps were run by hand: bump, changelog, AI.md, commit, annotated tag `v1.1.0`, `python -m build`, `twine upload`, then push `main` and the tag (RELEASE.md step 10).
+
+**Gates, and the first gate's failure.**
+
+- **Repo and PyPI checks.** The tree was clean, HEAD and origin/main were both `842f4d0`, and no `v1.1.0` tag existed locally or on origin. PyPI's latest was 1.0.0.
+- **First gate (M4 Max).** `make test-{ocl,metal,numbax,rustcpu}` ran twice, with the numba and Mako caches redirected into plum `claude-debug/`. In the second metal run, `test_resnet50_resident_async_vs_sync[ocl-Apple M4 Max]` failed: 57 of 1000 outputs were off by up to 0.0217. It passed in the other 7 full-suite runs and in 10 of 10 isolated reruns. The release stopped there, with no bump.
+- **#88.** The coordinator reproduced the failure with 4 processes at once, on OpenCL and Metal, in sync and in async mode; one process on a quiet GPU gave none. It is filed as #88, and its cause (yapocis, or Apple's GPU stack under multi-process load) is open. The first gate had probably shared the GPU with the coordinator's other test runs.
+- **Gate rerun on a quiet GPU.** No other pytest, cargo, xcodebuild or vimp process was running before each backend. Results:
+  - ocl: 1,684 passed, 28 skipped, 1 failed
+  - metal: 1,684 passed, 28 skipped, 1 failed
+  - numbax: 1,684 passed, 28 skipped, 1 failed
+  - rustcpu: 661 passed, 45 skipped, 1 failed
+- **The one failure in each run.** It is always `test_kernel_template_cache.py::test_old_compiled_modules_are_removed`, caused by the Mako redirect; that file passes (4 passed) without it.
+- **`make check` fails, as it did at 1.0.0.** At HEAD, isort flags 3 tracked files, black would reformat 27, ruff reports 479 errors and mypy 1,443. At v1.0.0, isort flagged 15 files, ruff reported 527 errors and mypy 968. It was not made a release blocker; it remains an open RELEASE.md checklist item.
+
+**Artifacts checked.**
+
+- Both the sdist and the wheel pass `twine check`. The wheel holds no compiled Mako modules, `__pycache__` or model weights.
+- The wheel was installed with uv into a fresh Python 3.13 venv (plum `claude-debug/rel_venv`). From outside the source tree, the README's Mandelbrot example ran on OpenCL, Metal and numba and was compared with a numpy reference.
+  - numba matched the reference exactly.
+  - OpenCL and Metal agreed on 99.99% of the set and on 99.83% of escape counts (float32 at the boundary).
+- `importlib.metadata` read the version back from the wheel as 1.1.0.
+
+**Not verified:**
+
+- CUDA, NVIDIA OpenCL and PoCL for the release build (yellowfin was not run for this release; the CUDA run for the numba batch is in the entry below).
+- Python versions other than 3.13.
+- Linux and Windows installs.
+
+**Shipped with known issues:**
+
+- **#88:** GPU results can differ under multi-process contention on Apple M4.
+- **#87:** Dependabot's 56 alerts against `uv.lock`, mostly Pillow. The published dependency floors are unchanged (`Pillow>=10.3.0`), so users resolve current versions.
+- **`make check` debt,** as above.
+
+**Division of labor:** the maintainer decided the version, the release and shipping with #88; the plum coordinator diagnosed #88 and wrote the BUGS.md entries; Claude ran the gates, bumped the version, wrote the changelog and ledger entries, and built, checked and published the artifacts.
 
 ### 2026-11-11: #66 closed on rustcpu, the temporary xfail removed, and a correction about CUDA (Claude Opus 5.5)
 

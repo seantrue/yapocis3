@@ -20,6 +20,21 @@ The list was started on 2026-11-11 by the plum coordinator, from issues already 
 - Context: `lib/truetrace.py:53-54`.
 - Issue: #81
 
+### B10. 56 open Dependabot alerts in `uv.lock`
+
+- Reported: 2026-11-11
+- Report: (GitHub, on push) "56 vulnerabilities on seantrue/yapocis3's default branch (5 critical, 26 high, 23 moderate, 2 low)"
+- Context: all of them are in `uv.lock`; 41 are Pillow (all 5 critical). The table by package is on the issue.
+- Issue: #87
+
+### B11. GPU results nondeterministic under multi-process contention on Apple M4
+
+- Reported: 2026-11-11
+- Report: (the 1.1.0 release gate) `test_resnet50_resident_async_vs_sync[ocl-Apple M4 Max]` failed once in 8 full-suite runs, with 57 of 1000 outputs off by up to 0.0217.
+- Context: reproduced with 4 processes at once. Both OpenCL and Metal, and both sync and async, diverge; one process on a quiet GPU gives 0 of 12. Not a kernel-internal race (no local memory, barriers or atomics) and not a stale `id(array)` buffer (a strict-id patch changed nothing). The probe is plum `claude-debug/rn_race/rn_probe.py`.
+- Open question: is it yapocis, or Apple's GPU stack when several processes share the GPU? Separating them needs an unrelated GPU load, and a run on yellowfin (CUDA, NVIDIA OpenCL).
+- Issue: #88
+
 ## Fixed
 
 ### B2. colormath `xyz2xyY` of black: NaN on OpenCL, 0 on numba

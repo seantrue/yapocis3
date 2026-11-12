@@ -5,9 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.1.0] - 2026-11-11
 
-Backfilled on 2026-11-11 from the history since 1.0.0 (19 pull requests, #51 to #79; four direct commits on main, `cca8f8a`, `a42bfab`, `80884c3` and `6a90822`; and the `2c7c9b5` merge of main into dev), for review before the 1.1.0 release.
+Backfilled on 2026-11-11 from the history since 1.0.0 (19 pull requests, #51 to #79; four direct commits on main, `cca8f8a`, `a42bfab`, `80884c3` and `6a90822`; and the `2c7c9b5` merge of main into dev).
 
 ### Added
 
@@ -48,6 +48,10 @@ Backfilled on 2026-11-11 from the history since 1.0.0 (19 pull requests, #51 to 
 - The device kernels and the numba port agree: histogram bins with a non-zero `low`, Mandelbrot's first escape, the numba simplex hash (32-bit, as on the devices) and its non-square layout, and the numba stretch's clamp (#75)
 - CUDA `simplex2d` gave the other backends' field transposed (#76)
 - Tests: `YAPOCIS_BACKEND` set by one test leaked into later ones, so unparametrized tests ran on the last backend set (#82)
+
+### Known issues
+
+- On Apple M4, GPU results can differ from run to run when several processes use the GPU at once, on OpenCL and on Metal, in sync and in async mode. With 4 processes at once, ResNet50 outputs diverged (in the release gate, 57 of 1000 outputs were off by up to 0.0217); one process on a quiet GPU gave no divergence. Whether the cause is yapocis or Apple's GPU stack under multi-process load is still open. `test_resnet50_resident_async_vs_sync` can fail while other GPU work is running (#88)
 
 ## [1.0.0] - 2026-10-17
 
