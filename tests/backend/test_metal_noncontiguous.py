@@ -35,24 +35,37 @@ def metal():
 @pytest.fixture
 def demo(metal):
     prog = metal[0]
-    # Other tests leave orphaned out_like buffers; start each test from none.
-    # Collect first: arrays that earlier tests left in reference cycles (a dropped
-    # program's kernels hold their last call's arguments) die only in a full
-    # collection, and a purge before it would leave their buffers counted as leaks.
+    # Start each test with no orphaned buffers. Collect first: arrays that earlier
+    # tests left in reference cycles die only in a full collection, and a purge
+    # before it would leave their buffers counted as leaks. (Kernels no longer
+    # keep their last call's arguments, #100.)
     gc.collect()
     prog.dmgr.purge()
     return prog
 
 
 def test_strided_in_leaves_no_orphan_buffer(demo):
+    dmgr = demo.dmgr
     a = np.arange(64, dtype=np.float32)[::2]
     b = np.arange(64, dtype=np.float32)[1::2]
     c = np.zeros(32, dtype=np.float32)
+    entries = len(dmgr._store)
+    released = dmgr.released
     for _ in range(5):
         demo.sum_res(a, b, c, global_size=a.size)
     gc.collect()
     np.testing.assert_array_equal(c, a + b)
-    assert demo.dmgr.count_leaked_buffers() == 0
+    assert dmgr.count_leaked_buffers() == 0
+    # count_leaked_buffers() drains first (#100), so it can't see a buffer that was
+    # registered under a temporary copy: the copy dies and fast free drops its entry.
+    # Check the store instead. Each argument is registered under the caller's array,
+    # and no buffer was registered under an array that then died.
+    for arr in (a, b, c):
+        assert (
+            dmgr._lookup(arr) is not None
+        ), "a strided argument has no buffer of its own"
+    assert dmgr.released == released, "buffers were registered under temporary copies"
+    assert len(dmgr._store) == entries + 3
 
 
 def test_strided_out_is_written(demo):

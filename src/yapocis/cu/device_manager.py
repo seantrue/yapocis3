@@ -7,7 +7,8 @@ Helpers around the PyCUDA wrappers for CUDA
 import atexit
 import os
 import sys
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, contextmanager
+from typing import Any
 
 import pycuda.driver as cuda
 
@@ -121,9 +122,7 @@ class DeviceManager(DeviceManagerBase):
         # Create a GPUArray from the numpy array
         with self.activated():
             buf = gpuarray.to_gpu_async(a, stream=self.queue)
-        buffer_id = id(a)
-        self.arrays[buffer_id] = a
-        self.buffers[buffer_id] = buf
+        self._register(a, buf)
         return buf
 
     def read_buffer(self, a: Array) -> Array:
@@ -163,27 +162,6 @@ class DeviceManager(DeviceManagerBase):
         # Async mode: return immediately, transfer continues in background
         return buf
 
-    def find_buffer(self, a: Array, op: int) -> gpuarray.GPUArray | None:
-        """Find existing PyCUDA GPUArray for array."""
-        assert op in (self.READ, self.WRITE)
-        buffer_id = id(a)
-        havea = buffer_id in self.buffers and buffer_id in self.arrays
-        # Complete match, easy decision
-        if havea:
-            self.hits += 1
-            return self.buffers[buffer_id]
-        else:
-            self.misses += 1
-        # No match at all, also easy.
-        if not havea:
-            # Reading an array back with no matching buffer is fatal
-            if op == self.READ:
-                raise ValueError(
-                    "Array not in yapocis management, you may have written to it, or be using an assigned or .copy"
-                )
-            return None
-        raise RuntimeError(f"Failed to find a buffer for {op} {a}")
-
     def wait_events(self, events: list) -> None:
         """
         Wait for a list of CUDA streams to complete.
@@ -203,6 +181,10 @@ class DeviceManager(DeviceManagerBase):
             with self.activated():
                 for stream in unique_streams:
                     stream.synchronize()
+
+    def _release_context(self) -> AbstractContextManager[Any]:
+        """Release buffers with this device's context current."""
+        return self.activated()
 
     def _free_buffer(self, buffer: gpuarray.GPUArray):
         """
@@ -233,9 +215,14 @@ class DeviceManager(DeviceManagerBase):
             # Stream may already be invalid - ignore
             pass
 
-        # Clear buffer references to allow GPU memory to be freed
-        self.buffers.clear()
-        self.arrays = {}
+        # Forget every entry so GPU memory can be freed. Arrays are held only
+        # through weak refs, so close leaves no strong reference to them (#100).
+        try:
+            with self._release_context():
+                self._clear_store()
+        except cuda.Error:
+            # Context unusable: drop the entries without it
+            self._clear_store()
 
     def __del__(self):
         """
@@ -250,8 +237,8 @@ class DeviceManager(DeviceManagerBase):
                 return
 
             # Clear buffers
-            if hasattr(self, "buffers"):
-                self.buffers.clear()
+            if hasattr(self, "_store"):
+                self._clear_store()
 
             # Pop context to clean up the context stack
             try:
@@ -280,7 +267,7 @@ def _cleanup_device_managers():
             dmgr.purge()
 
             # Clear buffer and module references
-            dmgr.buffers.clear()
+            dmgr._clear_store()
 
             # Pop context from stack
             if hasattr(dmgr, "ctx") and dmgr.ctx is not None:

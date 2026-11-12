@@ -77,9 +77,7 @@ class DeviceManager(DeviceManagerBase):
         # Buffer.from_numpy makes its own C-contiguous copy and Metal copies
         # the bytes, so no copy has to be kept alive here.
         buf = pymetallic.Buffer.from_numpy(self.device, a)
-        buffer_id = id(a)
-        self.arrays[buffer_id] = a
-        self.buffers[buffer_id] = buf
+        self._register(a, buf)
         return buf
 
     def read_buffer(self, a: Array) -> Array:
@@ -118,32 +116,10 @@ class DeviceManager(DeviceManagerBase):
         # 4. Result: async is ~1.7-26x SLOWER than sync, even when 8 writes
         #    share one command buffer
         buf = pymetallic.Buffer.from_numpy(self.device, a)
-
-        buffer_id = id(a)
-        self.arrays[buffer_id] = a
-        self.buffers[buffer_id] = buf
+        # A new buffer per write; the store keeps one weak ref per live array and
+        # drops the previous buffer.
+        self._register(a, buf)
         return buf
-
-    def find_buffer(self, a: Array, op: int) -> pymetallic.Buffer | None:
-        """Find existing PyMetallic buffer for array."""
-        assert op in (
-            self.READ,
-            self.WRITE,
-        ), f"{op=} not one of {self.READ=},{self.WRITE=}"
-        buffer_id = id(a)
-        havea = buffer_id in self.buffers and buffer_id in self.arrays
-        if havea:
-            self.hits += 1
-            return self.buffers[buffer_id]
-        else:
-            self.misses += 1
-        if not havea:
-            if op == self.READ:
-                raise ValueError(
-                    f"Array {buffer_id=} not in yapocis management, you may have written to it, or be using an assigned or .copy"
-                )
-            return None
-        raise RuntimeError(f"Failed to find a buffer for {op} a@{buffer_id=}")
 
     def wait_events(self, events: list) -> None:
         """

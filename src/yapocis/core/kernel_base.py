@@ -42,6 +42,10 @@ class KernelBase(ABC):
       with appropriate scalar packaging for their API
     """
 
+    # The current call's Python arguments, for the size hooks. Cleared when the
+    # call returns or raises, so a kernel never keeps its arguments alive (#100).
+    _current_args: tuple | None = None
+
     def read(self, a: Array):
         """Read array data from GPU buffer to NumPy array."""
         return self.kernel_manager.dmgr.read(a)
@@ -334,6 +338,9 @@ class KernelBase(ABC):
         3. Execute kernel (backend-specific)
         4. Handle async vs sync completion
         5. Track performance
+
+        With ``async_exec=True`` the call returns None at once, and the kernel
+        manager holds the call's device buffers until ``wait_all()``.
         """
         # Common pre-processing
         self.kernel_manager.calls += 1
@@ -345,28 +352,37 @@ class KernelBase(ABC):
         async_exec = kwargs.pop("async_exec", self.kernel_manager._default_async)
         resident_arrays = kwargs.pop("resident", None)
 
-        # Store args for use in hooks
+        # Store args for use in hooks; cleared in the finally (#100)
         self._current_args = args
+        try:
+            # Prepare arguments
+            prepared_args = self.prepare_arguments(
+                args, resident_arrays=resident_arrays
+            )
 
-        # Prepare arguments
-        prepared_args = self.prepare_arguments(args, resident_arrays=resident_arrays)
+            # Normalize sizes to tuples (backend-specific normalization in subclass)
+            self._normalize_sizes()
 
-        # Normalize sizes to tuples (backend-specific normalization in subclass)
-        self._normalize_sizes()
+            # Backend-specific kernel execution
+            self._execute_kernel_with_args(prepared_args, args, kwargs)
 
-        # Backend-specific kernel execution
-        self._execute_kernel_with_args(prepared_args, args, kwargs)
-
-        # Handle async vs sync completion
-        if async_exec:
-            self._handle_async_completion()
-            self.kernel_manager.runtime += time.time() - t
-            return None  # Can't return results yet - kernel still executing
-        else:
-            self._handle_sync_completion(kwargs)
-            rval = self.prepare_return()
-            self.kernel_manager.runtime += time.time() - t
-            return rval
+            # Handle async vs sync completion
+            if async_exec:
+                self._handle_async_completion()
+                # Hold the call's device buffers (not its arrays) until wait_all():
+                # the manager may drop a temporary's or out_like's buffer while the
+                # kernel is still queued.
+                self.kernel_manager._inflight.append(prepared_args)
+                self.kernel_manager.runtime += time.time() - t
+                return None  # Can't return results yet - kernel still executing
+            else:
+                self._handle_sync_completion(kwargs)
+                rval = self.prepare_return()
+                self.kernel_manager.runtime += time.time() - t
+                return rval
+        finally:
+            self._current_args = None
+            self.returns = []
 
     @abstractmethod
     def _normalize_sizes(self):

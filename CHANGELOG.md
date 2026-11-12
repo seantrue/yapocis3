@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The published Pillow floor is `Pillow>=13.0.0`, the first release outside all 41 Pillow security advisories (#87)
 - Dependencies: Pillow 13.0.0, starlette 1.10.0, filelock 4.2.10, wheel 0.48.0, pytest 9.2.0, idna 3.20, requests 2.34.2, fonttools 4.68.0 and Pygments 2.21.0 in `uv.lock`, which closes all 56 Dependabot alerts (#87)
 - Dependencies: pytest-benchmark 5.1.0 → 5.3.1 (which replaces py-cpuinfo with py-cpuinfo2) in `uv.lock`, because pytest 9 removed `Node._nodeid`, which 5.1.0 reads (#87)
+- A device buffer is released at the next device-manager call after its array dies; `purge()` is no longer needed to free memory, and is kept. Async calls hold the buffers they used until `wait_all()`. `KernelManager.purge()` now waits for pending async work first (#100)
+- `DeviceManager.arrays` and `DeviceManager.buffers` are now read-only views of one internal table. Reading them works as before; writing to them raises. `stats()` reports a new `released` count of buffers freed without a purge, and `purged` counts only explicit purges (#100)
 
 ### Fixed
 
@@ -21,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Metal: non-C-contiguous arrays (strided views, Fortran order, transposes) as kernel arguments. The device manager registered the buffer under a temporary contiguous copy, so strided inputs leaked their buffers until a purge, and strided `out` and `inout` arguments, and F-ordered inputs with an `out_like` result, failed with "not in yapocis management". It now registers under the caller's array (#89)
 - Tests: #89's `test_strided_in_leaves_no_orphan_buffer` failed in full-suite runs, counting buffers that earlier tests had left as leaks. Its fixture purged the Metal device manager before `gc.collect()`, so arrays that earlier tests had left in reference cycles died after the purge; it now collects first. No library change
 - `Convolve1D`'s `<name>_fast` kernels on OpenCL, Metal and CUDA gave partial output: each work item left `len(conv)` of its `chunk` outputs unwritten (all of them when `chunk <= len(conv)`), and the rest were computed from the wrong samples (OpenCL, CUDA) or a racy threadgroup buffer (Metal). Each work item now computes its `chunk` outputs exactly as `<name>` does, for any global size of at least `ceil(len(a) / chunk)`; a `chunk` below 1 counts as 1. rustcpu gets the same fix with a `yapocis_rs` wheel built from yapocis-rs `556ef5c` (PR #23) or later (#80)
+- Kernels no longer keep their last call's arguments, and async calls no longer keep their `out_like` and `inout` arrays until the kernel's next call (#100)
+- CUDA: `close()` left the device manager holding arrays strongly, so their buffers were never purged (#100)
 
 ## [1.1.0] - 2026-11-11
 
