@@ -54,8 +54,19 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~15 lines of docs: BUGS.md B12 and issues #89/#90 from the pymetallic check (2026-11-11)
   - ~7 lines of docstrings and docs, ~35 of BUGS.md, changelog and ledger: #81 iso direction, BUGS.md B13 (#92) and B14 (#93) (2026-11-11)
   - ~8 lines in `metallic/device_manager.py` and a 93-line `tests/backend/test_metal_noncontiguous.py`: Metal buffers for non-contiguous arrays registered under the caller's array, #89 (2026-11-11)
+  - ~8 lines of comments in `metallic/device_manager.py`, and the lock: pymetallic 0.2.3 → 0.3.1, #90 (2026-11-11)
 
 ## Detailed Contributions
+
+### 2026-11-11: #90, pymetallic 0.2.3 → 0.3.1 (Claude Opus 5.5)
+
+**What the maintainer asked for.** "Note to move to 0.3.1 at the start of the next release cycle" (#90), then "Yes: #90 as its own PR, after #89" (plum `docs/QUEUE.md` D7.4): the next release cycle has started.
+
+**What the AI did.** `uv lock --upgrade-package pymetallic` (with yapocis3's `.venv` uv, 0.13.4): only pymetallic moves, 0.2.3 → 0.3.1; uv also writes the lock's `revision = 5` (was 3), as the plan's trial locks did. The issue asked whether `metallic/device_manager.py`'s "always synchronous `Buffer.from_numpy`" reasoning survives 0.3's async writes, and the #89 plan asked whether `from_numpy` still copies. Read: 0.3.1's `Buffer.from_numpy` is unchanged from 0.2.3 (`ascontiguousarray`, then `makeBuffer(bytes:)`), and the installed `metallic.py` is identical to pymetallic's `v0.3.1` tag. Measured (plum `claude-debug/y4_pr3_async_bench.py`, M4 Max, alone on the GPU): changing the source after `from_numpy` leaves the buffer as it was, and a strided source round-trips; sync `from_numpy` takes 5.8 µs at 4 KiB and 0.97 ms at 16 MiB, while `async_buffer_from_numpy` with its commit and wait takes 151 µs and 1.71 ms, and 8 async writes sharing one command buffer are still 1.7–5x slower than 8 sync ones. So the reasoning holds. One of its four reasons was stale: 0.3.1 lets several async writes share a command buffer (pymetallic `44fcbba` removed the auto-commit). The comment now gives the measured reasons, including that async writes default to private storage, which `read_buffer` can't map. ~8 lines of comments; no code changed.
+
+**Tests.** In a scratch venv built from this branch's lock (plum `claude-debug/y4_venv90`; its requirements differ from `main`'s only in pymetallic), the Metal suite: 1,581 passed, 14 skipped, 1 failed, the same counts as `main` in a venv from `main`'s lock. The failure, in both, is `test_kernel_template_cache.py::test_old_compiled_modules_are_removed`, caused by the Mako redirect the runs use.
+
+**Division of labor:** the maintainer decided the timing and the separate PR; Claude upgraded the lock, read and measured pymetallic 0.3.1, and wrote the comment and the ledger entries.
 
 ### 2026-11-11: #89, Metal buffers for non-contiguous arrays registered under the caller's array (Claude Opus 5.5)
 

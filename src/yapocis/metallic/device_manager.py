@@ -110,11 +110,13 @@ class DeviceManager(DeviceManagerBase):
         # Register under the caller's array, as make_buffer does (#89).
 
         # Always use synchronous Buffer.from_numpy on Metal
-        # Reasons:
-        # 1. Unified memory makes transfers instant (~0.1μs)
-        # 2. async_buffer_from_numpy requires new command buffer per call
-        # 3. Command buffer overhead (200-300μs) >> transfer time
-        # 4. Result: async is 2x SLOWER than sync on unified memory
+        # Reasons (rechecked on pymetallic 0.3.1, M4 Max, #90):
+        # 1. Unified memory: from_numpy is one copy into a shared buffer
+        # 2. async_buffer_from_numpy needs a command buffer, a commit and a wait,
+        #    and writes private storage, which read_buffer can't map
+        # 3. Command buffer overhead (~150μs) >> a small transfer (~6μs at 4 KiB)
+        # 4. Result: async is ~1.7-26x SLOWER than sync, even when 8 writes
+        #    share one command buffer
         buf = pymetallic.Buffer.from_numpy(self.device, a)
 
         buffer_id = id(a)

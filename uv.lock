@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -2368,14 +2368,14 @@ wheels = [
 
 [[package]]
 name = "pymetallic"
-version = "0.2.3"
+version = "0.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/97/49/5921bcadc02e8f19732cb808ae54f70b5d958d9b52ea605d091061d22dd9/pymetallic-0.2.3-py3-none-any.whl", hash = "sha256:5e37a43d2cfa24b7aa9d1270f378fa3e451257ebf7ae7bf1b6dd9bda533b157e", size = 45187, upload-time = "2025-09-30T18:44:20.443Z" },
+    { url = "https://files.pythonhosted.org/packages/9e/a6/f2220568fab94f4dad65a7a9b1982bdac085c8e271951cf3ab153b7c49f7/pymetallic-0.3.1-py3-none-any.whl", hash = "sha256:7f9b13dd595a731e7ca688d0a67951097c2ab1f214b900600b38d4efa519996e", size = 57246, upload-time = "2025-11-04T00:09:38.956Z" },
 ]
 
 [[package]]
