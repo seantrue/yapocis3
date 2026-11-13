@@ -388,6 +388,16 @@ def sign_array(*args, **kwargs) -> tuple[str, PILImage]:
     return title, img
 
 
+def _png_ready(img):
+    """A 32-bit integer ("I") image as 16-bit, which PNG can hold.
+
+    Pillow up to 12.x clipped "I" images to 16 bits when saving them as PNG; Pillow 13 refuses
+    instead ("Saving I mode images as PNG", 13.0.0 release notes). Converting to "I;16" clips
+    to 0..65535 explicitly, so the PNG is the same as Pillow 12 wrote.
+    """
+    return img.convert("I;16") if img.mode == "I" else img
+
+
 def show_array(array: np.ndarray, *args, queue_dir=None, checkzero=True, **kwargs) -> Path:
     queue_dir = queue_dir or VIEWING_QUEUE
     raw_dir = os.path.join(queue_dir, "raw") if queue_dir else RAW_QUEUE
@@ -409,9 +419,9 @@ def show_array(array: np.ndarray, *args, queue_dir=None, checkzero=True, **kwarg
     title, img = sign_array(*args, array, **kwargs)
     name = f"{title}.png"
     pth = os.path.join(queue_dir, name)
-    img.save(pth)
+    _png_ready(img).save(pth)
     if os.path.exists(raw_dir):
-        raw_img.save(os.path.join(raw_dir, name))
+        _png_ready(raw_img).save(os.path.join(raw_dir, name))
         npz_name = f"{title}.npz"
         np.savez_compressed(os.path.join(raw_dir, npz_name), array)
     if VIEWER:

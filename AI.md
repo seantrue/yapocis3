@@ -67,6 +67,14 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2026-11-13: show_array under Pillow 13 (Claude Opus 5.5)
+
+**What the maintainer asked:** "Check pillow release notes for an explanation", then "Fix and cpm yapocis", after impressionist's `tests/test_all.py::test_boundedaverage` failed with `OSError: cannot write mode I as PNG` once impressionist moved to yapocis 1.2.0 (which requires `Pillow>=13.0.0`, #87).
+
+**What the AI did:** found the cause in Pillow 13.0.0's release notes ("Saving I mode images as PNG": Pillow had clipped such images to 16 bits and now refuses). `utils/basic.py`: `_png_ready` converts a mode "I" image to "I;16" before `show_array`'s two PNG saves, which clips to 0..65535 as Pillow 12 did. Test: `test_show_array_saves_a_32_bit_integer_array_as_a_16_bit_png` (`tests/integration/test_image_io.py`) fails without the fix on Pillow 13.0.0 and passes with it (20 passed in that file); impressionist's `test_boundedaverage` passes against this branch. ~30 lines with the test.
+
+**Defect it fixes:** the 1.2.0 Pillow floor (#87) was raised without a test that saves an integer array, so the break went unnoticed until impressionist ran it.
+
 ### 2026-11-12: Mako module names through commonkit's hash facade (Claude Opus 5.5)
 
 **What the maintainer asked for.** Layer 1 of plum's plan `2026-11-12-commonkit-hash-facade.md` (§3.3), approved with the coordinated move (D19: no direct hash libraries). Uses pyuncommonkit 0.2.0 from PyPI. No release during the move (D22 Q3).
