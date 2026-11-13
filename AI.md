@@ -63,8 +63,24 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~17 lines of BUGS.md and FEATURES.md: B15 (#103, `compare-branches` divides by a zero mean) and F2 (#102, CI on the rustcpu backend) (2026-11-12)
   - ~70 lines: `.github/workflows/ci.yml`, the first CI workflow, the test suite on the rustcpu backend, and ~26 lines of tests so OpenCL tests skip without an OpenCL platform, #102 (2026-11-12)
   - ~45 lines of version, changelog, BUGS.md/FEATURES.md and this entry: version 1.2.0 released to PyPI (2026-11-12)
+  - ~60 lines and ~31 of tests: Mako module names and the bundle SHA-256 through commonkit's hash facade, ruff bans, CI under md5 and b3 (2026-11-12)
 
 ## Detailed Contributions
+
+### 2026-11-12: Mako module names through commonkit's hash facade (Claude Opus 5.5)
+
+**What the maintainer asked for.** Layer 1 of plum's plan `2026-11-12-commonkit-hash-facade.md` (§3.3), approved with the coordinated move (D19: no direct hash libraries). Uses pyuncommonkit 0.2.0 from PyPI. No release during the move (D22 Q3).
+
+**What the AI did.**
+- `src/yapocis/core/kmgr_base.py` (~11 LOC): a compiled Mako module is named `<template>.<digest>.py` with `commonkit.digest.raw`, so the name follows commonkit's switch; a switch recompiles every template.
+- `src/yapocis/codegen/bundle.py` (~6 LOC): the bundle manifest's SHA-256 is `commonkit.digest.fixed.raw("sha256", …)`, allowlisted in `hash-allowlist.txt`.
+- `pyproject.toml` (~11 LOC): `pyuncommonkit>=0.2.0`; ruff `TID251` bans `hashlib` and `blake3` outside tests. `uv.lock` adds pyuncommonkit 0.2.0 and blake3.
+- `tests/backend/test_kernel_template_cache.py` (~31 LOC): the module name of the template `version 1`, built through `kernel_template_lookup(dirs, tmp_path)`, carries its known MD5 or BLAKE3 (it failed under b3 before the change), and `test_hash_is_what_was_asked`.
+- CI (~24 LOC): the rustcpu tests run under md5 and then b3, one after the other, each in a fresh run folder, then a hash-gate step (ruff `TID251` and a grep). `YAPOCIS_RS_REF` moves to `e45f6e0`, yapocis-rs #25's merge (the same change on that side).
+
+**Checked:** the full suite under md5 and b3 on the M4 Max, through plum's isolated environment; counts are in the PR body.
+
+**Division of labor:** the maintainer decided the design; the plum planner wrote the plan; Claude implemented it and wrote this entry.
 
 ### 2026-11-12: Version 1.2.0 (Claude Opus 5.5)
 

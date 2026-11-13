@@ -41,13 +41,13 @@ The base class handles:
 """
 
 import glob
-import hashlib
 import os
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from contextlib import contextmanager
 from typing import Any
 
+from commonkit import digest as ck_digest
 from mako.lookup import TemplateLookup
 from mako.template import Template
 
@@ -60,18 +60,19 @@ from yapocis.utils.stereo_typing import Context
 def kernel_template_lookup(
     directories: list[str], module_directory: str
 ) -> TemplateLookup:
-    """A Mako TemplateLookup whose compiled modules are named by the MD5 of their template.
+    """A Mako TemplateLookup whose compiled modules are named by a digest of their template.
 
     Mako reuses a compiled module unless the template's whole-second mtime is newer than the
     module's, so an edit made in the same second as the last compile (a checkout, a
     ``git stash pop``) silently ran the old kernel. Naming each module
-    ``<template>.<md5 of its source>.py`` makes reusing a stale module impossible; when a new
-    digest is named, that template's other compiled modules are removed.
+    ``<template>.<digest of its source>.py`` makes reusing a stale module impossible; when a
+    new digest is named, that template's other compiled modules are removed. The digest is
+    commonkit's current algorithm (md5 or b3), so a switch recompiles every template.
     """
 
     def modulename(filename: str, uri: str) -> str:
         with open(filename, "rb") as f:
-            digest = hashlib.md5(f.read()).hexdigest()
+            digest = ck_digest.raw(f.read())
         base = os.path.join(module_directory, os.path.normpath(uri.lstrip("/")))
         path = f"{base}.{digest}.py"
         for old in [*glob.glob(f"{glob.escape(base)}.*.py"), f"{base}.py"]:
