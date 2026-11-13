@@ -19,7 +19,8 @@
 .libs
 __pycache__
 #*
-/.claude
+/.claude/*
+!/.claude/skills/
 .env
 /src/yapocis/mako_modules
 /queue

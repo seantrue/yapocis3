@@ -1,0 +1,61 @@
+# affected.py config for Yapocis3.
+#
+# The suite is parametrized over every (backend, device) the host has (tests/conftest.py,
+# get_backend_device_combinations), ~760 tests each. On the 3-card Linux host that product is
+# the main cost. Tier 0 pins ONE backend and ONE device; tier 1 runs every backend on one device
+# each; tier 2 is the full product (make test), for a nightly run, not an edit loop.
+#
+# Override the tier-0 pick per host: YAPOCIS_T0_BACKEND=metal on the Mac, ocl or cuda on Linux,
+# and YAPOCIS_T0_DEVICE=3080 (a name, never an index).
+
+[[python]]
+root = "."
+cmd = ".venv/bin/python -m pytest"
+tests = "tests"
+src = ["src/*", "tests/*", "pyproject.toml", "uv.lock", "conftest.py"]
+tier0 = "-x -m 'not performance and not slow'"
+tier1 = "-m 'not performance'"
+tier2 = "-m 'not performance'"
+
+pre = "run=$(mktemp -d)"
+
+[python.env]
+YAPOCIS_VALIDATION = "1"
+COMMONKIT_HASH = "${COMMONKIT_HASH:-md5}"
+COMMONKIT_TEST_RUN = "$run"
+COMMONKIT_STORE_ROOT = "$run/store"
+COMMONKIT_MARK_DIR = "$run/marks"
+
+[python.tier_env.0]
+YAPOCIS_BACKEND = "${YAPOCIS_T0_BACKEND:-numbax}"
+YAPOCIS_TEST_BACKENDS = "${YAPOCIS_T0_BACKEND:-numbax}"
+YAPOCIS_TEST_DEVICES = "${YAPOCIS_T0_DEVICE:-}"
+
+[python.tier_env.1]
+YAPOCIS_TEST_DEVICES = "${YAPOCIS_T0_DEVICE:-}"
+
+# A kernel template, interface or library module -> the test files that name it.
+# Shared includes have no single name: they fall back to the whole suite.
+[[python.map]]
+glob = "src/yapocis/kernels/*/helpers.mako"
+tests = ["tests"]
+
+[[python.map]]
+glob = "src/yapocis/kernels/*/constants.mako"
+tests = ["tests"]
+
+[[python.map]]
+glob = "src/yapocis/kernels/*/*.mako"
+grep_stem = true
+env = { YAPOCIS_T0_BACKEND = "{seg3}" }   # kernels/<backend>/x.mako runs on <backend>, not the default
+
+[[python.map]]
+glob = "src/yapocis/interfaces/*.interface"
+grep_stem = true
+
+[[python.map]]
+glob = "src/yapocis/lib/*.py*"
+grep_stem = true
+
+# A kernel or interface change also changes what yapocis-rs vendors: the skill reminds you to
+# regenerate the bundle there and run its tier 0 (bundle drift is that repo's CI job).

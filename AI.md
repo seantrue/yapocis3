@@ -67,6 +67,21 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 ## Detailed Contributions
 
+### 2026-11-13: test-affected, run the tests a change can reach (Claude Opus 5.5)
+
+**Requested by the maintainer:** test tooling for Claude Code across the Python and Rust repos, whose suites had grown to hours; then "Add to each repo".
+
+**What the AI did.**
+- `.claude/skills/test-affected/` (SKILL.md, `affected.py`, ~300 lines of Python, stdlib only): maps `git diff` against `origin/main` to the tests that can see it, as one command per suite.
+  - Rust: the changed packages plus every workspace package that depends on them (normal, dev or build), from `cargo metadata`. A root `Cargo.toml`, `Cargo.lock`, toolchain or nextest config change selects everything.
+  - Python: test files that name a changed kernel, interface or module (`grep_stem`), or explicit `[[python.map]]` rules.
+  - Each run gets a fresh `COMMONKIT_TEST_RUN`/`STORE_ROOT`/`MARK_DIR`, as CI does, and md5 only (b3 again when hashing or the store changed).
+  - Tiers: 0 after each edit, 1 before a commit, 2 the repo's documented gate, run in the background.
+- The same SKILL.md and `affected.py` are in plumcraft, yapocis-rs, Yapocis3 and impressionist-rs; a change goes to all four.
+- Here: `.test-affected.toml`. Tier 0 pins one backend and one device (`YAPOCIS_T0_BACKEND`, default `numbax`; `YAPOCIS_T0_DEVICE`, a name), because the suite runs every test on every (backend, device) the host has, ~760 tests each. A change to `kernels/<backend>/x.mako` runs the tests that name `x` on that backend; a change to `helpers.mako` or `constants.mako`, or to anything under `core/`, runs the whole suite on the one backend. `.gitignore`: `/.claude` became `/.claude/*` with `!/.claude/skills/`, so the skill is tracked and local settings are not.
+
+**Measured** on a 4-core Linux container, rustcpu backend (yapocis-rs wheel from its main): 759 tests in 238 s serially; one failure, `test_seaborn.py::TestSeabornComparison::test_hexgrid` (RMS over tolerance against Agg), not investigated.
+
 ### 2026-11-13: show_array under Pillow 13 (Claude Opus 5.5)
 
 **What the maintainer asked:** "Check pillow release notes for an explanation", then "Fix and cpm yapocis", after impressionist's `tests/test_all.py::test_boundedaverage` failed with `OSError: cannot write mode I as PNG` once impressionist moved to yapocis 1.2.0 (which requires `Pillow>=13.0.0`, #87).
