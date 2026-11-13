@@ -82,6 +82,6 @@ jobs:
       # blake3, and no source outside tests and hash-allowlist.txt names an algorithm.
       - name: Hash gates
         run: |
-          uvx ruff check --select TID251 .
+          uvx ruff check --select TID251 --extend-exclude yapocis-rs .
           ! git ls-files '*.py' | grep -v '^tests/' | grep -vxF -f hash-allowlist.txt \
             | xargs grep -nE 'hashlib|blake3|fixed\.|build\.both|"md5:|"b3:' 

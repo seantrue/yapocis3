@@ -76,7 +76,7 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 - `src/yapocis/codegen/bundle.py` (~6 LOC): the bundle manifest's SHA-256 is `commonkit.digest.fixed.raw("sha256", …)`, allowlisted in `hash-allowlist.txt`.
 - `pyproject.toml` (~11 LOC): `pyuncommonkit>=0.2.0`; ruff `TID251` bans `hashlib` and `blake3` outside tests. `uv.lock` adds pyuncommonkit 0.2.0 and blake3.
 - `tests/backend/test_kernel_template_cache.py` (~31 LOC): the module name of the template `version 1`, built through `kernel_template_lookup(dirs, tmp_path)`, carries its known MD5 or BLAKE3 (it failed under b3 before the change), and `test_hash_is_what_was_asked`.
-- CI (~24 LOC): the rustcpu tests run under md5 and then b3, one after the other, each in a fresh run folder, then a hash-gate step (ruff `TID251` and a grep). `YAPOCIS_RS_REF` moves to `e45f6e0`, yapocis-rs #25's merge (the same change on that side).
+- CI (~24 LOC): the rustcpu tests run under md5 and then b3, one after the other, each in a fresh run folder, then a hash-gate step (ruff `TID251` and a grep). `YAPOCIS_RS_REF` moves to `e45f6e0`, yapocis-rs #25's merge (the same change on that side). **Defect caught by CI:** the hash-gate step's ruff ran over the yapocis-rs checkout CI clones into the workspace and flagged that repo's allowlisted `compare-bundle.py`; ruff now skips `yapocis-rs/`.
 
 **Checked:** the full suite under md5 and b3 on the M4 Max, through plum's isolated environment; counts are in the PR body.
 
