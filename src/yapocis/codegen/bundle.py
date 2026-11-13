@@ -22,12 +22,13 @@ Schema version history:
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import re
 from dataclasses import asdict, dataclass, field
 from typing import Any
+
+from commonkit import digest as ck_digest
 
 import yaml
 
@@ -356,7 +357,8 @@ def kernel_entry(k: KernelSpec, cuda_source: str | None) -> KernelEntry:
 
 
 def _sha256(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+    # The manifest format names SHA-256: fixed, not the switch (D9; hash-allowlist.txt).
+    return ck_digest.fixed.raw("sha256", text.encode("utf-8"))
 
 
 def _json_safe(value: Any) -> Any:

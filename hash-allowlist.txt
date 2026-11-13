@@ -1,0 +1,4 @@
+# Files allowed to name a hash algorithm outside tests (the commonkit hash facade, D9/D10).
+# One path per line; each use carries a comment at the line.
+# The bundle manifest format names SHA-256 (commonkit.digest.fixed, not the switch).
+src/yapocis/codegen/bundle.py
