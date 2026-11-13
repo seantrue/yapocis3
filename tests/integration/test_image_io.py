@@ -114,3 +114,20 @@ def test_to_image_float16_matches_float32():
     assert np.array_equal(
         np.asarray(to_image(a32.astype(np.float16))), np.asarray(to_image(a32))
     )
+
+
+def test_show_array_saves_a_32_bit_integer_array_as_a_16_bit_png(tmp_path):
+    """Pillow 13 refuses to save mode "I" as PNG (12.x clipped it to 16 bits); show_array clips."""
+    from PIL import Image
+
+    from yapocis.utils.basic import show_array
+
+    array = np.array([[-5, 0, 300, 70000]] * 40, dtype=np.int32)
+    (tmp_path / "raw").mkdir()
+    show_array(array, "int32", queue_dir=str(tmp_path), checkzero=False)
+    pngs = sorted(tmp_path.glob("*.png"))
+    raw = sorted((tmp_path / "raw").glob("*.png"))
+    assert len(pngs) == 1 and len(raw) == 1
+    with Image.open(raw[0]) as img:
+        assert img.mode in ("I;16", "I")
+        assert list(img.getdata())[:4] == [0, 0, 300, 65535]

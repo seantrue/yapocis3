@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `show_array` failed with `OSError: cannot write mode I as PNG` for 32-bit integer arrays under Pillow 13, which 1.2.0 requires: Pillow 13 refuses to save mode "I" as PNG where 12.x silently clipped it to 16 bits. The image is now converted to "I;16" before saving, the same clipped PNG as before.
+
 ## [1.2.0] - 2026-11-12
 
 ### Added
