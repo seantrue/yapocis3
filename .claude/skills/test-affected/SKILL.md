@@ -1,6 +1,6 @@
 ---
 name: test-affected
-description: Run only the tests a change can affect, in tiers, across the Rust workspaces and Python packages (plumcraft, yapocis-rs, Yapocis3). Use after editing code and before saying a change works, before committing, or when asked to "run the tests". Do not run a repo's full suite unless asked for tier 2.
+description: Run only the tests a change can affect, in tiers, across the Rust workspaces and Python packages (plumcraft, plumimpress, yapocis-rs, Yapocis3, yapocis-external, impressionist-rs, Virtual-Impressionist). Use after editing code and before saying a change works, before committing, or when asked to "run the tests". Do not run a repo's full suite unless asked for tier 2.
 ---
 
 # test-affected
@@ -15,8 +15,9 @@ python3 .claude/skills/test-affected/affected.py --base HEAD~3 ... # diff base (
 ```
 
 Per-repo rules are in `.test-affected.toml` at the repo root; nextest profiles (`quick`) in
-`.config/nextest.toml`. `affected.py` and this file are the same in plumcraft, yapocis-rs,
-Yapocis3 and impressionist-rs: change them in all four.
+`.config/nextest.toml`. `affected.py` and this file are the same in plumcraft, plumimpress,
+yapocis-rs, Yapocis3, yapocis-external, impressionist-rs and Virtual-Impressionist: change them
+in all seven.
 
 ## Tiers
 
@@ -49,6 +50,12 @@ in the background (`run_in_background`) and keep working; never block a turn on 
   changes what yapocis-rs vendors. Say so; regenerating the bundle there is a separate step
   (`yapocis-tools bundle`, update `bundle/SOURCE`), and its tier 0 is then `-p yapocis` with
   `rustcpu`. Kernel changes also need the matching port in `yapocis-rt/src/cpu/kernels/`.
+- **yapocis-external → impressionist-rs:** the same chain one level up. A kernel or interface
+  change in yapocis-external is re-exported into impressionist-rs's
+  `crates/yapocis-external/bundle` (`yapocis-tools bundle --project-only`, update `bundle/SOURCE`)
+  and ported in `crates/yapocis-external/src/cpu/`; then run impressionist-rs's tier 0 there.
+  Virtual-Impressionist reads yapocis-external through `YAPOCIS_PROJECT`, so run its tests that
+  name the kernel too.
 - **yapocis-rs `bindings/python`** is outside the workspace: for a change there, run
   `cargo clippy --manifest-path bindings/python/Cargo.toml -- -D warnings`, then Yapocis3's
   tier 0 with `YAPOCIS_T0_BACKEND=rustcpu` after `maturin develop`.

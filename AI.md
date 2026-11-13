@@ -82,6 +82,8 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 **Measured** on a 4-core Linux container, rustcpu backend (yapocis-rs wheel from its main): 759 tests in 238 s serially; one failure, `test_seaborn.py::TestSeabornComparison::test_hexgrid` (RMS over tolerance against Agg), not investigated.
 
+**Follow-up (same day).** The skill now also lives in plumimpress, yapocis-external and Virtual-Impressionist; SKILL.md lists all seven repos and adds the yapocis-external → impressionist-rs rule (re-export the bundle, port the CPU kernel, run impressionist-rs's tier 0). SKILL.md and affected.py stay identical in all seven.
+
 ### 2026-11-13: show_array under Pillow 13 (Claude Opus 5.5)
 
 **What the maintainer asked:** "Check pillow release notes for an explanation", then "Fix and cpm yapocis", after impressionist's `tests/test_all.py::test_boundedaverage` failed with `OSError: cannot write mode I as PNG` once impressionist moved to yapocis 1.2.0 (which requires `Pillow>=13.0.0`, #87).
