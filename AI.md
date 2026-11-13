@@ -84,6 +84,8 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 **Follow-up (same day).** The skill now also lives in plumimpress, yapocis-external and Virtual-Impressionist; SKILL.md lists all seven repos and adds the yapocis-external → impressionist-rs rule (re-export the bundle, port the CPU kernel, run impressionist-rs's tier 0). SKILL.md and affected.py stay identical in all seven.
 
+**CI (same day).** The rustcpu job takes uv, maturin, Rust and its build cache from the shared action `seantrue/yapocis-rs/.github/actions/test-env` (ref `@claude/test-affected` until yapocis-rs merges, then `@main`), and builds the wheel with that maturin rather than `uvx maturin`. Test commands, triggers and env are unchanged. One side effect: the action installs PoCL, so the `@pytest.mark.ocl` tests (15), which skipped on the runner for want of an OpenCL platform, will run on PoCL's CPU device. Not run: the maintainer asked for the branch not to be active yet.
+
 ### 2026-11-13: show_array under Pillow 13 (Claude Opus 5.5)
 
 **What the maintainer asked:** "Check pillow release notes for an explanation", then "Fix and cpm yapocis", after impressionist's `tests/test_all.py::test_boundedaverage` failed with `OSError: cannot write mode I as PNG` once impressionist moved to yapocis 1.2.0 (which requires `Pillow>=13.0.0`, #87).

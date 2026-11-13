@@ -34,15 +34,12 @@ jobs:
           ref: ${{ env.YAPOCIS_RS_REF }}
           path: yapocis-rs
 
-      - uses: astral-sh/setup-uv@v6
+      # The yapocis family's shared test environment (yapocis-rs/.github/actions/test-env): uv
+      # (cached), maturin, Rust and its build cache for the yapocis_rs wheel, and the system
+      # packages. Switch the ref to @main once yapocis-rs merges.
+      - uses: seantrue/yapocis-rs/.github/actions/test-env@claude/test-affected
         with:
-          enable-cache: true
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: yapocis-rs/bindings/python
+          rust-cache-workspaces: yapocis-rs/bindings/python
 
       - name: Install yapocis and its test dependencies (from uv.lock)
         run: |
@@ -58,7 +55,7 @@ jobs:
       - name: Build and install the yapocis_rs wheel
         working-directory: yapocis-rs/bindings/python
         run: |
-          uvx maturin build --release -i "$GITHUB_WORKSPACE/.venv/bin/python" --out dist
+          maturin build --release -i "$GITHUB_WORKSPACE/.venv/bin/python" --out dist
           # --no-deps: keep the NumPy that uv.lock chose
           uv pip install --python "$GITHUB_WORKSPACE/.venv/bin/python" --no-deps dist/yapocis_rs-*.whl
 
