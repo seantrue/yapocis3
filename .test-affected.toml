@@ -21,7 +21,7 @@ pre = "run=$(mktemp -d)"
 
 [python.env]
 YAPOCIS_VALIDATION = "1"
-COMMONKIT_HASH = "${COMMONKIT_HASH:-md5}"
+COMMONKIT_HASH = "b3"
 COMMONKIT_TEST_RUN = "$run"
 COMMONKIT_STORE_ROOT = "$run/store"
 COMMONKIT_MARK_DIR = "$run/marks"

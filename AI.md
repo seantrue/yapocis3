@@ -86,6 +86,8 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
 
 **CI (same day).** The rustcpu job takes uv, maturin, Rust and its build cache from the shared action `seantrue/yapocis-rs/.github/actions/test-env` (ref `@claude/test-affected` until yapocis-rs merges, then `@main`), and builds the wheel with that maturin rather than `uvx maturin`. Test commands, triggers and env are unchanged. One side effect: the action installs PoCL, so the `@pytest.mark.ocl` tests (15), which skipped on the runner for want of an OpenCL platform, will run on PoCL's CPU device. Not run: the maintainer asked for the branch not to be active yet.
 
+**b3 only (same day).** The maintainer: "No md5 is to be used" and "Drop all MD5 testing. It's legacy." SKILL.md (the same in all seven repos) now says every tier runs b3 only. md5 had been the AI's choice for tier 0/1 when it wrote the skill earlier the same day; the maintainer corrected it. Here: `.test-affected.toml` sets `COMMONKIT_HASH = "b3"`, and CI's rustcpu test step runs once, under b3. Checked by reading the config: this diff selects no suite, so tier 0 printed no command. The CI change runs on this PR.
+
 ### 2026-11-13: show_array under Pillow 13 (Claude Opus 5.5)
 
 **What the maintainer asked:** "Check pillow release notes for an explanation", then "Fix and cpm yapocis", after impressionist's `tests/test_all.py::test_boundedaverage` failed with `OSError: cannot write mode I as PNG` once impressionist moved to yapocis 1.2.0 (which requires `Pillow>=13.0.0`, #87).

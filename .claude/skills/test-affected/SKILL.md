@@ -23,7 +23,7 @@ in all seven.
 
 | Tier | When | What |
 |---|---|---|
-| 0 | after each logical edit | affected crates/tests, one hash algorithm (md5), one backend/device, fail fast |
+| 0 | after each logical edit | affected crates/tests, b3 hashing, one backend/device, fail fast |
 | 1 | before a commit | affected crates/tests, this host's backends, no fail-fast |
 | 2 | only when asked, or a global file changed | the repo's documented gate (AGENTS.md / CLAUDE.md) |
 
@@ -43,9 +43,8 @@ in the background (`run_in_background`) and keep working; never block a turn on 
 
 - **Never fix a test by changing backend, device, tolerance or hash algorithm.** (All three
   repos' CLAUDE.md.) Tier 0 runs one backend for speed; a failure there is a failure.
-- **Hash algorithms:** tier 0/1 use md5 only. If the diff touches hashing, the store, or
-  anything `commonkit::digest` / `commonkit.digest` reaches, run tier 1 again with
-  `COMMONKIT_HASH=b3` (and a fresh `COMMONKIT_TEST_RUN` / `COMMONKIT_STORE_ROOT`, as CI does).
+- **Hash algorithm:** every tier runs b3 only. md5 is legacy and is not tested. Each run gets
+  a fresh `COMMONKIT_TEST_RUN` / `COMMONKIT_STORE_ROOT`, as CI does.
 - **Yapocis3 → yapocis-rs:** a change under `src/yapocis/kernels/` or `src/yapocis/interfaces/`
   changes what yapocis-rs vendors. Say so; regenerating the bundle there is a separate step
   (`yapocis-tools bundle`, update `bundle/SOURCE`), and its tier 0 is then `-p yapocis` with

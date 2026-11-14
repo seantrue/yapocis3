@@ -63,12 +63,11 @@ jobs:
         run: |
           .venv/bin/python -c "import sys, numpy, yapocis, yapocis_rs; print(sys.version); print('numpy', numpy.__version__); print('yapocis', yapocis.__file__); print('yapocis_rs', yapocis_rs.__file__)"
 
-      # Once per algorithm, one after the other in this checkout (never concurrently: they
-      # share the Mako module directory), each with a fresh store root and mark folder
+      # Under b3 (md5 is legacy and not tested), with a fresh store root and mark folder
       # inside a fresh run folder (the commonkit hash facade, §3.3).
-      - name: Tests (rustcpu), under md5 and then b3
+      - name: Tests (rustcpu), under b3
         run: |
-          for algo in md5 b3; do
+          for algo in b3; do
             run=$(mktemp -d)
             COMMONKIT_HASH=$algo COMMONKIT_TEST_RUN=$run COMMONKIT_STORE_ROOT=$run/store \
               COMMONKIT_MARK_DIR=$run/marks make test-rustcpu
