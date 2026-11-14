@@ -36,7 +36,7 @@ jobs:
 
       # The yapocis family's shared test environment (yapocis-rs/.github/actions/test-env): uv
       # (cached), maturin, Rust and its build cache for the yapocis_rs wheel, and the system
-      # packages. Switch the ref to @main once yapocis-rs merges.
+      # packages.
       - uses: seantrue/yapocis-rs/.github/actions/test-env@main
         with:
           rust-cache-workspaces: yapocis-rs/bindings/python
