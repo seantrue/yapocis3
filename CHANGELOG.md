@@ -9,7 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Graphics: the OpenCL, Metal and CUDA `triangles` kernels (`Graphics1`, `Graphics4`) drew a zero-area triangle (collinear corners, or two equal corners) as a line across the whole image; they now draw nothing, as numbax and `mesh_triangles` already did.
 - `show_array` failed with `OSError: cannot write mode I as PNG` for 32-bit integer arrays under Pillow 13, which 1.2.0 requires: Pillow 13 refuses to save mode "I" as PNG where 12.x silently clipped it to 16 bits. The image is now converted to "I;16" before saving, the same clipped PNG as before.
+
+### Changed
+
+- Graphics: the OpenCL, Metal and CUDA `lines`, `triangles` and `mesh_triangles` kernels skip a shape when the pixel is outside its bounding box, widened by its reach. No other pixel changes; on 10,000 small shapes they run 1.4-3.8x faster on Metal and OpenCL (M4 Max), and triangles 1.4-3.6x faster on CUDA (RTX 3080), where lines gain nothing.
 
 ## [1.2.0] - 2026-11-12
 

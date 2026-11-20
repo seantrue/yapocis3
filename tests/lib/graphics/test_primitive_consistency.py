@@ -85,3 +85,56 @@ def test_triangles_keep_inclusive_edges(backend, monkeypatch):
     )
     assert lone[10, 10] < 0.5  # first vertex drawn
     assert ((lone < 0.5).sum()) == 85
+
+
+# Zero-area triangles: collinear corners, along a diagonal and along a row, and two
+# equal corners. The GPU kernels' sign test counted every pixel on the line through
+# such a triangle's corners as inside, drawing it across the whole image (numbax drew
+# nothing); triangles now skip zero area, as mesh_triangles already did.
+DEGENERATE = [
+    [10, 10, 20, 20, 30, 30],
+    [10, 32, 20, 32, 30, 32],
+    [10, 10, 10, 10, 20, 15],
+]
+
+
+def _rustcpu_draws_degenerate() -> bool:
+    """True only while the installed yapocis_rs still ports the old `triangles`, which
+    draws a zero-area triangle's line. Temporary: remove with the xfail below once
+    CI's YAPOCIS_RS_REF includes yapocis-rs's matching CPU-port fix."""
+    from yapocis.lib.graphics import Graphics1
+
+    image = np.ones((16, 16), np.float32)
+    Graphics1(backend="rustcpu").triangles(
+        image, [[2, 2, 4, 4, 6, 6]], colors=[0.0], alphas=[1.0]
+    )
+    return bool((image != 1).any())
+
+
+@pytest.mark.parametrize("backend", get_test_backends())
+@pytest.mark.parametrize("channels", [1, 4])
+@pytest.mark.parametrize("kernel", ["triangles", "mesh_triangles"])
+@pytest.mark.parametrize("aa_width", [0.0, 1.0])
+def test_degenerate_triangles_draw_nothing(backend, channels, kernel, aa_width):
+    from yapocis.lib.graphics import Graphics1
+    from yapocis.lib.graphics4 import Graphics4
+
+    if backend == "rustcpu" and kernel == "triangles" and _rustcpu_draws_degenerate():
+        pytest.xfail("installed yapocis_rs predates yapocis-rs's zero-area triangles fix")
+    if channels == 1:
+        g, shape = Graphics1(backend=backend), (64, 64)
+        colors = {"colors": [0.0], "alphas": [1.0]}
+    else:
+        g, shape = Graphics4(backend=backend), (64, 64, 4)
+        colors = {"colors": [[0.0, 0.0, 0.0, 1.0]]}
+    for tri in DEGENERATE:
+        image = np.ones(shape, np.float32)
+        getattr(g, kernel)(image, [tri], aa_widths=[aa_width], **colors)
+        assert (image == 1).all(), f"{backend} {kernel} drew {tri}"
+    # A proper triangle still draws, and only inside its box
+    image = np.ones(shape, np.float32)
+    getattr(g, kernel)(image, [[10, 10, 30, 12, 15, 25]], aa_widths=[aa_width], **colors)
+    drawn = (image != 1) if channels == 1 else (image != 1).any(axis=2)
+    rows, cols = np.nonzero(drawn)
+    assert len(rows) > 100
+    assert cols.min() >= 10 and cols.max() <= 30 and rows.min() >= 10 and rows.max() <= 25
