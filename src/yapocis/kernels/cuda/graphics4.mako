@@ -35,6 +35,11 @@ extern "C" __kernel void lines(int width, int height, READWRITE float4 *a, int n
     float2 linestart = *coords++;
     float2 lineend = *coords++;
     float4 rgba = *colors++;
+    float reach = threshold + fmax(aa_width, 0.0f) + 1.0f;
+    // A pixel outside the line's bounding box, widened by the half width, the antialiased
+    // edge and a pixel's margin (for rounding below), can't be drawn: skip the line.
+    if (point.x < fmin(linestart.x, lineend.x) - reach || point.x > fmax(linestart.x, lineend.x) + reach ||
+        point.y < fmin(linestart.y, lineend.y) - reach || point.y > fmax(linestart.y, lineend.y) + reach) continue;
     float linemag2 = dxdy2(lineend, linestart);
     float2 delta = lineend - linestart;
     float2 u2 = (point - linestart) * (delta);
@@ -186,6 +191,13 @@ extern "C" __kernel void triangles(int width, int height, READWRITE float4 *a, i
     float2 v3 = *coords++;
     float aa_width = *aa_widths++;
     float4 rgba = *colors++;
+    // A zero-area (collinear) triangle covers no pixels: the sign test below would
+    // otherwise draw the whole line through its corners, across the image.
+    if (signex(v1, v2, v3) == 0.0f) continue;
+    // A pixel outside the triangle's bounding box, widened by a pixel's margin (for
+    // rounding below), can't be drawn: skip the triangle.
+    if (point.x < fmin(fmin(v1.x, v2.x), v3.x) - 1.0f || point.x > fmax(fmax(v1.x, v2.x), v3.x) + 1.0f ||
+        point.y < fmin(fmin(v1.y, v2.y), v3.y) - 1.0f || point.y > fmax(fmax(v1.y, v2.y), v3.y) + 1.0f) continue;
 
     float d1 = signex(point, v1, v2);
     float d2 = signex(point, v2, v3);
@@ -229,6 +241,10 @@ extern "C" __kernel void mesh_triangles(int width, int height, READWRITE float4 
     float2 v3 = *coords++;
     float aa_width = *aa_widths++;
     float4 rgba = *colors++;
+    // A pixel outside the triangle's bounding box, widened by a pixel's margin (for
+    // rounding below), can't be drawn: skip the triangle.
+    if (point.x < fmin(fmin(v1.x, v2.x), v3.x) - 1.0f || point.x > fmax(fmax(v1.x, v2.x), v3.x) + 1.0f ||
+        point.y < fmin(fmin(v1.y, v2.y), v3.y) - 1.0f || point.y > fmax(fmax(v1.y, v2.y), v3.y) + 1.0f) continue;
 
     bool inside = tri_inside(point.x, point.y, v1.x, v1.y, v2.x, v2.y, v3.x, v3.y);
 

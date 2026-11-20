@@ -64,8 +64,28 @@ This document tracks contributions made by AI assistants (primarily Claude) vers
   - ~70 lines: `.github/workflows/ci.yml`, the first CI workflow, the test suite on the rustcpu backend, and ~26 lines of tests so OpenCL tests skip without an OpenCL platform, #102 (2026-11-12)
   - ~45 lines of version, changelog, BUGS.md/FEATURES.md and this entry: version 1.2.0 released to PyPI (2026-11-12)
   - ~60 lines and ~31 of tests: Mako module names and the bundle SHA-256 through commonkit's hash facade, ruff bans, CI under md5 and b3 (2026-11-12)
+  - ~96 lines of kernels and ~53 of tests: graphics kernels skip zero-area triangles and shapes whose bounding box a pixel is outside (2026-11-20)
 
 ## Detailed Contributions
+
+### 2026-11-20: graphics kernels skip zero-area triangles and far shapes (Claude Opus 5.5)
+
+**Requested by the maintainer.** Working on Virtual Impressionist's etch script, which now draws its strokes with `Graphics1.lines`, the maintainer pointed out that "every stroke should already have a cheap check for proximity to target pixel", asked for the other primitives to be checked "for comparable short cuts", for Metal measurements, then for both changes below ("1,2"), tested on rustcpu and CUDA as well.
+
+**Zero-area triangles (a bug fix; it changes output).** The OpenCL, Metal and CUDA `triangles` kernels (`graphics` and `graphics4`) tested inside-ness by the signs of three cross products and counted a zero as inside. For a triangle with collinear corners, or two equal corners, every pixel on the line through them has all-zero signs, so the kernel drew that line across the whole image (a 64 px line on a 64x64 image for corners (10,10), (20,20), (30,30); 43 of its pixels outside the triangle's box). numbax drew nothing, and `mesh_triangles` already returned early for zero area. `triangles` now skips a triangle whose `signex(v1, v2, v3)` is exactly 0, on every GPU backend. Found by the AI while measuring the bounding-box test on Metal, where a test that should change no pixel changed 257,521: the shapes had integer corners, so some were collinear.
+
+**Bounding-box early-out (output unchanged).** The GPU `lines`, `triangles` and `mesh_triangles` loops computed each primitive's full test for every pixel. They now `continue` first when the pixel is outside the primitive's box, widened by the line's half width, the antialiased edge and a pixel's margin (for rounding in the full test), placed after the loop's last pointer load (`*colors++`) so every pointer still advances. The edits were applied by a script (kept in Virtual Impressionist's `claude-debug/etch_graphics/patch_graphics_kernels.py`) that asserts no load follows the test. Circles and ellipses were measured and left alone: on Metal the test made them slower (0.8-0.9x), their own tests being cheap. `rects` and `composite` already test their box.
+
+**Measured** (10,000 shapes on 1624x1620; before -> after):
+- M4 Max: Metal lines 1.4-1.6x, triangles 1.6-2.4x, mesh_triangles 3.2x; OpenCL 1.4-2.9x, 2.3-2.7x, 3.6-3.8x.
+- RTX 3080 on yellowfin: CUDA and NVIDIA OpenCL triangles 1.4-1.7x, mesh_triangles 2.5-3.6x, lines 1.0x (no gain). Why lines gain nothing there was not investigated; one untested suspect is the `*rdist++ * .5` double-precision literal, which consumer NVIDIA GPUs run slowly, computed before the box test can skip anything.
+
+**Verified.** Every primitive drawn before and after, 1 and 4 channels, hard and antialiased edges, on a non-square image: 0 pixels changed except degenerate triangles, on Metal, OpenCL, CUDA, NVIDIA OpenCL, rustcpu (with yapocis-rs's matching CPU-port change) and numbax; the fixed degenerate cases now equal numbax's output exactly. `tests/lib/graphics` and `tests/test_truetrace_fill.py`: 384 passed on ocl, metal, numbax and rustcpu (M4 Max), 297 on cuda, ocl and numbax (yellowfin, RTX 3080). New test: `test_degenerate_triangles_draw_nothing` (32 cases on the Mac's four backends).
+
+**Temporary rustcpu xfail.** rustcpu runs yapocis-rs's Rust port of these kernels, which needs the same fix (a yapocis-rs PR), and CI builds its wheel from a pinned yapocis-rs commit. As for #80, the new test xfails rustcpu's `triangles` cases only while the installed `yapocis_rs` still draws a degenerate triangle (`_rustcpu_draws_degenerate`); it goes once `YAPOCIS_RS_REF` includes the fix. Tier 1 (`test-affected`) on the Mac with this venv's older wheel: 381 passed, then those 4 cases xfail.
+
+- ~16 lines in each of `kernels/{ocl,metal,cuda}/graphics{,4}.mako`
+- ~53 lines: `tests/lib/graphics/test_primitive_consistency.py`
 
 ### 2026-11-13: test-affected, run the tests a change can reach (Claude Opus 5.5)
 

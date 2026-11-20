@@ -25,6 +25,11 @@ kernel void lines(constant int &width [[ buffer(0) ]],
         float2 linestart = *coords++;
         float2 lineend = *coords++;
         float2 value_alpha = *colors++;
+        float reach = threshold + fmax(aa_width, 0.0f) + 1.0f;
+        // A pixel outside the line's bounding box, widened by the half width, the antialiased
+        // edge and a pixel's margin (for rounding below), can't be drawn: skip the line.
+        if (point.x < fmin(linestart.x, lineend.x) - reach || point.x > fmax(linestart.x, lineend.x) + reach ||
+            point.y < fmin(linestart.y, lineend.y) - reach || point.y > fmax(linestart.y, lineend.y) + reach) continue;
         float value = value_alpha.x;
         float alpha = value_alpha.y;
         float linemag2 = dxdy2(lineend, linestart);
@@ -201,6 +206,13 @@ kernel void triangles(constant int &width [[ buffer(0) ]],
         float2 v3 = *coords++;
         float aa_width = *aa_widths++;
         float2 rc = *colors++;
+        // A zero-area (collinear) triangle covers no pixels: the sign test below would
+        // otherwise draw the whole line through its corners, across the image.
+        if (signex(v1, v2, v3) == 0.0f) continue;
+        // A pixel outside the triangle's bounding box, widened by a pixel's margin (for
+        // rounding below), can't be drawn: skip the triangle.
+        if (point.x < fmin(fmin(v1.x, v2.x), v3.x) - 1.0f || point.x > fmax(fmax(v1.x, v2.x), v3.x) + 1.0f ||
+            point.y < fmin(fmin(v1.y, v2.y), v3.y) - 1.0f || point.y > fmax(fmax(v1.y, v2.y), v3.y) + 1.0f) continue;
         float value = rc.x;
         float alpha = rc.y;
 
@@ -253,6 +265,10 @@ kernel void mesh_triangles(constant int &width [[ buffer(0) ]],
         float2 v3 = *coords++;
         float aa_width = *aa_widths++;
         float2 rc = *colors++;
+        // A pixel outside the triangle's bounding box, widened by a pixel's margin (for
+        // rounding below), can't be drawn: skip the triangle.
+        if (point.x < fmin(fmin(v1.x, v2.x), v3.x) - 1.0f || point.x > fmax(fmax(v1.x, v2.x), v3.x) + 1.0f ||
+            point.y < fmin(fmin(v1.y, v2.y), v3.y) - 1.0f || point.y > fmax(fmax(v1.y, v2.y), v3.y) + 1.0f) continue;
         float value = rc.x;
         float alpha = rc.y;
 
